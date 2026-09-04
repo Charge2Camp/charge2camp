@@ -14,6 +14,8 @@ export function ChargingReviewForm({
   caravans: Caravan[];
 }) {
   const [error, setError] = useState<string | null>(null);
+  const [suitable, setSuitable] = useState<"yes" | "limited" | "no">("yes");
+  const [decoupledParkingPossible, setDecoupledParkingPossible] = useState("");
   const [vehicleId, setVehicleId] = useState("");
   const [caravanId, setCaravanId] = useState("");
   const [trailerLengthM, setTrailerLengthM] = useState("");
@@ -57,18 +59,66 @@ export function ChargingReviewForm({
           Ist dieser Ladepunkt mit deinem Gespann nutzbar?
         </legend>
         <label className="flex items-center gap-2">
-          <input type="radio" name="suitable" value="yes" defaultChecked required />
+          <input
+            type="radio"
+            name="suitable"
+            value="yes"
+            checked={suitable === "yes"}
+            onChange={() => setSuitable("yes")}
+            required
+          />
           Ja
         </label>
         <label className="flex items-center gap-2">
-          <input type="radio" name="suitable" value="limited" />
+          <input
+            type="radio"
+            name="suitable"
+            value="limited"
+            checked={suitable === "limited"}
+            onChange={() => setSuitable("limited")}
+          />
           Mit Einschränkungen
         </label>
         <label className="flex items-center gap-2">
-          <input type="radio" name="suitable" value="no" />
+          <input
+            type="radio"
+            name="suitable"
+            value="no"
+            checked={suitable === "no"}
+            onChange={() => setSuitable("no")}
+          />
           Nein
         </label>
       </fieldset>
+
+      {suitable === "limited" && (
+        <fieldset className="flex flex-col gap-1 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-sm">
+          <legend className="mb-1 font-medium">
+            Kannst du den Wohnwagen abkoppeln und bequem in unmittelbarer Nähe der Ladesäule
+            parken, während das Zugfahrzeug lädt?
+          </legend>
+          <label className="flex items-center gap-2">
+            <input
+              type="radio"
+              name="decoupled_parking_possible"
+              value="yes"
+              checked={decoupledParkingPossible === "yes"}
+              onChange={() => setDecoupledParkingPossible("yes")}
+            />
+            Ja
+          </label>
+          <label className="flex items-center gap-2">
+            <input
+              type="radio"
+              name="decoupled_parking_possible"
+              value="no"
+              checked={decoupledParkingPossible === "no"}
+              onChange={() => setDecoupledParkingPossible("no")}
+            />
+            Nein
+          </label>
+        </fieldset>
+      )}
 
       <p className="text-sm font-medium">Mit welchem Gespann warst du hier?</p>
       <div className="grid grid-cols-2 gap-3">

@@ -18,6 +18,15 @@ function EditForm({
   review: ChargingReviewWithStation;
   onCancel: () => void;
 }) {
+  const [suitable, setSuitable] = useState(review.suitable);
+  const [decoupledParkingPossible, setDecoupledParkingPossible] = useState(
+    review.decoupled_parking_possible === true
+      ? "yes"
+      : review.decoupled_parking_possible === false
+        ? "no"
+        : ""
+  );
+
   return (
     <form
       action={async (formData) => {
@@ -32,7 +41,13 @@ function EditForm({
       <fieldset className="flex flex-col gap-1 text-sm">
         <legend className="mb-1">Gespann nutzbar?</legend>
         <label className="flex items-center gap-2">
-          <input type="radio" name="suitable" value="yes" defaultChecked={review.suitable === "yes"} />
+          <input
+            type="radio"
+            name="suitable"
+            value="yes"
+            checked={suitable === "yes"}
+            onChange={() => setSuitable("yes")}
+          />
           Ja
         </label>
         <label className="flex items-center gap-2">
@@ -40,15 +55,50 @@ function EditForm({
             type="radio"
             name="suitable"
             value="limited"
-            defaultChecked={review.suitable === "limited"}
+            checked={suitable === "limited"}
+            onChange={() => setSuitable("limited")}
           />
           Mit Einschränkungen
         </label>
         <label className="flex items-center gap-2">
-          <input type="radio" name="suitable" value="no" defaultChecked={review.suitable === "no"} />
+          <input
+            type="radio"
+            name="suitable"
+            value="no"
+            checked={suitable === "no"}
+            onChange={() => setSuitable("no")}
+          />
           Nein
         </label>
       </fieldset>
+
+      {suitable === "limited" && (
+        <fieldset className="flex flex-col gap-1 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-sm">
+          <legend className="mb-1">
+            Wohnwagen abkoppelbar &amp; bequem in der Nähe parkbar während des Ladens?
+          </legend>
+          <label className="flex items-center gap-2">
+            <input
+              type="radio"
+              name="decoupled_parking_possible"
+              value="yes"
+              checked={decoupledParkingPossible === "yes"}
+              onChange={() => setDecoupledParkingPossible("yes")}
+            />
+            Ja
+          </label>
+          <label className="flex items-center gap-2">
+            <input
+              type="radio"
+              name="decoupled_parking_possible"
+              value="no"
+              checked={decoupledParkingPossible === "no"}
+              onChange={() => setDecoupledParkingPossible("no")}
+            />
+            Nein
+          </label>
+        </fieldset>
+      )}
 
       <div className="grid grid-cols-2 gap-3">
         <label className="flex flex-col gap-1 text-sm">
@@ -146,6 +196,12 @@ export function ChargingReviewList({ reviews }: { reviews: ChargingReviewWithSta
                 {review.trailer_width_m && ` × ${review.trailer_width_m} m`}
                 {review.caravan_model && ` · ${review.caravan_model}`}
               </p>
+              {review.suitable === "limited" && review.decoupled_parking_possible !== null && (
+                <p className="mt-1 text-black/60 dark:text-white/60">
+                  Wohnwagen abkoppeln &amp; in der Nähe parken:{" "}
+                  {review.decoupled_parking_possible ? "möglich" : "nicht möglich"}
+                </p>
+              )}
               {review.comment && (
                 <p className="mt-1 text-black/70 dark:text-white/70">{review.comment}</p>
               )}

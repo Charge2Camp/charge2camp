@@ -157,6 +157,12 @@ export default async function ChargingStationDetailPage({
                   {review.trailer_width_m && ` × ${review.trailer_width_m} m`}
                   {review.caravan_model && ` · ${review.caravan_model}`}
                 </p>
+                {review.suitable === "limited" && review.decoupled_parking_possible !== null && (
+                  <p className="text-black/60 dark:text-white/60">
+                    Wohnwagen abkoppeln &amp; in der Nähe parken:{" "}
+                    {review.decoupled_parking_possible ? "möglich" : "nicht möglich"}
+                  </p>
+                )}
                 {review.comment && <p className="mt-1 text-black/70 dark:text-white/70">{review.comment}</p>}
               </li>
             ))}

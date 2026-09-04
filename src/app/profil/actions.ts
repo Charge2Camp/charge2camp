@@ -142,10 +142,21 @@ export async function updateChargingReview(formData: FormData) {
     throw new Error("Bitte eine gültige Antwort auswählen.");
   }
 
+  const decoupledParkingRaw = formData.get("decoupled_parking_possible");
+  const decoupledParkingPossible =
+    suitable === "limited"
+      ? decoupledParkingRaw === "yes"
+        ? true
+        : decoupledParkingRaw === "no"
+          ? false
+          : null
+      : null;
+
   const { error } = await supabase
     .from("charging_reviews")
     .update({
       suitable,
+      decoupled_parking_possible: decoupledParkingPossible,
       trailer_length_m: parseOptionalNumber(formData.get("trailer_length_m")),
       trailer_width_m: parseOptionalNumber(formData.get("trailer_width_m")),
       caravan_model:

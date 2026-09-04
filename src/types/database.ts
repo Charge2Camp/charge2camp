@@ -172,6 +172,7 @@ export interface ChargingReview {
   caravan_model: string | null;
   vehicle_id: string | null;
   caravan_id: string | null;
+  decoupled_parking_possible: boolean | null;
   photo_url: string | null;
   comment: string | null;
   created_at: string;

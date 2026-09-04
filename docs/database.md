@@ -81,6 +81,12 @@ Diese Gespannlänge ist die Grundlage für die Verteilungsanzeige "Eignung
 nach Gespannlänge" je Ladepunkt
 ([src/lib/scoring/trailer-compatibility.ts](../src/lib/scoring/trailer-compatibility.ts)).
 
+`decoupled_parking_possible` (optional, nur relevant wenn
+`suitable = 'limited'`): Zusatzfrage im Bewertungsformular, da man mit
+Gespann meist nur abgekoppelt an die Ladesäule heranfahren kann — erfasst,
+ob der Wohnwagen dabei bequem in unmittelbarer Nähe geparkt werden kann,
+während das Zugfahrzeug lädt.
+
 ### favorites
 
 Composite Key (`user_id`, `entity_type`, `entity_id`) für Campingplätze und

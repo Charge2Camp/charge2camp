@@ -13,6 +13,12 @@ function parseOptionalId(value: FormDataEntryValue | null): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
+function parseOptionalBoolean(value: FormDataEntryValue | null): boolean | null {
+  if (value === "yes") return true;
+  if (value === "no") return false;
+  return null;
+}
+
 export async function addChargingReview(formData: FormData) {
   const supabase = await createClient();
   const {
@@ -59,6 +65,8 @@ export async function addChargingReview(formData: FormData) {
     suitable,
     vehicle_id: vehicleId,
     caravan_id: caravanId,
+    decoupled_parking_possible:
+      suitable === "limited" ? parseOptionalBoolean(formData.get("decoupled_parking_possible")) : null,
     trailer_length_m: parseOptionalNumber(formData.get("trailer_length_m")),
     trailer_width_m: parseOptionalNumber(formData.get("trailer_width_m")),
     caravan_model: typeof caravanModel === "string" && caravanModel.trim() ? caravanModel.trim() : null,
