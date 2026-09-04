@@ -53,12 +53,19 @@ werden.
 | evkx.net / Herstellerangaben (VW, Škoda, Audi) | https://evkx.net | öffentlich zugängliche Spezifikationsdaten | 3 E-Auto-Varianten | 2026-09-04 |
 | go-e.com Towing Guide 2026 | https://go-e.com/en/magazine/ev-towing-trailers-guide | öffentlicher Artikel, nur Anhängelast übernommen | 2 E-Auto-Varianten (Audi A6 Avant e-tron, Polestar 3) | 2026-09-04 |
 | evspecifications.com | https://www.evspecifications.com | öffentlich zugängliche Spezifikationsdaten | Kia EV9 GT-Line AWD | 2026-09-04 |
+| Dethleffs (Preisliste Wohnwagen, offizielles Herstellerdokument) | https://www.dethleffs.de | öffentlich publizierte technische Daten, Referenzangabe der Quelle | 14 Modelle MJ2027 (Serien c'joy, c'go & c'go up, SUMMER EDITION) | 2027-02-01 |
+| Tabbert (Preisliste Wohnwagen, offizielles Herstellerdokument) | https://www.tabbert.com | öffentlich publizierte technische Daten, Referenzangabe der Quelle | 10 Modelle MJ2026-1 (Serie CAZADORA) | 2025-08-01 |
+| Knaus (technische Daten, aufbereitet von promobil.de aus Herstellerangaben) | https://www.promobil.de | öffentlich zugängliche Spezifikationsdaten | 23 Modelle (Serien SÜDWIND, SPORT) — **ohne zulässiges Gesamtgewicht**, dieses Feld bleibt bewusst leer statt geschätzt | 2026-09-05 |
 
-Alle Eintrage tragen `source` und `verification_status = 'unverified'` (bzw.
-`'verified'` bei den Hobby-Daten, da direkt vom Hersteller). Fahrzeuge ohne
-werksseitig genehmigte Anhängelast wurden bewusst nicht aufgenommen. Andere
-Wohnwagenmarken (Dethleffs, Tabbert, Knaus, Adria, Fendt, …) sind als
-**Research Required** vorgemerkt und noch nicht enthalten.
+Alle Einträge tragen `source` und `verification_status = 'unverified'` (bzw.
+`'verified'` bei Hobby/Dethleffs/Tabbert, da direkt aus offiziellen
+Herstellerdokumenten). Fahrzeuge ohne werksseitig genehmigte Anhängelast
+wurden bewusst nicht aufgenommen. Andere Wohnwagenmarken (Adria, Fendt,
+Bürstner, Weinsberg, LMC, …) sind als **Research Required** vorgemerkt und
+noch nicht enthalten. Bei Knaus war keine öffentlich zugängliche Quelle mit
+zulässigem Gesamtgewicht pro Modell auffindbar (die offizielle Preisliste war
+zum Zeitpunkt der Recherche nicht erreichbar) — das Feld bleibt für diese 23
+Modelle `null`, statt einen plausiblen, aber ungeprüften Wert einzutragen.
 
 ## Ausdrücklich NICHT als Quelle verwendet (§34)
 
@@ -71,7 +78,7 @@ Die Seed-Daten in [supabase/seeds/01_demo_data.sql](../supabase/seeds/01_demo_da
 sind frei erfundene Testdaten (`source = 'demo'`, `[DEMO]`-Präfix im Namen)
 für Deutschland, Kroatien und Italien — ausschließlich zur lokalen
 Entwicklung und Demonstration der Funktionen, nicht produktiv nutzbar. Die
-Fahrzeug-/Wohnwagen-Referenzkataloge in
-[supabase/seeds/02_caravan_models.sql](../supabase/seeds/02_caravan_models.sql)
-und [supabase/seeds/03_vehicle_models.sql](../supabase/seeds/03_vehicle_models.sql)
-sind dagegen recherchierte Realdaten (siehe Tabelle oben), keine Demo-Daten.
+Fahrzeug-/Wohnwagen-Referenzkataloge in `supabase/seeds/02_caravan_models.sql`,
+`supabase/seeds/03_vehicle_models.sql`, `supabase/seeds/04_caravan_models_dethleffs_tabbert.sql`
+und `supabase/seeds/05_caravan_models_knaus.sql` sind dagegen recherchierte
+Realdaten (siehe Tabelle oben), keine Demo-Daten.

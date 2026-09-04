@@ -15,15 +15,32 @@ const EMPTY_FORM = {
 };
 
 export function VehicleForm({ models }: { models: VehicleModel[] }) {
+  const [manufacturer, setManufacturer] = useState("");
   const [selectedId, setSelectedId] = useState("");
   const [form, setForm] = useState(EMPTY_FORM);
 
+  const manufacturers = useMemo(
+    () => Array.from(new Set(models.map((m) => m.manufacturer))).sort(),
+    [models]
+  );
+
+  const modelsForManufacturer = useMemo(
+    () => models.filter((m) => m.manufacturer === manufacturer),
+    [models, manufacturer]
+  );
+
   const byId = useMemo(() => new Map(models.map((m) => [m.id, m])), [models]);
+
+  function handleManufacturerSelect(value: string) {
+    setManufacturer(value);
+    setSelectedId("");
+    setForm({ ...EMPTY_FORM, manufacturer: value });
+  }
 
   function handleModelSelect(id: string) {
     setSelectedId(id);
     if (!id) {
-      setForm(EMPTY_FORM);
+      setForm({ ...EMPTY_FORM, manufacturer });
       return;
     }
     const m = byId.get(id);
@@ -47,26 +64,46 @@ export function VehicleForm({ models }: { models: VehicleModel[] }) {
     <form
       action={async (formData) => {
         await addVehicle(formData);
+        setManufacturer("");
         setSelectedId("");
         setForm(EMPTY_FORM);
       }}
       className="flex flex-col gap-4"
     >
-      <label className="flex flex-col gap-1 text-sm">
-        Modell auswählen (füllt die Felder unten automatisch aus)
-        <select
-          value={selectedId}
-          onChange={(e) => handleModelSelect(e.target.value)}
-          className="rounded-md border border-black/15 px-3 py-2 dark:border-white/15 dark:bg-transparent"
-        >
-          <option value="">Manuell eingeben…</option>
-          {models.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.manufacturer} {m.model} {m.variant}
-            </option>
-          ))}
-        </select>
-      </label>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <label className="flex flex-col gap-1 text-sm">
+          Hersteller auswählen
+          <select
+            value={manufacturer}
+            onChange={(e) => handleManufacturerSelect(e.target.value)}
+            className="rounded-md border border-black/15 px-3 py-2 dark:border-white/15 dark:bg-transparent"
+          >
+            <option value="">Manuell eingeben…</option>
+            {manufacturers.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="flex flex-col gap-1 text-sm">
+          Modell auswählen (füllt die Felder unten automatisch aus)
+          <select
+            value={selectedId}
+            onChange={(e) => handleModelSelect(e.target.value)}
+            disabled={!manufacturer}
+            className="rounded-md border border-black/15 px-3 py-2 disabled:opacity-50 dark:border-white/15 dark:bg-transparent"
+          >
+            <option value="">Manuell eingeben…</option>
+            {modelsForManufacturer.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.model} {m.variant}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
       <input type="hidden" name="model_reference_id" value={selectedId} />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
