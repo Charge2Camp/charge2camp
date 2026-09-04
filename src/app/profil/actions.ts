@@ -87,3 +87,90 @@ export async function deleteCaravan(formData: FormData) {
   if (error) throw new Error(error.message);
   revalidatePath("/profil");
 }
+
+export async function updateCampsiteReview(formData: FormData) {
+  const { supabase, userId } = await requireUserId();
+  const id = requireString(formData.get("id"));
+  const campsiteId = formData.get("campsite_id");
+  const rating = Number(formData.get("rating"));
+  const comment = formData.get("comment");
+
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+    throw new Error("Bewertung muss zwischen 1 und 5 liegen.");
+  }
+
+  const { error } = await supabase
+    .from("campsite_reviews")
+    .update({
+      rating,
+      comment: typeof comment === "string" && comment.trim() ? comment.trim() : null,
+    })
+    .eq("id", id)
+    .eq("user_id", userId);
+
+  if (error) throw new Error(error.message);
+  revalidatePath("/profil");
+  if (typeof campsiteId === "string" && campsiteId) revalidatePath(`/campingplaetze/${campsiteId}`);
+}
+
+export async function deleteCampsiteReview(formData: FormData) {
+  const { supabase, userId } = await requireUserId();
+  const id = requireString(formData.get("id"));
+  const campsiteId = formData.get("campsite_id");
+
+  const { error } = await supabase
+    .from("campsite_reviews")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", userId);
+
+  if (error) throw new Error(error.message);
+  revalidatePath("/profil");
+  if (typeof campsiteId === "string" && campsiteId) revalidatePath(`/campingplaetze/${campsiteId}`);
+}
+
+export async function updateChargingReview(formData: FormData) {
+  const { supabase, userId } = await requireUserId();
+  const id = requireString(formData.get("id"));
+  const stationId = formData.get("charging_station_id");
+  const suitable = formData.get("suitable");
+  const comment = formData.get("comment");
+  const caravanModel = formData.get("caravan_model");
+
+  if (suitable !== "yes" && suitable !== "no" && suitable !== "limited") {
+    throw new Error("Bitte eine gültige Antwort auswählen.");
+  }
+
+  const { error } = await supabase
+    .from("charging_reviews")
+    .update({
+      suitable,
+      trailer_length_m: parseOptionalNumber(formData.get("trailer_length_m")),
+      trailer_width_m: parseOptionalNumber(formData.get("trailer_width_m")),
+      caravan_model:
+        typeof caravanModel === "string" && caravanModel.trim() ? caravanModel.trim() : null,
+      comment: typeof comment === "string" && comment.trim() ? comment.trim() : null,
+    })
+    .eq("id", id)
+    .eq("user_id", userId);
+
+  if (error) throw new Error(error.message);
+  revalidatePath("/profil");
+  if (typeof stationId === "string" && stationId) revalidatePath(`/ladepunkte/${stationId}`);
+}
+
+export async function deleteChargingReview(formData: FormData) {
+  const { supabase, userId } = await requireUserId();
+  const id = requireString(formData.get("id"));
+  const stationId = formData.get("charging_station_id");
+
+  const { error } = await supabase
+    .from("charging_reviews")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", userId);
+
+  if (error) throw new Error(error.message);
+  revalidatePath("/profil");
+  if (typeof stationId === "string" && stationId) revalidatePath(`/ladepunkte/${stationId}`);
+}

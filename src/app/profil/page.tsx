@@ -5,6 +5,14 @@ import { VehicleForm } from "@/components/profile/vehicle-form";
 import { VehicleList } from "@/components/profile/vehicle-list";
 import { CaravanForm } from "@/components/profile/caravan-form";
 import { CaravanList } from "@/components/profile/caravan-list";
+import {
+  CampsiteReviewList,
+  type CampsiteReviewWithCampsite,
+} from "@/components/profile/campsite-review-list";
+import {
+  ChargingReviewList,
+  type ChargingReviewWithStation,
+} from "@/components/profile/charging-review-list";
 
 export default async function ProfilePage() {
   const supabase = await createClient();
@@ -21,6 +29,8 @@ export default async function ProfilePage() {
     { data: caravans },
     { data: vehicleModels },
     { data: caravanModels },
+    { data: campsiteReviews },
+    { data: chargingReviews },
   ] = await Promise.all([
     supabase
       .from("vehicles")
@@ -44,6 +54,16 @@ export default async function ProfilePage() {
       .order("manufacturer")
       .order("model")
       .order("series"),
+    supabase
+      .from("campsite_reviews")
+      .select("*, campsites(id, name)")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("charging_reviews")
+      .select("*, charging_stations(id, name, provider)")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false }),
   ]);
 
   return (
@@ -68,6 +88,24 @@ export default async function ProfilePage() {
         </div>
         <div className="mt-6 rounded-lg border border-black/10 p-4 dark:border-white/10">
           <CaravanForm models={(caravanModels as CaravanModel[]) ?? []} />
+        </div>
+      </section>
+
+      <section className="mt-12">
+        <h2 className="text-lg font-semibold">Meine Campingplatz-Bewertungen</h2>
+        <div className="mt-4">
+          <CampsiteReviewList
+            reviews={(campsiteReviews as CampsiteReviewWithCampsite[]) ?? []}
+          />
+        </div>
+      </section>
+
+      <section className="mt-12">
+        <h2 className="text-lg font-semibold">Meine Ladepunkt-Bewertungen</h2>
+        <div className="mt-4">
+          <ChargingReviewList
+            reviews={(chargingReviews as ChargingReviewWithStation[]) ?? []}
+          />
         </div>
       </section>
     </div>
