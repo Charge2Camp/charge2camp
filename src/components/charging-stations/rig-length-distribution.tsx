@@ -27,12 +27,11 @@ export function RigLengthDistributionChart({
         (Zugfahrzeug + Wohnwagen) und wie tauglich der Ladepunkt in dieser Klasse eingeschätzt wird.
       </p>
 
-      {distribution.buckets
-        .filter((b) => b.count > 0)
-        .map((bucket) => (
-          <div key={bucket.label} className="flex items-center gap-3 text-sm">
-            <span className="w-16 shrink-0 text-black/70 dark:text-white/70">{bucket.label}</span>
-            <div className="h-4 flex-1 overflow-hidden rounded-full bg-black/5 dark:bg-white/10">
+      {distribution.buckets.map((bucket) => (
+        <div key={bucket.label} className="flex items-center gap-3 text-sm">
+          <span className="w-16 shrink-0 text-black/70 dark:text-white/70">{bucket.label}</span>
+          <div className="h-4 flex-1 overflow-hidden rounded-full bg-black/5 dark:bg-white/10">
+            {bucket.count > 0 && (
               <div
                 className="h-full rounded-full"
                 style={{
@@ -40,17 +39,20 @@ export function RigLengthDistributionChart({
                   backgroundColor: suitabilityColor(bucket.positiveRatio),
                 }}
               />
-            </div>
-            <span className="w-10 shrink-0 text-right text-black/50 dark:text-white/50">
-              {bucket.sharePercent}%
-            </span>
-            <span className="w-24 shrink-0 text-right text-xs text-black/50 dark:text-white/50">
-              {bucket.reliable && bucket.positiveRatio !== null
+            )}
+          </div>
+          <span className="w-10 shrink-0 text-right text-black/50 dark:text-white/50">
+            {bucket.sharePercent}%
+          </span>
+          <span className="w-24 shrink-0 text-right text-xs text-black/50 dark:text-white/50">
+            {bucket.count === 0
+              ? "keine Bewertungen"
+              : bucket.reliable && bucket.positiveRatio !== null
                 ? `${Math.round(bucket.positiveRatio * 100)}% positiv`
                 : `${bucket.count} Bewertung${bucket.count === 1 ? "" : "en"}`}
-            </span>
-          </div>
-        ))}
+          </span>
+        </div>
+      ))}
 
       {distribution.reviewsWithoutLength > 0 && (
         <p className="text-xs text-black/40 dark:text-white/40">
