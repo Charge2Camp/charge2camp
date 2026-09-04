@@ -37,6 +37,29 @@ markiert.
 | HERE Traffic API | https://developer.here.com | kommerziell | Free Tier + kostenpflichtig | Research Required |
 | TomTom Traffic API | https://developer.tomtom.com | kommerziell | Free Tier + kostenpflichtig | Research Required |
 
+## Fahrzeug-/Wohnwagen-Referenzkataloge (Autofill im Profil, §7)
+
+Kuratierte Starterdatensätze für die Modellauswahl mit Autofill in
+`vehicle_models` / `caravan_models`. **Keine vollständige Marktabdeckung** —
+bewusst begrenzter, aber recherchierter Kernbestand statt erfundener
+Platzhalterwerte (§2, §39). Erweiterbar über den in §17 vorgesehenen
+Importmechanismus (CSV/JSON), sobald weitere Marken/Modelle aufgenommen
+werden.
+
+| Anbieter | URL | Lizenz/Nutzung | Umfang | Stand |
+|---|---|---|---|---|
+| Hobby (Preisliste Wohnwagen 2026, offizielles Herstellerdokument) | https://www.hobby-caravan.de | öffentlich publizierte technische Daten, Referenzangabe der Quelle | alle 37 Modelle Modelljahr 2026 (Serien ONTOUR, DE LUXE, EXCELLENT, EXCELLENT EDITION, PRESTIGE, MAXIA) | 2026-05-06 |
+| EV Database (ev-database.org) | https://ev-database.org | öffentlich zugängliche Vergleichsdaten, Referenzangabe der Quelle | 9 E-Auto-Varianten mit genehmigter Anhängelast | 2026-09-04 |
+| evkx.net / Herstellerangaben (VW, Škoda, Audi) | https://evkx.net | öffentlich zugängliche Spezifikationsdaten | 3 E-Auto-Varianten | 2026-09-04 |
+| go-e.com Towing Guide 2026 | https://go-e.com/en/magazine/ev-towing-trailers-guide | öffentlicher Artikel, nur Anhängelast übernommen | 2 E-Auto-Varianten (Audi A6 Avant e-tron, Polestar 3) | 2026-09-04 |
+| evspecifications.com | https://www.evspecifications.com | öffentlich zugängliche Spezifikationsdaten | Kia EV9 GT-Line AWD | 2026-09-04 |
+
+Alle Eintrage tragen `source` und `verification_status = 'unverified'` (bzw.
+`'verified'` bei den Hobby-Daten, da direkt vom Hersteller). Fahrzeuge ohne
+werksseitig genehmigte Anhängelast wurden bewusst nicht aufgenommen. Andere
+Wohnwagenmarken (Dethleffs, Tabbert, Knaus, Adria, Fendt, …) sind als
+**Research Required** vorgemerkt und noch nicht enthalten.
+
 ## Ausdrücklich NICHT als Quelle verwendet (§34)
 
 Google Maps, PiNCAMP, camping.info sowie andere kommerzielle
@@ -44,7 +67,11 @@ Campingportale werden nicht gescrapt oder ungeprüft übernommen.
 
 ## Demo-/Testdaten
 
-Die Seed-Daten in [supabase/seed.sql](../supabase/seed.sql) sind
-frei erfundene Testdaten (`source = 'demo'`, `[DEMO]`-Präfix im Namen) für
-Deutschland, Kroatien und Italien — ausschließlich zur lokalen Entwicklung
-und Demonstration der Funktionen, nicht produktiv nutzbar.
+Die Seed-Daten in [supabase/seeds/01_demo_data.sql](../supabase/seeds/01_demo_data.sql)
+sind frei erfundene Testdaten (`source = 'demo'`, `[DEMO]`-Präfix im Namen)
+für Deutschland, Kroatien und Italien — ausschließlich zur lokalen
+Entwicklung und Demonstration der Funktionen, nicht produktiv nutzbar. Die
+Fahrzeug-/Wohnwagen-Referenzkataloge in
+[supabase/seeds/02_caravan_models.sql](../supabase/seeds/02_caravan_models.sql)
+und [supabase/seeds/03_vehicle_models.sql](../supabase/seeds/03_vehicle_models.sql)
+sind dagegen recherchierte Realdaten (siehe Tabelle oben), keine Demo-Daten.

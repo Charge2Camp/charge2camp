@@ -22,6 +22,9 @@ export function VehicleList({ vehicles }: { vehicles: Vehicle[] }) {
               {vehicle.consumption_kwh_per_100km ? ` · ${vehicle.consumption_kwh_per_100km} kWh/100km` : ""}
               {vehicle.charging_power_kw ? ` · ${vehicle.charging_power_kw} kW Ladeleistung` : ""}
               {vehicle.range_km ? ` · ${vehicle.range_km} km Reichweite` : ""}
+              {vehicle.max_towing_weight_braked_kg
+                ? ` · ${vehicle.max_towing_weight_braked_kg} kg Anhängelast`
+                : ""}
             </p>
           </div>
           <form action={deleteVehicle}>

@@ -29,7 +29,8 @@ npm run dev
 
 `npx supabase start` startet Postgres, Auth und die weiteren Supabase-Dienste
 lokal über Docker und wendet die Migrationen aus `supabase/migrations/`
-sowie die Demo-Seed-Daten aus `supabase/seed.sql` an. `.env.local` ist
+sowie die Seed-Daten aus `supabase/seeds/*.sql` an (Demo-Campingplätze/
+-Ladepunkte sowie die Fahrzeug-/Wohnwagen-Referenzkataloge). `.env.local` ist
 bereits mit den Standard-Werten für die lokale Instanz vorbelegt.
 
 Die App läuft danach unter http://localhost:3000, die lokale Supabase

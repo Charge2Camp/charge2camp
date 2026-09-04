@@ -22,13 +22,28 @@ kann): [src/types/database.ts](../src/types/database.ts).
 
 id, user_id, manufacturer, model, battery_capacity_kwh,
 consumption_kwh_per_100km (optional), charging_power_kw (optional),
-range_km (optional), created_at.
+range_km (optional), max_towing_weight_braked_kg (optional),
+model_reference_id (optional, verweist auf `vehicle_models`), created_at.
 
 ### caravans (Wohnwagen, §7)
 
 id, user_id, manufacturer, model, length_m, width_m, height_m, weight_kg,
 gross_vehicle_weight_kg (optional), actual_travel_weight_kg (optional),
-created_at.
+model_reference_id (optional, verweist auf `caravan_models`), created_at.
+
+### vehicle_models / caravan_models (Referenzkataloge fuer Autofill, §7)
+
+Oeffentlich lesbare Kataloge bekannter Fahrzeug-/Wohnwagenmodelle, aus denen
+das Profilformular Hersteller/Modell/Abmessungen/Batteriedaten vorausfuellt
+(`src/components/profile/vehicle-form.tsx`,
+`src/components/profile/caravan-form.tsx`). `vehicle_models` enthaelt nur
+Modelle mit werksseitig genehmigter Anhaengelast
+(`max_towing_weight_braked_kg`). Beide Tabellen tragen `source` und
+`verification_status` wie `campsites`/`charging_stations` (§38) — siehe
+[data-sources.md](data-sources.md) fuer die Herkunft jedes Datensatzes.
+Kein Anspruch auf vollstaendige Marktabdeckung; erweiterbar ueber den in §17
+vorgesehenen Importmechanismus. Nutzer koennen die vorausgefuellten Werte
+jederzeit manuell ueberschreiben, bevor sie gespeichert werden.
 
 ### campsites (§8)
 

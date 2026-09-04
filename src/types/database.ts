@@ -30,6 +30,8 @@ export interface Vehicle {
   consumption_kwh_per_100km: number | null;
   charging_power_kw: number | null;
   range_km: number | null;
+  max_towing_weight_braked_kg: number | null;
+  model_reference_id: string | null;
   created_at: string;
 }
 
@@ -44,6 +46,39 @@ export interface Caravan {
   weight_kg: number;
   gross_vehicle_weight_kg: number | null;
   actual_travel_weight_kg: number | null;
+  model_reference_id: string | null;
+  created_at: string;
+}
+
+export interface VehicleModel {
+  id: string;
+  manufacturer: string;
+  model: string;
+  variant: string;
+  battery_capacity_kwh: number | null;
+  consumption_kwh_per_100km: number | null;
+  charging_power_kw: number | null;
+  range_km: number | null;
+  max_towing_weight_braked_kg: number | null;
+  source: string;
+  verification_status: VerificationStatus;
+  last_verified_at: string | null;
+  created_at: string;
+}
+
+export interface CaravanModel {
+  id: string;
+  manufacturer: string;
+  model: string;
+  series: string | null;
+  length_m: number;
+  width_m: number;
+  height_m: number;
+  weight_kg: number;
+  gross_vehicle_weight_kg: number | null;
+  source: string;
+  verification_status: VerificationStatus;
+  last_verified_at: string | null;
   created_at: string;
 }
 

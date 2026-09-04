@@ -42,6 +42,8 @@ export async function addVehicle(formData: FormData) {
     consumption_kwh_per_100km: parseOptionalNumber(formData.get("consumption_kwh_per_100km")),
     charging_power_kw: parseOptionalNumber(formData.get("charging_power_kw")),
     range_km: parseOptionalNumber(formData.get("range_km")),
+    max_towing_weight_braked_kg: parseOptionalNumber(formData.get("max_towing_weight_braked_kg")),
+    model_reference_id: formData.get("model_reference_id") || null,
   });
 
   if (error) throw new Error(error.message);
@@ -70,6 +72,7 @@ export async function addCaravan(formData: FormData) {
     weight_kg: requireNumber(formData.get("weight_kg")),
     gross_vehicle_weight_kg: parseOptionalNumber(formData.get("gross_vehicle_weight_kg")),
     actual_travel_weight_kg: parseOptionalNumber(formData.get("actual_travel_weight_kg")),
+    model_reference_id: formData.get("model_reference_id") || null,
   });
 
   if (error) throw new Error(error.message);

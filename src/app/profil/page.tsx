@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type { Caravan, Vehicle } from "@/types/database";
+import type { Caravan, CaravanModel, Vehicle, VehicleModel } from "@/types/database";
 import { VehicleForm } from "@/components/profile/vehicle-form";
 import { VehicleList } from "@/components/profile/vehicle-list";
 import { CaravanForm } from "@/components/profile/caravan-form";
@@ -16,7 +16,12 @@ export default async function ProfilePage() {
     redirect("/login");
   }
 
-  const [{ data: vehicles }, { data: caravans }] = await Promise.all([
+  const [
+    { data: vehicles },
+    { data: caravans },
+    { data: vehicleModels },
+    { data: caravanModels },
+  ] = await Promise.all([
     supabase
       .from("vehicles")
       .select("*")
@@ -27,6 +32,18 @@ export default async function ProfilePage() {
       .select("*")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false }),
+    supabase
+      .from("vehicle_models")
+      .select("*")
+      .order("manufacturer")
+      .order("model")
+      .order("variant"),
+    supabase
+      .from("caravan_models")
+      .select("*")
+      .order("manufacturer")
+      .order("model")
+      .order("series"),
   ]);
 
   return (
@@ -40,7 +57,7 @@ export default async function ProfilePage() {
           <VehicleList vehicles={(vehicles as Vehicle[]) ?? []} />
         </div>
         <div className="mt-6 rounded-lg border border-black/10 p-4 dark:border-white/10">
-          <VehicleForm />
+          <VehicleForm models={(vehicleModels as VehicleModel[]) ?? []} />
         </div>
       </section>
 
@@ -50,7 +67,7 @@ export default async function ProfilePage() {
           <CaravanList caravans={(caravans as Caravan[]) ?? []} />
         </div>
         <div className="mt-6 rounded-lg border border-black/10 p-4 dark:border-white/10">
-          <CaravanForm />
+          <CaravanForm models={(caravanModels as CaravanModel[]) ?? []} />
         </div>
       </section>
     </div>
