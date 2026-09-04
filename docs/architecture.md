@@ -82,6 +82,20 @@ entsteht eine differenzierte Aussage statt einer einzelnen Quote. Ist der
 Nutzer angemeldet und hat einen Wohnwagen hinterlegt, wird zusätzlich eine
 persönliche Einschätzung ("Für dein Gespann: Sehr gut geeignet") angezeigt.
 
+**Gespannlänge aus Profildaten (§18-Erweiterung):** Beim Bewerten eines
+Ladepunkts wählt der Nutzer optional sein hinterlegtes Fahrzeug + Wohnwagen
+aus dem Profil statt Freitext-Maße einzugeben. Die Gespannlänge wird dann
+automatisch als Fahrzeuglänge + Wohnwagenlänge berechnet (dafür trägt
+`vehicles` jetzt auch `length_m`). Auf der Ladepunkt-Detailseite zeigt eine
+Verteilungsgrafik ("Eignung nach Gespannlänge") den Anteil der Bewertungen
+je Längen-Klasse (bis 9 m / 9–11 m / 11–13 m / 13–15 m / über 15 m) sowie
+die Eignung (% positiv) innerhalb jeder Klasse — z. B. "33 % der
+Bewertungen: 11–13 m, davon 75 % positiv". So wird sichtbar, wie
+gespanntauglich ein Ladepunkt über verschiedene Gespanngrößen hinweg
+tatsächlich ist, statt nur einer einzelnen Gesamtquote. Klassengrenzen
+zentral in `RIG_LENGTH_BUCKETS` (leicht anpassbar, z. B. auf datengetriebene
+Quantile später).
+
 ## Phasenplan
 
 1. **Grundsystem** — Next.js, TypeScript, Tailwind, Supabase, Auth, DB,

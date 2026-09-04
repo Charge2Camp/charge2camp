@@ -109,3 +109,70 @@ export function assessPersonalCompatibility(
 
   return ratio >= 0.7 ? "sehr_gut" : "eingeschraenkt";
 }
+
+/**
+ * Verteilung der Bewertungen nach Gespannlänge (§18-Erweiterung: "welches
+ * Auto/welcher Wohnwagen"). Zeigt je Längen-Klasse den Anteil der
+ * Bewertungen und wie tauglich der Ladepunkt in dieser Klasse eingeschätzt
+ * wird -- z. B. "30 % der Bewertungen: 9-11 m, davon 90 % positiv".
+ * Klassengrenzen hier zentral, spaeter ggf. datengetrieben anpassbar.
+ */
+export interface RigLengthBucket {
+  label: string;
+  minM: number;
+  maxM: number;
+}
+
+export const RIG_LENGTH_BUCKETS: RigLengthBucket[] = [
+  { label: "bis 9 m", minM: 0, maxM: 9 },
+  { label: "9–11 m", minM: 9, maxM: 11 },
+  { label: "11–13 m", minM: 11, maxM: 13 },
+  { label: "13–15 m", minM: 13, maxM: 15 },
+  { label: "über 15 m", minM: 15, maxM: Infinity },
+];
+
+export interface RigLengthBucketResult extends RigLengthBucket {
+  count: number;
+  sharePercent: number;
+  positiveRatio: number | null;
+  reliable: boolean; // genug Bewertungen fuer eine belastbare Aussage
+}
+
+export interface RigLengthDistribution {
+  reviewsWithLength: number;
+  reviewsWithoutLength: number;
+  buckets: RigLengthBucketResult[];
+}
+
+/**
+ * Ordnet alle Bewertungen mit bekannter Gespannlänge (Zugfahrzeug +
+ * Wohnwagen, `trailer_length_m`) einer Längen-Klasse zu.
+ */
+export function bucketReviewsByRigLength(reviews: ChargingReview[]): RigLengthDistribution {
+  const withLength = reviews.filter(
+    (r): r is ChargingReview & { trailer_length_m: number } => r.trailer_length_m !== null
+  );
+  const total = withLength.length;
+
+  const buckets = RIG_LENGTH_BUCKETS.map((bucket, index) => {
+    const inBucket = withLength.filter((r) => {
+      if (bucket.maxM === Infinity) return r.trailer_length_m > bucket.minM;
+      if (index === 0) return r.trailer_length_m <= bucket.maxM;
+      return r.trailer_length_m > bucket.minM && r.trailer_length_m <= bucket.maxM;
+    });
+
+    return {
+      ...bucket,
+      count: inBucket.length,
+      sharePercent: total > 0 ? Math.round((inBucket.length / total) * 100) : 0,
+      positiveRatio: positiveRatio(inBucket),
+      reliable: inBucket.length >= MIN_REVIEWS_PER_BUCKET,
+    };
+  });
+
+  return {
+    reviewsWithLength: total,
+    reviewsWithoutLength: reviews.length - total,
+    buckets,
+  };
+}

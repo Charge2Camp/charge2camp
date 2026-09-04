@@ -12,6 +12,7 @@ const EMPTY_FORM = {
   charging_power_kw: "",
   range_km: "",
   max_towing_weight_braked_kg: "",
+  length_m: "",
 };
 
 export function VehicleForm({ models }: { models: VehicleModel[] }) {
@@ -53,6 +54,7 @@ export function VehicleForm({ models }: { models: VehicleModel[] }) {
       charging_power_kw: m.charging_power_kw?.toString() ?? "",
       range_km: m.range_km?.toString() ?? "",
       max_towing_weight_braked_kg: m.max_towing_weight_braked_kg?.toString() ?? "",
+      length_m: m.length_m?.toString() ?? "",
     });
   }
 
@@ -191,6 +193,19 @@ export function VehicleForm({ models }: { models: VehicleModel[] }) {
             min="0"
             value={form.max_towing_weight_braked_kg}
             onChange={(e) => updateField("max_towing_weight_braked_kg", e.target.value)}
+            className="rounded-md border border-black/15 px-3 py-2 dark:border-white/15 dark:bg-transparent"
+          />
+        </label>
+
+        <label className="flex flex-col gap-1 text-sm">
+          Fahrzeuglänge (m)
+          <input
+            name="length_m"
+            type="number"
+            step="0.01"
+            min="0"
+            value={form.length_m}
+            onChange={(e) => updateField("length_m", e.target.value)}
             className="rounded-md border border-black/15 px-3 py-2 dark:border-white/15 dark:bg-transparent"
           />
         </label>

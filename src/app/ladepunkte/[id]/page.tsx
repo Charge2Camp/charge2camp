@@ -1,12 +1,14 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import type { Caravan, ChargingReview, ChargingStation } from "@/types/database";
+import type { Caravan, ChargingReview, ChargingStation, Vehicle } from "@/types/database";
 import { MapView } from "@/components/map/map-view";
 import { ChargingReviewForm } from "@/components/charging-stations/review-form";
+import { RigLengthDistributionChart } from "@/components/charging-stations/rig-length-distribution";
 import { TRAILER_SUITABILITY_COLORS, TRAILER_SUITABILITY_LABELS } from "@/lib/trailer-suitability";
 import {
   assessPersonalCompatibility,
+  bucketReviewsByRigLength,
   PERSONAL_COMPATIBILITY_LABELS,
   summarizeCommunitySuitability,
 } from "@/lib/scoring/trailer-compatibility";
@@ -35,19 +37,28 @@ export default async function ChargingStationDetailPage({
   const s = station as ChargingStation;
   const allReviews = (reviews as ChargingReview[]) ?? [];
 
-  let ownCaravan: Caravan | null = null;
+  let ownCaravans: Caravan[] = [];
+  let ownVehicles: Vehicle[] = [];
   if (user) {
-    const { data } = await supabase
-      .from("caravans")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    ownCaravan = data as Caravan | null;
+    const [{ data: caravanData }, { data: vehicleData }] = await Promise.all([
+      supabase
+        .from("caravans")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("vehicles")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false }),
+    ]);
+    ownCaravans = (caravanData as Caravan[]) ?? [];
+    ownVehicles = (vehicleData as Vehicle[]) ?? [];
   }
+  const ownCaravan = ownCaravans[0] ?? null;
 
   const communitySummary = summarizeCommunitySuitability(allReviews);
+  const rigLengthDistribution = bucketReviewsByRigLength(allReviews);
   const personalCompatibility = user
     ? assessPersonalCompatibility(communitySummary, ownCaravan?.length_m ?? null)
     : "keine_daten";
@@ -121,6 +132,13 @@ export default async function ChargingStationDetailPage({
       </div>
 
       <section className="mt-8">
+        <h2 className="font-semibold">Eignung nach Gespannlänge</h2>
+        <div className="mt-2">
+          <RigLengthDistributionChart distribution={rigLengthDistribution} />
+        </div>
+      </section>
+
+      <section className="mt-8">
         <h2 className="font-semibold">Bewertungen</h2>
         {allReviews.length === 0 ? (
           <p className="mt-2 text-sm text-black/50 dark:text-white/50">
@@ -158,12 +176,7 @@ export default async function ChargingStationDetailPage({
               Du hast diesen Ladepunkt bereits bewertet ({SUITABLE_LABELS[ownReview.suitable]}).
             </p>
           ) : (
-            <ChargingReviewForm
-              stationId={s.id}
-              defaultTrailerLengthM={ownCaravan?.length_m}
-              defaultTrailerWidthM={ownCaravan?.width_m}
-              defaultCaravanModel={ownCaravan ? `${ownCaravan.manufacturer} ${ownCaravan.model}` : undefined}
-            />
+            <ChargingReviewForm stationId={s.id} vehicles={ownVehicles} caravans={ownCaravans} />
           )}
         </div>
       </section>

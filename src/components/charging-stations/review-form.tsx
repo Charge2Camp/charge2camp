@@ -1,20 +1,40 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { addChargingReview } from "@/app/ladepunkte/[id]/actions";
+import type { Caravan, Vehicle } from "@/types/database";
 
 export function ChargingReviewForm({
   stationId,
-  defaultTrailerLengthM,
-  defaultTrailerWidthM,
-  defaultCaravanModel,
+  vehicles,
+  caravans,
 }: {
   stationId: string;
-  defaultTrailerLengthM?: number;
-  defaultTrailerWidthM?: number;
-  defaultCaravanModel?: string;
+  vehicles: Vehicle[];
+  caravans: Caravan[];
 }) {
   const [error, setError] = useState<string | null>(null);
+  const [vehicleId, setVehicleId] = useState("");
+  const [caravanId, setCaravanId] = useState("");
+  const [trailerLengthM, setTrailerLengthM] = useState("");
+  const [trailerWidthM, setTrailerWidthM] = useState("");
+  const [caravanModel, setCaravanModel] = useState("");
+
+  const vehicleById = useMemo(() => new Map(vehicles.map((v) => [v.id, v])), [vehicles]);
+  const caravanById = useMemo(() => new Map(caravans.map((c) => [c.id, c])), [caravans]);
+
+  function recompute(nextVehicleId: string, nextCaravanId: string) {
+    const vehicle = vehicleById.get(nextVehicleId);
+    const caravan = caravanById.get(nextCaravanId);
+
+    if (vehicle?.length_m != null && caravan?.length_m != null) {
+      setTrailerLengthM((vehicle.length_m + caravan.length_m).toFixed(2));
+    } else if (caravan?.length_m != null) {
+      setTrailerLengthM(caravan.length_m.toString());
+    }
+    if (caravan?.width_m != null) setTrailerWidthM(caravan.width_m.toString());
+    if (caravan) setCaravanModel(`${caravan.manufacturer} ${caravan.model}`);
+  }
 
   return (
     <form
@@ -29,6 +49,8 @@ export function ChargingReviewForm({
       className="flex flex-col gap-3 rounded-lg border border-black/10 p-4 dark:border-white/10"
     >
       <input type="hidden" name="charging_station_id" value={stationId} />
+      <input type="hidden" name="vehicle_id" value={vehicleId} />
+      <input type="hidden" name="caravan_id" value={caravanId} />
 
       <fieldset className="flex flex-col gap-1 text-sm">
         <legend className="mb-1 font-medium">
@@ -48,15 +70,57 @@ export function ChargingReviewForm({
         </label>
       </fieldset>
 
+      <p className="text-sm font-medium">Mit welchem Gespann warst du hier?</p>
       <div className="grid grid-cols-2 gap-3">
         <label className="flex flex-col gap-1 text-sm">
-          Gespannlänge (m)
+          Auto (aus deinem Profil)
+          <select
+            value={vehicleId}
+            onChange={(e) => {
+              setVehicleId(e.target.value);
+              recompute(e.target.value, caravanId);
+            }}
+            className="rounded-md border border-black/15 px-3 py-2 dark:border-white/15 dark:bg-transparent"
+          >
+            <option value="">Sonstiges / manuell</option>
+            {vehicles.map((v) => (
+              <option key={v.id} value={v.id}>
+                {v.manufacturer} {v.model}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="flex flex-col gap-1 text-sm">
+          Wohnwagen (aus deinem Profil)
+          <select
+            value={caravanId}
+            onChange={(e) => {
+              setCaravanId(e.target.value);
+              recompute(vehicleId, e.target.value);
+            }}
+            className="rounded-md border border-black/15 px-3 py-2 dark:border-white/15 dark:bg-transparent"
+          >
+            <option value="">Sonstiges / manuell</option>
+            {caravans.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.manufacturer} {c.model}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <label className="flex flex-col gap-1 text-sm">
+          Gespannlänge gesamt (m)
           <input
             name="trailer_length_m"
             type="number"
             step="0.01"
             min="0"
-            defaultValue={defaultTrailerLengthM}
+            value={trailerLengthM}
+            onChange={(e) => setTrailerLengthM(e.target.value)}
             className="rounded-md border border-black/15 px-3 py-2 dark:border-white/15 dark:bg-transparent"
           />
         </label>
@@ -67,17 +131,23 @@ export function ChargingReviewForm({
             type="number"
             step="0.01"
             min="0"
-            defaultValue={defaultTrailerWidthM}
+            value={trailerWidthM}
+            onChange={(e) => setTrailerWidthM(e.target.value)}
             className="rounded-md border border-black/15 px-3 py-2 dark:border-white/15 dark:bg-transparent"
           />
         </label>
       </div>
+      <p className="-mt-2 text-xs text-black/40 dark:text-white/40">
+        Bei Auswahl von Auto + Wohnwagen automatisch berechnet (Fahrzeuglänge + Wohnwagenlänge),
+        bei Bedarf anpassbar.
+      </p>
 
       <label className="flex flex-col gap-1 text-sm">
         Wohnwagenmodell (optional)
         <input
           name="caravan_model"
-          defaultValue={defaultCaravanModel}
+          value={caravanModel}
+          onChange={(e) => setCaravanModel(e.target.value)}
           className="rounded-md border border-black/15 px-3 py-2 dark:border-white/15 dark:bg-transparent"
         />
       </label>

@@ -43,6 +43,7 @@ export async function addVehicle(formData: FormData) {
     charging_power_kw: parseOptionalNumber(formData.get("charging_power_kw")),
     range_km: parseOptionalNumber(formData.get("range_km")),
     max_towing_weight_braked_kg: parseOptionalNumber(formData.get("max_towing_weight_braked_kg")),
+    length_m: parseOptionalNumber(formData.get("length_m")),
     model_reference_id: formData.get("model_reference_id") || null,
   });
 

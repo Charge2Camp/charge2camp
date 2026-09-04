@@ -31,6 +31,7 @@ export interface Vehicle {
   charging_power_kw: number | null;
   range_km: number | null;
   max_towing_weight_braked_kg: number | null;
+  length_m: number | null;
   model_reference_id: string | null;
   created_at: string;
 }
@@ -60,6 +61,7 @@ export interface VehicleModel {
   charging_power_kw: number | null;
   range_km: number | null;
   max_towing_weight_braked_kg: number | null;
+  length_m: number | null;
   source: string;
   verification_status: VerificationStatus;
   last_verified_at: string | null;
@@ -168,6 +170,8 @@ export interface ChargingReview {
   trailer_length_m: number | null;
   trailer_width_m: number | null;
   caravan_model: string | null;
+  vehicle_id: string | null;
+  caravan_id: string | null;
   photo_url: string | null;
   comment: string | null;
   created_at: string;

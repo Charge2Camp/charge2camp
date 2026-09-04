@@ -23,6 +23,7 @@ kann): [src/types/database.ts](../src/types/database.ts).
 id, user_id, manufacturer, model, battery_capacity_kwh,
 consumption_kwh_per_100km (optional), charging_power_kw (optional),
 range_km (optional), max_towing_weight_braked_kg (optional),
+length_m (optional, Fahrzeuglaenge fuer Gespannlaenge-Berechnung),
 model_reference_id (optional, verweist auf `vehicle_models`), created_at.
 
 ### caravans (Wohnwagen, §7)
@@ -69,6 +70,16 @@ Community-Bewertungen. `charging_reviews` erfasst zusätzlich die
 Gespannmaße der bewertenden Person (`trailer_length_m`, `trailer_width_m`,
 `caravan_model`), damit spätere Auswertungen die Bewertung im Kontext der
 Gespanngröße interpretieren können (§19, §20) statt als reine Ja/Nein-Quote.
+
+`vehicle_id`/`caravan_id` (optional, verweisen auf die eigenen `vehicles`/
+`caravans`-Datensätze des Bewertenden) dokumentieren, mit welcher
+Fahrzeug/Wohnwagen-Kombination aus dem Profil bewertet wurde. Ist beides
+bekannt, wird `trailer_length_m` automatisch als Fahrzeuglänge +
+Wohnwagenlänge vorausgefüllt ("Gespannlänge gesamt") — Nutzer ohne
+hinterlegtes Fahrzeug/Wohnwagen können die Werte weiterhin frei eingeben.
+Diese Gespannlänge ist die Grundlage für die Verteilungsanzeige "Eignung
+nach Gespannlänge" je Ladepunkt
+([src/lib/scoring/trailer-compatibility.ts](../src/lib/scoring/trailer-compatibility.ts)).
 
 ### favorites
 
