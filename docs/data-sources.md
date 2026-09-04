@@ -11,8 +11,18 @@ markiert.
 
 | Anbieter | URL | Lizenz | Kosten | Status |
 |---|---|---|---|---|
-| OpenStreetMap | https://www.openstreetmap.org | ODbL | kostenlos (Attribution nötig) | aktiv geplant (Phase 3/4) |
-| MapLibre GL JS | https://maplibre.org | BSD-3-Clause | kostenlos | aktiv geplant |
+| OpenStreetMap | https://www.openstreetmap.org | ODbL | kostenlos (Attribution nötig) | aktiv seit Phase 3 |
+| MapLibre GL JS | https://maplibre.org | BSD-3-Clause | kostenlos | aktiv seit Phase 3 |
+
+**Hinweis Kachel-Server (Phase 3):** Die Karte nutzt aktuell die öffentlichen
+`tile.openstreetmap.org`-Rasterkacheln direkt (kein API-Key nötig, siehe
+[src/components/map/osm-style.ts](../src/components/map/osm-style.ts)).
+Das ist für lokale Entwicklung und MVP-Traffic in Ordnung, verstößt aber bei
+höherem Produktions-Traffic gegen die
+[OSM Tile Usage Policy](https://operations.osmfoundation.org/policies/tiles/).
+Vor dem produktiven Rollout muss auf einen eigenen Tile-Cache oder einen
+Anbieter mit OSM-Lizenz (z. B. MapTiler, Stadia Maps, Geofabrik) umgestellt
+werden.
 
 ## Ladeinfrastruktur
 

@@ -61,9 +61,12 @@ gekennzeichnete Demo-Daten (siehe Regel "keine Scheindaten", §39).
 ## EV-Camping-Score (§11)
 
 Regelbasiert, keine KI im MVP. Gewichtung liegt in einer zentralen,
-leicht änderbaren Funktion. Faktoren: Ladepunkt auf dem Platz, Ladeleistung,
-Anzahl Ladepunkte, Entfernung zu Schnellladern, Community-Bewertungen,
-Aktualität der Daten.
+leicht änderbaren Funktion
+([src/lib/scoring/ev-camping-score.ts](../src/lib/scoring/ev-camping-score.ts)).
+Faktoren: Ladepunkt auf dem Platz, Ladeleistung, Anzahl Ladepunkte,
+Entfernung zu Schnellladern (Haversine-Distanz zu `charging_stations` mit
+≥100 kW, [src/lib/nearby-charging.ts](../src/lib/nearby-charging.ts)),
+Community-Bewertungen, Aktualität der Daten (`last_verified_at`).
 
 ## Gespann-Kompatibilität (§19, §20)
 
@@ -75,9 +78,11 @@ Gespanne > 8,5 m").
 ## Phasenplan
 
 1. **Grundsystem** — Next.js, TypeScript, Tailwind, Supabase, Auth, DB,
-   Grundlayout ✅ (dieser Commit)
-2. **Nutzerprofil** — Registrierung, Login, Fahrzeug, Wohnwagen, Abmessungen
-3. **Campingplätze** — Datenbank, Kartenansicht, Liste, Suche, Filter, Detailseite
+   Grundlayout ✅
+2. **Nutzerprofil** — Registrierung, Login, Fahrzeug, Wohnwagen, Abmessungen ✅
+   (inkl. Referenzkataloge mit Autofill für gängige Modelle)
+3. **Campingplätze** — Datenbank, Kartenansicht, Liste, Suche, Filter,
+   Detailseite mit EV-Camping-Score ✅
 4. **Ladepunkte** — Datenmodell, Kartenansicht, Filter, Anhängertauglichkeit
 5. **Community** — Bewertung, Kommentar, Gespannparameter, Score
 6. **Routenplanung** — Start/Ziel, Routing, Fahrzeug, Wohnwagen, Ladeplanung
