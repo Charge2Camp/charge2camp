@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { Campsite, CampsiteReview } from "@/types/database";
 import { fetchNearbyChargingStations, nearestFastChargerDistanceKm } from "@/lib/nearby-charging";
 import { calculateEvCampingScore } from "@/lib/scoring/ev-camping-score";
-import { CampsiteMap } from "@/components/map/campsite-map";
+import { MapView } from "@/components/map/map-view";
 import { EvScoreBadge } from "@/components/campsites/ev-score-badge";
 import { AMENITY_FIELDS, AMENITY_LABELS } from "@/lib/campsites";
 
@@ -49,7 +49,7 @@ export default async function CampsiteDetailPage({
       )}
 
       <div className="mt-6 h-[320px] overflow-hidden rounded-lg border border-black/10 dark:border-white/10">
-        <CampsiteMap
+        <MapView
           markers={[
             { id: site.id, latitude: site.latitude, longitude: site.longitude, label: site.name },
           ]}

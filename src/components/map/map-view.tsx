@@ -9,9 +9,13 @@ export interface MapMarker {
   latitude: number;
   longitude: number;
   label: string;
+  color?: string;
 }
 
-export function CampsiteMap({
+const DEFAULT_COLOR = "#10b981";
+const SELECTED_COLOR = "#059669";
+
+export function MapView({
   markers,
   selectedId,
   onMarkerClick,
@@ -69,7 +73,7 @@ export function CampsiteMap({
       el.style.border = "2px solid white";
       el.style.boxShadow = "0 1px 3px rgba(0,0,0,0.4)";
       el.style.cursor = "pointer";
-      el.style.background = m.id === selectedId ? "#059669" : "#10b981";
+      el.style.background = m.id === selectedId ? SELECTED_COLOR : (m.color ?? DEFAULT_COLOR);
       el.onclick = () => onMarkerClick?.(m.id);
 
       const marker = new Marker({ element: el })

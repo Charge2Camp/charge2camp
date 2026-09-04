@@ -83,7 +83,7 @@ Gespanne > 8,5 m").
    (inkl. Referenzkataloge mit Autofill für gängige Modelle)
 3. **Campingplätze** — Datenbank, Kartenansicht, Liste, Suche, Filter,
    Detailseite mit EV-Camping-Score ✅
-4. **Ladepunkte** — Datenmodell, Kartenansicht, Filter, Anhängertauglichkeit
+4. **Ladepunkte** — Datenmodell, Kartenansicht, Filter, Anhängertauglichkeit ✅
 5. **Community** — Bewertung, Kommentar, Gespannparameter, Score
 6. **Routenplanung** — Start/Ziel, Routing, Fahrzeug, Wohnwagen, Ladeplanung
 7. **Gespannlogik** — Länge/Breite/Höhe/Gewicht, Straßenrestriktionen (OSM)

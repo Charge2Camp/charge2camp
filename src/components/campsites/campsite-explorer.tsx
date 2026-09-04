@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { CampsiteMap } from "@/components/map/campsite-map";
+import { MapView } from "@/components/map/map-view";
 import type { Campsite } from "@/types/database";
 
 function CampsiteCard({
@@ -103,7 +103,7 @@ export function CampsiteExplorer({ campsites }: { campsites: Campsite[] }) {
             mobileTab === "list" ? "hidden md:block" : ""
           }`}
         >
-          <CampsiteMap markers={markers} selectedId={hoveredId ?? undefined} />
+          <MapView markers={markers} selectedId={hoveredId ?? undefined} />
         </div>
       </div>
     </div>
