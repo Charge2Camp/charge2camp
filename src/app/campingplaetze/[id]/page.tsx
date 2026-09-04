@@ -1,10 +1,12 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import type { Campsite, CampsiteReview } from "@/types/database";
 import { fetchNearbyChargingStations, nearestFastChargerDistanceKm } from "@/lib/nearby-charging";
 import { calculateEvCampingScore } from "@/lib/scoring/ev-camping-score";
 import { MapView } from "@/components/map/map-view";
 import { EvScoreBadge } from "@/components/campsites/ev-score-badge";
+import { CampsiteReviewForm } from "@/components/campsites/review-form";
 import { AMENITY_FIELDS, AMENITY_LABELS } from "@/lib/campsites";
 
 export default async function CampsiteDetailPage({
@@ -15,16 +17,21 @@ export default async function CampsiteDetailPage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const [{ data: campsite }, { data: reviews }] = await Promise.all([
+  const [{ data: campsite }, { data: reviews }, { data: { user } }] = await Promise.all([
     supabase.from("campsites").select("*").eq("id", id).maybeSingle(),
     supabase
       .from("campsite_reviews")
       .select("*")
       .eq("campsite_id", id)
       .order("created_at", { ascending: false }),
+    supabase.auth.getUser(),
   ]);
 
   if (!campsite) notFound();
+
+  const ownReview = user
+    ? (reviews as CampsiteReview[] | null)?.find((r) => r.user_id === user.id)
+    : undefined;
 
   const site = campsite as Campsite;
   const nearbyStations = await fetchNearbyChargingStations(site);
@@ -133,22 +140,24 @@ export default async function CampsiteDetailPage({
           <h2 className="font-semibold">Ladepunkte in der Nähe</h2>
           <ul className="mt-2 flex flex-col gap-2">
             {nearbyStations.slice(0, 5).map((station) => (
-              <li
-                key={station.id}
-                className="flex items-center justify-between rounded-md border border-black/10 px-4 py-2 text-sm dark:border-white/10"
-              >
-                <div>
-                  <p className="font-medium">{station.name ?? station.provider}</p>
-                  <p className="text-black/60 dark:text-white/60">
-                    {station.power_kw ? `${station.power_kw} kW` : ""}
-                    {station.trailer_suitable === "confirmed" && " · anhängertauglich bestätigt"}
-                    {station.trailer_suitable === "likely" && " · vermutlich anhängertauglich"}
-                    {station.trailer_suitable === "unsuitable" && " · nicht anhängertauglich"}
-                  </p>
-                </div>
-                <span className="text-black/50 dark:text-white/50">
-                  {station.distanceKm.toFixed(1)} km
-                </span>
+              <li key={station.id}>
+                <Link
+                  href={`/ladepunkte/${station.id}`}
+                  className="flex items-center justify-between rounded-md border border-black/10 px-4 py-2 text-sm hover:bg-black/5 dark:border-white/10 dark:hover:bg-white/10"
+                >
+                  <div>
+                    <p className="font-medium">{station.name ?? station.provider}</p>
+                    <p className="text-black/60 dark:text-white/60">
+                      {station.power_kw ? `${station.power_kw} kW` : ""}
+                      {station.trailer_suitable === "confirmed" && " · anhängertauglich bestätigt"}
+                      {station.trailer_suitable === "likely" && " · vermutlich anhängertauglich"}
+                      {station.trailer_suitable === "unsuitable" && " · nicht anhängertauglich"}
+                    </p>
+                  </div>
+                  <span className="text-black/50 dark:text-white/50">
+                    {station.distanceKm.toFixed(1)} km
+                  </span>
+                </Link>
               </li>
             ))}
           </ul>
@@ -174,9 +183,23 @@ export default async function CampsiteDetailPage({
             ))}
           </ul>
         )}
-        <p className="mt-3 text-xs text-black/40 dark:text-white/40">
-          Eigene Bewertungen abgeben folgt in Phase 5 (Community).
-        </p>
+
+        <div className="mt-4">
+          {!user ? (
+            <p className="text-sm text-black/50 dark:text-white/50">
+              <Link href="/login" className="text-emerald-600 hover:underline">
+                Anmelden
+              </Link>{" "}
+              um eine Bewertung abzugeben.
+            </p>
+          ) : ownReview ? (
+            <p className="text-sm text-black/50 dark:text-white/50">
+              Du hast diesen Campingplatz bereits bewertet (★ {ownReview.rating}/5).
+            </p>
+          ) : (
+            <CampsiteReviewForm campsiteId={site.id} />
+          )}
+        </div>
       </section>
     </div>
   );

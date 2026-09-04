@@ -73,7 +73,14 @@ Community-Bewertungen, Aktualität der Daten (`last_verified_at`).
 Bewertungen von Ladepunkten werden nicht nur als Ja/Nein-Quote aggregiert,
 sondern im Kontext der Gespannmaße der bewertenden Nutzer interpretiert
 (z. B. "geeignet für normale Gespanne, eingeschränkt für sehr große
-Gespanne > 8,5 m").
+Gespanne > 8,5 m"), siehe
+[src/lib/scoring/trailer-compatibility.ts](../src/lib/scoring/trailer-compatibility.ts).
+Regelbasiert (Schwellwert 8,5 m Gespannlänge, konfigurierbar): Bewertungen
+werden nach Gespannlänge in "normal" und "groß" gruppiert; bei ausreichend
+Bewertungen in beiden Gruppen mit deutlich unterschiedlicher Zustimmung
+entsteht eine differenzierte Aussage statt einer einzelnen Quote. Ist der
+Nutzer angemeldet und hat einen Wohnwagen hinterlegt, wird zusätzlich eine
+persönliche Einschätzung ("Für dein Gespann: Sehr gut geeignet") angezeigt.
 
 ## Phasenplan
 
@@ -84,7 +91,7 @@ Gespanne > 8,5 m").
 3. **Campingplätze** — Datenbank, Kartenansicht, Liste, Suche, Filter,
    Detailseite mit EV-Camping-Score ✅
 4. **Ladepunkte** — Datenmodell, Kartenansicht, Filter, Anhängertauglichkeit ✅
-5. **Community** — Bewertung, Kommentar, Gespannparameter, Score
+5. **Community** — Bewertung, Kommentar, Gespannparameter, Score ✅
 6. **Routenplanung** — Start/Ziel, Routing, Fahrzeug, Wohnwagen, Ladeplanung
 7. **Gespannlogik** — Länge/Breite/Höhe/Gewicht, Straßenrestriktionen (OSM)
 8. **Live-Daten** — echte Provider-Adapter anschließen

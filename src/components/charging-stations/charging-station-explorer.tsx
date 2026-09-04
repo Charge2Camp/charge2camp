@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { MapView } from "@/components/map/map-view";
 import { TRAILER_SUITABILITY_COLORS, TRAILER_SUITABILITY_LABELS } from "@/lib/trailer-suitability";
 import type { ChargingStation } from "@/types/database";
@@ -26,13 +27,14 @@ function ChargingStationCard({
   onHover: (id: string | null) => void;
 }) {
   return (
-    <div
+    <Link
+      href={`/ladepunkte/${station.id}`}
       onMouseEnter={() => onHover(station.id)}
       onMouseLeave={() => onHover(null)}
-      className={`rounded-lg border p-4 transition-colors ${
+      className={`block rounded-lg border p-4 transition-colors ${
         selected
           ? "border-emerald-600 bg-emerald-600/5"
-          : "border-black/10 dark:border-white/10"
+          : "border-black/10 hover:bg-black/5 dark:border-white/10 dark:hover:bg-white/10"
       }`}
     >
       <div className="flex items-start justify-between gap-2">
@@ -70,7 +72,7 @@ function ChargingStationCard({
       {station.trailer_notes && (
         <p className="mt-2 text-sm text-black/70 dark:text-white/70">{station.trailer_notes}</p>
       )}
-    </div>
+    </Link>
   );
 }
 
