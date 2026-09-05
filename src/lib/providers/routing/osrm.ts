@@ -13,7 +13,8 @@ const OSRM_BASE_URL = process.env.OSRM_BASE_URL ?? "https://router.project-osrm.
 export const osrmProvider: RoutingProvider = {
   id: "osrm",
   async planRoute(request: RouteRequest): Promise<RouteResult> {
-    const coords = `${request.start.longitude},${request.start.latitude};${request.end.longitude},${request.end.latitude}`;
+    const points = [request.start, ...(request.waypoints ?? []), request.end];
+    const coords = points.map((p) => `${p.longitude},${p.latitude}`).join(";");
     const url = `${OSRM_BASE_URL}/route/v1/driving/${coords}?overview=full&geometries=geojson`;
 
     const response = await fetch(url, {

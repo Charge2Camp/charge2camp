@@ -58,11 +58,22 @@ export interface ChargingStopCandidate {
    * die aufrufende Server-Action reichert Kandidaten damit nachtraeglich an.
    */
   personalCompatibility?: import("./scoring/trailer-compatibility").PersonalCompatibility | null;
+  /**
+   * Datum der letzten Community-Bewertung dieses Ladepunkts (als Proxy fuer
+   * "zuletzt bestaetigt funktionsfaehig", da kein Live-Status verfuegbar
+   * ist, siehe §39/Phase 8). Wie personalCompatibility erst von der
+   * aufrufenden Server-Action gesetzt.
+   */
+  lastConfirmedAt?: string | null;
 }
 
 export interface ChargingStopPlan extends ChargingStopCandidate {
   socOnArrivalPercent: number;
   chargingTimeMin: number | null;
+  /** Tatsaechlich nachgeladene Energiemenge (kWh), fuer die Kostenschaetzung. */
+  energyChargedKwh: number;
+  /** Ladekosten (station.price * energyChargedKwh), null wenn kein Preis hinterlegt. */
+  estimatedCostEur: number | null;
   /** Weitere Kandidaten fuer DIESEN Stopp im Streckenkorridor (gleiche Sortierung: Anhaengertauglichkeit vor Umweg), zur Anzeige als Alternativen. */
   alternatives: ChargingStopCandidate[];
 }
@@ -78,7 +89,26 @@ export interface TripPlan {
   departureSocPercent: number;
   /** null, wenn das Ziel mit den aktuellen Ladestopps/Einstellungen nicht erreichbar ist. */
   arrivalSocPercent: number | null;
+  /** Summe der geschaetzten Ladekosten aller Stopps; null wenn kein Stopp einen Preis hinterlegt hat. */
+  totalEstimatedCostEur: number | null;
+  /** true, wenn mindestens ein Stopp keinen Preis hinterlegt hat -- totalEstimatedCostEur ist dann nur eine Teilsumme. */
+  costEstimateIncomplete: boolean;
   warning: string | null;
+}
+
+/** Fasst die geschaetzten Ladekosten aller Stopps zusammen -- ehrlich als
+ * unvollstaendig markiert statt fehlende Preise stillschweigend als 0 EUR
+ * zu behandeln (keine Scheindaten). */
+function summarizeCost(stops: ChargingStopPlan[]): {
+  totalEstimatedCostEur: number | null;
+  costEstimateIncomplete: boolean;
+} {
+  if (stops.length === 0) return { totalEstimatedCostEur: null, costEstimateIncomplete: false };
+  const known = stops.filter((s) => s.estimatedCostEur !== null);
+  return {
+    totalEstimatedCostEur: known.length > 0 ? known.reduce((sum, s) => sum + (s.estimatedCostEur ?? 0), 0) : null,
+    costEstimateIncomplete: known.length < stops.length,
+  };
 }
 
 /** Reichweite (km), die zwischen zwei Ladestaenden (in %) zur Verfuegung
@@ -106,6 +136,15 @@ function nearestPointOnRoute(
   return best;
 }
 
+/** Naeherungsweise Distanz (km) eines beliebigen Punkts entlang der Route
+ * ab Streckenanfang -- z. B. fuer manuell hinzugefuegte Zwischenstopps, die
+ * (anders als Ladepunkt-Kandidaten) nicht Teil der Ladeplanung sind, aber
+ * fuer die Reihenfolge in der Routenuebersicht einsortiert werden muessen. */
+export function distanceAlongRouteKm(point: LatLng, route: Pick<RouteResult, "geometry" | "distanceKm">): number {
+  const nearest = nearestPointOnRoute(point, route.geometry);
+  return cumulativeDistanceAtIndex(nearest.index, route.geometry.length, route.distanceKm);
+}
+
 export function planTrip({
   route,
   vehicle,
@@ -118,6 +157,7 @@ export function planTrip({
   minSocAtDestinationPercent = DEFAULT_MIN_SOC_AT_DESTINATION_PERCENT,
   targetSocAfterChargingPercent = DEFAULT_TARGET_SOC_AFTER_CHARGING_PERCENT,
   detourToleranceKm = DEFAULT_DETOUR_TOLERANCE_KM,
+  preferredProvider,
   excludedStationIds = [],
   forcedStationIdByIndex = {},
 }: {
@@ -126,6 +166,8 @@ export function planTrip({
   chargingStations: ChargingStation[];
   preferTrailerSuitable?: boolean;
   minPowerKw?: number;
+  /** Nur Ladepunkte dieses Anbieters (z. B. "IONITY") als Kandidaten zulassen, sofern gesetzt. */
+  preferredProvider?: string;
   /** Bereits aufgeloester Verbrauch (manuell > Profil > Standard), siehe Modul-Kommentar. */
   consumptionKwhPer100km: number;
   /** Ladestand bei Abfahrt in %. */
@@ -185,6 +227,7 @@ export function planTrip({
         chargingStops: stops,
         departureSocPercent,
         arrivalSocPercent: null,
+        ...summarizeCost(stops),
         warning,
       };
     }
@@ -201,6 +244,7 @@ export function planTrip({
       .filter((c) => c.distanceFromStartKm > currentDistanceKm)
       .filter((c) => c.distanceFromStartKm - currentDistanceKm <= rangeToStopKm)
       .filter((c) => !minPowerKw || (c.station.power_kw ?? 0) >= minPowerKw)
+      .filter((c) => !preferredProvider || c.station.provider === preferredProvider)
       // Anhängertauglichkeit hat Priorität vor einem kürzeren Umweg (§26/§27):
       // "unsuitable" wird hart ausgeschlossen, nicht nur nachrangig behandelt.
       .filter((c) => c.station.trailer_suitable !== "unsuitable");
@@ -232,6 +276,7 @@ export function planTrip({
         chargingStops: stops,
         departureSocPercent,
         arrivalSocPercent: null,
+        ...summarizeCost(stops),
         warning,
       };
     }
@@ -250,9 +295,11 @@ export function planTrip({
 
     const energyAtTarget = (targetSocAfterChargingPercent / 100) * vehicle.battery_capacity_kwh;
     const energyOnArrival = (socOnArrival / 100) * vehicle.battery_capacity_kwh;
+    const energyChargedKwh = Math.max(0, energyAtTarget - energyOnArrival);
     const chargingTimeMin = chosen.station.power_kw
-      ? Math.max(0, ((energyAtTarget - energyOnArrival) / chosen.station.power_kw) * 60)
+      ? Math.max(0, (energyChargedKwh / chosen.station.power_kw) * 60)
       : null;
+    const estimatedCostEur = chosen.station.price !== null ? energyChargedKwh * chosen.station.price : null;
 
     if (!warning && chosen.station.trailer_suitable === "unknown") {
       warning =
@@ -265,6 +312,8 @@ export function planTrip({
       corridorDistanceKm: chosen.corridorDistanceKm,
       socOnArrivalPercent: socOnArrival,
       chargingTimeMin,
+      energyChargedKwh,
+      estimatedCostEur,
       alternatives,
     });
 
@@ -289,6 +338,7 @@ export function planTrip({
     chargingStops: stops,
     departureSocPercent,
     arrivalSocPercent,
+    ...summarizeCost(stops),
     warning,
   };
 }

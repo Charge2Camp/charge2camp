@@ -15,6 +15,16 @@ import {
 
 const SUITABLE_LABELS = { yes: "Ja", limited: "Mit Einschränkungen", no: "Nein" } as const;
 
+const CRITERION_LABELS: Record<
+  "enough_space_for_rig" | "unobstructed_access" | "no_barrier_or_garage" | "side_mounted_charger",
+  string
+> = {
+  enough_space_for_rig: "Genug Platz",
+  unobstructed_access: "Freie Rangierfläche",
+  no_barrier_or_garage: "Kein Parkhaus/Schranke",
+  side_mounted_charger: "Ladesäule seitlich mit Kabellänge",
+};
+
 export default async function ChargingStationDetailPage({
   params,
 }: {
@@ -162,6 +172,24 @@ export default async function ChargingStationDetailPage({
                     Wohnwagen abkoppeln &amp; in der Nähe parken:{" "}
                     {review.decoupled_parking_possible ? "möglich" : "nicht möglich"}
                   </p>
+                )}
+                {(
+                  Object.keys(CRITERION_LABELS) as Array<keyof typeof CRITERION_LABELS>
+                ).some((key) => review[key] !== null) && (
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {(Object.keys(CRITERION_LABELS) as Array<keyof typeof CRITERION_LABELS>)
+                      .filter((key) => review[key] !== null)
+                      .map((key) => (
+                        <span
+                          key={key}
+                          className={`rounded-full px-2 py-0.5 text-xs text-white ${
+                            review[key] ? "bg-emerald-600" : "bg-red-600"
+                          }`}
+                        >
+                          {review[key] ? "✓" : "✗"} {CRITERION_LABELS[key]}
+                        </span>
+                      ))}
+                  </div>
                 )}
                 {review.comment && <p className="mt-1 text-black/70 dark:text-white/70">{review.comment}</p>}
               </li>

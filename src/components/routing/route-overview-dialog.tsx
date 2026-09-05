@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { ChargingStopCandidate, TripPlan } from "@/lib/route-planning";
+import { buildRouteTimeline, type ManualWaypointWithDistance } from "@/lib/route-timeline";
 import { TRAILER_SUITABILITY_COLORS, TRAILER_SUITABILITY_LABELS } from "@/lib/trailer-suitability";
 import { PERSONAL_COMPATIBILITY_LABELS } from "@/lib/scoring/trailer-compatibility";
 
@@ -29,6 +30,12 @@ function SuitabilityBadges({ candidate }: { candidate: Pick<ChargingStopCandidat
   );
 }
 
+function lastConfirmedLabel(lastConfirmedAt: string | null | undefined): string {
+  return lastConfirmedAt
+    ? `Zuletzt von der Community bestätigt am ${new Date(lastConfirmedAt).toLocaleDateString("de-DE")}`
+    : "Noch nicht von der Community bestätigt";
+}
+
 function AlternativeRow({
   alternative,
   disabled,
@@ -49,6 +56,7 @@ function AlternativeRow({
           {alternative.station.power_kw ? `${alternative.station.power_kw} kW` : "Ladeleistung unbekannt"} · ca.{" "}
           {alternative.corridorDistanceKm.toFixed(0)} km Umweg von der Route
         </span>
+        <span className="text-xs text-black/50 dark:text-white/50">{lastConfirmedLabel(alternative.lastConfirmedAt)}</span>
       </div>
       <button
         type="button"
@@ -66,6 +74,7 @@ export function RouteOverviewDialog({
   open,
   start,
   end,
+  manualWaypoints,
   plan,
   busy,
   dirty,
@@ -78,8 +87,9 @@ export function RouteOverviewDialog({
   onSelectAlternative,
 }: {
   open: boolean;
-  start: { displayName: string };
-  end: { displayName: string };
+  start: { displayName: string; latitude: number; longitude: number };
+  end: { displayName: string; latitude: number; longitude: number };
+  manualWaypoints: ManualWaypointWithDistance[];
   plan: TripPlan;
   busy: boolean;
   /** true, sobald in diesem Popup geloescht oder eine Alternative gewaehlt wurde, ohne dass die Aenderung schon uebernommen wurde. */
@@ -97,13 +107,24 @@ export function RouteOverviewDialog({
 
   if (!open) return null;
 
-  const stops = plan.chargingStops;
+  // Vereint Ladestopps und manuelle Zwischenstopps (§ ABRP-Vorbild "Add
+  // Stop") in einer nach Streckenposition sortierten Liste, damit die
+  // Reihenfolge in der Uebersicht immer der tatsaechlichen Fahrtrichtung
+  // entspricht.
+  const timeline = buildRouteTimeline({
+    start,
+    end,
+    distanceKm: plan.distanceKm,
+    chargingStops: plan.chargingStops,
+    manualWaypoints,
+  });
+  const middlePoints = timeline.slice(1, -1);
 
   // Etappen-km/Fahrzeit werden proportional zur Gesamtfahrzeit geschaetzt
   // (OSRM liefert keine Zwischenzeiten fuer beliebige Streckenpunkte) --
   // gleiche Naeherung wie die Korridor-Distanz der Ladepunkte selbst.
-  const legStartKm = [0, ...stops.map((s) => s.distanceFromStartKm)];
-  const legEndKm = [...stops.map((s) => s.distanceFromStartKm), plan.distanceKm];
+  const legStartKm = [0, ...middlePoints.map((p) => p.distanceFromStartKm)];
+  const legEndKm = [...middlePoints.map((p) => p.distanceFromStartKm), plan.distanceKm];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -161,9 +182,30 @@ export function RouteOverviewDialog({
                 </p>
               </li>
 
-              {stops.map((stop, index) => {
-                const legDistanceKm = legEndKm[index] - legStartKm[index];
+              {middlePoints.map((point, i) => {
+                const legDistanceKm = legEndKm[i] - legStartKm[i];
                 const legDurationMin = (legDistanceKm / plan.distanceKm) * plan.durationMin;
+
+                if (point.kind === "manual") {
+                  return (
+                    <div key={`manual-${point.label}-${point.distanceFromStartKm}`} className="contents">
+                      <li className="flex items-center gap-2 pl-2 text-xs text-black/50 dark:text-white/50">
+                        <span>↓ {legDistanceKm.toFixed(0)} km</span>
+                        <span>· ca. {formatDuration(legDurationMin)}</span>
+                      </li>
+                      <li className="rounded-lg border border-blue-500/30 bg-blue-500/5 p-3">
+                        <p className="font-medium">Zwischenstopp: {point.label}</p>
+                        <p className="text-xs text-black/50 dark:text-white/50">
+                          Manuell hinzugefügt, unabhängig von der Ladeplanung -- änderbar über das
+                          Routenplaner-Formular.
+                        </p>
+                      </li>
+                    </div>
+                  );
+                }
+
+                const stop = point.chargingStop!;
+                const index = point.chargingStopIndex!;
                 const showAlternatives = expandedStopIndex === index;
 
                 return (
@@ -189,6 +231,11 @@ export function RouteOverviewDialog({
                             {stop.chargingTimeMin !== null && (
                               <li>Voraussichtliche Ladezeit: {formatDuration(stop.chargingTimeMin)}</li>
                             )}
+                            <li>
+                              Geschätzte Ladekosten:{" "}
+                              {stop.estimatedCostEur !== null ? `${stop.estimatedCostEur.toFixed(2)} €` : "unbekannt"}
+                            </li>
+                            <li>{lastConfirmedLabel(stop.lastConfirmedAt)}</li>
                           </ul>
                         </div>
                         <button

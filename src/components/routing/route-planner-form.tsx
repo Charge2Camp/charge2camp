@@ -21,6 +21,7 @@ import {
   type TripPlan,
 } from "@/lib/route-planning";
 import { googleMapsNavigationProvider } from "@/lib/providers/navigation";
+import { buildRouteTimeline } from "@/lib/route-timeline";
 import { TRAILER_SUITABILITY_COLORS, TRAILER_SUITABILITY_LABELS } from "@/lib/trailer-suitability";
 import type { Caravan, Vehicle } from "@/types/database";
 
@@ -77,10 +78,13 @@ function formatDuration(minutes: number): string {
 export function RoutePlannerForm({
   vehicles,
   caravans,
+  providers,
   initialSavedRouteId,
 }: {
   vehicles: Vehicle[];
   caravans: Caravan[];
+  /** Bekannte Anbieter aus charging_stations, fuer den optionalen Anbieter-Filter. */
+  providers: string[];
   /** Aus dem URL-Query-Parameter `?savedRouteId=...` (Link "Öffnen" im Profil) -- laedt die gespeicherte Route beim ersten Rendern. */
   initialSavedRouteId?: string;
 }) {
@@ -103,6 +107,8 @@ export function RoutePlannerForm({
     DEFAULT_TARGET_SOC_AFTER_CHARGING_PERCENT
   );
   const [detourTolerance, setDetourTolerance] = useState(DEFAULT_DETOUR_TOLERANCE_KM);
+  const [preferredProvider, setPreferredProvider] = useState("");
+  const [manualStopQueries, setManualStopQueries] = useState<string[]>([]);
   const [excludedStationIds, setExcludedStationIds] = useState<string[]>([]);
   const [forcedStationIdByIndex, setForcedStationIdByIndex] = useState<Record<number, string>>({});
   const [overviewOpen, setOverviewOpen] = useState(false);
@@ -146,11 +152,13 @@ export function RoutePlannerForm({
         if (cancelled) return;
         setStart(saved.startQuery);
         setEnd(saved.endQuery);
+        setManualStopQueries(saved.manualStopQueries);
         setVehicleId(saved.vehicleId);
         setCaravanId(saved.caravanId ?? "");
         setConsumption(saved.manualConsumptionKwhPer100km?.toString() ?? "");
         setMinPowerKw(saved.minPowerKw?.toString() ?? "");
         setPreferTrailerSuitable(saved.preferTrailerSuitable);
+        setPreferredProvider(saved.preferredProvider ?? "");
         setDepartureSoc(saved.departureSocPercent);
         setMinSocAtStop(saved.minSocAtStopPercent);
         setMinSocAtDestination(saved.minSocAtDestinationPercent);
@@ -191,11 +199,13 @@ export function RoutePlannerForm({
     setError(null);
     setStart("");
     setEnd("");
+    setManualStopQueries([]);
     setVehicleId("");
     setCaravanId("");
     setConsumption("");
     setMinPowerKw("");
     setPreferTrailerSuitable(true);
+    setPreferredProvider("");
     setDepartureSoc(DEFAULT_DEPARTURE_SOC_PERCENT);
     setMinSocAtStop(DEFAULT_MIN_SOC_AT_STOP_PERCENT);
     setMinSocAtDestination(DEFAULT_MIN_SOC_AT_DESTINATION_PERCENT);
@@ -247,6 +257,7 @@ export function RoutePlannerForm({
         consumptionKwhPer100km: result.plan.effectiveConsumptionKwhPer100km,
         preferTrailerSuitable,
         minPowerKw: minPowerKw ? Number(minPowerKw) : undefined,
+        preferredProvider: preferredProvider || undefined,
         departureSocPercent: departureSoc,
         minSocAtStopPercent: minSocAtStop,
         minSocAtDestinationPercent: minSocAtDestination,
@@ -327,11 +338,13 @@ export function RoutePlannerForm({
         start: result.start,
         endQuery: end,
         end: result.end,
+        manualWaypoints: result.manualWaypoints,
         vehicleId,
         caravanId: caravanId || null,
         manualConsumptionKwhPer100km: consumption.trim() ? Number(consumption) : null,
         minPowerKw: minPowerKw.trim() ? Number(minPowerKw) : null,
         preferTrailerSuitable,
+        preferredProvider: preferredProvider || null,
         departureSocPercent: departureSoc,
         minSocAtStopPercent: minSocAtStop,
         minSocAtDestinationPercent: minSocAtDestination,
@@ -355,13 +368,19 @@ export function RoutePlannerForm({
   // wiederverwenden kann.
   function handleStartNavigation() {
     if (!result) return;
+    const timeline = buildRouteTimeline({
+      start: result.start,
+      end: result.end,
+      distanceKm: result.plan.distanceKm,
+      chargingStops: result.plan.chargingStops,
+      manualWaypoints: result.manualWaypoints,
+    });
     const url = googleMapsNavigationProvider.buildUrl({
       origin: result.start,
       destination: result.end,
-      stops: result.plan.chargingStops.map((stop) => ({
-        latitude: stop.station.latitude,
-        longitude: stop.station.longitude,
-      })),
+      stops: timeline
+        .filter((p) => p.kind === "charging" || p.kind === "manual")
+        .map((p) => ({ latitude: p.latitude, longitude: p.longitude })),
     });
     // Eindeutiger Fenstername statt "_blank": sonst wuerde ein zweiter Klick
     // (z. B. nach Aenderung der Route) denselben bereits offenen Tab nur
@@ -490,6 +509,61 @@ export function RoutePlannerForm({
             className="rounded-md border border-black/15 px-3 py-2 dark:border-white/15 dark:bg-transparent"
           />
         </label>
+
+        <label className="flex flex-col gap-1 text-sm">
+          Bevorzugter Anbieter (optional)
+          <select
+            name="preferred_provider"
+            value={preferredProvider}
+            onChange={(e) => setPreferredProvider(e.target.value)}
+            className="rounded-md border border-black/15 px-3 py-2 dark:border-white/15 dark:bg-transparent"
+          >
+            <option value="">Alle Anbieter</option>
+            {providers.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <div className="flex flex-col gap-2 sm:col-span-2">
+          <p className="text-sm font-medium">Manuelle Zwischenstopps (optional)</p>
+          <p className="-mt-1 text-xs text-black/40 dark:text-white/40">
+            Orte, die die Route zwingend durchfahren soll (z. B. ein Campingplatz oder eine
+            Sehenswürdigkeit) -- unabhängig davon, ob dort geladen werden muss.
+          </p>
+          {manualStopQueries.map((query, index) => (
+            <div key={index} className="flex gap-2">
+              <input
+                name="manual_stop"
+                value={query}
+                onChange={(e) => {
+                  const next = [...manualStopQueries];
+                  next[index] = e.target.value;
+                  setManualStopQueries(next);
+                }}
+                placeholder="z. B. Camping Seeblick, Prien am Chiemsee"
+                className="flex-1 rounded-md border border-black/15 px-3 py-2 text-sm dark:border-white/15 dark:bg-transparent"
+              />
+              <button
+                type="button"
+                onClick={() => setManualStopQueries(manualStopQueries.filter((_, i) => i !== index))}
+                aria-label="Zwischenstopp entfernen"
+                className="rounded-md border border-black/15 px-3 text-sm hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/5"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => setManualStopQueries([...manualStopQueries, ""])}
+            className="w-fit rounded-md border border-black/15 px-3 py-1.5 text-sm hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/5"
+          >
+            + Zwischenstopp hinzufügen
+          </button>
+        </div>
 
         <div className="rounded-lg border border-black/10 p-4 dark:border-white/10 sm:col-span-2">
           <p className="mb-3 text-sm font-medium">Ladeeinstellungen</p>
@@ -647,6 +721,13 @@ export function RoutePlannerForm({
                   label: `${index + 1}. Ladestopp: ${stop.station.name ?? stop.station.provider}`,
                   color: "#f59e0b",
                 })),
+                ...result.manualWaypoints.map((waypoint, index) => ({
+                  id: `manual-stop-${index}`,
+                  latitude: waypoint.latitude,
+                  longitude: waypoint.longitude,
+                  label: `Zwischenstopp: ${waypoint.displayName}`,
+                  color: "#3b82f6",
+                })),
               ]}
               route={result.geometry}
             />
@@ -671,7 +752,29 @@ export function RoutePlannerForm({
               <p className="text-black/50 dark:text-white/50">Reichweite (Gespann)</p>
               <p className="text-lg font-semibold">{result.plan.effectiveRangeKm.toFixed(0)} km</p>
             </div>
+            {result.plan.totalEstimatedCostEur !== null && (
+              <div>
+                <p className="text-black/50 dark:text-white/50">Geschätzte Ladekosten</p>
+                <p className="text-lg font-semibold">
+                  {result.plan.costEstimateIncomplete && "ab "}
+                  {result.plan.totalEstimatedCostEur.toFixed(2)} €
+                </p>
+              </div>
+            )}
           </div>
+
+          {result.manualWaypoints.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <p className="text-sm font-medium">Manuelle Zwischenstopps</p>
+              <ul className="text-sm text-black/70 dark:text-white/70">
+                {result.manualWaypoints.map((waypoint) => (
+                  <li key={waypoint.query}>
+                    {waypoint.displayName} (nach {waypoint.distanceFromStartKm.toFixed(0)} km)
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           <p className="text-sm text-black/60 dark:text-white/60">
             {result.vehicle.manufacturer} {result.vehicle.model}
@@ -726,6 +829,15 @@ export function RoutePlannerForm({
                       {stop.chargingTimeMin !== null && (
                         <li>Voraussichtliche Ladezeit: {formatDuration(stop.chargingTimeMin)}</li>
                       )}
+                      <li>
+                        Geschätzte Ladekosten:{" "}
+                        {stop.estimatedCostEur !== null ? `${stop.estimatedCostEur.toFixed(2)} €` : "unbekannt (kein Preis hinterlegt)"}
+                      </li>
+                      <li>
+                        {stop.lastConfirmedAt
+                          ? `Zuletzt von der Community bestätigt am ${new Date(stop.lastConfirmedAt).toLocaleDateString("de-DE")}`
+                          : "Noch nicht von der Community bestätigt"}
+                      </li>
                     </ul>
                   </div>
                 ))}
@@ -745,6 +857,7 @@ export function RoutePlannerForm({
           open={overviewOpen}
           start={result.start}
           end={result.end}
+          manualWaypoints={result.manualWaypoints}
           plan={draftPlan}
           busy={replanBusy}
           dirty={overviewDirty}

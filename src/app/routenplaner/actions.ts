@@ -3,8 +3,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { geocodeAddress } from "@/lib/providers/geocoding/nominatim";
 import { osrmProvider } from "@/lib/providers/routing/osrm";
-import { DEFAULT_CONSUMPTION_KWH_PER_100KM, planTrip, type TripPlan } from "@/lib/route-planning";
+import { DEFAULT_CONSUMPTION_KWH_PER_100KM, distanceAlongRouteKm, planTrip, type TripPlan } from "@/lib/route-planning";
 import { assessPersonalCompatibility, summarizeCommunitySuitability } from "@/lib/scoring/trailer-compatibility";
+import type { ManualWaypoint, ManualWaypointWithDistance } from "@/lib/route-timeline";
 import type { Caravan, ChargingReview, ChargingStation, SavedRoute, Vehicle } from "@/types/database";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
@@ -19,6 +20,8 @@ export interface RoutePlanResult {
   start: { latitude: number; longitude: number; displayName: string };
   end: { latitude: number; longitude: number; displayName: string };
   geometry: { latitude: number; longitude: number }[];
+  /** Manuell hinzugefuegte, zwingend zu durchfahrende Zwischenstopps (§ ABRP-Vorbild "Add Stop") -- unabhaengig von der Ladeplanung, siehe route-timeline.ts. */
+  manualWaypoints: ManualWaypointWithDistance[];
   vehicle: Pick<Vehicle, "manufacturer" | "model">;
   caravan: Pick<Caravan, "manufacturer" | "model"> | null;
   consumptionSource: "manual" | "profile" | "default";
@@ -32,6 +35,7 @@ export interface RoutePlanResult {
 interface PlanningSettings {
   preferTrailerSuitable: boolean;
   minPowerKw?: number;
+  preferredProvider?: string;
   departureSocPercent?: number;
   minSocAtStopPercent?: number;
   minSocAtDestinationPercent?: number;
@@ -62,19 +66,19 @@ function requireString(value: FormDataEntryValue | null, label: string): string 
 }
 
 /**
- * Reichert den geplanten Ladestopp sowie dessen Alternativen um eine
+ * Reichert die geplanten Ladestopps sowie deren Alternativen an: eine
  * persoenliche Eignungseinschaetzung fuer das konkrete Gespann des Nutzers
- * an (§20) -- planTrip selbst kennt keine charging_reviews (reine
- * Planungslogik ohne DB-Zugriff, siehe route-planning.ts). Ohne Wohnwagen
- * im Profil bleibt personalCompatibility null (nur die allgemeine
- * trailer_suitable-Einstufung wird angezeigt).
+ * (§20) und das Datum der letzten Community-Bewertung als Proxy fuer
+ * "zuletzt bestaetigt funktionsfaehig" (kein Live-Status verfuegbar, siehe
+ * Phase 8). planTrip selbst kennt keine charging_reviews (reine
+ * Planungslogik ohne DB-Zugriff, siehe route-planning.ts).
  */
-async function annotatePersonalCompatibility(
+async function annotateChargingStops(
   supabase: SupabaseServerClient,
   plan: TripPlan,
   userTrailerLengthM: number | null
 ): Promise<TripPlan> {
-  if (plan.chargingStops.length === 0 || userTrailerLengthM === null) return plan;
+  if (plan.chargingStops.length === 0) return plan;
 
   const stationIds = plan.chargingStops.flatMap((stop) => [
     stop.station.id,
@@ -93,20 +97,27 @@ async function annotatePersonalCompatibility(
     reviewsByStation.set(review.charging_station_id, list);
   }
 
-  function personalCompatibilityFor(stationId: string) {
+  function annotate(stationId: string) {
     const stationReviews = reviewsByStation.get(stationId) ?? [];
     const summary = summarizeCommunitySuitability(stationReviews);
-    return assessPersonalCompatibility(summary, userTrailerLengthM);
+    const lastConfirmedAt =
+      stationReviews.length > 0
+        ? stationReviews.reduce((latest, r) => (r.created_at > latest ? r.created_at : latest), stationReviews[0].created_at)
+        : null;
+    return {
+      personalCompatibility: assessPersonalCompatibility(summary, userTrailerLengthM),
+      lastConfirmedAt,
+    };
   }
 
   return {
     ...plan,
     chargingStops: plan.chargingStops.map((stop) => ({
       ...stop,
-      personalCompatibility: personalCompatibilityFor(stop.station.id),
+      ...annotate(stop.station.id),
       alternatives: stop.alternatives.map((alt) => ({
         ...alt,
-        personalCompatibility: personalCompatibilityFor(alt.station.id),
+        ...annotate(alt.station.id),
       })),
     })),
   };
@@ -123,6 +134,7 @@ async function buildRoutePlanResult({
   supabase,
   start,
   end,
+  manualWaypoints,
   vehicle,
   caravan,
   consumptionKwhPer100km,
@@ -132,13 +144,19 @@ async function buildRoutePlanResult({
   supabase: SupabaseServerClient;
   start: GeoPoint;
   end: GeoPoint;
+  /** Bereits aufgeloeste manuelle Zwischenstopps (Koordinaten bekannt, siehe route-timeline.ts). */
+  manualWaypoints: ManualWaypoint[];
   vehicle: Vehicle;
   caravan: Caravan | null;
   consumptionKwhPer100km: number;
   consumptionSource: RoutePlanResult["consumptionSource"];
   settings: PlanningSettings;
 }): Promise<RoutePlanResult> {
-  const route = await osrmProvider.planRoute({ start, end });
+  const route = await osrmProvider.planRoute({
+    start,
+    end,
+    waypoints: manualWaypoints.map((w) => ({ latitude: w.latitude, longitude: w.longitude })),
+  });
 
   const { data: chargingStations } = await supabase.from("charging_stations").select("*");
 
@@ -148,6 +166,7 @@ async function buildRoutePlanResult({
     chargingStations: (chargingStations as ChargingStation[]) ?? [],
     preferTrailerSuitable: settings.preferTrailerSuitable,
     minPowerKw: settings.minPowerKw,
+    preferredProvider: settings.preferredProvider,
     consumptionKwhPer100km,
     ...(settings.departureSocPercent !== undefined && { departureSocPercent: settings.departureSocPercent }),
     ...(settings.minSocAtStopPercent !== undefined && { minSocAtStopPercent: settings.minSocAtStopPercent }),
@@ -164,12 +183,18 @@ async function buildRoutePlanResult({
 
   const userTrailerLengthM =
     vehicle.length_m !== null && caravan?.length_m ? vehicle.length_m + caravan.length_m : null;
-  const annotatedPlan = await annotatePersonalCompatibility(supabase, plan, userTrailerLengthM);
+  const annotatedPlan = await annotateChargingStops(supabase, plan, userTrailerLengthM);
+
+  const manualWaypointsWithDistance: ManualWaypointWithDistance[] = manualWaypoints.map((w) => ({
+    ...w,
+    distanceFromStartKm: distanceAlongRouteKm(w, route),
+  }));
 
   return {
     start: { latitude: start.latitude, longitude: start.longitude, displayName: start.displayName },
     end: { latitude: end.latitude, longitude: end.longitude, displayName: end.displayName },
     geometry: route.geometry,
+    manualWaypoints: manualWaypointsWithDistance,
     vehicle: { manufacturer: vehicle.manufacturer, model: vehicle.model },
     caravan: caravan ? { manufacturer: caravan.manufacturer, model: caravan.model } : null,
     consumptionSource,
@@ -219,17 +244,31 @@ export async function planRoute(formData: FormData): Promise<RoutePlanResult> {
   const vehicleId = requireString(formData.get("vehicle_id"), "Fahrzeug");
   const caravanId = formData.get("caravan_id");
   const minPowerKwRaw = formData.get("min_power_kw");
+  const preferredProviderRaw = formData.get("preferred_provider");
   const preferTrailerSuitable = formData.get("prefer_trailer_suitable") === "1";
+  const manualStopQueries = formData
+    .getAll("manual_stop")
+    .filter((v): v is string => typeof v === "string" && v.trim() !== "");
 
   const vehicle = await requireVehicle(supabase, vehicleId, user.id);
   const caravan = await loadCaravan(supabase, typeof caravanId === "string" ? caravanId : null, user.id);
 
+  // Nominatim-Nutzungsrichtlinie: max. 1 Anfrage/Sekunde -- Start, Ziel und
+  // jeder manuelle Zwischenstopp werden deshalb sequenziell mit Pause
+  // geocodiert statt parallel.
   const start = await geocodeAddress(startQuery);
   if (!start) throw new Error(`Start "${startQuery}" konnte nicht gefunden werden.`);
-  // Nominatim-Nutzungsrichtlinie: max. 1 Anfrage/Sekunde.
   await new Promise((resolve) => setTimeout(resolve, 1000));
   const end = await geocodeAddress(endQuery);
   if (!end) throw new Error(`Ziel "${endQuery}" konnte nicht gefunden werden.`);
+
+  const manualWaypoints: ManualWaypoint[] = [];
+  for (const query of manualStopQueries) {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    const point = await geocodeAddress(query);
+    if (!point) throw new Error(`Zwischenstopp "${query}" konnte nicht gefunden werden.`);
+    manualWaypoints.push({ query, displayName: point.displayName, latitude: point.latitude, longitude: point.longitude });
+  }
 
   // Verbrauch: manuelle Eingabe im Routenplaner > Profilangabe > Standardwert.
   // Bewusst KEINE Herstellerangaben (Batterie/Reichweite) verwenden, siehe
@@ -257,6 +296,7 @@ export async function planRoute(formData: FormData): Promise<RoutePlanResult> {
     supabase,
     start,
     end,
+    manualWaypoints,
     vehicle,
     caravan,
     consumptionKwhPer100km,
@@ -264,6 +304,7 @@ export async function planRoute(formData: FormData): Promise<RoutePlanResult> {
     settings: {
       preferTrailerSuitable,
       minPowerKw: minPowerKwRaw ? Number(minPowerKwRaw) : undefined,
+      preferredProvider: typeof preferredProviderRaw === "string" && preferredProviderRaw ? preferredProviderRaw : undefined,
       ...(departureSocPercent !== null && { departureSocPercent }),
       ...(minSocAtStopPercent !== null && { minSocAtStopPercent }),
       ...(minSocAtDestinationPercent !== null && { minSocAtDestinationPercent }),
@@ -286,6 +327,7 @@ export async function replanChargingStop(input: {
   consumptionKwhPer100km: number;
   preferTrailerSuitable: boolean;
   minPowerKw?: number;
+  preferredProvider?: string;
   departureSocPercent: number;
   minSocAtStopPercent: number;
   minSocAtDestinationPercent: number;
@@ -311,6 +353,7 @@ export async function replanChargingStop(input: {
     chargingStations: (chargingStations as ChargingStation[]) ?? [],
     preferTrailerSuitable: input.preferTrailerSuitable,
     minPowerKw: input.minPowerKw,
+    preferredProvider: input.preferredProvider,
     consumptionKwhPer100km: input.consumptionKwhPer100km,
     departureSocPercent: input.departureSocPercent,
     minSocAtStopPercent: input.minSocAtStopPercent,
@@ -323,7 +366,7 @@ export async function replanChargingStop(input: {
 
   const userTrailerLengthM =
     vehicle.length_m !== null && caravan?.length_m ? vehicle.length_m + caravan.length_m : null;
-  return annotatePersonalCompatibility(supabase, plan, userTrailerLengthM);
+  return annotateChargingStops(supabase, plan, userTrailerLengthM);
 }
 
 export interface SaveRouteInput {
@@ -332,11 +375,13 @@ export interface SaveRouteInput {
   start: GeoPoint;
   endQuery: string;
   end: GeoPoint;
+  manualWaypoints: ManualWaypoint[];
   vehicleId: string;
   caravanId: string | null;
   manualConsumptionKwhPer100km: number | null;
   minPowerKw: number | null;
   preferTrailerSuitable: boolean;
+  preferredProvider: string | null;
   departureSocPercent: number;
   minSocAtStopPercent: number;
   minSocAtDestinationPercent: number;
@@ -370,11 +415,18 @@ export async function saveRoute(input: SaveRouteInput): Promise<{ id: string }> 
       end_display_name: input.end.displayName,
       end_latitude: input.end.latitude,
       end_longitude: input.end.longitude,
+      manual_stops: input.manualWaypoints.map((w) => ({
+        query: w.query,
+        display_name: w.displayName,
+        latitude: w.latitude,
+        longitude: w.longitude,
+      })),
       vehicle_id: input.vehicleId,
       caravan_id: input.caravanId,
       manual_consumption_kwh_per_100km: input.manualConsumptionKwhPer100km,
       min_power_kw: input.minPowerKw,
       prefer_trailer_suitable: input.preferTrailerSuitable,
+      preferred_provider: input.preferredProvider,
       departure_soc_percent: input.departureSocPercent,
       min_soc_at_stop_percent: input.minSocAtStopPercent,
       min_soc_at_destination_percent: input.minSocAtDestinationPercent,
@@ -394,11 +446,13 @@ export interface SavedRouteDetail {
   name: string;
   startQuery: string;
   endQuery: string;
+  manualStopQueries: string[];
   vehicleId: string;
   caravanId: string | null;
   manualConsumptionKwhPer100km: number | null;
   minPowerKw: number | null;
   preferTrailerSuitable: boolean;
+  preferredProvider: string | null;
   departureSocPercent: number;
   minSocAtStopPercent: number;
   minSocAtDestinationPercent: number;
@@ -409,9 +463,10 @@ export interface SavedRouteDetail {
   result: RoutePlanResult;
 }
 
-/** Oeffnet eine gespeicherte Route erneut: Start/Ziel-Koordinaten sind
- * bereits bekannt (kein erneutes Geocoding noetig), Route/Ladeplanung
- * werden mit den gespeicherten Einstellungen frisch neu berechnet. */
+/** Oeffnet eine gespeicherte Route erneut: Start/Ziel/manuelle Zwischenstopp-
+ * Koordinaten sind bereits bekannt (kein erneutes Geocoding noetig), Route/
+ * Ladeplanung werden mit den gespeicherten Einstellungen frisch neu
+ * berechnet. */
 export async function loadSavedRoute(savedRouteId: string): Promise<SavedRouteDetail> {
   const supabase = await createClient();
   const {
@@ -454,11 +509,18 @@ export async function loadSavedRoute(savedRouteId: string): Promise<SavedRouteDe
     longitude: savedRoute.end_longitude,
     displayName: savedRoute.end_display_name,
   };
+  const manualWaypoints: ManualWaypoint[] = savedRoute.manual_stops.map((w) => ({
+    query: w.query,
+    displayName: w.display_name,
+    latitude: w.latitude,
+    longitude: w.longitude,
+  }));
 
   const result = await buildRoutePlanResult({
     supabase,
     start,
     end,
+    manualWaypoints,
     vehicle,
     caravan,
     consumptionKwhPer100km,
@@ -466,6 +528,7 @@ export async function loadSavedRoute(savedRouteId: string): Promise<SavedRouteDe
     settings: {
       preferTrailerSuitable: savedRoute.prefer_trailer_suitable,
       minPowerKw: savedRoute.min_power_kw ?? undefined,
+      preferredProvider: savedRoute.preferred_provider ?? undefined,
       departureSocPercent: savedRoute.departure_soc_percent,
       minSocAtStopPercent: savedRoute.min_soc_at_stop_percent,
       minSocAtDestinationPercent: savedRoute.min_soc_at_destination_percent,
@@ -480,11 +543,13 @@ export async function loadSavedRoute(savedRouteId: string): Promise<SavedRouteDe
     name: savedRoute.name,
     startQuery: savedRoute.start_query,
     endQuery: savedRoute.end_query,
+    manualStopQueries: manualWaypoints.map((w) => w.query),
     vehicleId: savedRoute.vehicle_id,
     caravanId: savedRoute.caravan_id,
     manualConsumptionKwhPer100km: savedRoute.manual_consumption_kwh_per_100km,
     minPowerKw: savedRoute.min_power_kw,
     preferTrailerSuitable: savedRoute.prefer_trailer_suitable,
+    preferredProvider: savedRoute.preferred_provider,
     departureSocPercent: savedRoute.departure_soc_percent,
     minSocAtStopPercent: savedRoute.min_soc_at_stop_percent,
     minSocAtDestinationPercent: savedRoute.min_soc_at_destination_percent,

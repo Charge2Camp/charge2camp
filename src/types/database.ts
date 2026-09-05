@@ -176,6 +176,13 @@ export interface ChargingReview {
   photo_url: string | null;
   comment: string | null;
   created_at: string;
+
+  // Strukturierte "echter Drive-Through"-Kriterien (angelehnt an
+  // evcaravan.de), jeweils optional (null = keine Angabe).
+  enough_space_for_rig: boolean | null;
+  unobstructed_access: boolean | null;
+  no_barrier_or_garage: boolean | null;
+  side_mounted_charger: boolean | null;
 }
 
 export interface SavedRoute {
@@ -199,6 +206,7 @@ export interface SavedRoute {
   manual_consumption_kwh_per_100km: number | null;
   min_power_kw: number | null;
   prefer_trailer_suitable: boolean;
+  preferred_provider: string | null;
 
   departure_soc_percent: number;
   min_soc_at_stop_percent: number;
@@ -208,6 +216,7 @@ export interface SavedRoute {
 
   excluded_station_ids: string[];
   forced_station_id_by_index: Record<number, string>;
+  manual_stops: { query: string; display_name: string; latitude: number; longitude: number }[];
 
   created_at: string;
 }

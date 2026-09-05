@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { deleteChargingReview, updateChargingReview } from "@/app/profil/actions";
+import { CriterionField } from "@/components/charging-stations/criterion-field";
 import type { ChargingReview } from "@/types/database";
 
 export type ChargingReviewWithStation = ChargingReview & {
@@ -26,6 +27,11 @@ function EditForm({
         ? "no"
         : ""
   );
+  const criterionDefault = (value: boolean | null) => (value === true ? "yes" : value === false ? "no" : "");
+  const [enoughSpaceForRig, setEnoughSpaceForRig] = useState(criterionDefault(review.enough_space_for_rig));
+  const [unobstructedAccess, setUnobstructedAccess] = useState(criterionDefault(review.unobstructed_access));
+  const [noBarrierOrGarage, setNoBarrierOrGarage] = useState(criterionDefault(review.no_barrier_or_garage));
+  const [sideMountedCharger, setSideMountedCharger] = useState(criterionDefault(review.side_mounted_charger));
 
   return (
     <form
@@ -99,6 +105,34 @@ function EditForm({
           </label>
         </fieldset>
       )}
+
+      <div className="flex flex-col gap-3 rounded-md border border-black/10 p-3 dark:border-white/10">
+        <p className="text-sm font-medium">Details zur Durchfahrt</p>
+        <CriterionField
+          name="enough_space_for_rig"
+          label="Genug Platz für Zugfahrzeug + Wohnwagen (ca. ab 15 m)?"
+          value={enoughSpaceForRig}
+          onChange={setEnoughSpaceForRig}
+        />
+        <CriterionField
+          name="unobstructed_access"
+          label="Freie Rangierfläche ohne Hindernisse?"
+          value={unobstructedAccess}
+          onChange={setUnobstructedAccess}
+        />
+        <CriterionField
+          name="no_barrier_or_garage"
+          label="Kein Parkhaus / keine Schranke?"
+          value={noBarrierOrGarage}
+          onChange={setNoBarrierOrGarage}
+        />
+        <CriterionField
+          name="side_mounted_charger"
+          label="Ladesäule seitlich mit ausreichender Kabellänge?"
+          value={sideMountedCharger}
+          onChange={setSideMountedCharger}
+        />
+      </div>
 
       <div className="grid grid-cols-2 gap-3">
         <label className="flex flex-col gap-1 text-sm">

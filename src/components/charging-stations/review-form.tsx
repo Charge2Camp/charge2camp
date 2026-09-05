@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { addChargingReview } from "@/app/ladepunkte/[id]/actions";
+import { CriterionField } from "@/components/charging-stations/criterion-field";
 import type { Caravan, Vehicle } from "@/types/database";
 
 export function ChargingReviewForm({
@@ -16,6 +17,10 @@ export function ChargingReviewForm({
   const [error, setError] = useState<string | null>(null);
   const [suitable, setSuitable] = useState<"yes" | "limited" | "no">("yes");
   const [decoupledParkingPossible, setDecoupledParkingPossible] = useState("");
+  const [enoughSpaceForRig, setEnoughSpaceForRig] = useState("");
+  const [unobstructedAccess, setUnobstructedAccess] = useState("");
+  const [noBarrierOrGarage, setNoBarrierOrGarage] = useState("");
+  const [sideMountedCharger, setSideMountedCharger] = useState("");
   const [vehicleId, setVehicleId] = useState("");
   const [caravanId, setCaravanId] = useState("");
   const [trailerLengthM, setTrailerLengthM] = useState("");
@@ -119,6 +124,36 @@ export function ChargingReviewForm({
           </label>
         </fieldset>
       )}
+
+      <div className="flex flex-col gap-3 rounded-md border border-black/10 p-3 dark:border-white/10">
+        <p className="text-sm font-medium">
+          Details zur Durchfahrt (optional, hilft anderen bei der Einschätzung)
+        </p>
+        <CriterionField
+          name="enough_space_for_rig"
+          label="Genug Platz für Zugfahrzeug + Wohnwagen (ca. ab 15 m)?"
+          value={enoughSpaceForRig}
+          onChange={setEnoughSpaceForRig}
+        />
+        <CriterionField
+          name="unobstructed_access"
+          label="Freie Rangierfläche ohne Hindernisse?"
+          value={unobstructedAccess}
+          onChange={setUnobstructedAccess}
+        />
+        <CriterionField
+          name="no_barrier_or_garage"
+          label="Kein Parkhaus / keine Schranke?"
+          value={noBarrierOrGarage}
+          onChange={setNoBarrierOrGarage}
+        />
+        <CriterionField
+          name="side_mounted_charger"
+          label="Ladesäule seitlich mit ausreichender Kabellänge?"
+          value={sideMountedCharger}
+          onChange={setSideMountedCharger}
+        />
+      </div>
 
       <p className="text-sm font-medium">Mit welchem Gespann warst du hier?</p>
       <div className="grid grid-cols-2 gap-3">

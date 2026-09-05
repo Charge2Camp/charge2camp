@@ -6,6 +6,10 @@ export interface LatLng {
 export interface RouteRequest {
   start: LatLng;
   end: LatLng;
+  /** Zwingend zu durchfahrende Zwischenpunkte in Fahrtreihenfolge (z. B.
+   * manuell hinzugefuegte Stopps, siehe route-timeline.ts) -- unabhaengig
+   * von den automatisch geplanten Ladestopps. */
+  waypoints?: LatLng[];
 }
 
 export interface RouteResult {

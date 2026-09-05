@@ -17,7 +17,7 @@ export default async function RoutePlannerPage({
 
   const { savedRouteId } = await searchParams;
 
-  const [{ data: vehicles }, { data: caravans }] = await Promise.all([
+  const [{ data: vehicles }, { data: caravans }, { data: providerRows }] = await Promise.all([
     supabase
       .from("vehicles")
       .select("*")
@@ -28,7 +28,10 @@ export default async function RoutePlannerPage({
       .select("*")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false }),
+    supabase.from("charging_stations").select("provider"),
   ]);
+
+  const providers = Array.from(new Set((providerRows ?? []).map((r) => r.provider as string))).sort();
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
@@ -41,6 +44,7 @@ export default async function RoutePlannerPage({
         <RoutePlannerForm
           vehicles={(vehicles as Vehicle[]) ?? []}
           caravans={(caravans as Caravan[]) ?? []}
+          providers={providers}
           initialSavedRouteId={savedRouteId}
         />
       </div>

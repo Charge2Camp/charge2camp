@@ -187,6 +187,44 @@ dieselbe Adapter-Logik unveraendert in der geplanten nativen iOS-/
 Android-App wiederverwendet werden kann (dort uebernimmt z. B. React
 Natives `Linking.openURL` das Oeffnen).
 
+**Anbieter-Filter, manuelle Zwischenstopps, Ladekosten, Bestätigungsdatum
+(angelehnt an evcaravan.de und A Better Routeplanner):**
+
+- Optionaler **Anbieter-Filter** (`preferredProvider` in `planTrip`) --
+  schraenkt Ladestopp-Kandidaten auf einen bestimmten Betreiber ein
+  (z. B. "IONITY"), analog zu `minPowerKw`.
+- **Manuelle Zwischenstopps** ("Add Stop", ABRP-Vorbild): beliebig viele
+  Adressen, die die Route zwingend durchfahren soll, unabhaengig vom
+  Ladebedarf (z. B. ein Campingplatz). Werden als zusaetzliche Wegpunkte in
+  die OSRM-Anfrage eingespeist (`RouteRequest.waypoints`,
+  [src/lib/providers/routing/osrm.ts](../src/lib/providers/routing/osrm.ts));
+  die zurueckgegebene Streckengeometrie enthaelt sie bereits, sodass die
+  bestehende Distanz-entlang-der-Route-Logik unveraendert weiterfunktioniert.
+  Anders als Ladestopps koennen sie NICHT im Routenuebersicht-Popup geloescht
+  werden (das wuerde eine komplette Neuberechnung der OSRM-Route erfordern) --
+  Aendern/Entfernen geschieht ueber das Hauptformular.
+  [src/lib/route-timeline.ts](../src/lib/route-timeline.ts) baut aus Start,
+  Ladestopps und manuellen Zwischenstopps eine gemeinsame, nach
+  Streckenposition sortierte Zeitleiste -- Grundlage sowohl fuer die
+  Routenuebersicht-Anzeige als auch fuer die Segment-Navigation.
+- **Geschaetzte Ladekosten** pro Stopp und gesamt (`estimatedCostEur`,
+  `totalEstimatedCostEur` in `TripPlan`) aus bereits vorhandenem
+  `charging_stations.price` -- fehlt bei mindestens einem Stopp der Preis,
+  wird die Summe ehrlich als Teilsumme markiert (`costEstimateIncomplete`)
+  statt fehlende Preise stillschweigend als 0 € zu behandeln.
+- **Datum der letzten Community-Bestätigung** statt Live-Status/
+  Oeffnungszeiten (kein Live-Status verfuegbar, siehe Phase 8): jeder
+  vorgeschlagene Ladestopp und jede Alternative zeigt das Datum der
+  juengsten `charging_reviews`-Bewertung als Proxy fuer "zuletzt bestaetigt
+  funktionsfaehig".
+- **Strukturierte Anhaengertauglichkeits-Kriterien** in `charging_reviews`
+  (`enough_space_for_rig`, `unobstructed_access`, `no_barrier_or_garage`,
+  `side_mounted_charger`, jeweils optional) statt nur Freitext -- macht
+  Community-Bewertungen konsistenter vergleichbar. Werden im
+  Bewertungsformular ([src/components/charging-stations/review-form.tsx](../src/components/charging-stations/review-form.tsx))
+  und in der Bearbeiten-Ansicht im Profil abgefragt, auf der
+  Ladepunkt-Detailseite als Badges je Bewertung angezeigt.
+
 **Meine Routen (Profil): Segment-Navigation.** Die Liste unter
 `/profil/routen` plant jede gespeicherte Route serverseitig neu (siehe
 oben) und zeigt neben "Gesamte Route navigieren" auch einen

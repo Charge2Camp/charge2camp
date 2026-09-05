@@ -87,13 +87,22 @@ Gespann meist nur abgekoppelt an die Ladesäule heranfahren kann — erfasst,
 ob der Wohnwagen dabei bequem in unmittelbarer Nähe geparkt werden kann,
 während das Zugfahrzeug lädt.
 
+`enough_space_for_rig`, `unobstructed_access`, `no_barrier_or_garage`,
+`side_mounted_charger` (alle optional, angelehnt an evcaravan.de):
+strukturierte Einzelkriterien fuer "echten Drive-Through ohne Rangieren/
+Abkoppeln" statt nur Freitext in `trailer_notes` -- machen
+Community-Bewertungen konsistenter vergleichbar.
+
 ### saved_routes (§21–§27, Routenplaner)
 
 Gespeicherte Routenplanungen: Start-/Ziel-Query + Koordinaten +
 Anzeigename, Verweis auf `vehicles`/`caravans` (optional, `on delete set
 null`), alle Ladeeinstellungen (Verbrauch, Mindest-Ladeleistung,
-Anhängertauglichkeits-Präferenz, SOC-Werte, Umweg-Toleranz) sowie die im
-Routenübersicht-Popup getroffene Kuratierung (`excluded_station_ids`,
+Anhängertauglichkeits-Präferenz, bevorzugter Anbieter, SOC-Werte,
+Umweg-Toleranz), manuelle Zwischenstopps (`manual_stops`, jsonb-Array aus
+{query, display_name, latitude, longitude} -- siehe
+[architecture.md](architecture.md)) sowie die im Routenübersicht-Popup
+getroffene Kuratierung (`excluded_station_ids`,
 `forced_station_id_by_index`). Enthält bewusst KEINE fertige
 Streckengeometrie/keinen fertigen Ladeplan — beim Öffnen wird mit
 denselben Einstellungen frisch neu geplant (siehe

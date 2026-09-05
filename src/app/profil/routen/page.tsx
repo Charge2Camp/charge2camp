@@ -2,7 +2,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { deleteSavedRoute } from "@/app/profil/actions";
 import { loadSavedRoute, type RoutePlanResult } from "@/app/routenplaner/actions";
-import { googleMapsNavigationProvider, type NavigationPoint } from "@/lib/providers/navigation";
+import { googleMapsNavigationProvider } from "@/lib/providers/navigation";
+import { buildRouteTimeline } from "@/lib/route-timeline";
 import { NavigationLink } from "@/components/profile/navigation-link";
 import type { SavedRoute } from "@/types/database";
 
@@ -17,33 +18,32 @@ interface RouteSegment {
 
 /** Ein Navigations-Link pro Etappe (Start -> 1. Ladestopp -> ... -> Ziel),
  * damit z. B. nur der Teil zwischen zwei Ladestopps in Google Maps
- * nachnavigiert werden kann -- zusaetzlich zur Navigation der Gesamtroute. */
+ * nachnavigiert werden kann -- zusaetzlich zur Navigation der Gesamtroute.
+ * Beruecksichtigt auch manuell hinzugefuegte Zwischenstopps (§ ABRP-Vorbild
+ * "Add Stop") in der korrekten Streckenposition. */
 function buildSegments(result: RoutePlanResult): { segments: RouteSegment[]; fullRouteUrl: string } {
-  const points: (NavigationPoint & { label: string })[] = [
-    { label: "Start", latitude: result.start.latitude, longitude: result.start.longitude },
-    ...result.plan.chargingStops.map((stop, index) => ({
-      label: `${index + 1}. Ladestopp`,
-      latitude: stop.station.latitude,
-      longitude: stop.station.longitude,
-    })),
-    { label: "Ziel", latitude: result.end.latitude, longitude: result.end.longitude },
-  ];
+  const timeline = buildRouteTimeline({
+    start: result.start,
+    end: result.end,
+    distanceKm: result.plan.distanceKm,
+    chargingStops: result.plan.chargingStops,
+    manualWaypoints: result.manualWaypoints,
+  });
 
   const segments: RouteSegment[] = [];
-  for (let i = 0; i < points.length - 1; i++) {
+  for (let i = 0; i < timeline.length - 1; i++) {
     segments.push({
-      label: `${points[i].label} → ${points[i + 1].label}`,
-      url: googleMapsNavigationProvider.buildUrl({ origin: points[i], destination: points[i + 1], stops: [] }),
+      label: `${timeline[i].label} → ${timeline[i + 1].label}`,
+      url: googleMapsNavigationProvider.buildUrl({ origin: timeline[i], destination: timeline[i + 1], stops: [] }),
     });
   }
 
   const fullRouteUrl = googleMapsNavigationProvider.buildUrl({
     origin: result.start,
     destination: result.end,
-    stops: result.plan.chargingStops.map((stop) => ({
-      latitude: stop.station.latitude,
-      longitude: stop.station.longitude,
-    })),
+    stops: timeline
+      .slice(1, -1)
+      .map((p) => ({ latitude: p.latitude, longitude: p.longitude })),
   });
 
   return { segments, fullRouteUrl };
@@ -147,6 +147,8 @@ export default async function SavedRoutesPage() {
                       {result.plan.chargingStops.length === 0
                         ? "Kein Ladestopp nötig"
                         : `${result.plan.chargingStops.length} Ladestopp${result.plan.chargingStops.length === 1 ? "" : "s"}`}
+                      {result.plan.totalEstimatedCostEur !== null &&
+                        ` · geschätzte Ladekosten: ${result.plan.costEstimateIncomplete ? "ab " : ""}${result.plan.totalEstimatedCostEur.toFixed(2)} €`}
                     </p>
 
                     {(() => {

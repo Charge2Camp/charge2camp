@@ -67,6 +67,10 @@ export async function addChargingReview(formData: FormData) {
     caravan_id: caravanId,
     decoupled_parking_possible:
       suitable === "limited" ? parseOptionalBoolean(formData.get("decoupled_parking_possible")) : null,
+    enough_space_for_rig: parseOptionalBoolean(formData.get("enough_space_for_rig")),
+    unobstructed_access: parseOptionalBoolean(formData.get("unobstructed_access")),
+    no_barrier_or_garage: parseOptionalBoolean(formData.get("no_barrier_or_garage")),
+    side_mounted_charger: parseOptionalBoolean(formData.get("side_mounted_charger")),
     trailer_length_m: parseOptionalNumber(formData.get("trailer_length_m")),
     trailer_width_m: parseOptionalNumber(formData.get("trailer_width_m")),
     caravan_model: typeof caravanModel === "string" && caravanModel.trim() ? caravanModel.trim() : null,

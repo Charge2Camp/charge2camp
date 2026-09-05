@@ -15,6 +15,12 @@ function requireNumber(value: FormDataEntryValue | null): number {
   return parsed;
 }
 
+function parseOptionalBoolean(value: FormDataEntryValue | null): boolean | null {
+  if (value === "yes") return true;
+  if (value === "no") return false;
+  return null;
+}
+
 function requireString(value: FormDataEntryValue | null): string {
   if (!value || typeof value !== "string" || value.trim() === "") {
     throw new Error("Pflichtfeld fehlt.");
@@ -163,6 +169,10 @@ export async function updateChargingReview(formData: FormData) {
     .update({
       suitable,
       decoupled_parking_possible: decoupledParkingPossible,
+      enough_space_for_rig: parseOptionalBoolean(formData.get("enough_space_for_rig")),
+      unobstructed_access: parseOptionalBoolean(formData.get("unobstructed_access")),
+      no_barrier_or_garage: parseOptionalBoolean(formData.get("no_barrier_or_garage")),
+      side_mounted_charger: parseOptionalBoolean(formData.get("side_mounted_charger")),
       trailer_length_m: parseOptionalNumber(formData.get("trailer_length_m")),
       trailer_width_m: parseOptionalNumber(formData.get("trailer_width_m")),
       caravan_model:
