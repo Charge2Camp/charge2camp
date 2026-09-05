@@ -38,7 +38,29 @@ werden.
 |---|---|---|---|---|
 | GraphHopper | https://www.graphhopper.com | Apache-2.0 (Open Source) / kommerzielle API | Free Tier + kostenpflichtig | Research Required |
 | Valhalla | https://valhalla.github.io | MIT | kostenlos (Self-Hosting) | Research Required |
-| OSRM | http://project-osrm.org | BSD-2-Clause | kostenlos (Self-Hosting) | Research Required |
+| OSRM (Demo-Server) | https://router.project-osrm.org | BSD-2-Clause, Demo-Server nur zur Evaluierung | kostenlos, kein API-Key | aktiv seit Phase 6 |
+
+**Hinweis OSRM-Demo-Server (Phase 6):** Genutzt über
+[src/lib/providers/routing/osrm.ts](../src/lib/providers/routing/osrm.ts).
+Laut OSRM-Projekt ist der öffentliche Demo-Server ausdrücklich nur für
+Tests/geringen Traffic gedacht, nicht für Produktivbetrieb. Vor dem
+produktiven Rollout muss auf einen selbst gehosteten OSRM/Valhalla/
+GraphHopper-Server umgestellt werden — dafür genügt ein neuer Adapter
+gegen dasselbe `RoutingProvider`-Interface (siehe [api.md](api.md)).
+
+## Geocoding
+
+| Anbieter | URL | Lizenz | Kosten | Status |
+|---|---|---|---|---|
+| Nominatim (OpenStreetMap) | https://nominatim.openstreetmap.org | ODbL, [Nutzungsrichtlinie](https://operations.osmfoundation.org/policies/nominatim/) | kostenlos, kein API-Key | aktiv seit Phase 6 |
+
+**Hinweis Nominatim (Phase 6):** Genutzt über
+[src/lib/providers/geocoding/nominatim.ts](../src/lib/providers/geocoding/nominatim.ts)
+zur Umwandlung von Start-/Zieladressen in Koordinaten. Die
+Nutzungsrichtlinie erlaubt max. 1 Anfrage/Sekunde und verlangt einen
+aussagekräftigen User-Agent (beides im Adapter berücksichtigt). Für
+höheren Produktions-Traffic muss auf einen selbst gehosteten
+Nominatim-Server oder einen kommerziellen Geocoder umgestellt werden.
 
 ## Verkehr
 

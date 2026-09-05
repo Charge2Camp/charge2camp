@@ -96,6 +96,37 @@ tatsächlich ist, statt nur einer einzelnen Gesamtquote. Klassengrenzen
 zentral in `RIG_LENGTH_BUCKETS` (leicht anpassbar, z. B. auf datengetriebene
 Quantile später).
 
+## Routenplanung (§21–§27, Phase 6)
+
+`/routenplaner` verbindet Geocoding, Routing und eine erste Ladeplanung:
+
+- **Geocoding**: Nominatim (OpenStreetMap, kostenlos, kein API-Key) —
+  [src/lib/providers/geocoding/nominatim.ts](../src/lib/providers/geocoding/nominatim.ts).
+- **Routing**: OSRM-Adapter gegen den öffentlichen Demo-Server (kostenlos,
+  kein API-Key) —
+  [src/lib/providers/routing/osrm.ts](../src/lib/providers/routing/osrm.ts),
+  implementiert das in [docs/api.md](api.md) definierte `RoutingProvider`-
+  Interface, damit ein Wechsel auf GraphHopper/Valhalla/einen selbst
+  gehosteten OSRM-Server nur einen neuen Adapter erfordert.
+- **Ladeplanung**: regelbasiert, ein Ladestopp pro Route (kein
+  Mehrstopp-Optimierer) —
+  [src/lib/route-planning.ts](../src/lib/route-planning.ts). Sucht
+  anhängertaugliche Ladepunkte im Streckenkorridor (`unsuitable` wird hart
+  ausgeschlossen, §26/§27), berechnet Energieverbrauch, Ladezeit sowie
+  Abfahrts-/Ankunfts-Ladestand und meldet ehrlich, wenn keine Lösung mit
+  einem einzelnen Stopp gefunden wird, statt eine falsche Route
+  vorzutäuschen.
+
+**Realistischer Verbrauch statt Herstellerangaben:** Der für die
+Reichweitenberechnung verwendete Verbrauch wird **nie** aus
+Batteriekapazität/Hersteller-Reichweite abgeleitet (diese Werte sind
+erfahrungsgemäß zu optimistisch, besonders mit Wohnwagen). Stattdessen gilt
+eine feste Priorität: manuelle Eingabe im Routenplaner-Formular → Wert aus
+dem Fahrzeugprofil (`vehicles.consumption_kwh_per_100km`) → Standardwert
+`DEFAULT_CONSUMPTION_KWH_PER_100KM` (38 kWh/100km, angelehnt an
+ADAC-Praxistests mit Gespann). Das Formular zeigt transparent an, welche
+Quelle verwendet wurde.
+
 ## Phasenplan
 
 1. **Grundsystem** — Next.js, TypeScript, Tailwind, Supabase, Auth, DB,
@@ -106,7 +137,7 @@ Quantile später).
    Detailseite mit EV-Camping-Score ✅
 4. **Ladepunkte** — Datenmodell, Kartenansicht, Filter, Anhängertauglichkeit ✅
 5. **Community** — Bewertung, Kommentar, Gespannparameter, Score ✅
-6. **Routenplanung** — Start/Ziel, Routing, Fahrzeug, Wohnwagen, Ladeplanung
+6. **Routenplanung** — Start/Ziel, Routing, Fahrzeug, Wohnwagen, Ladeplanung ✅
 7. **Gespannlogik** — Länge/Breite/Höhe/Gewicht, Straßenrestriktionen (OSM)
 8. **Live-Daten** — echte Provider-Adapter anschließen
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { LngLatBounds, MapLibreMap, Marker, NavigationControl } from "maplibre-gl";
+import { GeoJSONSource, LngLatBounds, MapLibreMap, Marker, NavigationControl } from "maplibre-gl";
 import { osmStyle } from "./osm-style";
 
 export interface MapMarker {
@@ -12,17 +12,26 @@ export interface MapMarker {
   color?: string;
 }
 
+export interface RoutePoint {
+  latitude: number;
+  longitude: number;
+}
+
 const DEFAULT_COLOR = "#10b981";
 const SELECTED_COLOR = "#059669";
+const ROUTE_SOURCE_ID = "route";
+const ROUTE_LAYER_ID = "route-line";
 
 export function MapView({
   markers,
+  route,
   selectedId,
   onMarkerClick,
   fallbackCenter = { latitude: 51.1657, longitude: 10.4515 }, // Deutschland
   fallbackZoom = 4.5,
 }: {
   markers: MapMarker[];
+  route?: RoutePoint[];
   selectedId?: string;
   onMarkerClick?: (id: string) => void;
   fallbackCenter?: { latitude: number; longitude: number };
@@ -31,6 +40,7 @@ export function MapView({
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markersRef = useRef<Map<string, Marker>>(new Map());
+  const loadedRef = useRef(false);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -47,11 +57,15 @@ export function MapView({
       zoom: first ? 6 : fallbackZoom,
     });
     map.addControl(new NavigationControl(), "top-right");
+    map.on("load", () => {
+      loadedRef.current = true;
+    });
     mapRef.current = map;
 
     return () => {
       map.remove();
       mapRef.current = null;
+      loadedRef.current = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -82,19 +96,53 @@ export function MapView({
       markersRef.current.set(m.id, marker);
     }
 
-    if (markers.length > 1) {
-      const bounds = markers.reduce(
-        (b, m) => b.extend([m.longitude, m.latitude]),
-        new LngLatBounds(
-          [markers[0].longitude, markers[0].latitude],
-          [markers[0].longitude, markers[0].latitude]
-        )
+    const routeCoords = route?.map((p): [number, number] => [p.longitude, p.latitude]) ?? [];
+
+    function drawRoute() {
+      if (!map) return;
+      const geojson = {
+        type: "Feature" as const,
+        properties: {},
+        geometry: { type: "LineString" as const, coordinates: routeCoords },
+      };
+      const source = map.getSource(ROUTE_SOURCE_ID);
+      if (routeCoords.length > 1) {
+        if (source instanceof GeoJSONSource) {
+          source.setData(geojson);
+        } else {
+          map.addSource(ROUTE_SOURCE_ID, { type: "geojson", data: geojson });
+          map.addLayer({
+            id: ROUTE_LAYER_ID,
+            type: "line",
+            source: ROUTE_SOURCE_ID,
+            layout: { "line-join": "round", "line-cap": "round" },
+            paint: { "line-color": "#059669", "line-width": 4 },
+          });
+        }
+      } else if (source) {
+        map.removeLayer(ROUTE_LAYER_ID);
+        map.removeSource(ROUTE_SOURCE_ID);
+      }
+    }
+
+    if (loadedRef.current) {
+      drawRoute();
+    } else {
+      map.once("load", drawRoute);
+    }
+
+    const boundsPoints = routeCoords.length > 0 ? routeCoords : markers.map((m) => [m.longitude, m.latitude] as [number, number]);
+
+    if (boundsPoints.length > 1) {
+      const bounds = boundsPoints.reduce(
+        (b, p) => b.extend(p),
+        new LngLatBounds(boundsPoints[0], boundsPoints[0])
       );
       map.fitBounds(bounds, { padding: 60, maxZoom: 12 });
-    } else if (markers.length === 1) {
-      map.flyTo({ center: [markers[0].longitude, markers[0].latitude], zoom: 10 });
+    } else if (boundsPoints.length === 1) {
+      map.flyTo({ center: boundsPoints[0], zoom: 10 });
     }
-  }, [markers, selectedId, onMarkerClick]);
+  }, [markers, route, selectedId, onMarkerClick]);
 
   return <div ref={containerRef} className="h-full w-full" />;
 }

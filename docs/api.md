@@ -2,14 +2,12 @@
 
 ## Status
 
-Phase 1 stellt Auth (Supabase Auth, direkt über den Browser-/Server-Client)
-und das Datenbankschema bereit. Es gibt noch keine eigenen REST/RPC-Routen
-und noch keine Provider-Adapter-Implementierung — beides folgt mit den
-Phasen, die die jeweiligen Daten benötigen (Campingplätze: Phase 3,
-Ladepunkte: Phase 4, Routing: Phase 6, Live-Daten: Phase 8).
-
-Dieses Dokument beschreibt die geplante Struktur, damit spätere Phasen
-konsistent darauf aufbauen.
+Seit Phase 6 sind zwei Provider-Adapter aktiv: `RoutingProvider` (OSRM,
+[src/lib/providers/routing/osrm.ts](../src/lib/providers/routing/osrm.ts))
+und ein Geocoding-Adapter (Nominatim,
+[src/lib/providers/geocoding/nominatim.ts](../src/lib/providers/geocoding/nominatim.ts),
+noch ohne eigenes generisches Interface, da bislang nur ein Anbieter).
+`ChargingProvider`/`TrafficProvider` folgen mit Phase 8 (Live-Daten).
 
 ## Supabase-Zugriff
 
