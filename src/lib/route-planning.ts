@@ -37,24 +37,41 @@ export const DEFAULT_TARGET_SOC_AFTER_CHARGING_PERCENT = 80;
 export const DEFAULT_DETOUR_TOLERANCE_KM = 20;
 export const MAX_DETOUR_TOLERANCE_KM = 100;
 
+export interface ChargingStopCandidate {
+  station: ChargingStation;
+  distanceFromStartKm: number;
+  /** Naeherungsweise Distanz der Ladesaeule von der Route (Umweg-Proxy). */
+  corridorDistanceKm: number;
+  /**
+   * Persoenliche Eignungseinschaetzung fuer das Gespann des Nutzers (§20),
+   * basierend auf Community-Bewertungen dieses Ladepunkts. Wird von
+   * planTrip NICHT berechnet (erfordert charging_reviews aus der DB) --
+   * die aufrufende Server-Action reichert Kandidaten damit nachtraeglich an.
+   */
+  personalCompatibility?: import("./scoring/trailer-compatibility").PersonalCompatibility | null;
+}
+
 export interface TripPlan {
   distanceKm: number;
   durationMin: number;
   effectiveConsumptionKwhPer100km: number;
   effectiveRangeKm: number;
   chargingStopRequired: boolean;
-  chargingStop: {
-    station: ChargingStation;
-    distanceFromStartKm: number;
-    /** Naeherungsweise Distanz der Ladesaeule von der Route (Umweg-Proxy). */
-    corridorDistanceKm: number;
-    socOnArrivalPercent: number;
-    chargingTimeMin: number | null;
-  } | null;
+  chargingStop:
+    | (ChargingStopCandidate & {
+        socOnArrivalPercent: number;
+        chargingTimeMin: number | null;
+        /** Weitere Kandidaten im Streckenkorridor (gleiche Sortierung: Anhaengertauglichkeit vor Umweg), zur Anzeige als Alternativen. */
+        alternatives: ChargingStopCandidate[];
+      })
+    | null;
   departureSocPercent: number;
   arrivalSocPercent: number | null;
   warning: string | null;
 }
+
+/** Maximale Anzahl an Alternativ-Vorschlaegen pro Ladestopp (Uebersichtlichkeit im UI). */
+const MAX_ALTERNATIVES = 5;
 
 /** Reichweite (km), die zwischen zwei Ladestaenden (in %) zur Verfuegung
  * steht, gegeben die effektive Gesamtreichweite bei 100 % -> 0 %. */
@@ -93,6 +110,8 @@ export function planTrip({
   minSocAtDestinationPercent = DEFAULT_MIN_SOC_AT_DESTINATION_PERCENT,
   targetSocAfterChargingPercent = DEFAULT_TARGET_SOC_AFTER_CHARGING_PERCENT,
   detourToleranceKm = DEFAULT_DETOUR_TOLERANCE_KM,
+  excludedStationIds = [],
+  forcedStationId,
 }: {
   route: RouteResult;
   vehicle: Pick<Vehicle, "battery_capacity_kwh">;
@@ -111,6 +130,10 @@ export function planTrip({
   targetSocAfterChargingPercent?: number;
   /** Zusaetzliche km, die fuer einen anhaengertauglicheren Ladepunkt in Kauf genommen werden. */
   detourToleranceKm?: number;
+  /** Vom Nutzer per "Loeschen" ausgeschlossene Ladepunkt-IDs -- werden bei der Kandidatensuche uebersprungen. */
+  excludedStationIds?: string[];
+  /** Nutzer hat explizit eine Alternative gewaehlt -- diese Station wird bevorzugt, sofern sie noch als Kandidat gueltig ist. */
+  forcedStationId?: string;
 }): TripPlan {
   const consumption = consumptionKwhPer100km;
   const effectiveRangeKm = (vehicle.battery_capacity_kwh / consumption) * 100;
@@ -179,7 +202,14 @@ export function planTrip({
     return a.corridorDistanceKm - b.corridorDistanceKm;
   });
 
-  const chosen = candidates[0];
+  // Vom Nutzer geloeschte Ladepunkte werden aus der Auswahl entfernt, bevor
+  // automatisch (oder per Alternativen-Auswahl) der naechste Kandidat
+  // bestimmt wird.
+  const selectable = candidates.filter((c) => !excludedStationIds.includes(c.station.id));
+
+  const chosen = forcedStationId
+    ? selectable.find((c) => c.station.id === forcedStationId)
+    : selectable[0];
 
   if (!chosen) {
     return {
@@ -191,10 +221,20 @@ export function planTrip({
       chargingStop: null,
       departureSocPercent,
       arrivalSocPercent: null,
-      warning:
-        "Diese Strecke übersteigt die Reichweite des Gespanns, aber es wurde kein passender Ladepunkt auf der Route gefunden (ggf. Umweg-Toleranz erhöhen). Bitte Route, Fahrzeug oder Einstellungen prüfen.",
+      warning: forcedStationId
+        ? "Der gewählte Ladepunkt ist mit den aktuellen Einstellungen nicht erreichbar (außerhalb der Reichweite, Umweg-Toleranz oder Mindest-Ladeleistung). Bitte Einstellungen prüfen."
+        : "Diese Strecke übersteigt die Reichweite des Gespanns, aber es wurde kein passender Ladepunkt auf der Route gefunden (ggf. Umweg-Toleranz erhöhen). Bitte Route, Fahrzeug oder Einstellungen prüfen.",
     };
   }
+
+  const alternatives = selectable
+    .filter((c) => c.station.id !== chosen.station.id)
+    .slice(0, MAX_ALTERNATIVES)
+    .map(({ station, distanceFromStartKm, corridorDistanceKm }) => ({
+      station,
+      distanceFromStartKm,
+      corridorDistanceKm,
+    }));
 
   const socOnArrival = socPercentAfter(departureSocPercent, energyForDistance(chosen.distanceFromStartKm));
 
@@ -227,6 +267,7 @@ export function planTrip({
       corridorDistanceKm: chosen.corridorDistanceKm,
       socOnArrivalPercent: socOnArrival,
       chargingTimeMin,
+      alternatives,
     },
     departureSocPercent,
     arrivalSocPercent,

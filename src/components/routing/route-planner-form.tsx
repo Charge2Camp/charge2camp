@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { planRoute, type RoutePlanResult } from "@/app/routenplaner/actions";
+import { planRoute, replanChargingStop, type RoutePlanResult } from "@/app/routenplaner/actions";
 import { MapView } from "@/components/map/map-view";
+import { RouteOverviewDialog } from "@/components/routing/route-overview-dialog";
 import {
   DEFAULT_CONSUMPTION_KWH_PER_100KM,
   DEFAULT_DEPARTURE_SOC_PERCENT,
@@ -91,6 +92,10 @@ export function RoutePlannerForm({
     DEFAULT_TARGET_SOC_AFTER_CHARGING_PERCENT
   );
   const [detourTolerance, setDetourTolerance] = useState(DEFAULT_DETOUR_TOLERANCE_KM);
+  const [excludedStationIds, setExcludedStationIds] = useState<string[]>([]);
+  const [overviewOpen, setOverviewOpen] = useState(false);
+  const [replanBusy, setReplanBusy] = useState(false);
+  const [replanError, setReplanError] = useState<string | null>(null);
 
   const vehicleById = useMemo(() => new Map(vehicles.map((v) => [v.id, v])), [vehicles]);
 
@@ -120,6 +125,50 @@ export function RoutePlannerForm({
     setMinSocAtDestination(DEFAULT_MIN_SOC_AT_DESTINATION_PERCENT);
     setTargetSocAfterCharging(DEFAULT_TARGET_SOC_AFTER_CHARGING_PERCENT);
     setDetourTolerance(DEFAULT_DETOUR_TOLERANCE_KM);
+    setExcludedStationIds([]);
+    setOverviewOpen(false);
+    setReplanError(null);
+  }
+
+  // Ruft die Ladeplanung neu ab, ohne Start/Ziel neu zu geocodieren oder die
+  // Route neu zu berechnen (Streckengeometrie bleibt gleich) -- genutzt zum
+  // Loeschen eines vorgeschlagenen Ladestopps oder Waehlen einer Alternative
+  // aus der Routenuebersicht.
+  async function handleReplan(overrides: { excludedStationIds?: string[]; forcedStationId?: string }) {
+    if (!result) return;
+    setReplanBusy(true);
+    setReplanError(null);
+    try {
+      const newPlan = await replanChargingStop({
+        vehicleId,
+        caravanId: caravanId || undefined,
+        route: { distanceKm: result.plan.distanceKm, durationMin: result.plan.durationMin, geometry: result.geometry },
+        consumptionKwhPer100km: result.plan.effectiveConsumptionKwhPer100km,
+        preferTrailerSuitable,
+        minPowerKw: minPowerKw ? Number(minPowerKw) : undefined,
+        departureSocPercent: departureSoc,
+        minSocAtStopPercent: minSocAtStop,
+        minSocAtDestinationPercent: minSocAtDestination,
+        targetSocAfterChargingPercent: targetSocAfterCharging,
+        detourToleranceKm: detourTolerance,
+        excludedStationIds: overrides.excludedStationIds ?? excludedStationIds,
+        forcedStationId: overrides.forcedStationId,
+      });
+      setResult({ ...result, plan: newPlan });
+      if (overrides.excludedStationIds) setExcludedStationIds(overrides.excludedStationIds);
+    } catch (err) {
+      setReplanError(err instanceof Error ? err.message : "Ladestopp konnte nicht neu geplant werden.");
+    } finally {
+      setReplanBusy(false);
+    }
+  }
+
+  function handleDeleteStop(stationId: string) {
+    handleReplan({ excludedStationIds: [...excludedStationIds, stationId] });
+  }
+
+  function handleSelectAlternative(stationId: string) {
+    handleReplan({ forcedStationId: stationId });
   }
 
   return (
@@ -139,6 +188,7 @@ export function RoutePlannerForm({
           try {
             const planResult = await planRoute(formData);
             setResult(planResult);
+            setExcludedStationIds([]);
           } catch (err) {
             setError(err instanceof Error ? err.message : "Route konnte nicht berechnet werden.");
           } finally {
@@ -326,6 +376,18 @@ export function RoutePlannerForm({
 
       {result && (
         <div className="flex flex-col gap-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => setOverviewOpen(true)}
+              className="rounded-md border border-emerald-600 px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-600/10 dark:text-emerald-400"
+            >
+              Routenübersicht anzeigen
+            </button>
+          </div>
+
+          {replanError && <p className="text-sm text-red-600">{replanError}</p>}
+
           <div className="h-[400px] overflow-hidden rounded-lg border border-black/10 dark:border-white/10">
             <MapView
               markers={[
@@ -424,6 +486,17 @@ export function RoutePlannerForm({
             )
           )}
         </div>
+      )}
+
+      {result && (
+        <RouteOverviewDialog
+          open={overviewOpen}
+          onClose={() => setOverviewOpen(false)}
+          result={result}
+          busy={replanBusy}
+          onDeleteStop={handleDeleteStop}
+          onSelectAlternative={handleSelectAlternative}
+        />
       )}
     </div>
   );

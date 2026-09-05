@@ -4,7 +4,10 @@ import { createClient } from "@/lib/supabase/server";
 import { geocodeAddress } from "@/lib/providers/geocoding/nominatim";
 import { osrmProvider } from "@/lib/providers/routing/osrm";
 import { DEFAULT_CONSUMPTION_KWH_PER_100KM, planTrip, type TripPlan } from "@/lib/route-planning";
-import type { Caravan, ChargingStation, Vehicle } from "@/types/database";
+import { assessPersonalCompatibility, summarizeCommunitySuitability } from "@/lib/scoring/trailer-compatibility";
+import type { Caravan, ChargingReview, ChargingStation, Vehicle } from "@/types/database";
+
+type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 
 export interface RoutePlanResult {
   start: { latitude: number; longitude: number; displayName: string };
@@ -34,6 +37,57 @@ function requireString(value: FormDataEntryValue | null, label: string): string 
     throw new Error(`${label} fehlt.`);
   }
   return value.trim();
+}
+
+/**
+ * Reichert den geplanten Ladestopp sowie dessen Alternativen um eine
+ * persoenliche Eignungseinschaetzung fuer das konkrete Gespann des Nutzers
+ * an (§20) -- planTrip selbst kennt keine charging_reviews (reine
+ * Planungslogik ohne DB-Zugriff, siehe route-planning.ts). Ohne Wohnwagen
+ * im Profil bleibt personalCompatibility null (nur die allgemeine
+ * trailer_suitable-Einstufung wird angezeigt).
+ */
+async function annotatePersonalCompatibility(
+  supabase: SupabaseServerClient,
+  plan: TripPlan,
+  userTrailerLengthM: number | null
+): Promise<TripPlan> {
+  if (!plan.chargingStop || userTrailerLengthM === null) return plan;
+
+  const stationIds = [
+    plan.chargingStop.station.id,
+    ...plan.chargingStop.alternatives.map((a) => a.station.id),
+  ];
+
+  const { data: reviews } = await supabase
+    .from("charging_reviews")
+    .select("*")
+    .in("charging_station_id", stationIds);
+
+  const reviewsByStation = new Map<string, ChargingReview[]>();
+  for (const review of (reviews as ChargingReview[]) ?? []) {
+    const list = reviewsByStation.get(review.charging_station_id) ?? [];
+    list.push(review);
+    reviewsByStation.set(review.charging_station_id, list);
+  }
+
+  function personalCompatibilityFor(stationId: string) {
+    const stationReviews = reviewsByStation.get(stationId) ?? [];
+    const summary = summarizeCommunitySuitability(stationReviews);
+    return assessPersonalCompatibility(summary, userTrailerLengthM);
+  }
+
+  return {
+    ...plan,
+    chargingStop: {
+      ...plan.chargingStop,
+      personalCompatibility: personalCompatibilityFor(plan.chargingStop.station.id),
+      alternatives: plan.chargingStop.alternatives.map((alt) => ({
+        ...alt,
+        personalCompatibility: personalCompatibilityFor(alt.station.id),
+      })),
+    },
+  };
 }
 
 export async function planRoute(formData: FormData): Promise<RoutePlanResult> {
@@ -116,6 +170,10 @@ export async function planRoute(formData: FormData): Promise<RoutePlanResult> {
     ...(detourToleranceKm !== null && { detourToleranceKm }),
   });
 
+  const userTrailerLengthM =
+    vehicle.length_m !== null && caravan?.length_m ? vehicle.length_m + caravan.length_m : null;
+  const annotatedPlan = await annotatePersonalCompatibility(supabase, plan, userTrailerLengthM);
+
   return {
     start: { latitude: start.latitude, longitude: start.longitude, displayName: start.displayName },
     end: { latitude: end.latitude, longitude: end.longitude, displayName: end.displayName },
@@ -123,6 +181,75 @@ export async function planRoute(formData: FormData): Promise<RoutePlanResult> {
     vehicle: { manufacturer: vehicle.manufacturer, model: vehicle.model },
     caravan: caravan ? { manufacturer: caravan.manufacturer, model: caravan.model } : null,
     consumptionSource,
-    plan,
+    plan: annotatedPlan,
   };
+}
+
+/**
+ * Berechnet nur die Ladeplanung neu (z. B. nachdem der Nutzer den
+ * vorgeschlagenen Ladestopp geloescht oder eine Alternative gewaehlt hat) --
+ * ohne erneutes Geocoding/Routing, da Start/Ziel/Streckengeometrie
+ * unveraendert bleiben. Vermeidet unnoetige Nominatim-/OSRM-Anfragen.
+ */
+export async function replanChargingStop(input: {
+  vehicleId: string;
+  caravanId?: string;
+  route: { distanceKm: number; durationMin: number; geometry: { latitude: number; longitude: number }[] };
+  consumptionKwhPer100km: number;
+  preferTrailerSuitable: boolean;
+  minPowerKw?: number;
+  departureSocPercent: number;
+  minSocAtStopPercent: number;
+  minSocAtDestinationPercent: number;
+  targetSocAfterChargingPercent: number;
+  detourToleranceKm: number;
+  excludedStationIds: string[];
+  forcedStationId?: string;
+}): Promise<TripPlan> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nicht angemeldet.");
+
+  const { data: vehicle, error: vehicleError } = await supabase
+    .from("vehicles")
+    .select("*")
+    .eq("id", input.vehicleId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (vehicleError || !vehicle) throw new Error("Fahrzeug nicht gefunden.");
+
+  let caravan: Caravan | null = null;
+  if (input.caravanId) {
+    const { data } = await supabase
+      .from("caravans")
+      .select("*")
+      .eq("id", input.caravanId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    caravan = data as Caravan | null;
+  }
+
+  const { data: chargingStations } = await supabase.from("charging_stations").select("*");
+
+  const plan = planTrip({
+    route: input.route,
+    vehicle: vehicle as Vehicle,
+    chargingStations: (chargingStations as ChargingStation[]) ?? [],
+    preferTrailerSuitable: input.preferTrailerSuitable,
+    minPowerKw: input.minPowerKw,
+    consumptionKwhPer100km: input.consumptionKwhPer100km,
+    departureSocPercent: input.departureSocPercent,
+    minSocAtStopPercent: input.minSocAtStopPercent,
+    minSocAtDestinationPercent: input.minSocAtDestinationPercent,
+    targetSocAfterChargingPercent: input.targetSocAfterChargingPercent,
+    detourToleranceKm: input.detourToleranceKm,
+    excludedStationIds: input.excludedStationIds,
+    forcedStationId: input.forcedStationId,
+  });
+
+  const userTrailerLengthM =
+    vehicle.length_m !== null && caravan?.length_m ? vehicle.length_m + caravan.length_m : null;
+  return annotatePersonalCompatibility(supabase, plan, userTrailerLengthM);
 }
