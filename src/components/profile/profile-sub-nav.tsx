@@ -26,8 +26,8 @@ export function ProfileSubNav() {
             href={tab.href}
             className={
               active
-                ? "rounded-md bg-emerald-600 px-3 py-1.5 text-white"
-                : "rounded-md px-3 py-1.5 hover:bg-black/5 dark:hover:bg-white/10"
+                ? "flex min-h-11 items-center rounded-md bg-emerald-600 px-3 text-white"
+                : "flex min-h-11 items-center rounded-md px-3 hover:bg-black/5 dark:hover:bg-white/10"
             }
           >
             {tab.label}

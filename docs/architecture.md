@@ -239,34 +239,70 @@ pro Klick sorgt dafuer, dass zuverlaessig ein neuer Tab entsteht (ein
 wiederholt gleicher Name wuerde einen schon offenen Tab nur still im
 Hintergrund umleiten) und der eCamper-Tab selbst nie verlassen wird.
 
-## Mobile/Touch-Design (Routenplaner)
+## Mobile/Touch-Design & Vorbereitung auf native Apps (verbindlich)
 
-`/routenplaner` und das Routenuebersicht-Popup sind mobile-first fuer
-Touch-Bedienung (iPhone) ausgelegt:
+**eCamper soll spaeter als native iOS-/Android-App im App Store/Play
+Store vertrieben werden** (vermutlich als WebView-Wrapper, z. B.
+Capacitor, um die bestehende Next.js-Codebasis wiederzuverwenden -- die
+konkrete Wrapper-Technologie ist noch nicht festgelegt). Das ist ab
+sofort eine **verbindliche Randbedingung fuer jede UI-Aenderung**, nicht
+nur fuer den Routenplaner:
 
+- **Mobile-first, Touch-Ziele ≥ 44px** (Apple HIG) fuer jeden
+  interaktiven Button/Link -- ueber `min-h-11`/`min-h-12` plus
+  grosszuegigeres Padding statt der kompakteren Desktop-Groessen. Reine
+  Text-Links ohne Padding (z. B. "Bearbeiten"/"Löschen"-Aktionen) sind zu
+  vermeiden.
+- **Eingabefelder mit `text-base`** (16px), niemals kleiner: iOS Safari
+  zoomt beim Fokussieren eines Feldes mit Schriftgroesse < 16px
+  automatisch hinein. Da Label-Wrapper haeufig `text-sm` setzen (vom
+  `<input>`/`<select>`/`<textarea>` per CSS-Vererbung uebernommen), muss
+  das Eingabeelement selbst immer explizit `text-base` tragen.
+- **Kein `hover:`-only Verhalten** fuer Funktionalitaet (nur fuer rein
+  kosmetisches Feedback) -- Touchscreens kennen kein `:hover`. Wo Hover
+  bisher etwas steuert (z. B. Karte↔Liste-Hervorhebung in
+  `campsite-explorer.tsx`/`charging-station-explorer.tsx`), zusaetzlich
+  einen Tap-Weg anbieten (dort: `onMarkerClick` auf der Karte).
+  Karten-Marker (`src/components/map/map-view.tsx`) haben eine 44px
+  Tap-Flaeche um einen bewusst kleiner bleibenden 16px-Punkt herum.
 - **Viewport-Meta** (`export const viewport` in
-  [src/app/layout.tsx](../src/app/layout.tsx)): ohne dieses Meta faellt
-  iOS Safari auf eine Desktop-Layout-Breite von ca. 980px zurueck --
-  saemtliche Tailwind-Breakpoints (`sm:`, `md:`, ...) wuerden dann auf
-  echten Handys falsch auswerten. Nutzer-Zoom bleibt bewusst erlaubt
-  (kein `maximumScale`/`userScalable: false`, das waere ein
+  [src/app/layout.tsx](../src/app/layout.tsx), inkl. `viewportFit:
+  "cover"`): ohne dieses Meta faellt iOS Safari auf eine
+  Desktop-Layout-Breite von ca. 980px zurueck -- saemtliche
+  Tailwind-Breakpoints (`sm:`, `md:`, ...) wuerden dann auf echten
+  Handys falsch auswerten. Nutzer-Zoom bleibt bewusst erlaubt (kein
+  `maximumScale`/`userScalable: false`, das waere ein
   Barrierefreiheits-Problem, WCAG 1.4.4).
-- **Eingabefelder mit `text-base`** (16px) statt des von umschliessenden
-  Labels geerbten `text-sm` (14px): iOS Safari zoomt beim Fokussieren
-  eines Feldes mit Schriftgroesse < 16px automatisch hinein, was auf
-  einem Formular mit vielen Feldern als sehr stoerend empfunden wird.
-- **Tap-Ziele ≥ 44px** (Apple HIG) fuer alle wiederholt genutzten
-  Buttons -- "Löschen", "Diesen Ladepunkt wählen",
-  "Alternativen anzeigen", Schliessen-Button (✕), Segment-Navigations-
-  Buttons, "+ Zwischenstopp hinzufügen" -- über `min-h-11`/`min-h-12`
-  plus grosszügigeres Padding statt der kompakteren Desktop-Groessen.
-- **Routenübersicht-Popup als Vollbild-Sheet auf kleinen Screens**: statt
-  einer kleinen, mittig schwebenden Karte mit totem Rand füllt das Popup
-  unterhalb von `sm:` (640px) den gesamten Bildschirm (`inset-0`, keine
-  abgerundeten Ecken) -- bessere Erreichbarkeit mit dem Daumen und mehr
-  Platz für die Liste. Ab `sm:` wieder die bisherige zentrierte Karte.
-- **Aktions-Buttons stapeln sich vertikal** auf schmalen Screens
+- **`env(safe-area-inset-*)`** fuer fixe/vollflaechige Elemente (Header,
+  Footer, Vollbild-Dialoge) -- respektiert Notch/Dynamic Island/
+  Home-Indicator, sobald die Seite randlos (native App ohne Browser-
+  Chrome) laeuft. Auf normalen Browsern ist der Wert 0, aendert also
+  nichts. **Vorsicht beim Schreiben**: `env(safe-area-inset-top)` NICHT
+  in Kommentaren als abgekuerztes Beispiel wie "env(...)" hinschreiben --
+  Tailwinds Klassen-Scanner liest auch Kommentare und generiert daraus
+  eine kaputte, nicht kompilierbare CSS-Regel (siehe Git-Historie).
+- **Externe Navigation/Deep-Links ueber Adapter kapseln** (§14-Prinzip,
+  gilt jetzt auch hierfuer): `NavigationProvider.buildUrl` baut nur die
+  URL, das Oeffnen passiert in einer duennen Komponente
+  ([src/components/profile/navigation-link.tsx](../src/components/profile/navigation-link.tsx)).
+  So kann eine spaetere native App `window.open` durch
+  `Linking.openURL`/ein natives Kartenprogramm ersetzen, ohne die
+  Adapter-Logik anzufassen.
+- **Vollbild-Sheets statt kleiner zentrierter Dialoge auf schmalen
+  Screens**: z. B. das Routenuebersicht-Popup
+  ([src/components/routing/route-overview-dialog.tsx](../src/components/routing/route-overview-dialog.tsx))
+  ist unterhalb von `sm:` (640px) `inset-0` ohne abgerundete Ecken --
+  bessere Erreichbarkeit mit dem Daumen. Ab `sm:` weiterhin eine
+  zentrierte Karte.
+- **Aktions-Button-Reihen stapeln sich vertikal** auf schmalen Screens
   (`flex-col sm:flex-row`) statt sich nebeneinander zu quetschen.
+
+**Noch offen fuer eine echte App-Store-Veroeffentlichung** (bewusst noch
+nicht umgesetzt, da echte Design-Assets fehlen -- keine Platzhalter-Icons
+erfunden, siehe §39 "keine Scheindaten"): App-Icon-Set, Splashscreens,
+`manifest.json` fuer PWA-Installierbarkeit, Entscheidung fuer eine
+konkrete Wrapper-Technologie (Capacitor o. ae.), Push-Notification-
+Strategie, Store-Listing-Texte/Screenshots.
 
 ## Profil-Struktur (Phase 2, erweitert)
 

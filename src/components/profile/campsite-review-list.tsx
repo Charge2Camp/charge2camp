@@ -30,7 +30,7 @@ function EditForm({ review, onCancel }: { review: CampsiteReviewWithCampsite; on
             type="button"
             onClick={() => setRating(value)}
             aria-label={`${value} Sterne`}
-            className={`text-xl ${value <= rating ? "text-amber-500" : "text-black/20 dark:text-white/20"}`}
+            className={`flex h-11 w-11 items-center justify-center text-xl ${value <= rating ? "text-amber-500" : "text-black/20 dark:text-white/20"}`}
           >
             ★
           </button>
@@ -42,20 +42,20 @@ function EditForm({ review, onCancel }: { review: CampsiteReviewWithCampsite; on
         name="comment"
         rows={2}
         defaultValue={review.comment ?? ""}
-        className="rounded-md border border-black/15 px-3 py-2 text-sm dark:border-white/15 dark:bg-transparent"
+        className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
       />
 
       <div className="flex gap-2">
         <button
           type="submit"
-          className="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
+          className="min-h-11 rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
         >
           Speichern
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-md border border-black/10 px-3 py-1.5 text-sm dark:border-white/10"
+          className="min-h-11 rounded-md border border-black/10 px-4 py-2 text-sm dark:border-white/10"
         >
           Abbrechen
         </button>
@@ -102,14 +102,14 @@ export function CampsiteReviewList({ reviews }: { reviews: CampsiteReviewWithCam
                 <button
                   type="button"
                   onClick={() => setEditingId(review.id)}
-                  className="text-emerald-600 hover:underline"
+                  className="flex min-h-11 items-center px-2 -mx-2 text-emerald-600 hover:underline"
                 >
                   Bearbeiten
                 </button>
                 <form action={deleteCampsiteReview}>
                   <input type="hidden" name="id" value={review.id} />
                   <input type="hidden" name="campsite_id" value={review.campsite_id} />
-                  <button type="submit" className="text-red-600 hover:underline">
+                  <button type="submit" className="flex min-h-11 items-center px-2 -mx-2 text-red-600 hover:underline">
                     Löschen
                   </button>
                 </form>

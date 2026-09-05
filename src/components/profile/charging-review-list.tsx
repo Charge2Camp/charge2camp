@@ -134,7 +134,7 @@ function EditForm({
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <label className="flex flex-col gap-1 text-sm">
           Gespannlänge (m)
           <input
@@ -143,7 +143,7 @@ function EditForm({
             step="0.01"
             min="0"
             defaultValue={review.trailer_length_m ?? ""}
-            className="rounded-md border border-black/15 px-3 py-2 dark:border-white/15 dark:bg-transparent"
+            className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
           />
         </label>
         <label className="flex flex-col gap-1 text-sm">
@@ -154,7 +154,7 @@ function EditForm({
             step="0.01"
             min="0"
             defaultValue={review.trailer_width_m ?? ""}
-            className="rounded-md border border-black/15 px-3 py-2 dark:border-white/15 dark:bg-transparent"
+            className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
           />
         </label>
       </div>
@@ -164,7 +164,7 @@ function EditForm({
         <input
           name="caravan_model"
           defaultValue={review.caravan_model ?? ""}
-          className="rounded-md border border-black/15 px-3 py-2 dark:border-white/15 dark:bg-transparent"
+          className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
         />
       </label>
 
@@ -172,20 +172,20 @@ function EditForm({
         name="comment"
         rows={2}
         defaultValue={review.comment ?? ""}
-        className="rounded-md border border-black/15 px-3 py-2 text-sm dark:border-white/15 dark:bg-transparent"
+        className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
       />
 
       <div className="flex gap-2">
         <button
           type="submit"
-          className="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
+          className="min-h-11 rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
         >
           Speichern
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-md border border-black/10 px-3 py-1.5 text-sm dark:border-white/10"
+          className="min-h-11 rounded-md border border-black/10 px-4 py-2 text-sm dark:border-white/10"
         >
           Abbrechen
         </button>
@@ -243,7 +243,7 @@ export function ChargingReviewList({ reviews }: { reviews: ChargingReviewWithSta
                 <button
                   type="button"
                   onClick={() => setEditingId(review.id)}
-                  className="text-emerald-600 hover:underline"
+                  className="flex min-h-11 items-center px-2 -mx-2 text-emerald-600 hover:underline"
                 >
                   Bearbeiten
                 </button>
@@ -254,7 +254,7 @@ export function ChargingReviewList({ reviews }: { reviews: ChargingReviewWithSta
                     name="charging_station_id"
                     value={review.charging_station_id}
                   />
-                  <button type="submit" className="text-red-600 hover:underline">
+                  <button type="submit" className="flex min-h-11 items-center px-2 -mx-2 text-red-600 hover:underline">
                     Löschen
                   </button>
                 </form>

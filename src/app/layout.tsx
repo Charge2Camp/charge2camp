@@ -29,6 +29,12 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  // "cover" macht die env(safe-area-inset-*) CSS-Variablen nutzbar (Notch/
+  // Dynamic Island/Home-Indicator) -- wichtig, sobald die Seite spaeter als
+  // native iOS-App (randlos, ohne Browser-Chrome) verpackt wird. Ohne
+  // "cover" bleiben diese Variablen 0 und Inhalte koennten unter der Notch
+  // oder Home-Indicator-Leiste liegen.
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

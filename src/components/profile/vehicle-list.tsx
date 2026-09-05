@@ -32,7 +32,7 @@ export function VehicleList({ vehicles }: { vehicles: Vehicle[] }) {
             <input type="hidden" name="id" value={vehicle.id} />
             <button
               type="submit"
-              className="text-sm text-red-600 hover:underline"
+              className="flex min-h-11 items-center px-2 text-sm text-red-600 hover:underline"
               aria-label={`${vehicle.manufacturer} ${vehicle.model} entfernen`}
             >
               Entfernen

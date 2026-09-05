@@ -17,11 +17,14 @@ export async function SiteHeader() {
   } = await supabase.auth.getUser();
 
   return (
-    <header className="relative border-b border-black/10 dark:border-white/10">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
-        <div className="flex items-center gap-3">
+    // Das oberste Padding nutzt env(safe-area-inset-top) und respektiert so
+    // die Notch/Dynamic Island, sobald die Seite randlos (viewport-fit=cover)
+    // laeuft -- auf normalen Browsern ist der Wert 0 und aendert nichts.
+    <header className="relative border-b border-black/10 pt-[env(safe-area-inset-top)] dark:border-white/10">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-2">
+        <div className="flex items-center gap-2">
           <MobileNav />
-          <Link href="/" className="flex items-center gap-2 font-semibold">
+          <Link href="/" className="flex items-center gap-2 py-2 font-semibold">
             <span className="text-emerald-600">e</span>Camper
           </Link>
         </div>
@@ -34,22 +37,28 @@ export async function SiteHeader() {
           ))}
         </nav>
 
-        <div className="flex items-center gap-3 text-sm">
+        <div className="flex items-center gap-1 text-sm sm:gap-2">
           {user ? (
             <>
-              <Link href="/profil" className="hover:text-emerald-600">
+              <Link
+                href="/profil"
+                className="flex min-h-11 items-center rounded-md px-2 hover:bg-black/5 hover:text-emerald-600 dark:hover:bg-white/10 sm:px-3"
+              >
                 Mein Profil
               </Link>
               <LogoutButton />
             </>
           ) : (
             <>
-              <Link href="/login" className="hover:text-emerald-600">
+              <Link
+                href="/login"
+                className="flex min-h-11 items-center rounded-md px-2 hover:bg-black/5 hover:text-emerald-600 dark:hover:bg-white/10 sm:px-3"
+              >
                 Anmelden
               </Link>
               <Link
                 href="/register"
-                className="rounded-md bg-emerald-600 px-3 py-1.5 text-white hover:bg-emerald-700"
+                className="flex min-h-11 items-center rounded-md bg-emerald-600 px-3 text-white hover:bg-emerald-700"
               >
                 Registrieren
               </Link>

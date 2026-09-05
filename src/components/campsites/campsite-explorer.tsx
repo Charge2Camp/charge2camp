@@ -60,7 +60,7 @@ export function CampsiteExplorer({ campsites }: { campsites: Campsite[] }) {
       <div className="flex gap-2 md:hidden">
         <button
           onClick={() => setMobileTab("list")}
-          className={`flex-1 rounded-md border px-3 py-2 text-sm ${
+          className={`min-h-11 flex-1 rounded-md border px-3 py-2 text-sm ${
             mobileTab === "list"
               ? "border-emerald-600 bg-emerald-600 text-white"
               : "border-black/10 dark:border-white/10"
@@ -70,7 +70,7 @@ export function CampsiteExplorer({ campsites }: { campsites: Campsite[] }) {
         </button>
         <button
           onClick={() => setMobileTab("map")}
-          className={`flex-1 rounded-md border px-3 py-2 text-sm ${
+          className={`min-h-11 flex-1 rounded-md border px-3 py-2 text-sm ${
             mobileTab === "map"
               ? "border-emerald-600 bg-emerald-600 text-white"
               : "border-black/10 dark:border-white/10"
@@ -103,7 +103,10 @@ export function CampsiteExplorer({ campsites }: { campsites: Campsite[] }) {
             mobileTab === "list" ? "hidden md:block" : ""
           }`}
         >
-          <MapView markers={markers} selectedId={hoveredId ?? undefined} />
+          {/* onMarkerClick gibt Touch-Nutzern (kein :hover auf dem Handy/
+              Tablet) eine Moeglichkeit, den zugehoerigen Listeneintrag
+              hervorzuheben, indem sie auf einen Pin tippen. */}
+          <MapView markers={markers} selectedId={hoveredId ?? undefined} onMarkerClick={setHoveredId} />
         </div>
       </div>
     </div>

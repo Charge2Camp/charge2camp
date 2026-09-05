@@ -27,7 +27,7 @@ export function CaravanList({ caravans }: { caravans: Caravan[] }) {
             <input type="hidden" name="id" value={caravan.id} />
             <button
               type="submit"
-              className="text-sm text-red-600 hover:underline"
+              className="flex min-h-11 items-center px-2 text-sm text-red-600 hover:underline"
               aria-label={`${caravan.manufacturer} ${caravan.model} entfernen`}
             >
               Entfernen

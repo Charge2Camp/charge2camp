@@ -19,7 +19,7 @@ export function MobileNav() {
         onClick={() => setOpen((v) => !v)}
         aria-label={open ? "Menü schließen" : "Menü öffnen"}
         aria-expanded={open}
-        className="rounded-md border border-black/10 p-2 dark:border-white/10"
+        className="flex h-11 w-11 items-center justify-center rounded-md border border-black/10 dark:border-white/10"
       >
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
           {open ? (
@@ -41,17 +41,34 @@ export function MobileNav() {
       </button>
 
       {open && (
-        <nav className="absolute inset-x-0 top-full border-b border-black/10 bg-background px-4 py-3 dark:border-white/10">
-          <ul className="flex flex-col gap-3 text-sm">
-            {NAV_LINKS.map((link) => (
-              <li key={link.href}>
-                <Link href={link.href} onClick={() => setOpen(false)}>
-                  {link.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
+        <>
+          {/* Unsichtbarer Hintergrund, damit ein Tap ausserhalb des Menues
+              (nicht nur ein Tap auf einen Link) es ebenfalls schliesst --
+              ohne :hover ist das auf einem Touchscreen der einzige Weg,
+              "daneben tippen" zu erkennen. */}
+          <button
+            type="button"
+            aria-hidden="true"
+            tabIndex={-1}
+            onClick={() => setOpen(false)}
+            className="fixed inset-0 z-40 cursor-default"
+          />
+          <nav className="absolute inset-x-0 top-full z-50 border-b border-black/10 bg-background px-2 py-2 dark:border-white/10">
+            <ul className="flex flex-col text-base">
+              {NAV_LINKS.map((link) => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    onClick={() => setOpen(false)}
+                    className="flex min-h-12 items-center rounded-md px-3 hover:bg-black/5 dark:hover:bg-white/10"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </>
       )}
     </div>
   );

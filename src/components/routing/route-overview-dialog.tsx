@@ -133,7 +133,7 @@ export function RouteOverviewDialog({
     // kleine, mittig schwebende Box mit viel totem Rand drumherum.
     <div className="fixed inset-0 z-50 bg-black/50 sm:flex sm:items-center sm:justify-center sm:p-4">
       <div className="flex h-full w-full flex-col overflow-hidden bg-white dark:bg-neutral-900 sm:h-auto sm:max-h-[90vh] sm:w-full sm:max-w-lg sm:rounded-lg">
-        <div className="flex items-center justify-between border-b border-black/10 p-4 dark:border-white/10">
+        <div className="flex items-center justify-between border-b border-black/10 p-4 pt-[calc(1rem+env(safe-area-inset-top))] dark:border-white/10 sm:pt-4">
           <h2 className="text-lg font-semibold">Routenübersicht</h2>
           <button
             type="button"
@@ -313,7 +313,7 @@ export function RouteOverviewDialog({
         )}
 
         {!confirmingClose && dirty && (
-          <div className="flex flex-col gap-3 border-t border-black/10 p-4 dark:border-white/10 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 border-t border-black/10 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] dark:border-white/10 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:pb-4">
             <p className="text-xs text-black/50 dark:text-white/50">Ungespeicherte Änderungen an der Ladeplanung.</p>
             <div className="flex gap-2">
               <button

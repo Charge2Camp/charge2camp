@@ -156,7 +156,7 @@ export function ChargingReviewForm({
       </div>
 
       <p className="text-sm font-medium">Mit welchem Gespann warst du hier?</p>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <label className="flex flex-col gap-1 text-sm">
           Auto (aus deinem Profil)
           <select
@@ -165,7 +165,7 @@ export function ChargingReviewForm({
               setVehicleId(e.target.value);
               recompute(e.target.value, caravanId);
             }}
-            className="rounded-md border border-black/15 px-3 py-2 dark:border-white/15 dark:bg-transparent"
+            className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
           >
             <option value="">Sonstiges / manuell</option>
             {vehicles.map((v) => (
@@ -184,7 +184,7 @@ export function ChargingReviewForm({
               setCaravanId(e.target.value);
               recompute(vehicleId, e.target.value);
             }}
-            className="rounded-md border border-black/15 px-3 py-2 dark:border-white/15 dark:bg-transparent"
+            className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
           >
             <option value="">Sonstiges / manuell</option>
             {caravans.map((c) => (
@@ -196,7 +196,7 @@ export function ChargingReviewForm({
         </label>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <label className="flex flex-col gap-1 text-sm">
           Gespannlänge gesamt (m)
           <input
@@ -206,7 +206,7 @@ export function ChargingReviewForm({
             min="0"
             value={trailerLengthM}
             onChange={(e) => setTrailerLengthM(e.target.value)}
-            className="rounded-md border border-black/15 px-3 py-2 dark:border-white/15 dark:bg-transparent"
+            className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
           />
         </label>
         <label className="flex flex-col gap-1 text-sm">
@@ -218,7 +218,7 @@ export function ChargingReviewForm({
             min="0"
             value={trailerWidthM}
             onChange={(e) => setTrailerWidthM(e.target.value)}
-            className="rounded-md border border-black/15 px-3 py-2 dark:border-white/15 dark:bg-transparent"
+            className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
           />
         </label>
       </div>
@@ -233,7 +233,7 @@ export function ChargingReviewForm({
           name="caravan_model"
           value={caravanModel}
           onChange={(e) => setCaravanModel(e.target.value)}
-          className="rounded-md border border-black/15 px-3 py-2 dark:border-white/15 dark:bg-transparent"
+          className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
         />
       </label>
 
@@ -242,7 +242,7 @@ export function ChargingReviewForm({
         <textarea
           name="comment"
           rows={3}
-          className="rounded-md border border-black/15 px-3 py-2 dark:border-white/15 dark:bg-transparent"
+          className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
         />
       </label>
 
@@ -250,7 +250,7 @@ export function ChargingReviewForm({
 
       <button
         type="submit"
-        className="self-start rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+        className="min-h-12 self-start rounded-md bg-emerald-600 px-4 py-3 text-sm font-medium text-white hover:bg-emerald-700"
       >
         Bewertung abschicken
       </button>

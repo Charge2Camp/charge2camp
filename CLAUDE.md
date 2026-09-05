@@ -29,6 +29,15 @@ volle Produkt- und Architekturspezifikation.
    Quelle wird in [docs/data-sources.md](docs/data-sources.md) dokumentiert.
 7. **Anhängertauglichkeit hat Priorität** vor einem minimal kürzeren Umweg
    bei der Routen-/Ladestopp-Auswahl.
+8. **Mobile-first & Touch-tauglich, mit Blick auf App Store/Play Store.**
+   eCamper soll später als native iOS-/Android-App vertrieben werden —
+   jede UI-Änderung muss das berücksichtigen: Tap-Ziele ≥ 44px, Eingabefelder
+   mit `text-base` (verhindert iOS-Auto-Zoom), kein rein
+   hover-abhängiges Verhalten (Touch kennt kein `:hover`),
+   `env(safe-area-inset-*)` für Header/Footer/Vollbild-Dialoge, externe
+   Navigation über Adapter kapseln (§3). Details und Begründung in
+   [docs/architecture.md](docs/architecture.md), Abschnitt
+   "Mobile/Touch-Design & Vorbereitung auf native Apps".
 
 ## Stack
 

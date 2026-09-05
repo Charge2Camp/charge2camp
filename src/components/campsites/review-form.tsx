@@ -30,7 +30,7 @@ export function CampsiteReviewForm({ campsiteId }: { campsiteId: string }) {
               type="button"
               onClick={() => setRating(value)}
               aria-label={`${value} Sterne`}
-              className={`text-2xl ${value <= rating ? "text-amber-500" : "text-black/20 dark:text-white/20"}`}
+              className={`flex h-11 w-11 items-center justify-center text-2xl ${value <= rating ? "text-amber-500" : "text-black/20 dark:text-white/20"}`}
             >
               ★
             </button>
@@ -44,7 +44,7 @@ export function CampsiteReviewForm({ campsiteId }: { campsiteId: string }) {
         <textarea
           name="comment"
           rows={3}
-          className="rounded-md border border-black/15 px-3 py-2 dark:border-white/15 dark:bg-transparent"
+          className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
         />
       </label>
 
@@ -52,7 +52,7 @@ export function CampsiteReviewForm({ campsiteId }: { campsiteId: string }) {
 
       <button
         type="submit"
-        className="self-start rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+        className="min-h-12 self-start rounded-md bg-emerald-600 px-4 py-3 text-sm font-medium text-white hover:bg-emerald-700"
       >
         Bewertung abschicken
       </button>

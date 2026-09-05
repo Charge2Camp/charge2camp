@@ -118,17 +118,33 @@ export function MapView({
     markersRef.current.clear();
 
     for (const m of markers) {
+      // Sichtbarer Punkt bleibt bewusst klein (16px, passt zur Kartenoptik),
+      // aber die Tap-Flaeche wird auf 44px (Apple HIG) vergroessert -- ein
+      // umschliessendes, unsichtbares Button-Element zentriert den Punkt,
+      // ohne die geografische Ankerposition zu veraendern (weiterhin
+      // mittig).
       const el = document.createElement("button");
       el.type = "button";
       el.setAttribute("aria-label", m.label);
-      el.style.width = "16px";
-      el.style.height = "16px";
-      el.style.borderRadius = "50%";
-      el.style.border = "2px solid white";
-      el.style.boxShadow = "0 1px 3px rgba(0,0,0,0.4)";
+      el.style.width = "44px";
+      el.style.height = "44px";
+      el.style.display = "flex";
+      el.style.alignItems = "center";
+      el.style.justifyContent = "center";
+      el.style.background = "transparent";
+      el.style.border = "none";
+      el.style.padding = "0";
       el.style.cursor = "pointer";
-      el.style.background = m.id === selectedId ? SELECTED_COLOR : (m.color ?? DEFAULT_COLOR);
       el.onclick = () => onMarkerClick?.(m.id);
+
+      const dot = document.createElement("span");
+      dot.style.width = "16px";
+      dot.style.height = "16px";
+      dot.style.borderRadius = "50%";
+      dot.style.border = "2px solid white";
+      dot.style.boxShadow = "0 1px 3px rgba(0,0,0,0.4)";
+      dot.style.background = m.id === selectedId ? SELECTED_COLOR : (m.color ?? DEFAULT_COLOR);
+      el.appendChild(dot);
 
       const marker = new Marker({ element: el })
         .setLngLat([m.longitude, m.latitude])
