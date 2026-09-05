@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { GeoJSONSource, LngLatBounds, MapLibreMap, Marker, NavigationControl } from "maplibre-gl";
+import { LngLatBounds, MapLibreMap, Marker, NavigationControl } from "maplibre-gl";
 import { osmStyle } from "./osm-style";
 
 export interface MapMarker {
@@ -19,8 +19,7 @@ export interface RoutePoint {
 
 const DEFAULT_COLOR = "#10b981";
 const SELECTED_COLOR = "#059669";
-const ROUTE_SOURCE_ID = "route";
-const ROUTE_LAYER_ID = "route-line";
+const ROUTE_LINE_COLOR = "#059669";
 
 export function MapView({
   markers,
@@ -38,9 +37,10 @@ export function MapView({
   fallbackZoom?: number;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markersRef = useRef<Map<string, Marker>>(new Map());
-  const loadedRef = useRef(false);
+  const routeRef = useRef<RoutePoint[] | undefined>(undefined);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -57,15 +57,55 @@ export function MapView({
       zoom: first ? 6 : fallbackZoom,
     });
     map.addControl(new NavigationControl(), "top-right");
-    map.on("load", () => {
-      loadedRef.current = true;
-    });
     mapRef.current = map;
+
+    // Route wird bewusst NICHT als MapLibre-GeoJSON-Source/Layer gezeichnet
+    // (das erfordert einen Web Worker fuer das Tiling; in manchen
+    // eingebetteten/sandboxten Browserumgebungen startet dieser Worker nicht
+    // und die Linie bleibt unsichtbar, siehe git-history). Stattdessen wird
+    // die Route auf einem eigenen <canvas> ueber der Karte gezeichnet, per
+    // map.project() synchron zur Kartenposition -- funktioniert ohne Worker.
+    function drawRouteOverlay() {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const dpr = window.devicePixelRatio || 1;
+      const width = map.getContainer().clientWidth;
+      const height = map.getContainer().clientHeight;
+      if (canvas.width !== width * dpr || canvas.height !== height * dpr) {
+        canvas.width = width * dpr;
+        canvas.height = height * dpr;
+        canvas.style.width = `${width}px`;
+        canvas.style.height = `${height}px`;
+      }
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, width, height);
+
+      const currentRoute = routeRef.current;
+      if (!currentRoute || currentRoute.length < 2) return;
+
+      ctx.beginPath();
+      currentRoute.forEach((point, index) => {
+        const { x, y } = map.project([point.longitude, point.latitude]);
+        if (index === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.strokeStyle = ROUTE_LINE_COLOR;
+      ctx.lineWidth = 4;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+      ctx.stroke();
+    }
+
+    map.on("move", drawRouteOverlay);
+    map.on("resize", drawRouteOverlay);
+    map.on("render", drawRouteOverlay);
+    map.on("load", drawRouteOverlay);
 
     return () => {
       map.remove();
       mapRef.current = null;
-      loadedRef.current = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -96,42 +136,12 @@ export function MapView({
       markersRef.current.set(m.id, marker);
     }
 
+    routeRef.current = route;
+    map.fire("render");
+
     const routeCoords = route?.map((p): [number, number] => [p.longitude, p.latitude]) ?? [];
-
-    function drawRoute() {
-      if (!map) return;
-      const geojson = {
-        type: "Feature" as const,
-        properties: {},
-        geometry: { type: "LineString" as const, coordinates: routeCoords },
-      };
-      const source = map.getSource(ROUTE_SOURCE_ID);
-      if (routeCoords.length > 1) {
-        if (source instanceof GeoJSONSource) {
-          source.setData(geojson);
-        } else {
-          map.addSource(ROUTE_SOURCE_ID, { type: "geojson", data: geojson });
-          map.addLayer({
-            id: ROUTE_LAYER_ID,
-            type: "line",
-            source: ROUTE_SOURCE_ID,
-            layout: { "line-join": "round", "line-cap": "round" },
-            paint: { "line-color": "#059669", "line-width": 4 },
-          });
-        }
-      } else if (source) {
-        map.removeLayer(ROUTE_LAYER_ID);
-        map.removeSource(ROUTE_SOURCE_ID);
-      }
-    }
-
-    if (loadedRef.current) {
-      drawRoute();
-    } else {
-      map.once("load", drawRoute);
-    }
-
-    const boundsPoints = routeCoords.length > 0 ? routeCoords : markers.map((m) => [m.longitude, m.latitude] as [number, number]);
+    const boundsPoints =
+      routeCoords.length > 0 ? routeCoords : markers.map((m) => [m.longitude, m.latitude] as [number, number]);
 
     if (boundsPoints.length > 1) {
       const bounds = boundsPoints.reduce(
@@ -144,5 +154,9 @@ export function MapView({
     }
   }, [markers, route, selectedId, onMarkerClick]);
 
-  return <div ref={containerRef} className="h-full w-full" />;
+  return (
+    <div ref={containerRef} className="relative h-full w-full">
+      <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 z-10" />
+    </div>
+  );
 }
