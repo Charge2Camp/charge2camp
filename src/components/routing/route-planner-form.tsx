@@ -75,8 +75,13 @@ export function RoutePlannerForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<RoutePlanResult | null>(null);
+  const [start, setStart] = useState("");
+  const [end, setEnd] = useState("");
   const [vehicleId, setVehicleId] = useState("");
+  const [caravanId, setCaravanId] = useState("");
   const [consumption, setConsumption] = useState("");
+  const [minPowerKw, setMinPowerKw] = useState("");
+  const [preferTrailerSuitable, setPreferTrailerSuitable] = useState(true);
   const [departureSoc, setDepartureSoc] = useState(DEFAULT_DEPARTURE_SOC_PERCENT);
   const [minSocAtStop, setMinSocAtStop] = useState(DEFAULT_MIN_SOC_AT_STOP_PERCENT);
   const [minSocAtDestination, setMinSocAtDestination] = useState(
@@ -95,18 +100,47 @@ export function RoutePlannerForm({
     setConsumption(v?.consumption_kwh_per_100km?.toString() ?? "");
   }
 
+  // Setzt nur die Formulareingaben zurueck, nicht die berechnete Route --
+  // die bleibt sichtbar, bis eine neue Planung gestartet wird (siehe
+  // "Neue Routenplanung"-Button), damit Ladeeinstellungen mehrfach
+  // angepasst werden koennen, ohne Start/Ziel/Fahrzeug erneut eingeben zu
+  // muessen.
+  function handleNewPlanning() {
+    setResult(null);
+    setError(null);
+    setStart("");
+    setEnd("");
+    setVehicleId("");
+    setCaravanId("");
+    setConsumption("");
+    setMinPowerKw("");
+    setPreferTrailerSuitable(true);
+    setDepartureSoc(DEFAULT_DEPARTURE_SOC_PERCENT);
+    setMinSocAtStop(DEFAULT_MIN_SOC_AT_STOP_PERCENT);
+    setMinSocAtDestination(DEFAULT_MIN_SOC_AT_DESTINATION_PERCENT);
+    setTargetSocAfterCharging(DEFAULT_TARGET_SOC_AFTER_CHARGING_PERCENT);
+    setDetourTolerance(DEFAULT_DETOUR_TOLERANCE_KM);
+  }
+
   return (
     <div className="flex flex-col gap-8">
       <form
-        action={async (formData) => {
+        onSubmit={async (e) => {
+          e.preventDefault();
+          // Bewusst ein normaler onSubmit-Handler statt der React-
+          // action-Prop: React setzt Formulare nach einer erfolgreichen
+          // action automatisch zurueck, wodurch Start/Ziel/Fahrzeug bei
+          // erneuter Berechnung (z. B. nach Anpassen der Ladeeinstellungen)
+          // verschwinden wuerden. Der bisherige Ergebnis-Stand bleibt
+          // zudem sichtbar, bis die neue Route eintrifft.
+          const formData = new FormData(e.currentTarget);
           setLoading(true);
           setError(null);
-          setResult(null);
           try {
             const planResult = await planRoute(formData);
             setResult(planResult);
-          } catch (e) {
-            setError(e instanceof Error ? e.message : "Route konnte nicht berechnet werden.");
+          } catch (err) {
+            setError(err instanceof Error ? err.message : "Route konnte nicht berechnet werden.");
           } finally {
             setLoading(false);
           }
@@ -118,6 +152,8 @@ export function RoutePlannerForm({
           <input
             name="start"
             required
+            value={start}
+            onChange={(e) => setStart(e.target.value)}
             placeholder="z. B. München"
             className="rounded-md border border-black/15 px-3 py-2 dark:border-white/15 dark:bg-transparent"
           />
@@ -128,6 +164,8 @@ export function RoutePlannerForm({
           <input
             name="end"
             required
+            value={end}
+            onChange={(e) => setEnd(e.target.value)}
             placeholder="z. B. Porec, Kroatien"
             className="rounded-md border border-black/15 px-3 py-2 dark:border-white/15 dark:bg-transparent"
           />
@@ -155,6 +193,8 @@ export function RoutePlannerForm({
           Wohnwagen (optional)
           <select
             name="caravan_id"
+            value={caravanId}
+            onChange={(e) => setCaravanId(e.target.value)}
             className="rounded-md border border-black/15 px-3 py-2 dark:border-white/15 dark:bg-transparent"
           >
             <option value="">Kein Wohnwagen</option>
@@ -187,6 +227,8 @@ export function RoutePlannerForm({
             type="number"
             step="1"
             min="0"
+            value={minPowerKw}
+            onChange={(e) => setMinPowerKw(e.target.value)}
             className="rounded-md border border-black/15 px-3 py-2 dark:border-white/15 dark:bg-transparent"
           />
         </label>
@@ -236,7 +278,13 @@ export function RoutePlannerForm({
         </div>
 
         <label className="flex items-center gap-2 self-end text-sm">
-          <input type="checkbox" name="prefer_trailer_suitable" value="1" defaultChecked />
+          <input
+            type="checkbox"
+            name="prefer_trailer_suitable"
+            value="1"
+            checked={preferTrailerSuitable}
+            onChange={(e) => setPreferTrailerSuitable(e.target.checked)}
+          />
           Anhängertaugliche Ladepunkte bevorzugen
         </label>
 
@@ -250,14 +298,27 @@ export function RoutePlannerForm({
           </p>
         )}
 
-        <div className="sm:col-span-2">
+        <div className="flex flex-wrap gap-3 sm:col-span-2">
           <button
             type="submit"
             disabled={loading || vehicles.length === 0}
             className="rounded-md bg-emerald-600 px-5 py-2.5 font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
           >
-            {loading ? "Route wird berechnet…" : "Route berechnen"}
+            {loading
+              ? "Route wird berechnet…"
+              : result
+                ? "Route mit angepassten Einstellungen neu berechnen"
+                : "Route berechnen"}
           </button>
+          {result && (
+            <button
+              type="button"
+              onClick={handleNewPlanning}
+              className="rounded-md border border-black/15 px-5 py-2.5 font-medium hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/5"
+            >
+              Neue Routenplanung
+            </button>
+          )}
         </div>
       </form>
 
