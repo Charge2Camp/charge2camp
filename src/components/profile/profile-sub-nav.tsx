@@ -1,0 +1,39 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+
+const TABS = [
+  { href: "/profil", label: "Übersicht" },
+  { href: "/profil/daten", label: "Meine Daten" },
+  { href: "/profil/gespann", label: "Mein Gespann" },
+  { href: "/profil/routen", label: "Meine Routen" },
+  { href: "/profil/favoriten", label: "Favoriten" },
+  { href: "/profil/bewertungen", label: "Bewertungen" },
+  { href: "/profil/einstellungen", label: "Einstellungen" },
+];
+
+export function ProfileSubNav() {
+  const pathname = usePathname();
+
+  return (
+    <nav className="mt-4 flex flex-wrap gap-2 border-b border-black/10 pb-4 text-sm dark:border-white/10">
+      {TABS.map((tab) => {
+        const active = tab.href === "/profil" ? pathname === "/profil" : pathname.startsWith(tab.href);
+        return (
+          <Link
+            key={tab.href}
+            href={tab.href}
+            className={
+              active
+                ? "rounded-md bg-emerald-600 px-3 py-1.5 text-white"
+                : "rounded-md px-3 py-1.5 hover:bg-black/5 dark:hover:bg-white/10"
+            }
+          >
+            {tab.label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}

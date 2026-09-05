@@ -543,9 +543,9 @@ export function RoutePlannerForm({
 
         {vehicles.length === 0 && (
           <p className="text-sm text-amber-700 dark:text-amber-400 sm:col-span-2">
-            Du hast noch kein Elektroauto im Profil hinterlegt. Bitte zuerst im{" "}
-            <a href="/profil" className="underline">
-              Profil
+            Du hast noch kein Elektroauto im Profil hinterlegt. Bitte zuerst unter{" "}
+            <a href="/profil/gespann" className="underline">
+              Mein Gespann
             </a>{" "}
             ergänzen.
           </p>
@@ -619,7 +619,7 @@ export function RoutePlannerForm({
             {saveSuccess && (
               <p className="w-full text-sm text-emerald-700 dark:text-emerald-400">
                 Gespeichert — zu finden unter{" "}
-                <a href="/profil" className="underline">
+                <a href="/profil/routen" className="underline">
                   Mein Profil → Meine Routen
                 </a>
                 .

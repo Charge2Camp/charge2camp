@@ -1,19 +1,18 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type { Caravan, CaravanModel, SavedRoute, Vehicle, VehicleModel } from "@/types/database";
-import { VehicleForm } from "@/components/profile/vehicle-form";
-import { VehicleList } from "@/components/profile/vehicle-list";
-import { CaravanForm } from "@/components/profile/caravan-form";
-import { CaravanList } from "@/components/profile/caravan-list";
-import { SavedRouteList } from "@/components/profile/saved-route-list";
-import {
-  CampsiteReviewList,
-  type CampsiteReviewWithCampsite,
-} from "@/components/profile/campsite-review-list";
-import {
-  ChargingReviewList,
-  type ChargingReviewWithStation,
-} from "@/components/profile/charging-review-list";
+
+async function countFor(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  table: string,
+  userId: string
+): Promise<number> {
+  const { count } = await supabase
+    .from(table)
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", userId);
+  return count ?? 0;
+}
 
 export default async function ProfilePage() {
   const supabase = await createClient();
@@ -21,107 +20,55 @@ export default async function ProfilePage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    redirect("/login");
-  }
+  if (!user) redirect("/login");
 
-  const [
-    { data: vehicles },
-    { data: caravans },
-    { data: vehicleModels },
-    { data: caravanModels },
-    { data: campsiteReviews },
-    { data: chargingReviews },
-    { data: savedRoutes },
-  ] = await Promise.all([
-    supabase
-      .from("vehicles")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("caravans")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("vehicle_models")
-      .select("*")
-      .order("manufacturer")
-      .order("model")
-      .order("variant"),
-    supabase
-      .from("caravan_models")
-      .select("*")
-      .order("manufacturer")
-      .order("model")
-      .order("series"),
-    supabase
-      .from("campsite_reviews")
-      .select("*, campsites(id, name)")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("charging_reviews")
-      .select("*, charging_stations(id, name, provider)")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("saved_routes")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false }),
-  ]);
+  const [vehicleCount, caravanCount, savedRouteCount, favoriteCount, campsiteReviewCount, chargingReviewCount] =
+    await Promise.all([
+      countFor(supabase, "vehicles", user.id),
+      countFor(supabase, "caravans", user.id),
+      countFor(supabase, "saved_routes", user.id),
+      countFor(supabase, "favorites", user.id),
+      countFor(supabase, "campsite_reviews", user.id),
+      countFor(supabase, "charging_reviews", user.id),
+    ]);
+
+  const cards = [
+    { href: "/profil/daten", title: "Meine Daten", description: user.email ?? "" },
+    {
+      href: "/profil/gespann",
+      title: "Mein Gespann",
+      description: `${vehicleCount} Elektroauto${vehicleCount === 1 ? "" : "s"}, ${caravanCount} Wohnwagen`,
+    },
+    {
+      href: "/profil/routen",
+      title: "Meine Routen",
+      description: `${savedRouteCount} gespeicherte Route${savedRouteCount === 1 ? "" : "n"}`,
+    },
+    {
+      href: "/profil/favoriten",
+      title: "Favoriten",
+      description: `${favoriteCount} gemerkt`,
+    },
+    {
+      href: "/profil/bewertungen",
+      title: "Bewertungen",
+      description: `${campsiteReviewCount + chargingReviewCount} Bewertung${campsiteReviewCount + chargingReviewCount === 1 ? "" : "en"}`,
+    },
+    { href: "/profil/einstellungen", title: "Einstellungen", description: "Konto & App" },
+  ];
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-16">
-      <h1 className="text-2xl font-semibold">Mein Profil</h1>
-      <p className="mt-2 text-black/60 dark:text-white/60">{user.email}</p>
-
-      <section className="mt-12">
-        <h2 className="text-lg font-semibold">Elektroauto</h2>
-        <div className="mt-4">
-          <VehicleList vehicles={(vehicles as Vehicle[]) ?? []} />
-        </div>
-        <div className="mt-6 rounded-lg border border-black/10 p-4 dark:border-white/10">
-          <VehicleForm models={(vehicleModels as VehicleModel[]) ?? []} />
-        </div>
-      </section>
-
-      <section className="mt-12">
-        <h2 className="text-lg font-semibold">Wohnwagen</h2>
-        <div className="mt-4">
-          <CaravanList caravans={(caravans as Caravan[]) ?? []} />
-        </div>
-        <div className="mt-6 rounded-lg border border-black/10 p-4 dark:border-white/10">
-          <CaravanForm models={(caravanModels as CaravanModel[]) ?? []} />
-        </div>
-      </section>
-
-      <section className="mt-12">
-        <h2 className="text-lg font-semibold">Meine Routen</h2>
-        <div className="mt-4">
-          <SavedRouteList routes={(savedRoutes as SavedRoute[]) ?? []} />
-        </div>
-      </section>
-
-      <section className="mt-12">
-        <h2 className="text-lg font-semibold">Meine Campingplatz-Bewertungen</h2>
-        <div className="mt-4">
-          <CampsiteReviewList
-            reviews={(campsiteReviews as CampsiteReviewWithCampsite[]) ?? []}
-          />
-        </div>
-      </section>
-
-      <section className="mt-12">
-        <h2 className="text-lg font-semibold">Meine Ladepunkt-Bewertungen</h2>
-        <div className="mt-4">
-          <ChargingReviewList
-            reviews={(chargingReviews as ChargingReviewWithStation[]) ?? []}
-          />
-        </div>
-      </section>
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      {cards.map((card) => (
+        <Link
+          key={card.href}
+          href={card.href}
+          className="rounded-lg border border-black/10 p-4 hover:border-emerald-600 dark:border-white/10"
+        >
+          <p className="font-medium">{card.title}</p>
+          <p className="mt-1 text-sm text-black/60 dark:text-white/60">{card.description}</p>
+        </Link>
+      ))}
     </div>
   );
 }

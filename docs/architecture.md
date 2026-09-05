@@ -187,6 +187,34 @@ dieselbe Adapter-Logik unveraendert in der geplanten nativen iOS-/
 Android-App wiederverwendet werden kann (dort uebernimmt z. B. React
 Natives `Linking.openURL` das Oeffnen).
 
+**Meine Routen (Profil): Segment-Navigation.** Die Liste unter
+`/profil/routen` plant jede gespeicherte Route serverseitig neu (siehe
+oben) und zeigt neben "Gesamte Route navigieren" auch einen
+Google-Maps-Link pro Etappe (Start → 1. Ladestopp, 1. → 2. Ladestopp,
+...). Da `NavigationProvider.buildUrl` eine reine Funktion ist, werden
+diese Links direkt serverseitig als `<a href>` gerendert -- kein
+Client-JavaScript noetig, kein `window.open`.
+
+## Profil-Struktur (Phase 2, erweitert)
+
+`/profil` ist ein Hub mit Kacheln (Anzahl Fahrzeuge/Wohnwagen, gespeicherte
+Routen, Favoriten, Bewertungen) und einer Unterseiten-Navigation
+(`src/components/profile/profile-sub-nav.tsx`, Layout in
+`src/app/profil/layout.tsx`):
+
+- `/profil/daten` — E-Mail, Konto erstellt am (Aendern von E-Mail/Passwort
+  noch nicht umgesetzt, ehrlich als "folgt spaeter" gekennzeichnet).
+- `/profil/gespann` — Elektroauto(s) + Wohnwagen (bisheriger Hauptinhalt
+  von `/profil`).
+- `/profil/routen` — gespeicherte Routen inkl. Segment-Navigation (s. o.).
+- `/profil/favoriten` — liest die bereits bestehende `favorites`-Tabelle,
+  aber es gibt noch KEINEN "Merken"-Button auf Campingplatz-/
+  Ladepunkt-Detailseiten -- Seite zeigt das ehrlich an, statt eine
+  scheinbar funktionierende Funktion vorzutaeuschen.
+- `/profil/bewertungen` — Campingplatz-/Ladepunkt-Bewertungen.
+- `/profil/einstellungen` — Platzhalter ("noch keine App-Einstellungen"),
+  keine Scheinfunktionen.
+
 ## Phasenplan
 
 1. **Grundsystem** — Next.js, TypeScript, Tailwind, Supabase, Auth, DB,

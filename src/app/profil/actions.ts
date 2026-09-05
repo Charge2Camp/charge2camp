@@ -49,6 +49,7 @@ export async function addVehicle(formData: FormData) {
 
   if (error) throw new Error(error.message);
   revalidatePath("/profil");
+  revalidatePath("/profil/gespann");
 }
 
 export async function deleteVehicle(formData: FormData) {
@@ -58,6 +59,7 @@ export async function deleteVehicle(formData: FormData) {
   const { error } = await supabase.from("vehicles").delete().eq("id", id).eq("user_id", userId);
   if (error) throw new Error(error.message);
   revalidatePath("/profil");
+  revalidatePath("/profil/gespann");
 }
 
 export async function addCaravan(formData: FormData) {
@@ -78,6 +80,7 @@ export async function addCaravan(formData: FormData) {
 
   if (error) throw new Error(error.message);
   revalidatePath("/profil");
+  revalidatePath("/profil/gespann");
 }
 
 export async function deleteCaravan(formData: FormData) {
@@ -87,6 +90,7 @@ export async function deleteCaravan(formData: FormData) {
   const { error } = await supabase.from("caravans").delete().eq("id", id).eq("user_id", userId);
   if (error) throw new Error(error.message);
   revalidatePath("/profil");
+  revalidatePath("/profil/gespann");
 }
 
 export async function updateCampsiteReview(formData: FormData) {
@@ -111,6 +115,7 @@ export async function updateCampsiteReview(formData: FormData) {
 
   if (error) throw new Error(error.message);
   revalidatePath("/profil");
+  revalidatePath("/profil/bewertungen");
   if (typeof campsiteId === "string" && campsiteId) revalidatePath(`/campingplaetze/${campsiteId}`);
 }
 
@@ -127,6 +132,7 @@ export async function deleteCampsiteReview(formData: FormData) {
 
   if (error) throw new Error(error.message);
   revalidatePath("/profil");
+  revalidatePath("/profil/bewertungen");
   if (typeof campsiteId === "string" && campsiteId) revalidatePath(`/campingplaetze/${campsiteId}`);
 }
 
@@ -168,6 +174,7 @@ export async function updateChargingReview(formData: FormData) {
 
   if (error) throw new Error(error.message);
   revalidatePath("/profil");
+  revalidatePath("/profil/bewertungen");
   if (typeof stationId === "string" && stationId) revalidatePath(`/ladepunkte/${stationId}`);
 }
 
@@ -184,6 +191,7 @@ export async function deleteChargingReview(formData: FormData) {
 
   if (error) throw new Error(error.message);
   revalidatePath("/profil");
+  revalidatePath("/profil/bewertungen");
   if (typeof stationId === "string" && stationId) revalidatePath(`/ladepunkte/${stationId}`);
 }
 
@@ -194,4 +202,5 @@ export async function deleteSavedRoute(formData: FormData) {
   const { error } = await supabase.from("saved_routes").delete().eq("id", id).eq("user_id", userId);
   if (error) throw new Error(error.message);
   revalidatePath("/profil");
+  revalidatePath("/profil/routen");
 }
