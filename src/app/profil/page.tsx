@@ -1,10 +1,11 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type { Caravan, CaravanModel, Vehicle, VehicleModel } from "@/types/database";
+import type { Caravan, CaravanModel, SavedRoute, Vehicle, VehicleModel } from "@/types/database";
 import { VehicleForm } from "@/components/profile/vehicle-form";
 import { VehicleList } from "@/components/profile/vehicle-list";
 import { CaravanForm } from "@/components/profile/caravan-form";
 import { CaravanList } from "@/components/profile/caravan-list";
+import { SavedRouteList } from "@/components/profile/saved-route-list";
 import {
   CampsiteReviewList,
   type CampsiteReviewWithCampsite,
@@ -31,6 +32,7 @@ export default async function ProfilePage() {
     { data: caravanModels },
     { data: campsiteReviews },
     { data: chargingReviews },
+    { data: savedRoutes },
   ] = await Promise.all([
     supabase
       .from("vehicles")
@@ -64,6 +66,11 @@ export default async function ProfilePage() {
       .select("*, charging_stations(id, name, provider)")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false }),
+    supabase
+      .from("saved_routes")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false }),
   ]);
 
   return (
@@ -88,6 +95,13 @@ export default async function ProfilePage() {
         </div>
         <div className="mt-6 rounded-lg border border-black/10 p-4 dark:border-white/10">
           <CaravanForm models={(caravanModels as CaravanModel[]) ?? []} />
+        </div>
+      </section>
+
+      <section className="mt-12">
+        <h2 className="text-lg font-semibold">Meine Routen</h2>
+        <div className="mt-4">
+          <SavedRouteList routes={(savedRoutes as SavedRoute[]) ?? []} />
         </div>
       </section>
 

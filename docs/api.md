@@ -2,11 +2,17 @@
 
 ## Status
 
-Seit Phase 6 sind zwei Provider-Adapter aktiv: `RoutingProvider` (OSRM,
-[src/lib/providers/routing/osrm.ts](../src/lib/providers/routing/osrm.ts))
-und ein Geocoding-Adapter (Nominatim,
+Seit Phase 6 sind mehrere Provider-Adapter aktiv: `RoutingProvider` (OSRM,
+[src/lib/providers/routing/osrm.ts](../src/lib/providers/routing/osrm.ts)),
+ein Geocoding-Adapter (Nominatim,
 [src/lib/providers/geocoding/nominatim.ts](../src/lib/providers/geocoding/nominatim.ts),
-noch ohne eigenes generisches Interface, da bislang nur ein Anbieter).
+noch ohne eigenes generisches Interface, da bislang nur ein Anbieter) sowie
+`NavigationProvider` (Google Maps,
+[src/lib/providers/navigation/](../src/lib/providers/navigation/)) für
+"Navigation starten" im Routenplaner — baut nur eine Deep-Link-URL, öffnet
+sie bewusst nicht selbst, damit dieselbe Logik später in der nativen App
+wiederverwendet werden kann. Apple Karten/Waze folgen als weitere Adapter
+in derselben Registry (`NAVIGATION_PROVIDERS`), sobald benötigt.
 `ChargingProvider`/`TrafficProvider` folgen mit Phase 8 (Live-Daten).
 
 ## Supabase-Zugriff

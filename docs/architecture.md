@@ -163,6 +163,30 @@ dem Fahrzeugprofil (`vehicles.consumption_kwh_per_100km`) → Standardwert
 ADAC-Praxistests mit Gespann). Das Formular zeigt transparent an, welche
 Quelle verwendet wurde.
 
+**Route speichern & Navigation starten:** Eine fertig geplante Route kann
+im Profil gespeichert werden (`saved_routes`,
+[supabase/migrations/20260908000000_saved_routes.sql](../supabase/migrations/20260908000000_saved_routes.sql)) --
+gespeichert werden bewusst nur Start/Ziel-Koordinaten und alle
+Formular-/Ladeeinstellungen (inkl. der im Routenübersicht-Popup
+geloeschten Ladepunkte bzw. gewaehlten Alternativen), NICHT die fertige
+Streckengeometrie oder der fertige Ladeplan. Beim erneuten Oeffnen
+(`loadSavedRoute`) wird mit denselben Einstellungen frisch neu geplant,
+damit sich aktualisierte Ladepunkte/Strassendaten korrekt niederschlagen
+statt eines veralteten Snapshots.
+
+"Navigation starten" oeffnet Google Maps mit Start, Ziel und allen
+Ladestopps als Zwischenziele (Directions-URL-Schema, kein API-Key noetig)
+-- Adapter unter
+[src/lib/providers/navigation/](../src/lib/providers/navigation/)
+(`NavigationProvider`-Interface analog zu `RoutingProvider`, §14-Prinzip).
+Apple Karten/Waze koennen spaeter als weitere Adapter ergaenzt werden, ohne
+die aufrufende UI zu aendern. Der Adapter baut ausschliesslich die URL
+(`buildUrl`) und oeffnet sie bewusst NICHT selbst -- das Oeffnen
+(`window.open` im Web) ist der einzige plattformspezifische Teil, damit
+dieselbe Adapter-Logik unveraendert in der geplanten nativen iOS-/
+Android-App wiederverwendet werden kann (dort uebernimmt z. B. React
+Natives `Linking.openURL` das Oeffnen).
+
 ## Phasenplan
 
 1. **Grundsystem** — Next.js, TypeScript, Tailwind, Supabase, Auth, DB,

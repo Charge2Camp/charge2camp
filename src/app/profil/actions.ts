@@ -186,3 +186,12 @@ export async function deleteChargingReview(formData: FormData) {
   revalidatePath("/profil");
   if (typeof stationId === "string" && stationId) revalidatePath(`/ladepunkte/${stationId}`);
 }
+
+export async function deleteSavedRoute(formData: FormData) {
+  const { supabase, userId } = await requireUserId();
+  const id = requireString(formData.get("id"));
+
+  const { error } = await supabase.from("saved_routes").delete().eq("id", id).eq("user_id", userId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/profil");
+}

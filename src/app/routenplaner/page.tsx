@@ -3,13 +3,19 @@ import { createClient } from "@/lib/supabase/server";
 import type { Caravan, Vehicle } from "@/types/database";
 import { RoutePlannerForm } from "@/components/routing/route-planner-form";
 
-export default async function RoutePlannerPage() {
+export default async function RoutePlannerPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ savedRouteId?: string }>;
+}) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) redirect("/login");
+
+  const { savedRouteId } = await searchParams;
 
   const [{ data: vehicles }, { data: caravans }] = await Promise.all([
     supabase
@@ -35,6 +41,7 @@ export default async function RoutePlannerPage() {
         <RoutePlannerForm
           vehicles={(vehicles as Vehicle[]) ?? []}
           caravans={(caravans as Caravan[]) ?? []}
+          initialSavedRouteId={savedRouteId}
         />
       </div>
     </div>

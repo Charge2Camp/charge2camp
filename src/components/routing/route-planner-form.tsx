@@ -1,7 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { planRoute, replanChargingStop, type RoutePlanResult } from "@/app/routenplaner/actions";
+import { useEffect, useMemo, useState } from "react";
+import {
+  loadSavedRoute,
+  planRoute,
+  replanChargingStop,
+  saveRoute,
+  type RoutePlanResult,
+} from "@/app/routenplaner/actions";
 import { MapView } from "@/components/map/map-view";
 import { RouteOverviewDialog } from "@/components/routing/route-overview-dialog";
 import {
@@ -14,6 +20,7 @@ import {
   MAX_DETOUR_TOLERANCE_KM,
   type TripPlan,
 } from "@/lib/route-planning";
+import { googleMapsNavigationProvider } from "@/lib/providers/navigation";
 import { TRAILER_SUITABILITY_COLORS, TRAILER_SUITABILITY_LABELS } from "@/lib/trailer-suitability";
 import type { Caravan, Vehicle } from "@/types/database";
 
@@ -70,9 +77,12 @@ function formatDuration(minutes: number): string {
 export function RoutePlannerForm({
   vehicles,
   caravans,
+  initialSavedRouteId,
 }: {
   vehicles: Vehicle[];
   caravans: Caravan[];
+  /** Aus dem URL-Query-Parameter `?savedRouteId=...` (Link "Öffnen" im Profil) -- laedt die gespeicherte Route beim ersten Rendern. */
+  initialSavedRouteId?: string;
 }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -108,8 +118,62 @@ export function RoutePlannerForm({
   const [draftForcedStationIdByIndex, setDraftForcedStationIdByIndex] = useState<Record<number, string>>({});
   const [overviewDirty, setOverviewDirty] = useState(false);
   const [confirmingOverviewClose, setConfirmingOverviewClose] = useState(false);
+  const [loadingSavedRoute, setLoadingSavedRoute] = useState(Boolean(initialSavedRouteId));
+  const [saveRouteName, setSaveRouteName] = useState("");
+  const [savingRoute, setSavingRoute] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   const vehicleById = useMemo(() => new Map(vehicles.map((v) => [v.id, v])), [vehicles]);
+
+  // Vorschlag fuer den Namen beim Speichern -- waehrend des Renderns aus
+  // dem Ergebnis abgeleitet statt per Effect gesetzt, damit ein bereits von
+  // Hand eingegebener Name (saveRouteName) erhalten bleibt, bis der Nutzer
+  // ihn aktiv aendert.
+  const defaultSaveRouteName = result
+    ? `${result.start.displayName.split(",")[0]} → ${result.end.displayName.split(",")[0]}`
+    : "";
+
+  // Gespeicherte Route ueber ?savedRouteId=... (Link "Öffnen" im Profil)
+  // beim ersten Rendern laden und alle Formularfelder + das Ergebnis damit
+  // vorbelegen.
+  useEffect(() => {
+    if (!initialSavedRouteId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const saved = await loadSavedRoute(initialSavedRouteId);
+        if (cancelled) return;
+        setStart(saved.startQuery);
+        setEnd(saved.endQuery);
+        setVehicleId(saved.vehicleId);
+        setCaravanId(saved.caravanId ?? "");
+        setConsumption(saved.manualConsumptionKwhPer100km?.toString() ?? "");
+        setMinPowerKw(saved.minPowerKw?.toString() ?? "");
+        setPreferTrailerSuitable(saved.preferTrailerSuitable);
+        setDepartureSoc(saved.departureSocPercent);
+        setMinSocAtStop(saved.minSocAtStopPercent);
+        setMinSocAtDestination(saved.minSocAtDestinationPercent);
+        setTargetSocAfterCharging(saved.targetSocAfterChargingPercent);
+        setDetourTolerance(saved.detourToleranceKm);
+        setExcludedStationIds(saved.excludedStationIds);
+        setForcedStationIdByIndex(saved.forcedStationIdByIndex);
+        setSaveRouteName(saved.name);
+        setSaveError(null);
+        setSaveSuccess(false);
+        setResult(saved.result);
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Gespeicherte Route konnte nicht geladen werden.");
+        }
+      } finally {
+        if (!cancelled) setLoadingSavedRoute(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [initialSavedRouteId]);
 
   function handleVehicleSelect(id: string) {
     setVehicleId(id);
@@ -144,6 +208,9 @@ export function RoutePlannerForm({
     setOverviewDirty(false);
     setConfirmingOverviewClose(false);
     setReplanError(null);
+    setSaveRouteName("");
+    setSaveError(null);
+    setSaveSuccess(false);
   }
 
   function handleOpenOverview() {
@@ -249,8 +316,62 @@ export function RoutePlannerForm({
     setConfirmingOverviewClose(false);
   }
 
+  async function handleSaveRoute() {
+    if (!result) return;
+    setSavingRoute(true);
+    setSaveError(null);
+    try {
+      await saveRoute({
+        name: saveRouteName.trim() || defaultSaveRouteName,
+        startQuery: start,
+        start: result.start,
+        endQuery: end,
+        end: result.end,
+        vehicleId,
+        caravanId: caravanId || null,
+        manualConsumptionKwhPer100km: consumption.trim() ? Number(consumption) : null,
+        minPowerKw: minPowerKw.trim() ? Number(minPowerKw) : null,
+        preferTrailerSuitable,
+        departureSocPercent: departureSoc,
+        minSocAtStopPercent: minSocAtStop,
+        minSocAtDestinationPercent: minSocAtDestination,
+        targetSocAfterChargingPercent: targetSocAfterCharging,
+        detourToleranceKm: detourTolerance,
+        excludedStationIds,
+        forcedStationIdByIndex,
+      });
+      setSaveSuccess(true);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Route konnte nicht gespeichert werden.");
+    } finally {
+      setSavingRoute(false);
+    }
+  }
+
+  // Baut nur die Google-Maps-URL (reiner Adapter-Aufruf, siehe
+  // src/lib/providers/navigation) und oeffnet sie -- das Oeffnen selbst
+  // (window.open) ist bewusst der einzige web-spezifische Teil, damit eine
+  // spaetere native App dieselbe buildUrl()-Logik mit Linking.openURL
+  // wiederverwenden kann.
+  function handleStartNavigation() {
+    if (!result) return;
+    const url = googleMapsNavigationProvider.buildUrl({
+      origin: result.start,
+      destination: result.end,
+      stops: result.plan.chargingStops.map((stop) => ({
+        latitude: stop.station.latitude,
+        longitude: stop.station.longitude,
+      })),
+    });
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+
   return (
     <div className="flex flex-col gap-8">
+      {loadingSavedRoute && (
+        <p className="text-sm text-black/60 dark:text-white/60">Gespeicherte Route wird geladen…</p>
+      )}
+
       <form
         onSubmit={async (e) => {
           e.preventDefault();
@@ -268,6 +389,9 @@ export function RoutePlannerForm({
             setResult(planResult);
             setExcludedStationIds([]);
             setForcedStationIdByIndex({});
+            setSaveRouteName("");
+            setSaveError(null);
+            setSaveSuccess(false);
           } catch (err) {
             setError(err instanceof Error ? err.message : "Route konnte nicht berechnet werden.");
           } finally {
@@ -455,7 +579,7 @@ export function RoutePlannerForm({
 
       {result && (
         <div className="flex flex-col gap-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <button
               type="button"
               onClick={handleOpenOverview}
@@ -463,6 +587,45 @@ export function RoutePlannerForm({
             >
               Routenübersicht anzeigen
             </button>
+            <button
+              type="button"
+              onClick={handleStartNavigation}
+              className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+            >
+              Navigation starten (Google Maps)
+            </button>
+          </div>
+
+          <div className="flex flex-wrap items-end gap-3 rounded-lg border border-black/10 p-4 dark:border-white/10">
+            <label className="flex flex-1 flex-col gap-1 text-sm">
+              Name für &quot;Meine Routen&quot; im Profil
+              <input
+                value={saveRouteName || defaultSaveRouteName}
+                onChange={(e) => {
+                  setSaveRouteName(e.target.value);
+                  setSaveSuccess(false);
+                }}
+                className="rounded-md border border-black/15 px-3 py-2 dark:border-white/15 dark:bg-transparent"
+              />
+            </label>
+            <button
+              type="button"
+              onClick={handleSaveRoute}
+              disabled={savingRoute}
+              className="rounded-md border border-black/15 px-4 py-2 text-sm font-medium hover:bg-black/5 disabled:opacity-50 dark:border-white/15 dark:hover:bg-white/5"
+            >
+              {savingRoute ? "Wird gespeichert…" : "Im Profil speichern"}
+            </button>
+            {saveSuccess && (
+              <p className="w-full text-sm text-emerald-700 dark:text-emerald-400">
+                Gespeichert — zu finden unter{" "}
+                <a href="/profil" className="underline">
+                  Mein Profil → Meine Routen
+                </a>
+                .
+              </p>
+            )}
+            {saveError && <p className="w-full text-sm text-red-600">{saveError}</p>}
           </div>
 
           {replanError && <p className="text-sm text-red-600">{replanError}</p>}

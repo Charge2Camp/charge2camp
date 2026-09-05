@@ -178,6 +178,40 @@ export interface ChargingReview {
   created_at: string;
 }
 
+export interface SavedRoute {
+  id: string;
+  user_id: string;
+  name: string;
+
+  start_query: string;
+  start_display_name: string;
+  start_latitude: number;
+  start_longitude: number;
+
+  end_query: string;
+  end_display_name: string;
+  end_latitude: number;
+  end_longitude: number;
+
+  vehicle_id: string | null;
+  caravan_id: string | null;
+
+  manual_consumption_kwh_per_100km: number | null;
+  min_power_kw: number | null;
+  prefer_trailer_suitable: boolean;
+
+  departure_soc_percent: number;
+  min_soc_at_stop_percent: number;
+  min_soc_at_destination_percent: number;
+  target_soc_after_charging_percent: number;
+  detour_tolerance_km: number;
+
+  excluded_station_ids: string[];
+  forced_station_id_by_index: Record<number, string>;
+
+  created_at: string;
+}
+
 export interface Favorite {
   user_id: string;
   entity_type: FavoriteEntityType;

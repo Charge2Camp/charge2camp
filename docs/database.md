@@ -87,6 +87,18 @@ Gespann meist nur abgekoppelt an die Ladesäule heranfahren kann — erfasst,
 ob der Wohnwagen dabei bequem in unmittelbarer Nähe geparkt werden kann,
 während das Zugfahrzeug lädt.
 
+### saved_routes (§21–§27, Routenplaner)
+
+Gespeicherte Routenplanungen: Start-/Ziel-Query + Koordinaten +
+Anzeigename, Verweis auf `vehicles`/`caravans` (optional, `on delete set
+null`), alle Ladeeinstellungen (Verbrauch, Mindest-Ladeleistung,
+Anhängertauglichkeits-Präferenz, SOC-Werte, Umweg-Toleranz) sowie die im
+Routenübersicht-Popup getroffene Kuratierung (`excluded_station_ids`,
+`forced_station_id_by_index`). Enthält bewusst KEINE fertige
+Streckengeometrie/keinen fertigen Ladeplan — beim Öffnen wird mit
+denselben Einstellungen frisch neu geplant (siehe
+[architecture.md](architecture.md)).
+
 ### favorites
 
 Composite Key (`user_id`, `entity_type`, `entity_id`) für Campingplätze und
@@ -96,8 +108,8 @@ Ladepunkte.
 
 RLS ist auf allen Tabellen aktiv:
 
-- `profiles`, `vehicles`, `caravans`, `favorites`: nur der Owner
-  (`auth.uid() = user_id`) darf lesen/schreiben.
+- `profiles`, `vehicles`, `caravans`, `favorites`, `saved_routes`: nur der
+  Owner (`auth.uid() = user_id`) darf lesen/schreiben.
 - `campsites`, `charging_stations`: öffentlich lesbar, Schreibzugriff aktuell
   nur über den `service_role`-Key (Admin-/Importskripte, §37). Policies für
   ein rollenbasiertes Admin-UI folgen mit dem Adminbereich.

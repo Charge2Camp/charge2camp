@@ -5,9 +5,15 @@ import { geocodeAddress } from "@/lib/providers/geocoding/nominatim";
 import { osrmProvider } from "@/lib/providers/routing/osrm";
 import { DEFAULT_CONSUMPTION_KWH_PER_100KM, planTrip, type TripPlan } from "@/lib/route-planning";
 import { assessPersonalCompatibility, summarizeCommunitySuitability } from "@/lib/scoring/trailer-compatibility";
-import type { Caravan, ChargingReview, ChargingStation, Vehicle } from "@/types/database";
+import type { Caravan, ChargingReview, ChargingStation, SavedRoute, Vehicle } from "@/types/database";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
+
+interface GeoPoint {
+  latitude: number;
+  longitude: number;
+  displayName: string;
+}
 
 export interface RoutePlanResult {
   start: { latitude: number; longitude: number; displayName: string };
@@ -17,6 +23,22 @@ export interface RoutePlanResult {
   caravan: Pick<Caravan, "manufacturer" | "model"> | null;
   consumptionSource: "manual" | "profile" | "default";
   plan: TripPlan;
+}
+
+/** Alle vom Nutzer einstellbaren Ladeplanungs-Parameter -- Formular-Slider
+ * plus vom Routenuebersicht-Popup kuratierte Auswahl. Wird sowohl fuer eine
+ * frische Planung als auch beim erneuten Oeffnen einer gespeicherten Route
+ * verwendet. */
+interface PlanningSettings {
+  preferTrailerSuitable: boolean;
+  minPowerKw?: number;
+  departureSocPercent?: number;
+  minSocAtStopPercent?: number;
+  minSocAtDestinationPercent?: number;
+  targetSocAfterChargingPercent?: number;
+  detourToleranceKm?: number;
+  excludedStationIds?: string[];
+  forcedStationIdByIndex?: Record<number, string>;
 }
 
 function parseOptionalPositiveNumber(value: FormDataEntryValue | null): number | null {
@@ -90,6 +112,101 @@ async function annotatePersonalCompatibility(
   };
 }
 
+/**
+ * Gemeinsamer Kern von `planRoute` (frische Planung, geocodiert Start/Ziel
+ * zuerst) und `loadSavedRoute` (Start/Ziel-Koordinaten bereits bekannt,
+ * kein erneutes Geocoding noetig): Routing + Ladeplanung + persoenliche
+ * Eignungseinschaetzung fuer bereits aufgeloeste Start-/Zielpunkte,
+ * Fahrzeug und Wohnwagen.
+ */
+async function buildRoutePlanResult({
+  supabase,
+  start,
+  end,
+  vehicle,
+  caravan,
+  consumptionKwhPer100km,
+  consumptionSource,
+  settings,
+}: {
+  supabase: SupabaseServerClient;
+  start: GeoPoint;
+  end: GeoPoint;
+  vehicle: Vehicle;
+  caravan: Caravan | null;
+  consumptionKwhPer100km: number;
+  consumptionSource: RoutePlanResult["consumptionSource"];
+  settings: PlanningSettings;
+}): Promise<RoutePlanResult> {
+  const route = await osrmProvider.planRoute({ start, end });
+
+  const { data: chargingStations } = await supabase.from("charging_stations").select("*");
+
+  const plan = planTrip({
+    route,
+    vehicle,
+    chargingStations: (chargingStations as ChargingStation[]) ?? [],
+    preferTrailerSuitable: settings.preferTrailerSuitable,
+    minPowerKw: settings.minPowerKw,
+    consumptionKwhPer100km,
+    ...(settings.departureSocPercent !== undefined && { departureSocPercent: settings.departureSocPercent }),
+    ...(settings.minSocAtStopPercent !== undefined && { minSocAtStopPercent: settings.minSocAtStopPercent }),
+    ...(settings.minSocAtDestinationPercent !== undefined && {
+      minSocAtDestinationPercent: settings.minSocAtDestinationPercent,
+    }),
+    ...(settings.targetSocAfterChargingPercent !== undefined && {
+      targetSocAfterChargingPercent: settings.targetSocAfterChargingPercent,
+    }),
+    ...(settings.detourToleranceKm !== undefined && { detourToleranceKm: settings.detourToleranceKm }),
+    excludedStationIds: settings.excludedStationIds,
+    forcedStationIdByIndex: settings.forcedStationIdByIndex,
+  });
+
+  const userTrailerLengthM =
+    vehicle.length_m !== null && caravan?.length_m ? vehicle.length_m + caravan.length_m : null;
+  const annotatedPlan = await annotatePersonalCompatibility(supabase, plan, userTrailerLengthM);
+
+  return {
+    start: { latitude: start.latitude, longitude: start.longitude, displayName: start.displayName },
+    end: { latitude: end.latitude, longitude: end.longitude, displayName: end.displayName },
+    geometry: route.geometry,
+    vehicle: { manufacturer: vehicle.manufacturer, model: vehicle.model },
+    caravan: caravan ? { manufacturer: caravan.manufacturer, model: caravan.model } : null,
+    consumptionSource,
+    plan: annotatedPlan,
+  };
+}
+
+async function requireVehicle(
+  supabase: SupabaseServerClient,
+  vehicleId: string,
+  userId: string
+): Promise<Vehicle> {
+  const { data: vehicle, error } = await supabase
+    .from("vehicles")
+    .select("*")
+    .eq("id", vehicleId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error || !vehicle) throw new Error("Fahrzeug nicht gefunden.");
+  return vehicle as Vehicle;
+}
+
+async function loadCaravan(
+  supabase: SupabaseServerClient,
+  caravanId: string | null | undefined,
+  userId: string
+): Promise<Caravan | null> {
+  if (!caravanId) return null;
+  const { data } = await supabase
+    .from("caravans")
+    .select("*")
+    .eq("id", caravanId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  return (data as Caravan | null) ?? null;
+}
+
 export async function planRoute(formData: FormData): Promise<RoutePlanResult> {
   const supabase = await createClient();
   const {
@@ -104,24 +221,8 @@ export async function planRoute(formData: FormData): Promise<RoutePlanResult> {
   const minPowerKwRaw = formData.get("min_power_kw");
   const preferTrailerSuitable = formData.get("prefer_trailer_suitable") === "1";
 
-  const { data: vehicle, error: vehicleError } = await supabase
-    .from("vehicles")
-    .select("*")
-    .eq("id", vehicleId)
-    .eq("user_id", user.id)
-    .maybeSingle();
-  if (vehicleError || !vehicle) throw new Error("Fahrzeug nicht gefunden.");
-
-  let caravan: Caravan | null = null;
-  if (typeof caravanId === "string" && caravanId) {
-    const { data } = await supabase
-      .from("caravans")
-      .select("*")
-      .eq("id", caravanId)
-      .eq("user_id", user.id)
-      .maybeSingle();
-    caravan = data as Caravan | null;
-  }
+  const vehicle = await requireVehicle(supabase, vehicleId, user.id);
+  const caravan = await loadCaravan(supabase, typeof caravanId === "string" ? caravanId : null, user.id);
 
   const start = await geocodeAddress(startQuery);
   if (!start) throw new Error(`Start "${startQuery}" konnte nicht gefunden werden.`);
@@ -129,10 +230,6 @@ export async function planRoute(formData: FormData): Promise<RoutePlanResult> {
   await new Promise((resolve) => setTimeout(resolve, 1000));
   const end = await geocodeAddress(endQuery);
   if (!end) throw new Error(`Ziel "${endQuery}" konnte nicht gefunden werden.`);
-
-  const route = await osrmProvider.planRoute({ start, end });
-
-  const { data: chargingStations } = await supabase.from("charging_stations").select("*");
 
   // Verbrauch: manuelle Eingabe im Routenplaner > Profilangabe > Standardwert.
   // Bewusst KEINE Herstellerangaben (Batterie/Reichweite) verwenden, siehe
@@ -156,33 +253,24 @@ export async function planRoute(formData: FormData): Promise<RoutePlanResult> {
   );
   const detourToleranceKm = parseOptionalNonNegativeNumber(formData.get("detour_tolerance_km"));
 
-  const plan = planTrip({
-    route,
-    vehicle: vehicle as Vehicle,
-    chargingStations: (chargingStations as ChargingStation[]) ?? [],
-    preferTrailerSuitable,
-    minPowerKw: minPowerKwRaw ? Number(minPowerKwRaw) : undefined,
+  return buildRoutePlanResult({
+    supabase,
+    start,
+    end,
+    vehicle,
+    caravan,
     consumptionKwhPer100km,
-    ...(departureSocPercent !== null && { departureSocPercent }),
-    ...(minSocAtStopPercent !== null && { minSocAtStopPercent }),
-    ...(minSocAtDestinationPercent !== null && { minSocAtDestinationPercent }),
-    ...(targetSocAfterChargingPercent !== null && { targetSocAfterChargingPercent }),
-    ...(detourToleranceKm !== null && { detourToleranceKm }),
-  });
-
-  const userTrailerLengthM =
-    vehicle.length_m !== null && caravan?.length_m ? vehicle.length_m + caravan.length_m : null;
-  const annotatedPlan = await annotatePersonalCompatibility(supabase, plan, userTrailerLengthM);
-
-  return {
-    start: { latitude: start.latitude, longitude: start.longitude, displayName: start.displayName },
-    end: { latitude: end.latitude, longitude: end.longitude, displayName: end.displayName },
-    geometry: route.geometry,
-    vehicle: { manufacturer: vehicle.manufacturer, model: vehicle.model },
-    caravan: caravan ? { manufacturer: caravan.manufacturer, model: caravan.model } : null,
     consumptionSource,
-    plan: annotatedPlan,
-  };
+    settings: {
+      preferTrailerSuitable,
+      minPowerKw: minPowerKwRaw ? Number(minPowerKwRaw) : undefined,
+      ...(departureSocPercent !== null && { departureSocPercent }),
+      ...(minSocAtStopPercent !== null && { minSocAtStopPercent }),
+      ...(minSocAtDestinationPercent !== null && { minSocAtDestinationPercent }),
+      ...(targetSocAfterChargingPercent !== null && { targetSocAfterChargingPercent }),
+      ...(detourToleranceKm !== null && { detourToleranceKm }),
+    },
+  });
 }
 
 /**
@@ -212,30 +300,14 @@ export async function replanChargingStop(input: {
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Nicht angemeldet.");
 
-  const { data: vehicle, error: vehicleError } = await supabase
-    .from("vehicles")
-    .select("*")
-    .eq("id", input.vehicleId)
-    .eq("user_id", user.id)
-    .maybeSingle();
-  if (vehicleError || !vehicle) throw new Error("Fahrzeug nicht gefunden.");
-
-  let caravan: Caravan | null = null;
-  if (input.caravanId) {
-    const { data } = await supabase
-      .from("caravans")
-      .select("*")
-      .eq("id", input.caravanId)
-      .eq("user_id", user.id)
-      .maybeSingle();
-    caravan = data as Caravan | null;
-  }
+  const vehicle = await requireVehicle(supabase, input.vehicleId, user.id);
+  const caravan = await loadCaravan(supabase, input.caravanId, user.id);
 
   const { data: chargingStations } = await supabase.from("charging_stations").select("*");
 
   const plan = planTrip({
     route: input.route,
-    vehicle: vehicle as Vehicle,
+    vehicle,
     chargingStations: (chargingStations as ChargingStation[]) ?? [],
     preferTrailerSuitable: input.preferTrailerSuitable,
     minPowerKw: input.minPowerKw,
@@ -252,4 +324,174 @@ export async function replanChargingStop(input: {
   const userTrailerLengthM =
     vehicle.length_m !== null && caravan?.length_m ? vehicle.length_m + caravan.length_m : null;
   return annotatePersonalCompatibility(supabase, plan, userTrailerLengthM);
+}
+
+export interface SaveRouteInput {
+  name: string;
+  startQuery: string;
+  start: GeoPoint;
+  endQuery: string;
+  end: GeoPoint;
+  vehicleId: string;
+  caravanId: string | null;
+  manualConsumptionKwhPer100km: number | null;
+  minPowerKw: number | null;
+  preferTrailerSuitable: boolean;
+  departureSocPercent: number;
+  minSocAtStopPercent: number;
+  minSocAtDestinationPercent: number;
+  targetSocAfterChargingPercent: number;
+  detourToleranceKm: number;
+  excludedStationIds: string[];
+  forcedStationIdByIndex: Record<number, string>;
+}
+
+/** Speichert Start/Ziel/Fahrzeug/Einstellungen im Profil des Nutzers --
+ * bewusst keine fertige Streckengeometrie/keinen fertigen Ladeplan (siehe
+ * Kommentar in der Migration), damit die Route beim erneuten Oeffnen immer
+ * mit aktuellen Ladepunkten/Strassendaten neu berechnet wird. */
+export async function saveRoute(input: SaveRouteInput): Promise<{ id: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nicht angemeldet.");
+
+  const { data, error } = await supabase
+    .from("saved_routes")
+    .insert({
+      user_id: user.id,
+      name: input.name,
+      start_query: input.startQuery,
+      start_display_name: input.start.displayName,
+      start_latitude: input.start.latitude,
+      start_longitude: input.start.longitude,
+      end_query: input.endQuery,
+      end_display_name: input.end.displayName,
+      end_latitude: input.end.latitude,
+      end_longitude: input.end.longitude,
+      vehicle_id: input.vehicleId,
+      caravan_id: input.caravanId,
+      manual_consumption_kwh_per_100km: input.manualConsumptionKwhPer100km,
+      min_power_kw: input.minPowerKw,
+      prefer_trailer_suitable: input.preferTrailerSuitable,
+      departure_soc_percent: input.departureSocPercent,
+      min_soc_at_stop_percent: input.minSocAtStopPercent,
+      min_soc_at_destination_percent: input.minSocAtDestinationPercent,
+      target_soc_after_charging_percent: input.targetSocAfterChargingPercent,
+      detour_tolerance_km: input.detourToleranceKm,
+      excluded_station_ids: input.excludedStationIds,
+      forced_station_id_by_index: input.forcedStationIdByIndex,
+    })
+    .select("id")
+    .single();
+
+  if (error || !data) throw new Error("Route konnte nicht gespeichert werden.");
+  return { id: data.id };
+}
+
+export interface SavedRouteDetail {
+  name: string;
+  startQuery: string;
+  endQuery: string;
+  vehicleId: string;
+  caravanId: string | null;
+  manualConsumptionKwhPer100km: number | null;
+  minPowerKw: number | null;
+  preferTrailerSuitable: boolean;
+  departureSocPercent: number;
+  minSocAtStopPercent: number;
+  minSocAtDestinationPercent: number;
+  targetSocAfterChargingPercent: number;
+  detourToleranceKm: number;
+  excludedStationIds: string[];
+  forcedStationIdByIndex: Record<number, string>;
+  result: RoutePlanResult;
+}
+
+/** Oeffnet eine gespeicherte Route erneut: Start/Ziel-Koordinaten sind
+ * bereits bekannt (kein erneutes Geocoding noetig), Route/Ladeplanung
+ * werden mit den gespeicherten Einstellungen frisch neu berechnet. */
+export async function loadSavedRoute(savedRouteId: string): Promise<SavedRouteDetail> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nicht angemeldet.");
+
+  const { data: saved, error } = await supabase
+    .from("saved_routes")
+    .select("*")
+    .eq("id", savedRouteId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (error || !saved) throw new Error("Gespeicherte Route nicht gefunden.");
+
+  const savedRoute = saved as SavedRoute;
+
+  if (!savedRoute.vehicle_id) {
+    throw new Error("Das Fahrzeug dieser gespeicherten Route wurde inzwischen aus dem Profil gelöscht.");
+  }
+
+  const vehicle = await requireVehicle(supabase, savedRoute.vehicle_id, user.id);
+  const caravan = await loadCaravan(supabase, savedRoute.caravan_id, user.id);
+
+  const consumptionKwhPer100km =
+    savedRoute.manual_consumption_kwh_per_100km ?? vehicle.consumption_kwh_per_100km ?? DEFAULT_CONSUMPTION_KWH_PER_100KM;
+  const consumptionSource: RoutePlanResult["consumptionSource"] = savedRoute.manual_consumption_kwh_per_100km
+    ? "manual"
+    : vehicle.consumption_kwh_per_100km
+      ? "profile"
+      : "default";
+
+  const start: GeoPoint = {
+    latitude: savedRoute.start_latitude,
+    longitude: savedRoute.start_longitude,
+    displayName: savedRoute.start_display_name,
+  };
+  const end: GeoPoint = {
+    latitude: savedRoute.end_latitude,
+    longitude: savedRoute.end_longitude,
+    displayName: savedRoute.end_display_name,
+  };
+
+  const result = await buildRoutePlanResult({
+    supabase,
+    start,
+    end,
+    vehicle,
+    caravan,
+    consumptionKwhPer100km,
+    consumptionSource,
+    settings: {
+      preferTrailerSuitable: savedRoute.prefer_trailer_suitable,
+      minPowerKw: savedRoute.min_power_kw ?? undefined,
+      departureSocPercent: savedRoute.departure_soc_percent,
+      minSocAtStopPercent: savedRoute.min_soc_at_stop_percent,
+      minSocAtDestinationPercent: savedRoute.min_soc_at_destination_percent,
+      targetSocAfterChargingPercent: savedRoute.target_soc_after_charging_percent,
+      detourToleranceKm: savedRoute.detour_tolerance_km,
+      excludedStationIds: savedRoute.excluded_station_ids,
+      forcedStationIdByIndex: savedRoute.forced_station_id_by_index,
+    },
+  });
+
+  return {
+    name: savedRoute.name,
+    startQuery: savedRoute.start_query,
+    endQuery: savedRoute.end_query,
+    vehicleId: savedRoute.vehicle_id,
+    caravanId: savedRoute.caravan_id,
+    manualConsumptionKwhPer100km: savedRoute.manual_consumption_kwh_per_100km,
+    minPowerKw: savedRoute.min_power_kw,
+    preferTrailerSuitable: savedRoute.prefer_trailer_suitable,
+    departureSocPercent: savedRoute.departure_soc_percent,
+    minSocAtStopPercent: savedRoute.min_soc_at_stop_percent,
+    minSocAtDestinationPercent: savedRoute.min_soc_at_destination_percent,
+    targetSocAfterChargingPercent: savedRoute.target_soc_after_charging_percent,
+    detourToleranceKm: savedRoute.detour_tolerance_km,
+    excludedStationIds: savedRoute.excluded_station_ids,
+    forcedStationIdByIndex: savedRoute.forced_station_id_by_index,
+    result,
+  };
 }
