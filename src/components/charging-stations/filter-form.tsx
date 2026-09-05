@@ -1,24 +1,28 @@
 import Link from "next/link";
+import { NameSuggestField } from "@/components/name-suggest-field";
 import type { ChargingStationFilters } from "@/lib/charging-stations";
 import { TRAILER_SUITABILITY_LABELS, TRAILER_SUITABILITY_VALUES } from "@/lib/trailer-suitability";
 
 export function ChargingStationFilterForm({
   filters,
   connectorTypes,
+  nameOptions,
 }: {
   filters: ChargingStationFilters;
   connectorTypes: string[];
+  /** Alle Ladepunkt-Anzeigenamen, fuer Vorschlaege im Suchfeld ab drei Zeichen. */
+  nameOptions: string[];
 }) {
   return (
     <form className="flex flex-col gap-5 text-sm" action="/ladepunkte">
       <label className="flex flex-col gap-1">
         Suche
-        <input
-          type="text"
+        <NameSuggestField
           name="q"
           defaultValue={filters.q}
           placeholder="Name des Ladepunkts"
-          className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+          options={nameOptions}
+          className="w-full rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
         />
       </label>
 

@@ -45,6 +45,17 @@ export async function fetchChargingStations(
   return (data as ChargingStation[]) ?? [];
 }
 
+/** Anzeigename je Ladepunkt (Name, falls vorhanden, sonst Anbieter -- wie in
+ * den Karten/Listen, siehe charging-station-explorer.tsx), unabhaengig von
+ * aktiven Filtern, fuer die Vorschlagsliste im Suchfeld (NameSuggestField). */
+export async function fetchChargingStationNameOptions(): Promise<string[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("charging_stations").select("name, provider").order("name");
+  if (error) throw new Error(error.message);
+  const labels = (data ?? []).map((row) => row.name ?? row.provider).filter(Boolean);
+  return Array.from(new Set(labels));
+}
+
 export async function fetchConnectorTypeOptions(): Promise<string[]> {
   const supabase = await createClient();
   const { data, error } = await supabase.from("charging_stations").select("connector_type");

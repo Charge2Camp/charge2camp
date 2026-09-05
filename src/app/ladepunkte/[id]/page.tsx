@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { Caravan, ChargingReview, ChargingStation, Vehicle } from "@/types/database";
 import { MapView } from "@/components/map/map-view";
 import { ChargingReviewForm } from "@/components/charging-stations/review-form";
+import { ChargingStationFavoriteButton } from "@/components/charging-stations/favorite-button";
 import { RigLengthDistributionChart } from "@/components/charging-stations/rig-length-distribution";
 import { TRAILER_SUITABILITY_COLORS, TRAILER_SUITABILITY_LABELS } from "@/lib/trailer-suitability";
 import {
@@ -33,19 +34,32 @@ export default async function ChargingStationDetailPage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const [{ data: station }, { data: reviews }, { data: { user } }] = await Promise.all([
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const [{ data: station }, { data: reviews }, favoriteResult] = await Promise.all([
     supabase.from("charging_stations").select("*").eq("id", id).maybeSingle(),
     supabase
       .from("charging_reviews")
       .select("*")
       .eq("charging_station_id", id)
       .order("created_at", { ascending: false }),
-    supabase.auth.getUser(),
+    user
+      ? supabase
+          .from("favorites")
+          .select("entity_id")
+          .eq("user_id", user.id)
+          .eq("entity_type", "charging_station")
+          .eq("entity_id", id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
   ]);
 
   if (!station) notFound();
   const s = station as ChargingStation;
   const allReviews = (reviews as ChargingReview[]) ?? [];
+  const isFavorite = Boolean(favoriteResult.data);
 
   let ownCaravans: Caravan[] = [];
   let ownVehicles: Vehicle[] = [];
@@ -86,6 +100,16 @@ export default async function ChargingStationDetailPage({
       >
         {TRAILER_SUITABILITY_LABELS[s.trailer_suitable]}
       </span>
+
+      <div className="mt-4 flex items-center gap-2">
+        <Link
+          href={`/routenplaner?destination_station_id=${s.id}`}
+          className="inline-flex min-h-11 items-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+        >
+          Route hierher planen
+        </Link>
+        {user && <ChargingStationFavoriteButton stationId={s.id} initialIsFavorite={isFavorite} />}
+      </div>
 
       <div className="mt-6 h-[320px] overflow-hidden rounded-lg border border-black/10 dark:border-white/10">
         <MapView markers={[{ id: s.id, latitude: s.latitude, longitude: s.longitude, label: s.name ?? s.provider }]} />

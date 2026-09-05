@@ -48,6 +48,22 @@ produktiven Rollout muss auf einen selbst gehosteten OSRM/Valhalla/
 GraphHopper-Server umgestellt werden — dafür genügt ein neuer Adapter
 gegen dasselbe `RoutingProvider`-Interface (siehe [api.md](api.md)).
 
+## Straßenrestriktionen (Höhe/Breite/Gewicht)
+
+| Anbieter | URL | Lizenz | Kosten | Status |
+|---|---|---|---|---|
+| Overpass API | https://overpass-api.de | ODbL (OpenStreetMap-Rohdaten) | kostenlos, kein API-Key | aktiv seit Phase 7 |
+
+**Hinweis Overpass API (Phase 7):** Genutzt über
+[src/lib/providers/road-restrictions/overpass.ts](../src/lib/providers/road-restrictions/overpass.ts)
+zur Warnung vor bekannten `maxheight`/`maxwidth`/`maxweight`-Beschränkungen
+entlang der geplanten Route, abgeglichen mit den Gespann-Maßen. Der
+öffentliche Dienst ist ohne SLA und wird deshalb nur mit einer begrenzten
+Anzahl Stichprobenpunkte pro Route abgefragt (siehe Kommentar im Adapter).
+OSM-Tag-Abdeckung ist lückenhaft — die Prüfung ist eine Best-Effort-Warnung,
+keine verlässliche Vollständigkeitsgarantie, und ersetzt keine
+Beschilderung vor Ort.
+
 ## Geocoding
 
 | Anbieter | URL | Lizenz | Kosten | Status |

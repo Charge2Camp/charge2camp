@@ -26,6 +26,9 @@ export function VehicleList({ vehicles }: { vehicles: Vehicle[] }) {
                 ? ` · ${vehicle.max_towing_weight_braked_kg} kg Anhängelast`
                 : ""}
               {vehicle.length_m ? ` · ${vehicle.length_m} m lang` : ""}
+              {vehicle.width_m ? ` · ${vehicle.width_m} m breit` : ""}
+              {vehicle.height_m ? ` · ${vehicle.height_m} m hoch` : ""}
+              {vehicle.weight_kg ? ` · ${vehicle.weight_kg} kg` : ""}
             </p>
           </div>
           <form action={deleteVehicle}>

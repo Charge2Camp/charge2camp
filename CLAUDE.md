@@ -1,6 +1,6 @@
 @AGENTS.md
 
-# eCamper — Projektkontext für Claude Code
+# Charge2Camp — Projektkontext für Claude Code
 
 MVP-Webplattform für Camper mit Elektroauto + Wohnwagen. Verbindet
 Campingplatzsuche, Ladeinfrastruktur, Anhängertauglichkeit und
@@ -30,7 +30,7 @@ volle Produkt- und Architekturspezifikation.
 7. **Anhängertauglichkeit hat Priorität** vor einem minimal kürzeren Umweg
    bei der Routen-/Ladestopp-Auswahl.
 8. **Mobile-first & Touch-tauglich, mit Blick auf App Store/Play Store.**
-   eCamper soll später als native iOS-/Android-App vertrieben werden —
+   Charge2Camp soll später als native iOS-/Android-App vertrieben werden —
    jede UI-Änderung muss das berücksichtigen: Tap-Ziele ≥ 44px, Eingabefelder
    mit `text-base` (verhindert iOS-Auto-Zoom), kein rein
    hover-abhängiges Verhalten (Touch kennt kein `:hover`),

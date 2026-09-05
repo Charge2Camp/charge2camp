@@ -18,7 +18,7 @@ export const osrmProvider: RoutingProvider = {
     const url = `${OSRM_BASE_URL}/route/v1/driving/${coords}?overview=full&geometries=geojson`;
 
     const response = await fetch(url, {
-      headers: { "User-Agent": "eCamper-dev/0.1 (MVP, lokale Entwicklung)" },
+      headers: { "User-Agent": "Charge2Camp-dev/0.1 (MVP, lokale Entwicklung)" },
     });
     if (!response.ok) {
       throw new Error(`OSRM-Anfrage fehlgeschlagen (${response.status}).`);

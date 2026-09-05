@@ -1,4 +1,9 @@
-import { fetchCampsiteLocationOptions, fetchCampsites, parseCampsiteFilters } from "@/lib/campsites";
+import {
+  fetchCampsiteLocationOptions,
+  fetchCampsiteNameOptions,
+  fetchCampsites,
+  parseCampsiteFilters,
+} from "@/lib/campsites";
 import { CampsiteFilterForm } from "@/components/campsites/filter-form";
 import { CampsiteExplorer } from "@/components/campsites/campsite-explorer";
 
@@ -8,9 +13,10 @@ export default async function CampsitesPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const filters = parseCampsiteFilters(await searchParams);
-  const [campsites, { countries, regions }] = await Promise.all([
+  const [campsites, { countries, regions }, nameOptions] = await Promise.all([
     fetchCampsites(filters),
     fetchCampsiteLocationOptions(),
+    fetchCampsiteNameOptions(),
   ]);
 
   return (
@@ -22,7 +28,12 @@ export default async function CampsitesPage({
 
       <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[280px_1fr]">
         <aside className="lg:sticky lg:top-4 lg:self-start">
-          <CampsiteFilterForm filters={filters} countries={countries} regions={regions} />
+          <CampsiteFilterForm
+            filters={filters}
+            countries={countries}
+            regions={regions}
+            nameOptions={nameOptions}
+          />
         </aside>
 
         <CampsiteExplorer campsites={campsites} />

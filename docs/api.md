@@ -12,7 +12,13 @@ noch ohne eigenes generisches Interface, da bislang nur ein Anbieter) sowie
 "Navigation starten" im Routenplaner — baut nur eine Deep-Link-URL, öffnet
 sie bewusst nicht selbst, damit dieselbe Logik später in der nativen App
 wiederverwendet werden kann. Apple Karten/Waze folgen als weitere Adapter
-in derselben Registry (`NAVIGATION_PROVIDERS`), sobald benötigt.
+in derselben Registry (`NAVIGATION_PROVIDERS`), sobald benötigt. Seit Phase
+7 prüft `RoadRestrictionProvider` (Overpass API,
+[src/lib/providers/road-restrictions/](../src/lib/providers/road-restrictions/))
+die Streckengeometrie auf bekannte Höhen-/Breiten-/Gewichtsbeschränkungen
+(Warnung, keine automatische Umfahrung — siehe
+[architecture.md](architecture.md), Abschnitt "Gespannlogik &
+Straßenrestriktionen").
 `ChargingProvider`/`TrafficProvider` folgen mit Phase 8 (Live-Daten).
 
 ## Supabase-Zugriff

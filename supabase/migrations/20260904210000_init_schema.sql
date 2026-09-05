@@ -1,4 +1,4 @@
--- eCamper MVP initial schema
+-- Charge2Camp MVP initial schema
 -- See docs/database.md for a description of every table.
 
 -- ---------------------------------------------------------------------------

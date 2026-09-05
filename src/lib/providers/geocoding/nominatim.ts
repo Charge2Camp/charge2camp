@@ -17,7 +17,7 @@ export async function geocodeAddress(query: string): Promise<GeocodeResult | nul
   const url = `${NOMINATIM_BASE_URL}/search?q=${encodeURIComponent(query)}&format=json&limit=1`;
 
   const response = await fetch(url, {
-    headers: { "User-Agent": "eCamper-dev/0.1 (MVP, lokale Entwicklung)" },
+    headers: { "User-Agent": "Charge2Camp-dev/0.1 (MVP, lokale Entwicklung)" },
   });
   if (!response.ok) {
     throw new Error(`Geocoding-Anfrage fehlgeschlagen (${response.status}).`);

@@ -18,6 +18,9 @@ export interface Profile {
   id: string;
   email: string;
   is_admin: boolean;
+  home_address: string | null;
+  home_latitude: number | null;
+  home_longitude: number | null;
   created_at: string;
 }
 
@@ -32,6 +35,9 @@ export interface Vehicle {
   range_km: number | null;
   max_towing_weight_braked_kg: number | null;
   length_m: number | null;
+  width_m: number | null;
+  height_m: number | null;
+  weight_kg: number | null;
   model_reference_id: string | null;
   created_at: string;
 }

@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "eCamper – Camping mit Elektroauto",
+  title: "Charge2Camp – Camping mit Elektroauto",
   description:
     "Finde Campingplätze und plane deine Route mit anhängertauglichen Ladestopps.",
 };

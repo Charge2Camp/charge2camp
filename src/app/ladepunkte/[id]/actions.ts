@@ -80,3 +80,32 @@ export async function addChargingReview(formData: FormData) {
   if (error) throw new Error(error.message);
   revalidatePath(`/ladepunkte/${stationId}`);
 }
+
+/** Setzt/entfernt einen Ladepunkt als Favorit des angemeldeten Nutzers
+ * (`favorites`-Tabelle, RLS beschraenkt bereits auf den eigenen Nutzer) --
+ * analog zu toggleCampsiteFavorite in campingplaetze/[id]/actions.ts. */
+export async function toggleChargingStationFavorite(stationId: string, isFavorite: boolean) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nicht angemeldet.");
+
+  if (isFavorite) {
+    const { error } = await supabase
+      .from("favorites")
+      .insert({ user_id: user.id, entity_type: "charging_station", entity_id: stationId });
+    if (error) throw new Error(error.message);
+  } else {
+    const { error } = await supabase
+      .from("favorites")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("entity_type", "charging_station")
+      .eq("entity_id", stationId);
+    if (error) throw new Error(error.message);
+  }
+
+  revalidatePath(`/ladepunkte/${stationId}`);
+  revalidatePath("/profil/favoriten");
+}

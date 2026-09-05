@@ -29,3 +29,31 @@ export async function addCampsiteReview(formData: FormData) {
   if (error) throw new Error(error.message);
   revalidatePath(`/campingplaetze/${campsiteId}`);
 }
+
+/** Setzt/entfernt einen Campingplatz als Favorit des angemeldeten Nutzers
+ * (`favorites`-Tabelle, RLS beschraenkt bereits auf den eigenen Nutzer). */
+export async function toggleCampsiteFavorite(campsiteId: string, isFavorite: boolean) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nicht angemeldet.");
+
+  if (isFavorite) {
+    const { error } = await supabase
+      .from("favorites")
+      .insert({ user_id: user.id, entity_type: "campsite", entity_id: campsiteId });
+    if (error) throw new Error(error.message);
+  } else {
+    const { error } = await supabase
+      .from("favorites")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("entity_type", "campsite")
+      .eq("entity_id", campsiteId);
+    if (error) throw new Error(error.message);
+  }
+
+  revalidatePath(`/campingplaetze/${campsiteId}`);
+  revalidatePath("/profil/favoriten");
+}

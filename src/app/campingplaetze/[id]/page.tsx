@@ -7,6 +7,7 @@ import { calculateEvCampingScore } from "@/lib/scoring/ev-camping-score";
 import { MapView } from "@/components/map/map-view";
 import { EvScoreBadge } from "@/components/campsites/ev-score-badge";
 import { CampsiteReviewForm } from "@/components/campsites/review-form";
+import { CampsiteFavoriteButton } from "@/components/campsites/favorite-button";
 import { AMENITY_FIELDS, AMENITY_LABELS } from "@/lib/campsites";
 
 export default async function CampsiteDetailPage({
@@ -17,17 +18,31 @@ export default async function CampsiteDetailPage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const [{ data: campsite }, { data: reviews }, { data: { user } }] = await Promise.all([
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const [{ data: campsite }, { data: reviews }, favoriteResult] = await Promise.all([
     supabase.from("campsites").select("*").eq("id", id).maybeSingle(),
     supabase
       .from("campsite_reviews")
       .select("*")
       .eq("campsite_id", id)
       .order("created_at", { ascending: false }),
-    supabase.auth.getUser(),
+    user
+      ? supabase
+          .from("favorites")
+          .select("entity_id")
+          .eq("user_id", user.id)
+          .eq("entity_type", "campsite")
+          .eq("entity_id", id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
   ]);
 
   if (!campsite) notFound();
+
+  const isFavorite = Boolean(favoriteResult.data);
 
   const ownReview = user
     ? (reviews as CampsiteReview[] | null)?.find((r) => r.user_id === user.id)
@@ -54,6 +69,16 @@ export default async function CampsiteDetailPage({
           ★ {site.rating_avg.toFixed(1)} ({reviews?.length ?? 0} Bewertungen)
         </p>
       )}
+
+      <div className="mt-4 flex items-center gap-2">
+        <Link
+          href={`/routenplaner?destination_campsite_id=${site.id}`}
+          className="inline-flex min-h-11 items-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+        >
+          Route hierher planen
+        </Link>
+        {user && <CampsiteFavoriteButton campsiteId={site.id} initialIsFavorite={isFavorite} />}
+      </div>
 
       <div className="mt-6 h-[320px] overflow-hidden rounded-lg border border-black/10 dark:border-white/10">
         <MapView

@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import type { RoadRestrictionCheck } from "@/app/routenplaner/actions";
 import type { ChargingStopCandidate, TripPlan } from "@/lib/route-planning";
 import { buildRouteTimeline, type ManualWaypointWithDistance } from "@/lib/route-timeline";
 import { TRAILER_SUITABILITY_COLORS, TRAILER_SUITABILITY_LABELS } from "@/lib/trailer-suitability";
 import { PERSONAL_COMPATIBILITY_LABELS } from "@/lib/scoring/trailer-compatibility";
+import { ROAD_RESTRICTION_LABELS } from "@/lib/providers/road-restrictions/labels";
 
 function formatDuration(minutes: number): string {
   const h = Math.floor(minutes / 60);
@@ -76,6 +78,7 @@ export function RouteOverviewDialog({
   end,
   manualWaypoints,
   plan,
+  roadRestrictions,
   busy,
   dirty,
   confirmingClose,
@@ -91,6 +94,7 @@ export function RouteOverviewDialog({
   end: { displayName: string; latitude: number; longitude: number };
   manualWaypoints: ManualWaypointWithDistance[];
   plan: TripPlan;
+  roadRestrictions: RoadRestrictionCheck;
   busy: boolean;
   /** true, sobald in diesem Popup geloescht oder eine Alternative gewaehlt wurde, ohne dass die Aenderung schon uebernommen wurde. */
   dirty: boolean;
@@ -178,6 +182,42 @@ export function RouteOverviewDialog({
           </div>
         ) : (
           <div className="flex-1 overflow-y-auto p-4">
+            {roadRestrictions.status === "checked" && (
+              <div
+                className={`mb-3 rounded-lg border p-3 text-sm ${
+                  roadRestrictions.warnings.length > 0
+                    ? "border-red-600/30 bg-red-600/5 text-red-700 dark:text-red-400"
+                    : "border-black/10 bg-black/5 text-black/50 dark:border-white/10 dark:bg-white/5 dark:text-white/50"
+                }`}
+              >
+                {roadRestrictions.warnings.length > 0 ? (
+                  <>
+                    <p className="font-medium">
+                      ⚠ Bekannte Straßenrestriktionen entlang der Route, die dein Gespann überschreitet:
+                    </p>
+                    <ul className="mt-1 list-inside list-disc">
+                      {roadRestrictions.warnings.map((w, i) => (
+                        <li key={`${w.kind}-${i}`}>
+                          km {w.distanceFromStartKm.toFixed(0)}: {ROAD_RESTRICTION_LABELS[w.kind](w.limitValue)}
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                ) : (
+                  <p>Keine bekannten Höhen-/Breiten-/Gewichtsbeschränkungen auf dieser Route gefunden.</p>
+                )}
+                <p className="mt-1 text-xs opacity-80">
+                  Basierend auf OpenStreetMap-Daten (Overpass API) — ggf. unvollständig, ersetzt keine
+                  Beschilderung vor Ort. Die Route wird deshalb nicht automatisch umgeleitet.
+                </p>
+              </div>
+            )}
+            {roadRestrictions.status === "failed" && (
+              <div className="mb-3 rounded-lg border border-black/10 bg-black/5 p-3 text-xs text-black/50 dark:border-white/10 dark:bg-white/5 dark:text-white/50">
+                Straßenrestriktionen (Höhe/Breite/Gewicht) konnten nicht geprüft werden — der Dienst war nicht
+                erreichbar.
+              </div>
+            )}
             <ol className="flex flex-col gap-3">
               <li className="rounded-lg border border-emerald-600/30 bg-emerald-600/5 p-3">
                 <p className="font-medium">Start: {start.displayName}</p>

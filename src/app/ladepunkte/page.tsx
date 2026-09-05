@@ -1,4 +1,5 @@
 import {
+  fetchChargingStationNameOptions,
   fetchChargingStations,
   fetchConnectorTypeOptions,
   parseChargingStationFilters,
@@ -12,9 +13,10 @@ export default async function ChargingStationsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const filters = parseChargingStationFilters(await searchParams);
-  const [stations, connectorTypes] = await Promise.all([
+  const [stations, connectorTypes, nameOptions] = await Promise.all([
     fetchChargingStations(filters),
     fetchConnectorTypeOptions(),
+    fetchChargingStationNameOptions(),
   ]);
 
   return (
@@ -26,7 +28,11 @@ export default async function ChargingStationsPage({
 
       <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[280px_1fr]">
         <aside className="lg:sticky lg:top-4 lg:self-start">
-          <ChargingStationFilterForm filters={filters} connectorTypes={connectorTypes} />
+          <ChargingStationFilterForm
+            filters={filters}
+            connectorTypes={connectorTypes}
+            nameOptions={nameOptions}
+          />
         </aside>
 
         <ChargingStationExplorer stations={stations} />

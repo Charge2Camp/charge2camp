@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { geocodeAddress } from "@/lib/providers/geocoding/nominatim";
 
 function parseOptionalNumber(value: FormDataEntryValue | null): number | null {
   if (!value || typeof value !== "string" || value.trim() === "") return null;
@@ -50,6 +51,9 @@ export async function addVehicle(formData: FormData) {
     range_km: parseOptionalNumber(formData.get("range_km")),
     max_towing_weight_braked_kg: parseOptionalNumber(formData.get("max_towing_weight_braked_kg")),
     length_m: parseOptionalNumber(formData.get("length_m")),
+    width_m: parseOptionalNumber(formData.get("width_m")),
+    height_m: parseOptionalNumber(formData.get("height_m")),
+    weight_kg: parseOptionalNumber(formData.get("weight_kg")),
     model_reference_id: formData.get("model_reference_id") || null,
   });
 
@@ -213,4 +217,56 @@ export async function deleteSavedRoute(formData: FormData) {
   if (error) throw new Error(error.message);
   revalidatePath("/profil");
   revalidatePath("/profil/routen");
+}
+
+/** Speichert die Zuhause-Adresse im Profil -- einmalig per Nominatim
+ * geocodiert (kein Autocomplete-Aufruf, siehe docs/data-sources.md), damit
+ * der Routenplaner sie spaeter direkt als Start/Ziel uebernehmen kann, ohne
+ * bei jeder Routenplanung erneut zu geocodieren. Leeres Feld entfernt die
+ * hinterlegte Adresse wieder. */
+export async function setHomeAddress(formData: FormData) {
+  const { supabase, userId } = await requireUserId();
+  const addressRaw = formData.get("home_address");
+  const address = typeof addressRaw === "string" ? addressRaw.trim() : "";
+
+  if (!address) {
+    const { error } = await supabase
+      .from("profiles")
+      .update({ home_address: null, home_latitude: null, home_longitude: null })
+      .eq("id", userId);
+    if (error) throw new Error(error.message);
+    revalidatePath("/profil/daten");
+    revalidatePath("/routenplaner");
+    return;
+  }
+
+  // Wurde die Adresse ueber einen Vorschlag ausgewaehlt (siehe
+  // AddressAutocomplete `onSelectCoordinates` in home-address-form.tsx),
+  // sind Koordinaten UND die praezise formatierte Adresse (inkl. Hausnummer)
+  // schon bekannt -- kein erneutes Geocoding, das die Hausnummer je nach
+  // OSM-Datenlage bei Nominatim abweichend formatieren oder weglassen
+  // koennte.
+  const latitudeRaw = formData.get("home_latitude");
+  const longitudeRaw = formData.get("home_longitude");
+  const coordsFromSuggestion =
+    typeof latitudeRaw === "string" && typeof longitudeRaw === "string" && latitudeRaw !== "" && longitudeRaw !== ""
+      ? { latitude: Number(latitudeRaw), longitude: Number(longitudeRaw) }
+      : null;
+
+  const resolved = coordsFromSuggestion
+    ? { displayName: address, ...coordsFromSuggestion }
+    : await geocodeAddress(address);
+  if (!resolved) throw new Error(`Adresse "${address}" konnte nicht gefunden werden.`);
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({
+      home_address: resolved.displayName,
+      home_latitude: resolved.latitude,
+      home_longitude: resolved.longitude,
+    })
+    .eq("id", userId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/profil/daten");
+  revalidatePath("/routenplaner");
 }

@@ -25,7 +25,7 @@ export async function SiteHeader() {
         <div className="flex items-center gap-2">
           <MobileNav />
           <Link href="/" className="flex items-center gap-2 py-2 font-semibold">
-            <span className="text-emerald-600">e</span>Camper
+            <span className="text-emerald-600">Charge</span>2Camp
           </Link>
         </div>
 

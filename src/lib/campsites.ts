@@ -83,6 +83,37 @@ export async function fetchCampsites(filters: CampsiteFilters): Promise<Campsite
   return (data as Campsite[]) ?? [];
 }
 
+/** Alle Campingplatz-Namen (unabhaengig von aktiven Filtern) fuer die
+ * Vorschlagsliste im Suchfeld -- siehe NameSuggestField. */
+export async function fetchCampsiteNameOptions(): Promise<string[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("campsites").select("name").order("name");
+  if (error) throw new Error(error.message);
+  return Array.from(new Set((data ?? []).map((row) => row.name).filter(Boolean)));
+}
+
+export interface CampsiteDestinationOption {
+  id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+}
+
+/** Name + Koordinaten aller eigenen Campingplaetze, fuer die Ziel-Vorschlaege
+ * im Routenplaner (AddressAutocomplete `localSuggestions`) -- die
+ * Koordinaten sind bereits bekannt, ein erneutes Geocoding des (bei
+ * Demo-Daten oft gar nicht real auffindbaren) Namens ist beim Absenden
+ * dadurch nicht noetig, siehe routenplaner/actions.ts. */
+export async function fetchCampsiteDestinationOptions(): Promise<CampsiteDestinationOption[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("campsites")
+    .select("id, name, latitude, longitude")
+    .order("name");
+  if (error) throw new Error(error.message);
+  return (data as CampsiteDestinationOption[]) ?? [];
+}
+
 export async function fetchCampsiteLocationOptions(): Promise<{
   countries: string[];
   regions: string[];

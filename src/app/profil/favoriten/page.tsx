@@ -87,8 +87,8 @@ export default async function FavoritenPage() {
       )}
 
       <p className="mt-6 text-sm text-black/50 dark:text-white/50">
-        Das Merken von Campingplätzen/Ladepunkten über einen Favoriten-Button auf den Detailseiten
-        ist noch nicht umgesetzt und folgt in einer späteren Phase.
+        Campingplätze und Ladepunkte lassen sich über das Herz-Symbol auf ihrer jeweiligen
+        Detailseite merken.
       </p>
     </section>
   );

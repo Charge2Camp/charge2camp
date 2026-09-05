@@ -3,6 +3,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { geocodeAddress } from "@/lib/providers/geocoding/nominatim";
 import { osrmProvider } from "@/lib/providers/routing/osrm";
+import type { RouteResult } from "@/lib/providers/routing/types";
+import { overpassRoadRestrictionProvider } from "@/lib/providers/road-restrictions/overpass";
+import type { RoadRestrictionKind } from "@/lib/providers/road-restrictions/types";
+import { combineGespannDimensions, type GespannDimensions } from "@/lib/gespann-dimensions";
 import { DEFAULT_CONSUMPTION_KWH_PER_100KM, distanceAlongRouteKm, planTrip, type TripPlan } from "@/lib/route-planning";
 import { assessPersonalCompatibility, summarizeCommunitySuitability } from "@/lib/scoring/trailer-compatibility";
 import type { ManualWaypoint, ManualWaypointWithDistance } from "@/lib/route-timeline";
@@ -26,6 +30,23 @@ export interface RoutePlanResult {
   caravan: Pick<Caravan, "manufacturer" | "model"> | null;
   consumptionSource: "manual" | "profile" | "default";
   plan: TripPlan;
+  /** Bekannte Strassenrestriktionen (Hoehe/Breite/Gewicht) entlang der Route, siehe checkRoadRestrictions weiter unten. */
+  roadRestrictions: RoadRestrictionCheck;
+}
+
+export interface RoadRestrictionWarning {
+  kind: RoadRestrictionKind;
+  limitValue: number;
+  distanceFromStartKm: number;
+}
+
+export interface RoadRestrictionCheck {
+  /** "not_applicable": kein Wohnwagen oder keine Gespann-Masse hinterlegt.
+   * "checked": Pruefung gelaufen (warnings kann trotzdem leer sein).
+   * "failed": Overpass-Anfrage fehlgeschlagen (z. B. Timeout/Rate-Limit) --
+   * bewusst NICHT als "keine Restriktionen" interpretieren. */
+  status: "not_applicable" | "checked" | "failed";
+  warnings: RoadRestrictionWarning[];
 }
 
 /** Alle vom Nutzer einstellbaren Ladeplanungs-Parameter -- Formular-Slider
@@ -124,6 +145,37 @@ async function annotateChargingStops(
 }
 
 /**
+ * Prueft die Streckengeometrie auf bekannte OSM-Strassenrestriktionen
+ * (Hoehen-/Breiten-/Gewichtsbeschraenkungen), die die Gespann-Masse
+ * ueberschreiten (§ Phase 7 Gespannlogik). Nur eine Warnung, keine
+ * automatische Umfahrung -- siehe Kommentar in overpass.ts. Ein
+ * Fehlschlag der Anfrage (oeffentlicher Dienst ohne SLA) blockiert die
+ * Routenplanung nicht, wird aber ehrlich als "failed" markiert statt eine
+ * falsche "keine Restriktionen"-Aussage vorzutaeuschen.
+ */
+async function checkRoadRestrictions(
+  route: Pick<RouteResult, "geometry" | "distanceKm">,
+  dimensions: GespannDimensions
+): Promise<RoadRestrictionCheck> {
+  if (dimensions.heightM === null && dimensions.widthM === null && dimensions.weightKg === null) {
+    return { status: "not_applicable", warnings: [] };
+  }
+  try {
+    const hits = await overpassRoadRestrictionProvider.checkRoute(route.geometry, dimensions);
+    const warnings = hits
+      .map((hit) => ({
+        kind: hit.kind,
+        limitValue: hit.limitValue,
+        distanceFromStartKm: distanceAlongRouteKm(hit.location, route),
+      }))
+      .sort((a, b) => a.distanceFromStartKm - b.distanceFromStartKm);
+    return { status: "checked", warnings };
+  } catch {
+    return { status: "failed", warnings: [] };
+  }
+}
+
+/**
  * Gemeinsamer Kern von `planRoute` (frische Planung, geocodiert Start/Ziel
  * zuerst) und `loadSavedRoute` (Start/Ziel-Koordinaten bereits bekannt,
  * kein erneutes Geocoding noetig): Routing + Ladeplanung + persoenliche
@@ -190,6 +242,8 @@ async function buildRoutePlanResult({
     distanceFromStartKm: distanceAlongRouteKm(w, route),
   }));
 
+  const roadRestrictions = await checkRoadRestrictions(route, combineGespannDimensions(vehicle, caravan));
+
   return {
     start: { latitude: start.latitude, longitude: start.longitude, displayName: start.displayName },
     end: { latitude: end.latitude, longitude: end.longitude, displayName: end.displayName },
@@ -199,6 +253,7 @@ async function buildRoutePlanResult({
     caravan: caravan ? { manufacturer: caravan.manufacturer, model: caravan.model } : null,
     consumptionSource,
     plan: annotatedPlan,
+    roadRestrictions,
   };
 }
 
@@ -250,22 +305,60 @@ export async function planRoute(formData: FormData): Promise<RoutePlanResult> {
     .getAll("manual_stop")
     .filter((v): v is string => typeof v === "string" && v.trim() !== "");
 
+  // Wurde "Start"/"Ziel" ueber einen unserer eigenen Campingplatz-Vorschlaege,
+  // einen Ladepunkt (Route-hierher-planen-Button) oder die Favoriten-Auswahl
+  // gesetzt (siehe AddressAutocomplete `localSuggestions` bzw.
+  // favorites-picker-dialog.tsx in route-planner-form.tsx), sind die
+  // Koordinaten schon bekannt und werden als verstecktes Formularfeld
+  // mitgeschickt -- kein erneutes Geocoding noetig (und bei Demo-Namen wie
+  // "[DEMO] ..." ueber Nominatim ohnehin nicht auffindbar).
+  function coordsFromHiddenFields(latField: string, lonField: string) {
+    const latRaw = formData.get(latField);
+    const lonRaw = formData.get(lonField);
+    return typeof latRaw === "string" && typeof lonRaw === "string" && latRaw !== "" && lonRaw !== ""
+      ? { latitude: Number(latRaw), longitude: Number(lonRaw) }
+      : null;
+  }
+  const startCoordsFromSuggestion = coordsFromHiddenFields("start_latitude", "start_longitude");
+  const endCoordsFromSuggestion = coordsFromHiddenFields("end_latitude", "end_longitude");
+
   const vehicle = await requireVehicle(supabase, vehicleId, user.id);
   const caravan = await loadCaravan(supabase, typeof caravanId === "string" ? caravanId : null, user.id);
 
-  // Nominatim-Nutzungsrichtlinie: max. 1 Anfrage/Sekunde -- Start, Ziel und
-  // jeder manuelle Zwischenstopp werden deshalb sequenziell mit Pause
-  // geocodiert statt parallel.
-  const start = await geocodeAddress(startQuery);
-  if (!start) throw new Error(`Start "${startQuery}" konnte nicht gefunden werden.`);
-  await new Promise((resolve) => setTimeout(resolve, 1000));
-  const end = await geocodeAddress(endQuery);
-  if (!end) throw new Error(`Ziel "${endQuery}" konnte nicht gefunden werden.`);
+  // Nominatim-Nutzungsrichtlinie: max. 1 Anfrage/Sekunde -- alle tatsaechlich
+  // per Nominatim aufzuloesenden Orte werden deshalb sequenziell mit Pause
+  // geocodiert statt parallel. Ein bereits per Vorschlag aufgeloestes
+  // Start/Ziel (s. o.) zaehlt nicht als Nominatim-Aufruf und braucht daher
+  // auch keine Wartezeit davor/danach.
+  let lastNominatimCallAt = 0;
+  async function geocodeRateLimited(query: string) {
+    const waitMs = Math.max(0, lastNominatimCallAt + 1000 - Date.now());
+    if (waitMs > 0) await new Promise((resolve) => setTimeout(resolve, waitMs));
+    lastNominatimCallAt = Date.now();
+    return geocodeAddress(query);
+  }
+
+  let start: GeoPoint;
+  if (startCoordsFromSuggestion) {
+    start = { ...startCoordsFromSuggestion, displayName: startQuery };
+  } else {
+    const geocodedStart = await geocodeRateLimited(startQuery);
+    if (!geocodedStart) throw new Error(`Start "${startQuery}" konnte nicht gefunden werden.`);
+    start = geocodedStart;
+  }
+
+  let end: GeoPoint;
+  if (endCoordsFromSuggestion) {
+    end = { ...endCoordsFromSuggestion, displayName: endQuery };
+  } else {
+    const geocodedEnd = await geocodeRateLimited(endQuery);
+    if (!geocodedEnd) throw new Error(`Ziel "${endQuery}" konnte nicht gefunden werden.`);
+    end = geocodedEnd;
+  }
 
   const manualWaypoints: ManualWaypoint[] = [];
   for (const query of manualStopQueries) {
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    const point = await geocodeAddress(query);
+    const point = await geocodeRateLimited(query);
     if (!point) throw new Error(`Zwischenstopp "${query}" konnte nicht gefunden werden.`);
     manualWaypoints.push({ query, displayName: point.displayName, latitude: point.latitude, longitude: point.longitude });
   }

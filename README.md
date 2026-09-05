@@ -1,10 +1,10 @@
-# eCamper
+# Charge2Camp
 
 MVP / Testversion einer Webplattform für Reisende mit Elektroauto +
 Wohnwagen/Caravan. Verbindet Campingplatzsuche, Ladeinfrastruktur,
 Anhängertauglichkeit und Gespann-Routing an einem Ort.
 
-> eCamper plant Reisen für das tatsächliche Gespann — nicht nur für das
+> Charge2Camp plant Reisen für das tatsächliche Gespann — nicht nur für das
 > Elektroauto.
 
 Volle Spezifikation und Phasenplan: [docs/architecture.md](docs/architecture.md).

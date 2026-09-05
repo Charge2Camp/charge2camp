@@ -8,8 +8,11 @@ import {
   saveRoute,
   type RoutePlanResult,
 } from "@/app/routenplaner/actions";
+import { AddressAutocomplete } from "@/components/address-autocomplete";
 import { MapView } from "@/components/map/map-view";
 import { RouteOverviewDialog } from "@/components/routing/route-overview-dialog";
+import { FavoritesPickerDialog } from "@/components/routing/favorites-picker-dialog";
+import { HomeAddressPickerDialog } from "@/components/routing/home-address-picker-dialog";
 import {
   DEFAULT_CONSUMPTION_KWH_PER_100KM,
   DEFAULT_DEPARTURE_SOC_PERCENT,
@@ -23,6 +26,8 @@ import {
 import { googleMapsNavigationProvider } from "@/lib/providers/navigation";
 import { buildRouteTimeline } from "@/lib/route-timeline";
 import { TRAILER_SUITABILITY_COLORS, TRAILER_SUITABILITY_LABELS } from "@/lib/trailer-suitability";
+import type { CampsiteDestinationOption } from "@/lib/campsites";
+import type { FavoriteDestinationOption } from "@/lib/favorites";
 import type { Caravan, Vehicle } from "@/types/database";
 
 function SocSlider({
@@ -79,12 +84,24 @@ export function RoutePlannerForm({
   vehicles,
   caravans,
   providers,
+  campsiteDestinations,
+  favorites,
+  homeAddress,
+  initialDestination,
   initialSavedRouteId,
 }: {
   vehicles: Vehicle[];
   caravans: Caravan[];
   /** Bekannte Anbieter aus charging_stations, fuer den optionalen Anbieter-Filter. */
   providers: string[];
+  /** Eigene Campingplaetze (Name + Koordinaten), als zusaetzliche, erkennbare Vorschlaege im Ziel-Feld. */
+  campsiteDestinations: CampsiteDestinationOption[];
+  /** Vom Nutzer gemerkte Campingplaetze/Ladepunkte, fuer die Favoriten-Auswahl (Start/Ziel). */
+  favorites: FavoriteDestinationOption[];
+  /** Im Profil ("Meine Daten") hinterlegte Zuhause-Adresse, fuer den "Zuhause verwenden"-Button (Start/Ziel). */
+  homeAddress: { name: string; latitude: number; longitude: number } | null;
+  /** Vom "Route hierher planen"-Button auf einer Campingplatz- oder Ladepunkt-Detailseite (?destination_campsite_id=...  /  ?destination_station_id=...) -- befuellt "Ziel" bereits beim ersten Rendern. */
+  initialDestination?: { name: string; latitude: number; longitude: number };
   /** Aus dem URL-Query-Parameter `?savedRouteId=...` (Link "Öffnen" im Profil) -- laedt die gespeicherte Route beim ersten Rendern. */
   initialSavedRouteId?: string;
 }) {
@@ -92,7 +109,36 @@ export function RoutePlannerForm({
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<RoutePlanResult | null>(null);
   const [start, setStart] = useState("");
-  const [end, setEnd] = useState("");
+  const [end, setEnd] = useState(initialDestination?.name ?? "");
+  // Gesetzt, wenn "Start"/"Ziel" ueber einen unserer eigenen Campingplatz-
+  // Vorschlaege (siehe AddressAutocomplete localSuggestions), ueber die
+  // Favoriten-Auswahl (favorites-picker-dialog.tsx) oder bereits ueber
+  // `initialDestination` vorbelegt wurde -- dann sind die Koordinaten schon
+  // bekannt und muessen beim Absenden NICHT per Nominatim aus dem (bei
+  // Demo-Namen ohnehin nicht auffindbaren) Text neu aufgeloest werden,
+  // siehe actions.ts.
+  const [startCoords, setStartCoords] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [endCoords, setEndCoords] = useState<{ latitude: number; longitude: number } | null>(
+    initialDestination ? { latitude: initialDestination.latitude, longitude: initialDestination.longitude } : null
+  );
+  const [favoritesDialogOpen, setFavoritesDialogOpen] = useState(false);
+  const [homeDialogOpen, setHomeDialogOpen] = useState(false);
+  const campsiteSuggestions = useMemo(
+    () => campsiteDestinations.map((c) => ({ id: c.id, displayName: c.name, latitude: c.latitude, longitude: c.longitude })),
+    [campsiteDestinations]
+  );
+  // Kombinierte Nachschlage-Tabelle (alle eigenen Campingplaetze + alle
+  // Favoriten + Zuhause-Adresse) nach Anzeigename -- genutzt beim
+  // Wiederherstellen einer gespeicherten Route, um Start/Ziel-Koordinaten
+  // zurueckzubekommen, falls damals ein Campingplatz/Favorit/Zuhause
+  // gewaehlt wurde (siehe useEffect unten).
+  const knownPlaceByName = useMemo(() => {
+    const map = new Map<string, { latitude: number; longitude: number }>();
+    for (const c of campsiteSuggestions) map.set(c.displayName, { latitude: c.latitude, longitude: c.longitude });
+    for (const f of favorites) map.set(f.name, { latitude: f.latitude, longitude: f.longitude });
+    if (homeAddress) map.set(homeAddress.name, { latitude: homeAddress.latitude, longitude: homeAddress.longitude });
+    return map;
+  }, [campsiteSuggestions, favorites, homeAddress]);
   const [vehicleId, setVehicleId] = useState("");
   const [caravanId, setCaravanId] = useState("");
   const [consumption, setConsumption] = useState("");
@@ -152,6 +198,13 @@ export function RoutePlannerForm({
         if (cancelled) return;
         setStart(saved.startQuery);
         setEnd(saved.endQuery);
+        // Falls Start/Ziel damals ueber einen unserer Campingplatz-
+        // Vorschlaege oder die Favoriten-Auswahl gewaehlt wurden, deren
+        // Koordinaten wiederherstellen -- sonst wuerde ein spaeteres "neu
+        // berechnen" versuchen, den (bei Demo-Namen nicht auffindbaren) Text
+        // per Nominatim zu geocodieren, siehe actions.ts.
+        setStartCoords(knownPlaceByName.get(saved.startQuery) ?? null);
+        setEndCoords(knownPlaceByName.get(saved.endQuery) ?? null);
         setManualStopQueries(saved.manualStopQueries);
         setVehicleId(saved.vehicleId);
         setCaravanId(saved.caravanId ?? "");
@@ -181,6 +234,7 @@ export function RoutePlannerForm({
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialSavedRouteId]);
 
   function handleVehicleSelect(id: string) {
@@ -199,6 +253,8 @@ export function RoutePlannerForm({
     setError(null);
     setStart("");
     setEnd("");
+    setStartCoords(null);
+    setEndCoords(null);
     setManualStopQueries([]);
     setVehicleId("");
     setCaravanId("");
@@ -385,9 +441,9 @@ export function RoutePlannerForm({
     // Eindeutiger Fenstername statt "_blank": sonst wuerde ein zweiter Klick
     // (z. B. nach Aenderung der Route) denselben bereits offenen Tab nur
     // stillschweigend im Hintergrund umleiten, statt zuverlaessig einen
-    // (neuen) Tab zu oeffnen -- die eCamper-App bleibt so immer im
+    // (neuen) Tab zu oeffnen -- die Charge2Camp-App bleibt so immer im
     // urspruenglichen Tab geoeffnet.
-    window.open(url, `ecamper-navigation-${Date.now()}`, "noopener,noreferrer");
+    window.open(url, `charge2camp-navigation-${Date.now()}`, "noopener,noreferrer");
   }
 
   return (
@@ -424,28 +480,62 @@ export function RoutePlannerForm({
         }}
         className="grid grid-cols-1 gap-4 sm:grid-cols-2"
       >
+        <div className="flex flex-wrap gap-2 sm:col-span-2">
+          <button
+            type="button"
+            onClick={() => setFavoritesDialogOpen(true)}
+            className="min-h-11 rounded-md border border-black/15 px-4 py-2 text-sm hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/5"
+          >
+            ♥ Aus Favoriten wählen
+          </button>
+          {homeAddress && (
+            <button
+              type="button"
+              onClick={() => setHomeDialogOpen(true)}
+              className="min-h-11 rounded-md border border-black/15 px-4 py-2 text-sm hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/5"
+            >
+              🏠 Zuhause verwenden
+            </button>
+          )}
+        </div>
+
         <label className="flex flex-col gap-1 text-sm">
           Start *
-          <input
+          <AddressAutocomplete
             name="start"
             required
             value={start}
-            onChange={(e) => setStart(e.target.value)}
+            onChange={setStart}
+            onSelectCoordinates={setStartCoords}
             placeholder="z. B. München"
-            className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+            className="w-full rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
           />
+          {startCoords && (
+            <>
+              <input type="hidden" name="start_latitude" value={startCoords.latitude} />
+              <input type="hidden" name="start_longitude" value={startCoords.longitude} />
+            </>
+          )}
         </label>
 
         <label className="flex flex-col gap-1 text-sm">
           Ziel *
-          <input
+          <AddressAutocomplete
             name="end"
             required
             value={end}
-            onChange={(e) => setEnd(e.target.value)}
+            onChange={setEnd}
             placeholder="z. B. Porec, Kroatien"
-            className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+            className="w-full rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+            localSuggestions={campsiteSuggestions}
+            onSelectCoordinates={setEndCoords}
           />
+          {endCoords && (
+            <>
+              <input type="hidden" name="end_latitude" value={endCoords.latitude} />
+              <input type="hidden" name="end_longitude" value={endCoords.longitude} />
+            </>
+          )}
         </label>
 
         <label className="flex flex-col gap-1 text-sm">
@@ -535,17 +625,19 @@ export function RoutePlannerForm({
           </p>
           {manualStopQueries.map((query, index) => (
             <div key={index} className="flex gap-2">
-              <input
-                name="manual_stop"
-                value={query}
-                onChange={(e) => {
-                  const next = [...manualStopQueries];
-                  next[index] = e.target.value;
-                  setManualStopQueries(next);
-                }}
-                placeholder="z. B. Camping Seeblick, Prien am Chiemsee"
-                className="flex-1 rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
-              />
+              <div className="flex-1">
+                <AddressAutocomplete
+                  name="manual_stop"
+                  value={query}
+                  onChange={(nextValue) => {
+                    const next = [...manualStopQueries];
+                    next[index] = nextValue;
+                    setManualStopQueries(next);
+                  }}
+                  placeholder="z. B. Camping Seeblick, Prien am Chiemsee"
+                  className="w-full rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+                />
+              </div>
               <button
                 type="button"
                 onClick={() => setManualStopQueries(manualStopQueries.filter((_, i) => i !== index))}
@@ -791,6 +883,27 @@ export function RoutePlannerForm({
             </p>
           )}
 
+          {result.roadRestrictions.status === "checked" && result.roadRestrictions.warnings.length > 0 && (
+            <p className="rounded-md border border-red-600/30 bg-red-600/5 p-3 text-sm text-red-700 dark:text-red-400">
+              ⚠ {result.roadRestrictions.warnings.length}{" "}
+              {result.roadRestrictions.warnings.length === 1
+                ? "bekannte Straßenrestriktion"
+                : "bekannte Straßenrestriktionen"}{" "}
+              entlang der Route, die dein Gespann überschreitet — Details in der{" "}
+              <button type="button" onClick={() => setOverviewOpen(true)} className="underline">
+                Routenübersicht
+              </button>
+              .
+            </p>
+          )}
+
+          {result.roadRestrictions.status === "failed" && (
+            <p className="rounded-md border border-black/10 bg-black/5 p-3 text-xs text-black/50 dark:border-white/10 dark:bg-white/5 dark:text-white/50">
+              Straßenrestriktionen (Höhe/Breite/Gewicht) konnten nicht geprüft werden — der Dienst war nicht
+              erreichbar.
+            </p>
+          )}
+
           {!result.plan.chargingStopsRequired ? (
             <p className="rounded-md border border-emerald-600/30 bg-emerald-600/5 p-3 text-sm text-emerald-700 dark:text-emerald-400">
               Kein Ladestopp nötig — die Strecke liegt innerhalb der Reichweite deines Gespanns.
@@ -859,6 +972,7 @@ export function RoutePlannerForm({
           end={result.end}
           manualWaypoints={result.manualWaypoints}
           plan={draftPlan}
+          roadRestrictions={result.roadRestrictions}
           busy={replanBusy}
           dirty={overviewDirty}
           confirmingClose={confirmingOverviewClose}
@@ -870,6 +984,39 @@ export function RoutePlannerForm({
           onSelectAlternative={(stopIndex, stationId) => handleSelectAlternative(stopIndex, stationId)}
         />
       )}
+
+      <FavoritesPickerDialog
+        open={favoritesDialogOpen}
+        favorites={favorites}
+        onClose={() => setFavoritesDialogOpen(false)}
+        onPick={(favorite, target) => {
+          if (target === "start") {
+            setStart(favorite.name);
+            setStartCoords({ latitude: favorite.latitude, longitude: favorite.longitude });
+          } else {
+            setEnd(favorite.name);
+            setEndCoords({ latitude: favorite.latitude, longitude: favorite.longitude });
+          }
+          setFavoritesDialogOpen(false);
+        }}
+      />
+
+      <HomeAddressPickerDialog
+        open={homeDialogOpen}
+        homeAddress={homeAddress}
+        onClose={() => setHomeDialogOpen(false)}
+        onPick={(target) => {
+          if (!homeAddress) return;
+          if (target === "start") {
+            setStart(homeAddress.name);
+            setStartCoords({ latitude: homeAddress.latitude, longitude: homeAddress.longitude });
+          } else {
+            setEnd(homeAddress.name);
+            setEndCoords({ latitude: homeAddress.latitude, longitude: homeAddress.longitude });
+          }
+          setHomeDialogOpen(false);
+        }}
+      />
     </div>
   );
 }

@@ -2,13 +2,13 @@
 
 ## Ziel
 
-eCamper ist eine Plattform für Reisende mit Elektroauto + Wohnwagen/Caravan.
+Charge2Camp ist eine Plattform für Reisende mit Elektroauto + Wohnwagen/Caravan.
 Sie verbindet vier Dinge, die bisher nur getrennt existieren:
 Elektroauto, Wohnwagen, Campingplatz, Ladeinfrastruktur, Gespann-Routing.
 
 Zentraler USP:
 
-> eCamper plant Reisen für das tatsächliche Gespann — nicht nur für das
+> Charge2Camp plant Reisen für das tatsächliche Gespann — nicht nur für das
 > Elektroauto.
 
 ## MVP-Prinzip
@@ -233,15 +233,53 @@ Google-Maps-Link pro Etappe (Start → 1. Ladestopp, 1. → 2. Ladestopp,
 serverseitig berechnet), das Oeffnen selbst laeuft aber ueber die kleine
 Client-Komponente `NavigationLink`
 ([src/components/profile/navigation-link.tsx](../src/components/profile/navigation-link.tsx)):
-sie ruft `window.open(url, "ecamper-navigation-" + Date.now(), ...)` auf
+sie ruft `window.open(url, "charge2camp-navigation-" + Date.now(), ...)` auf
 statt eines simplen `<a target="_blank">` -- ein eindeutiger Fenstername
 pro Klick sorgt dafuer, dass zuverlaessig ein neuer Tab entsteht (ein
 wiederholt gleicher Name wuerde einen schon offenen Tab nur still im
-Hintergrund umleiten) und der eCamper-Tab selbst nie verlassen wird.
+Hintergrund umleiten) und der Charge2Camp-Tab selbst nie verlassen wird.
+
+## Gespannlogik & Straßenrestriktionen (§28ff, Phase 7)
+
+**Fahrzeug-Abmessungen ergänzt:** `vehicles` trägt jetzt (analog zu
+`caravans`) auch `width_m`, `height_m`, `weight_kg` (alle optional,
+[supabase/migrations/20260910000000_vehicle_dimensions.sql](../supabase/migrations/20260910000000_vehicle_dimensions.sql)),
+abgefragt im Fahrzeugformular. Zusammen mit den Wohnwagen-Maßen ergibt sich
+daraus das tatsächliche Gespann —
+[src/lib/gespann-dimensions.ts](../src/lib/gespann-dimensions.ts)
+(`combineGespannDimensions`) berechnet Höhe/Breite als jeweils größeres Maß
+aus Fahrzeug/Wohnwagen (eine Beschränkung betrifft das gesamte Gespann) und
+das Gewicht als Summe — aber **nur**, wenn sowohl Fahrzeug- als auch
+Wohnwagenwert bekannt sind (eine Teilsumme wäre als "Gespanngewicht"
+irreführend, §2 keine Scheindaten). Fehlt ein Maß, bleibt es `null` statt
+geschätzt zu werden.
+
+**Straßenrestriktions-Check gegen OSM (Overpass API):**
+[src/lib/providers/road-restrictions/](../src/lib/providers/road-restrictions/)
+(`RoadRestrictionProvider`-Interface, §14-Adapterprinzip) fragt die
+öffentliche Overpass-API (overpass-api.de, kostenlos, kein API-Key) nach
+Wegen im Streckenkorridor mit `maxheight`/`maxwidth`/`maxweight`-Tags und
+vergleicht sie mit den Gespann-Maßen. Aus Rücksicht auf den geteilten,
+öffentlichen Dienst wird die Streckengeometrie auf max. 120
+Stichprobenpunkte reduziert statt jeden Geometriepunkt abzufragen.
+
+**Bewusst nur eine Warnung, keine automatische Umfahrung:** Der
+öffentliche OSRM-Demo-Server (§ Routenplanung, Phase 6) unterstützt kein
+gespannspezifisches Routing-Profil; ein selbst gehosteter OSRM/Valhalla-
+Server mit Höhen-/Gewichtsprofil wäre für den MVP unverhältnismäßig
+aufwändig (§4 Kostenoptimierung). Gefundene Restriktionen werden deshalb
+im Routenplaner-Formular (Kurzhinweis) und in der Routenübersicht
+(vollständige Liste mit km-Position) als Warnung angezeigt, ausdrücklich
+mit dem Hinweis, dass die OSM-Tag-Abdeckung lückenhaft ist — eine fehlende
+Warnung bedeutet **nicht** "keine Beschränkung vorhanden", sondern nur
+"keine bekannt". Schlägt die Overpass-Anfrage fehl (Timeout/Rate-Limit auf
+dem geteilten Dienst), wird das ehrlich als "nicht geprüft" markiert statt
+stillschweigend keine Warnung anzuzeigen. Der Check läuft nur, wenn ein
+Wohnwagen gewählt ist und mindestens ein Gespann-Maß bekannt ist.
 
 ## Mobile/Touch-Design & Vorbereitung auf native Apps (verbindlich)
 
-**eCamper soll spaeter als native iOS-/Android-App im App Store/Play
+**Charge2Camp soll spaeter als native iOS-/Android-App im App Store/Play
 Store vertrieben werden** (vermutlich als WebView-Wrapper, z. B.
 Capacitor, um die bestehende Next.js-Codebasis wiederzuverwenden -- die
 konkrete Wrapper-Technologie ist noch nicht festgelegt). Das ist ab
@@ -335,7 +373,7 @@ Routen, Favoriten, Bewertungen) und einer Unterseiten-Navigation
 4. **Ladepunkte** — Datenmodell, Kartenansicht, Filter, Anhängertauglichkeit ✅
 5. **Community** — Bewertung, Kommentar, Gespannparameter, Score ✅
 6. **Routenplanung** — Start/Ziel, Routing, Fahrzeug, Wohnwagen, Ladeplanung ✅
-7. **Gespannlogik** — Länge/Breite/Höhe/Gewicht, Straßenrestriktionen (OSM)
+7. **Gespannlogik** — Länge/Breite/Höhe/Gewicht, Straßenrestriktionen (OSM) ✅
 8. **Live-Daten** — echte Provider-Adapter anschließen
 
 Jede Phase wird implementiert, getestet, dokumentiert, bevor die nächste
