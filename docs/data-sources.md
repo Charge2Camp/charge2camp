@@ -109,7 +109,15 @@ Campingportale werden nicht gescrapt oder ungeprüft übernommen.
 Die Seed-Daten in [supabase/seeds/01_demo_data.sql](../supabase/seeds/01_demo_data.sql)
 sind frei erfundene Testdaten (`source = 'demo'`, `[DEMO]`-Präfix im Namen)
 für Deutschland, Kroatien und Italien — ausschließlich zur lokalen
-Entwicklung und Demonstration der Funktionen, nicht produktiv nutzbar. Die
+Entwicklung und Demonstration der Funktionen, nicht produktiv nutzbar.
+
+[supabase/seeds/06_demo_charging_stations_muenchen_meran.sql](../supabase/seeds/06_demo_charging_stations_muenchen_meran.sql)
+ergänzt ca. 50 frei erfundene Ladepunkte entlang der Brennerroute
+München–Meran (ebenfalls `source = 'demo'`, `[DEMO]`-Präfix), mit
+gestreuten Ladeleistungen, Anhängertauglichkeits-Einstufungen und
+Korridor-Abständen (0–90 km) — dient ausschließlich als Testdatensatz für
+die Routenplanung (§21–§27, Umweg-Toleranz-Slider), nicht produktiv
+nutzbar. Die
 Fahrzeug-/Wohnwagen-Referenzkataloge in `supabase/seeds/02_caravan_models.sql`,
 `supabase/seeds/03_vehicle_models.sql`, `supabase/seeds/04_caravan_models_dethleffs_tabbert.sql`
 und `supabase/seeds/05_caravan_models_knaus.sql` sind dagegen recherchierte
