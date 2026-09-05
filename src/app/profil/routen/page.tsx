@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { deleteSavedRoute } from "@/app/profil/actions";
 import { loadSavedRoute, type RoutePlanResult } from "@/app/routenplaner/actions";
 import { googleMapsNavigationProvider, type NavigationPoint } from "@/lib/providers/navigation";
+import { NavigationLink } from "@/components/profile/navigation-link";
 import type { SavedRoute } from "@/types/database";
 
 function formatDate(iso: string): string {
@@ -152,14 +153,12 @@ export default async function SavedRoutesPage() {
                       const { segments, fullRouteUrl } = buildSegments(result);
                       return (
                         <div className="mt-2 flex flex-col gap-2">
-                          <a
+                          <NavigationLink
                             href={fullRouteUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
                             className="w-fit rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700"
                           >
                             Gesamte Route navigieren (Google Maps)
-                          </a>
+                          </NavigationLink>
                           {segments.length > 1 && (
                             <div>
                               <p className="text-xs text-black/50 dark:text-white/50">
@@ -167,15 +166,13 @@ export default async function SavedRoutesPage() {
                               </p>
                               <div className="mt-1 flex flex-wrap gap-2">
                                 {segments.map((segment) => (
-                                  <a
+                                  <NavigationLink
                                     key={segment.label}
                                     href={segment.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
                                     className="rounded-md border border-black/15 px-3 py-1.5 text-xs hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/5"
                                   >
                                     {segment.label}
-                                  </a>
+                                  </NavigationLink>
                                 ))}
                               </div>
                             </div>

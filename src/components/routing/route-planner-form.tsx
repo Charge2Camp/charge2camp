@@ -363,7 +363,12 @@ export function RoutePlannerForm({
         longitude: stop.station.longitude,
       })),
     });
-    window.open(url, "_blank", "noopener,noreferrer");
+    // Eindeutiger Fenstername statt "_blank": sonst wuerde ein zweiter Klick
+    // (z. B. nach Aenderung der Route) denselben bereits offenen Tab nur
+    // stillschweigend im Hintergrund umleiten, statt zuverlaessig einen
+    // (neuen) Tab zu oeffnen -- die eCamper-App bleibt so immer im
+    // urspruenglichen Tab geoeffnet.
+    window.open(url, `ecamper-navigation-${Date.now()}`, "noopener,noreferrer");
   }
 
   return (
