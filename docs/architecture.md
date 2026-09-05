@@ -108,14 +108,31 @@ Quantile später).
   implementiert das in [docs/api.md](api.md) definierte `RoutingProvider`-
   Interface, damit ein Wechsel auf GraphHopper/Valhalla/einen selbst
   gehosteten OSRM-Server nur einen neuen Adapter erfordert.
-- **Ladeplanung**: regelbasiert, ein Ladestopp pro Route (kein
-  Mehrstopp-Optimierer) —
+- **Ladeplanung**: regelbasiert, iterative Mehrstopp-Planung (kein
+  globaler Optimierer über alle Stopp-Kombinationen, sondern ein
+  Greedy-Verfahren: von der aktuellen Position/Ladestand aus wird jeweils
+  der naechste erreichbare, moeglichst anhaengertaugliche Ladepunkt
+  gesucht, bis das Ziel direkt erreichbar ist) —
   [src/lib/route-planning.ts](../src/lib/route-planning.ts). Sucht
   anhängertaugliche Ladepunkte im Streckenkorridor (`unsuitable` wird hart
-  ausgeschlossen, §26/§27), berechnet Energieverbrauch, Ladezeit sowie
-  Abfahrts-/Ankunfts-Ladestand und meldet ehrlich, wenn keine Lösung mit
-  einem einzelnen Stopp gefunden wird, statt eine falsche Route
-  vorzutäuschen.
+  ausgeschlossen, §26/§27), berechnet je Stopp Energieverbrauch, Ladezeit
+  sowie Ankunfts-Ladestand und meldet ehrlich, wenn an keiner Stelle der
+  Route mehr ein passender Ladepunkt gefunden wird (max.
+  `MAX_CHARGING_STOPS` Stopps als Sicherheitsgrenze), statt eine falsche
+  Route vorzutäuschen.
+
+**Routenübersicht mit manueller Kontrolle je Ladestopp:** Ein Popup
+([route-overview-dialog.tsx](../src/components/routing/route-overview-dialog.tsx))
+zeigt Start (Abfahrts-Ladestand), jeden Ladestopp (Ladeleistung,
+allgemeine sowie persönliche Anhängertauglichkeit für das hinterlegte
+Gespann nach §20, km/Fahrzeit zum nächsten Punkt) und Ziel
+(Ankunfts-Ladestand). An jedem Stopp kann der vorgeschlagene Ladepunkt
+gelöscht (nächstbester Kandidat wird automatisch neu gesucht) oder durch
+eine von bis zu 5 Alternativen im Streckenkorridor ersetzt werden. Die
+Server-Action `replanChargingStop` berechnet dafür nur die Ladeplanung
+neu (kein erneutes Geocoding/Routing). Eine Löschung/Auswahl an Stopp *i*
+verwirft automatisch alle späteren erzwungenen Auswahlen (Index > *i*),
+da deren Position von Stopp *i* abhängt.
 
 **SOC-Eingaben statt interner Annahmen (angelehnt an A Better Routeplanner):**
 Vier Ladestand-Werte sind Formulareingaben (Schieberegler) statt fester

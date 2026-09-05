@@ -75,21 +75,21 @@ export function RouteOverviewDialog({
   onClose: () => void;
   result: RoutePlanResult;
   busy: boolean;
-  onDeleteStop: (stationId: string) => void;
-  onSelectAlternative: (stationId: string) => void;
+  onDeleteStop: (stopIndex: number, stationId: string) => void;
+  onSelectAlternative: (stopIndex: number, stationId: string) => void;
 }) {
-  const [showAlternatives, setShowAlternatives] = useState(false);
+  const [expandedStopIndex, setExpandedStopIndex] = useState<number | null>(null);
 
   if (!open) return null;
 
   const { plan } = result;
-  const chargingStop = plan.chargingStop;
+  const stops = plan.chargingStops;
 
-  const durationToStopMin = chargingStop
-    ? (chargingStop.distanceFromStartKm / plan.distanceKm) * plan.durationMin
-    : null;
-  const remainingDurationMin = durationToStopMin !== null ? plan.durationMin - durationToStopMin : null;
-  const remainingDistanceKm = chargingStop ? plan.distanceKm - chargingStop.distanceFromStartKm : null;
+  // Etappen-km/Fahrzeit werden proportional zur Gesamtfahrzeit geschaetzt
+  // (OSRM liefert keine Zwischenzeiten fuer beliebige Streckenpunkte) --
+  // gleiche Naeherung wie die Korridor-Distanz der Ladepunkte selbst.
+  const legStartKm = [0, ...stops.map((s) => s.distanceFromStartKm)];
+  const legEndKm = [...stops.map((s) => s.distanceFromStartKm), plan.distanceKm];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -115,81 +115,89 @@ export function RouteOverviewDialog({
               </p>
             </li>
 
-            {chargingStop ? (
-              <>
-                <li className="flex items-center gap-2 pl-2 text-xs text-black/50 dark:text-white/50">
-                  <span>↓ {chargingStop.distanceFromStartKm.toFixed(0)} km</span>
-                  {durationToStopMin !== null && <span>· ca. {formatDuration(durationToStopMin)}</span>}
-                </li>
+            {stops.map((stop, index) => {
+              const legDistanceKm = legEndKm[index] - legStartKm[index];
+              const legDurationMin = (legDistanceKm / plan.distanceKm) * plan.durationMin;
+              const showAlternatives = expandedStopIndex === index;
 
-                <li className="rounded-lg border border-black/10 p-3 dark:border-white/10">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex flex-col gap-1.5">
-                      <p className="font-medium">
-                        {chargingStop.station.name ?? chargingStop.station.provider}
-                      </p>
-                      <SuitabilityBadges candidate={chargingStop} />
-                      <p className="text-sm text-black/60 dark:text-white/60">
-                        {chargingStop.station.power_kw ? `${chargingStop.station.power_kw} kW` : "Ladeleistung unbekannt"}
-                        {" · "}ca. {chargingStop.corridorDistanceKm.toFixed(0)} km Umweg von der Route
-                      </p>
-                      <ul className="text-sm text-black/60 dark:text-white/60">
-                        <li>Ladestand bei Ankunft: {chargingStop.socOnArrivalPercent.toFixed(0)}%</li>
-                        {chargingStop.chargingTimeMin !== null && (
-                          <li>Voraussichtliche Ladezeit: {formatDuration(chargingStop.chargingTimeMin)}</li>
-                        )}
-                      </ul>
-                    </div>
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => onDeleteStop(chargingStop.station.id)}
-                      className="whitespace-nowrap rounded-md border border-red-600/50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-600/10 disabled:opacity-50 dark:text-red-400"
-                    >
-                      Löschen
-                    </button>
-                  </div>
+              return (
+                <div key={stop.station.id} className="contents">
+                  <li className="flex items-center gap-2 pl-2 text-xs text-black/50 dark:text-white/50">
+                    <span>↓ {legDistanceKm.toFixed(0)} km</span>
+                    <span>· ca. {formatDuration(legDurationMin)}</span>
+                  </li>
 
-                  {chargingStop.alternatives.length > 0 && (
-                    <div className="mt-3">
+                  <li className="rounded-lg border border-black/10 p-3 dark:border-white/10">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex flex-col gap-1.5">
+                        <p className="font-medium">
+                          {index + 1}. Ladestopp: {stop.station.name ?? stop.station.provider}
+                        </p>
+                        <SuitabilityBadges candidate={stop} />
+                        <p className="text-sm text-black/60 dark:text-white/60">
+                          {stop.station.power_kw ? `${stop.station.power_kw} kW` : "Ladeleistung unbekannt"}
+                          {" · "}ca. {stop.corridorDistanceKm.toFixed(0)} km Umweg von der Route
+                        </p>
+                        <ul className="text-sm text-black/60 dark:text-white/60">
+                          <li>Ladestand bei Ankunft: {stop.socOnArrivalPercent.toFixed(0)}%</li>
+                          {stop.chargingTimeMin !== null && (
+                            <li>Voraussichtliche Ladezeit: {formatDuration(stop.chargingTimeMin)}</li>
+                          )}
+                        </ul>
+                      </div>
                       <button
                         type="button"
-                        onClick={() => setShowAlternatives((v) => !v)}
-                        className="text-sm font-medium text-emerald-700 hover:underline dark:text-emerald-400"
+                        disabled={busy}
+                        onClick={() => onDeleteStop(index, stop.station.id)}
+                        className="whitespace-nowrap rounded-md border border-red-600/50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-600/10 disabled:opacity-50 dark:text-red-400"
                       >
-                        {showAlternatives
-                          ? "Alternativen ausblenden"
-                          : `Alternativen anzeigen (${chargingStop.alternatives.length})`}
+                        Löschen
                       </button>
-                      {showAlternatives && (
-                        <ul className="mt-2 flex flex-col gap-2">
-                          {chargingStop.alternatives.map((alt) => (
-                            <AlternativeRow
-                              key={alt.station.id}
-                              alternative={alt}
-                              disabled={busy}
-                              onSelect={() => onSelectAlternative(alt.station.id)}
-                            />
-                          ))}
-                        </ul>
-                      )}
                     </div>
-                  )}
-                </li>
 
+                    {stop.alternatives.length > 0 && (
+                      <div className="mt-3">
+                        <button
+                          type="button"
+                          onClick={() => setExpandedStopIndex(showAlternatives ? null : index)}
+                          className="text-sm font-medium text-emerald-700 hover:underline dark:text-emerald-400"
+                        >
+                          {showAlternatives
+                            ? "Alternativen ausblenden"
+                            : `Alternativen anzeigen (${stop.alternatives.length})`}
+                        </button>
+                        {showAlternatives && (
+                          <ul className="mt-2 flex flex-col gap-2">
+                            {stop.alternatives.map((alt) => (
+                              <AlternativeRow
+                                key={alt.station.id}
+                                alternative={alt}
+                                disabled={busy}
+                                onSelect={() => onSelectAlternative(index, alt.station.id)}
+                              />
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    )}
+                  </li>
+                </div>
+              );
+            })}
+
+            {(() => {
+              const lastIndex = legEndKm.length - 1;
+              const legDistanceKm = legEndKm[lastIndex] - legStartKm[lastIndex];
+              const legDurationMin = (legDistanceKm / plan.distanceKm) * plan.durationMin;
+              return (
                 <li className="flex items-center gap-2 pl-2 text-xs text-black/50 dark:text-white/50">
-                  <span>↓ {remainingDistanceKm?.toFixed(0)} km</span>
-                  {remainingDurationMin !== null && <span>· ca. {formatDuration(remainingDurationMin)}</span>}
+                  <span>↓ {legDistanceKm.toFixed(0)} km</span>
+                  <span>· ca. {formatDuration(legDurationMin)}</span>
                 </li>
-              </>
-            ) : (
-              <li className="flex items-center gap-2 pl-2 text-xs text-black/50 dark:text-white/50">
-                <span>↓ {plan.distanceKm.toFixed(0)} km</span>
-                <span>· ca. {formatDuration(plan.durationMin)}</span>
-              </li>
-            )}
+              );
+            })()}
 
-            {plan.chargingStopRequired && !chargingStop && (
+            {plan.chargingStopsRequired && plan.arrivalSocPercent === null && (
               <li className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-amber-700 dark:text-amber-400">
                 {plan.warning}
               </li>

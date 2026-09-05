@@ -93,6 +93,7 @@ export function RoutePlannerForm({
   );
   const [detourTolerance, setDetourTolerance] = useState(DEFAULT_DETOUR_TOLERANCE_KM);
   const [excludedStationIds, setExcludedStationIds] = useState<string[]>([]);
+  const [forcedStationIdByIndex, setForcedStationIdByIndex] = useState<Record<number, string>>({});
   const [overviewOpen, setOverviewOpen] = useState(false);
   const [replanBusy, setReplanBusy] = useState(false);
   const [replanError, setReplanError] = useState<string | null>(null);
@@ -126,6 +127,7 @@ export function RoutePlannerForm({
     setTargetSocAfterCharging(DEFAULT_TARGET_SOC_AFTER_CHARGING_PERCENT);
     setDetourTolerance(DEFAULT_DETOUR_TOLERANCE_KM);
     setExcludedStationIds([]);
+    setForcedStationIdByIndex({});
     setOverviewOpen(false);
     setReplanError(null);
   }
@@ -134,11 +136,16 @@ export function RoutePlannerForm({
   // Route neu zu berechnen (Streckengeometrie bleibt gleich) -- genutzt zum
   // Loeschen eines vorgeschlagenen Ladestopps oder Waehlen einer Alternative
   // aus der Routenuebersicht.
-  async function handleReplan(overrides: { excludedStationIds?: string[]; forcedStationId?: string }) {
+  async function handleReplan(overrides: {
+    excludedStationIds?: string[];
+    forcedStationIdByIndex?: Record<number, string>;
+  }) {
     if (!result) return;
     setReplanBusy(true);
     setReplanError(null);
     try {
+      const nextExcluded = overrides.excludedStationIds ?? excludedStationIds;
+      const nextForced = overrides.forcedStationIdByIndex ?? forcedStationIdByIndex;
       const newPlan = await replanChargingStop({
         vehicleId,
         caravanId: caravanId || undefined,
@@ -151,11 +158,12 @@ export function RoutePlannerForm({
         minSocAtDestinationPercent: minSocAtDestination,
         targetSocAfterChargingPercent: targetSocAfterCharging,
         detourToleranceKm: detourTolerance,
-        excludedStationIds: overrides.excludedStationIds ?? excludedStationIds,
-        forcedStationId: overrides.forcedStationId,
+        excludedStationIds: nextExcluded,
+        forcedStationIdByIndex: nextForced,
       });
       setResult({ ...result, plan: newPlan });
-      if (overrides.excludedStationIds) setExcludedStationIds(overrides.excludedStationIds);
+      setExcludedStationIds(nextExcluded);
+      setForcedStationIdByIndex(nextForced);
     } catch (err) {
       setReplanError(err instanceof Error ? err.message : "Ladestopp konnte nicht neu geplant werden.");
     } finally {
@@ -163,12 +171,28 @@ export function RoutePlannerForm({
     }
   }
 
-  function handleDeleteStop(stationId: string) {
-    handleReplan({ excludedStationIds: [...excludedStationIds, stationId] });
+  // Erzwungene Alternativen-Wahlen ab (ausschliesslich) diesem Stopp-Index
+  // verwerfen -- sie haengen von der Position des geaenderten Stopps ab und
+  // werden nach der Aenderung frei neu bestimmt.
+  function clearForcedFrom(stopIndex: number): Record<number, string> {
+    const next: Record<number, string> = {};
+    for (const [key, value] of Object.entries(forcedStationIdByIndex)) {
+      if (Number(key) < stopIndex) next[Number(key)] = value;
+    }
+    return next;
   }
 
-  function handleSelectAlternative(stationId: string) {
-    handleReplan({ forcedStationId: stationId });
+  function handleDeleteStop(stopIndex: number, stationId: string) {
+    handleReplan({
+      excludedStationIds: [...excludedStationIds, stationId],
+      forcedStationIdByIndex: clearForcedFrom(stopIndex),
+    });
+  }
+
+  function handleSelectAlternative(stopIndex: number, stationId: string) {
+    handleReplan({
+      forcedStationIdByIndex: { ...clearForcedFrom(stopIndex), [stopIndex]: stationId },
+    });
   }
 
   return (
@@ -189,6 +213,7 @@ export function RoutePlannerForm({
             const planResult = await planRoute(formData);
             setResult(planResult);
             setExcludedStationIds([]);
+            setForcedStationIdByIndex({});
           } catch (err) {
             setError(err instanceof Error ? err.message : "Route konnte nicht berechnet werden.");
           } finally {
@@ -393,17 +418,13 @@ export function RoutePlannerForm({
               markers={[
                 { id: "start", latitude: result.start.latitude, longitude: result.start.longitude, label: "Start" },
                 { id: "end", latitude: result.end.latitude, longitude: result.end.longitude, label: "Ziel" },
-                ...(result.plan.chargingStop
-                  ? [
-                      {
-                        id: "charging-stop",
-                        latitude: result.plan.chargingStop.station.latitude,
-                        longitude: result.plan.chargingStop.station.longitude,
-                        label: result.plan.chargingStop.station.name ?? "Ladestopp",
-                        color: "#f59e0b",
-                      },
-                    ]
-                  : []),
+                ...result.plan.chargingStops.map((stop, index) => ({
+                  id: `charging-stop-${index}`,
+                  latitude: stop.station.latitude,
+                  longitude: stop.station.longitude,
+                  label: `${index + 1}. Ladestopp: ${stop.station.name ?? stop.station.provider}`,
+                  color: "#f59e0b",
+                })),
               ]}
               route={result.geometry}
             />
@@ -445,43 +466,52 @@ export function RoutePlannerForm({
             </p>
           )}
 
-          {!result.plan.chargingStopRequired ? (
+          {!result.plan.chargingStopsRequired ? (
             <p className="rounded-md border border-emerald-600/30 bg-emerald-600/5 p-3 text-sm text-emerald-700 dark:text-emerald-400">
               Kein Ladestopp nötig — die Strecke liegt innerhalb der Reichweite deines Gespanns.
               {result.plan.arrivalSocPercent !== null &&
                 ` Voraussichtlicher Ankunfts-Ladestand: ${result.plan.arrivalSocPercent.toFixed(0)}%.`}
             </p>
           ) : (
-            result.plan.chargingStop && (
-              <div className="rounded-lg border border-black/10 p-4 dark:border-white/10">
-                <p className="font-medium">Geplanter Ladestopp</p>
-                <div className="mt-2 flex items-center gap-2">
-                  <span
-                    className="rounded-full px-2 py-0.5 text-xs text-white"
-                    style={{
-                      backgroundColor:
-                        TRAILER_SUITABILITY_COLORS[result.plan.chargingStop.station.trailer_suitable],
-                    }}
+            result.plan.chargingStops.length > 0 && (
+              <div className="flex flex-col gap-3">
+                <p className="text-sm font-medium">
+                  Geplante Ladestopps ({result.plan.chargingStops.length}) — Details und Alternativen in der{" "}
+                  <button
+                    type="button"
+                    onClick={() => setOverviewOpen(true)}
+                    className="underline hover:no-underline"
                   >
-                    {TRAILER_SUITABILITY_LABELS[result.plan.chargingStop.station.trailer_suitable]}
-                  </span>
-                  <span className="text-sm">
-                    {result.plan.chargingStop.station.name ?? result.plan.chargingStop.station.provider}
-                  </span>
-                </div>
-                <ul className="mt-3 space-y-1 text-sm text-black/70 dark:text-white/70">
-                  <li>Nach {result.plan.chargingStop.distanceFromStartKm.toFixed(0)} km ab Start</li>
-                  <li>Umweg von der Route: ca. {result.plan.chargingStop.corridorDistanceKm.toFixed(0)} km</li>
-                  {result.plan.chargingStop.socOnArrivalPercent !== null && (
-                    <li>Ladestand bei Ankunft: {result.plan.chargingStop.socOnArrivalPercent.toFixed(0)}%</li>
-                  )}
-                  {result.plan.chargingStop.chargingTimeMin !== null && (
-                    <li>Voraussichtliche Ladezeit: {formatDuration(result.plan.chargingStop.chargingTimeMin)}</li>
-                  )}
-                  {result.plan.arrivalSocPercent !== null && (
-                    <li>Ladestand am Ziel: {result.plan.arrivalSocPercent.toFixed(0)}%</li>
-                  )}
-                </ul>
+                    Routenübersicht
+                  </button>
+                </p>
+                {result.plan.chargingStops.map((stop, index) => (
+                  <div key={stop.station.id} className="rounded-lg border border-black/10 p-4 dark:border-white/10">
+                    <p className="font-medium">{index + 1}. Ladestopp</p>
+                    <div className="mt-2 flex items-center gap-2">
+                      <span
+                        className="rounded-full px-2 py-0.5 text-xs text-white"
+                        style={{ backgroundColor: TRAILER_SUITABILITY_COLORS[stop.station.trailer_suitable] }}
+                      >
+                        {TRAILER_SUITABILITY_LABELS[stop.station.trailer_suitable]}
+                      </span>
+                      <span className="text-sm">{stop.station.name ?? stop.station.provider}</span>
+                    </div>
+                    <ul className="mt-3 space-y-1 text-sm text-black/70 dark:text-white/70">
+                      <li>Nach {stop.distanceFromStartKm.toFixed(0)} km ab Start</li>
+                      <li>Umweg von der Route: ca. {stop.corridorDistanceKm.toFixed(0)} km</li>
+                      <li>Ladestand bei Ankunft: {stop.socOnArrivalPercent.toFixed(0)}%</li>
+                      {stop.chargingTimeMin !== null && (
+                        <li>Voraussichtliche Ladezeit: {formatDuration(stop.chargingTimeMin)}</li>
+                      )}
+                    </ul>
+                  </div>
+                ))}
+                {result.plan.arrivalSocPercent !== null && (
+                  <p className="text-sm text-black/70 dark:text-white/70">
+                    Ladestand am Ziel: {result.plan.arrivalSocPercent.toFixed(0)}%
+                  </p>
+                )}
               </div>
             )
           )}
@@ -494,8 +524,8 @@ export function RoutePlannerForm({
           onClose={() => setOverviewOpen(false)}
           result={result}
           busy={replanBusy}
-          onDeleteStop={handleDeleteStop}
-          onSelectAlternative={handleSelectAlternative}
+          onDeleteStop={(stopIndex, stationId) => handleDeleteStop(stopIndex, stationId)}
+          onSelectAlternative={(stopIndex, stationId) => handleSelectAlternative(stopIndex, stationId)}
         />
       )}
     </div>

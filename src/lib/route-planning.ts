@@ -3,13 +3,14 @@ import type { LatLng, RouteResult } from "@/lib/providers/routing/types";
 import type { ChargingStation, Vehicle } from "@/types/database";
 
 /**
- * Regelbasierte "erste Ladeplanung" (§21, §26), angelehnt an gängige
+ * Regelbasierte Mehrstopp-Ladeplanung (§21, §26), angelehnt an gängige
  * EV-Routenplaner (z. B. A Better Routeplanner): SOC-Zielwerte fuer
- * Abfahrt, Ankunft am Ladestopp, Ziel-Ladestand nach dem Laden und
+ * Abfahrt, Ankunft an einem Ladestopp, Ziel-Ladestand nach dem Laden und
  * Ankunft am Ziel sind Eingaben des Nutzers, keine internen Annahmen.
- * Schwellwerte/Defaults zentral und leicht anpassbar. Plant fuer den MVP
- * genau EINEN Ladestopp (kein Mehrstopp-Optimierer) -- ausreichend fuer
- * die meisten Strecken innerhalb der Reichweite eines modernen E-Autos.
+ * Schwellwerte/Defaults zentral und leicht anpassbar. Plant iterativ so
+ * viele Ladestopps wie noetig (nicht nur einen): von der aktuellen
+ * Position/SOC aus wird jeweils der naechste erreichbare, moeglichst
+ * anhaengertaugliche Ladepunkt gesucht, bis das Ziel direkt erreichbar ist.
  *
  * Verbrauch bewusst NICHT aus Herstellerangaben (Batterie/Reichweite)
  * abgeleitet -- diese sind erfahrungsgemaess unrealistisch optimistisch,
@@ -37,6 +38,14 @@ export const DEFAULT_TARGET_SOC_AFTER_CHARGING_PERCENT = 80;
 export const DEFAULT_DETOUR_TOLERANCE_KM = 20;
 export const MAX_DETOUR_TOLERANCE_KM = 100;
 
+// Sicherheitsgrenze gegen pathologische Konfigurationen (z. B. sehr geringe
+// Reichweite + sehr viele, dicht beieinanderliegende Ladepunkte) -- eine
+// reale Reise braucht praktisch nie mehr Stopps als das.
+const MAX_CHARGING_STOPS = 8;
+
+/** Maximale Anzahl an Alternativ-Vorschlaegen pro Ladestopp (Uebersichtlichkeit im UI). */
+const MAX_ALTERNATIVES = 5;
+
 export interface ChargingStopCandidate {
   station: ChargingStation;
   distanceFromStartKm: number;
@@ -51,27 +60,26 @@ export interface ChargingStopCandidate {
   personalCompatibility?: import("./scoring/trailer-compatibility").PersonalCompatibility | null;
 }
 
+export interface ChargingStopPlan extends ChargingStopCandidate {
+  socOnArrivalPercent: number;
+  chargingTimeMin: number | null;
+  /** Weitere Kandidaten fuer DIESEN Stopp im Streckenkorridor (gleiche Sortierung: Anhaengertauglichkeit vor Umweg), zur Anzeige als Alternativen. */
+  alternatives: ChargingStopCandidate[];
+}
+
 export interface TripPlan {
   distanceKm: number;
   durationMin: number;
   effectiveConsumptionKwhPer100km: number;
   effectiveRangeKm: number;
-  chargingStopRequired: boolean;
-  chargingStop:
-    | (ChargingStopCandidate & {
-        socOnArrivalPercent: number;
-        chargingTimeMin: number | null;
-        /** Weitere Kandidaten im Streckenkorridor (gleiche Sortierung: Anhaengertauglichkeit vor Umweg), zur Anzeige als Alternativen. */
-        alternatives: ChargingStopCandidate[];
-      })
-    | null;
+  chargingStopsRequired: boolean;
+  /** Ladestopps in Fahrtreihenfolge (leer, wenn das Ziel direkt erreichbar ist). */
+  chargingStops: ChargingStopPlan[];
   departureSocPercent: number;
+  /** null, wenn das Ziel mit den aktuellen Ladestopps/Einstellungen nicht erreichbar ist. */
   arrivalSocPercent: number | null;
   warning: string | null;
 }
-
-/** Maximale Anzahl an Alternativ-Vorschlaegen pro Ladestopp (Uebersichtlichkeit im UI). */
-const MAX_ALTERNATIVES = 5;
 
 /** Reichweite (km), die zwischen zwei Ladestaenden (in %) zur Verfuegung
  * steht, gegeben die effektive Gesamtreichweite bei 100 % -> 0 %. */
@@ -111,7 +119,7 @@ export function planTrip({
   targetSocAfterChargingPercent = DEFAULT_TARGET_SOC_AFTER_CHARGING_PERCENT,
   detourToleranceKm = DEFAULT_DETOUR_TOLERANCE_KM,
   excludedStationIds = [],
-  forcedStationId,
+  forcedStationIdByIndex = {},
 }: {
   route: RouteResult;
   vehicle: Pick<Vehicle, "battery_capacity_kwh">;
@@ -130,10 +138,10 @@ export function planTrip({
   targetSocAfterChargingPercent?: number;
   /** Zusaetzliche km, die fuer einen anhaengertauglicheren Ladepunkt in Kauf genommen werden. */
   detourToleranceKm?: number;
-  /** Vom Nutzer per "Loeschen" ausgeschlossene Ladepunkt-IDs -- werden bei der Kandidatensuche uebersprungen. */
+  /** Vom Nutzer per "Loeschen" ausgeschlossene Ladepunkt-IDs -- werden bei der Kandidatensuche an JEDEM Stopp uebersprungen. */
   excludedStationIds?: string[];
-  /** Nutzer hat explizit eine Alternative gewaehlt -- diese Station wird bevorzugt, sofern sie noch als Kandidat gueltig ist. */
-  forcedStationId?: string;
+  /** Nutzer hat fuer den Stopp mit diesem Index (0-basiert, Fahrtreihenfolge) explizit eine Alternative gewaehlt. */
+  forcedStationIdByIndex?: Record<number, string>;
 }): TripPlan {
   const consumption = consumptionKwhPer100km;
   const effectiveRangeKm = (vehicle.battery_capacity_kwh / consumption) * 100;
@@ -142,138 +150,145 @@ export function planTrip({
   const socPercentAfter = (startSocPercent: number, energyUsedKwh: number) =>
     Math.max(0, startSocPercent - (energyUsedKwh / vehicle.battery_capacity_kwh) * 100);
 
-  const directRangeKm = rangeBetweenSoc(effectiveRangeKm, departureSocPercent, minSocAtDestinationPercent);
-
-  // Kein Ladestopp noetig.
-  if (route.distanceKm <= directRangeKm) {
+  // Streckenkorridor-Position (Naeherung, s. o.) fuer alle Ladepunkte einmal
+  // vorab berechnen -- wird an jedem Stopp wiederverwendet.
+  const stationsWithPosition = chargingStations.map((station) => {
+    const nearest = nearestPointOnRoute(station, route.geometry);
     return {
-      distanceKm: route.distanceKm,
-      durationMin: route.durationMin,
-      effectiveConsumptionKwhPer100km: consumption,
-      effectiveRangeKm,
-      chargingStopRequired: false,
-      chargingStop: null,
-      departureSocPercent,
-      arrivalSocPercent: socPercentAfter(departureSocPercent, energyForDistance(route.distanceKm)),
-      warning: null,
+      station,
+      corridorDistanceKm: nearest.distanceKm,
+      distanceFromStartKm: cumulativeDistanceAtIndex(nearest.index, route.geometry.length, route.distanceKm),
     };
-  }
-
-  const rangeToStopKm = rangeBetweenSoc(effectiveRangeKm, departureSocPercent, minSocAtStopPercent);
-  const rangeFromStopKm = rangeBetweenSoc(
-    effectiveRangeKm,
-    targetSocAfterChargingPercent,
-    minSocAtDestinationPercent
-  );
-
-  // Ladestopp noetig: Kandidaten im Streckenkorridor suchen. Die
-  // Korridor-Distanz (Abstand der Ladesaeule von der Streckengeometrie)
-  // dient als Naeherung fuer den Umweg -- eine echte Neuberechnung der
-  // Route ueber die Ladesaeule waere fuer den MVP zu aufwaendig.
-  const candidates = chargingStations
-    .map((station) => {
-      const nearest = nearestPointOnRoute(station, route.geometry);
-      return {
-        station,
-        corridorDistanceKm: nearest.distanceKm,
-        distanceFromStartKm: cumulativeDistanceAtIndex(
-          nearest.index,
-          route.geometry.length,
-          route.distanceKm
-        ),
-      };
-    })
-    .filter((c) => c.corridorDistanceKm <= detourToleranceKm)
-    .filter((c) => c.distanceFromStartKm <= rangeToStopKm)
-    // von dort auch das Ziel erreichbar -- nach dem Stopp steht nur die auf
-    // targetSocAfterChargingPercent begrenzte Reichweite zur Verfuegung.
-    .filter((c) => route.distanceKm - c.distanceFromStartKm <= rangeFromStopKm)
-    .filter((c) => !minPowerKw || (c.station.power_kw ?? 0) >= minPowerKw)
-    // Anhängertauglichkeit hat Priorität vor einem kürzeren Umweg (§26/§27):
-    // "unsuitable" wird hart ausgeschlossen, nicht nur nachrangig behandelt.
-    .filter((c) => c.station.trailer_suitable !== "unsuitable");
-
-  candidates.sort((a, b) => {
-    if (preferTrailerSuitable) {
-      const rank = { confirmed: 0, likely: 1, unknown: 2, unsuitable: 3 } as const;
-      const diff = rank[a.station.trailer_suitable] - rank[b.station.trailer_suitable];
-      if (diff !== 0) return diff;
-    }
-    return a.corridorDistanceKm - b.corridorDistanceKm;
   });
 
-  // Vom Nutzer geloeschte Ladepunkte werden aus der Auswahl entfernt, bevor
-  // automatisch (oder per Alternativen-Auswahl) der naechste Kandidat
-  // bestimmt wird.
-  const selectable = candidates.filter((c) => !excludedStationIds.includes(c.station.id));
+  const stops: ChargingStopPlan[] = [];
+  const usedStationIds = new Set<string>();
+  let currentDistanceKm = 0;
+  let currentSocPercent = departureSocPercent;
+  let warning: string | null = null;
 
-  const chosen = forcedStationId
-    ? selectable.find((c) => c.station.id === forcedStationId)
-    : selectable[0];
+  while (true) {
+    const remainingDistanceKm = route.distanceKm - currentDistanceKm;
+    const directRangeKm = rangeBetweenSoc(effectiveRangeKm, currentSocPercent, minSocAtDestinationPercent);
 
-  if (!chosen) {
-    return {
-      distanceKm: route.distanceKm,
-      durationMin: route.durationMin,
-      effectiveConsumptionKwhPer100km: consumption,
-      effectiveRangeKm,
-      chargingStopRequired: true,
-      chargingStop: null,
-      departureSocPercent,
-      arrivalSocPercent: null,
-      warning: forcedStationId
+    // Von hier aus ist das Ziel direkt erreichbar -- fertig.
+    if (remainingDistanceKm <= directRangeKm) break;
+
+    if (stops.length >= MAX_CHARGING_STOPS) {
+      warning = `Diese Strecke wuerde mehr als ${MAX_CHARGING_STOPS} Ladestopps benoetigen -- bitte Reichweite, Verbrauch oder Ladeeinstellungen pruefen.`;
+      return {
+        distanceKm: route.distanceKm,
+        durationMin: route.durationMin,
+        effectiveConsumptionKwhPer100km: consumption,
+        effectiveRangeKm,
+        chargingStopsRequired: true,
+        chargingStops: stops,
+        departureSocPercent,
+        arrivalSocPercent: null,
+        warning,
+      };
+    }
+
+    const rangeToStopKm = rangeBetweenSoc(effectiveRangeKm, currentSocPercent, minSocAtStopPercent);
+
+    // Kandidaten fuer DIESEN Stopp: noch nicht auf dieser Route verwendet,
+    // vom Nutzer nicht geloescht, vor uns liegend und von der aktuellen
+    // Position aus mit dem aktuellen Ladestand erreichbar.
+    const candidates = stationsWithPosition
+      .filter((c) => !usedStationIds.has(c.station.id))
+      .filter((c) => !excludedStationIds.includes(c.station.id))
+      .filter((c) => c.corridorDistanceKm <= detourToleranceKm)
+      .filter((c) => c.distanceFromStartKm > currentDistanceKm)
+      .filter((c) => c.distanceFromStartKm - currentDistanceKm <= rangeToStopKm)
+      .filter((c) => !minPowerKw || (c.station.power_kw ?? 0) >= minPowerKw)
+      // Anhängertauglichkeit hat Priorität vor einem kürzeren Umweg (§26/§27):
+      // "unsuitable" wird hart ausgeschlossen, nicht nur nachrangig behandelt.
+      .filter((c) => c.station.trailer_suitable !== "unsuitable");
+
+    candidates.sort((a, b) => {
+      if (preferTrailerSuitable) {
+        const rank = { confirmed: 0, likely: 1, unknown: 2, unsuitable: 3 } as const;
+        const diff = rank[a.station.trailer_suitable] - rank[b.station.trailer_suitable];
+        if (diff !== 0) return diff;
+      }
+      return a.corridorDistanceKm - b.corridorDistanceKm;
+    });
+
+    const forcedStationId = forcedStationIdByIndex[stops.length];
+    const chosen = forcedStationId
+      ? candidates.find((c) => c.station.id === forcedStationId)
+      : candidates[0];
+
+    if (!chosen) {
+      warning = forcedStationId
         ? "Der gewählte Ladepunkt ist mit den aktuellen Einstellungen nicht erreichbar (außerhalb der Reichweite, Umweg-Toleranz oder Mindest-Ladeleistung). Bitte Einstellungen prüfen."
-        : "Diese Strecke übersteigt die Reichweite des Gespanns, aber es wurde kein passender Ladepunkt auf der Route gefunden (ggf. Umweg-Toleranz erhöhen). Bitte Route, Fahrzeug oder Einstellungen prüfen.",
-    };
-  }
+        : `Diese Strecke übersteigt die Reichweite des Gespanns${stops.length > 0 ? ` nach ${stops.length}. Ladestopp` : ""}, aber es wurde kein passender Ladepunkt auf der Route gefunden (ggf. Umweg-Toleranz erhöhen). Bitte Route, Fahrzeug oder Einstellungen prüfen.`;
+      return {
+        distanceKm: route.distanceKm,
+        durationMin: route.durationMin,
+        effectiveConsumptionKwhPer100km: consumption,
+        effectiveRangeKm,
+        chargingStopsRequired: true,
+        chargingStops: stops,
+        departureSocPercent,
+        arrivalSocPercent: null,
+        warning,
+      };
+    }
 
-  const alternatives = selectable
-    .filter((c) => c.station.id !== chosen.station.id)
-    .slice(0, MAX_ALTERNATIVES)
-    .map(({ station, distanceFromStartKm, corridorDistanceKm }) => ({
-      station,
-      distanceFromStartKm,
-      corridorDistanceKm,
-    }));
+    const alternatives: ChargingStopCandidate[] = candidates
+      .filter((c) => c.station.id !== chosen.station.id)
+      .slice(0, MAX_ALTERNATIVES)
+      .map(({ station, distanceFromStartKm, corridorDistanceKm }) => ({
+        station,
+        distanceFromStartKm,
+        corridorDistanceKm,
+      }));
 
-  const socOnArrival = socPercentAfter(departureSocPercent, energyForDistance(chosen.distanceFromStartKm));
+    const distanceTraveledKm = chosen.distanceFromStartKm - currentDistanceKm;
+    const socOnArrival = socPercentAfter(currentSocPercent, energyForDistance(distanceTraveledKm));
 
-  const energyAtTarget = (targetSocAfterChargingPercent / 100) * vehicle.battery_capacity_kwh;
-  const energyOnArrival = (socOnArrival / 100) * vehicle.battery_capacity_kwh;
-  const chargingTimeMin = chosen.station.power_kw
-    ? Math.max(0, ((energyAtTarget - energyOnArrival) / chosen.station.power_kw) * 60)
-    : null;
+    const energyAtTarget = (targetSocAfterChargingPercent / 100) * vehicle.battery_capacity_kwh;
+    const energyOnArrival = (socOnArrival / 100) * vehicle.battery_capacity_kwh;
+    const chargingTimeMin = chosen.station.power_kw
+      ? Math.max(0, ((energyAtTarget - energyOnArrival) / chosen.station.power_kw) * 60)
+      : null;
 
-  // Startpunkt fuer die Restetappe: entweder der Zielladestand nach dem
-  // Stopp, oder der tatsaechliche Ladestand bei Ankunft, falls dieser
-  // (z. B. bei kurzer erster Etappe) bereits darueber liegt -- dann wird
-  // nicht unnoetig "heruntergerechnet".
-  const socAfterChargingStop = Math.max(targetSocAfterChargingPercent, socOnArrival);
-  const remainingDistanceKm = route.distanceKm - chosen.distanceFromStartKm;
-  const arrivalSocPercent = socPercentAfter(
-    socAfterChargingStop,
-    energyForDistance(remainingDistanceKm)
-  );
+    if (!warning && chosen.station.trailer_suitable === "unknown") {
+      warning =
+        "Die Anhängertauglichkeit mindestens eines vorgeschlagenen Ladepunkts ist noch nicht von der Community bestätigt -- bitte Details prüfen.";
+    }
 
-  return {
-    distanceKm: route.distanceKm,
-    durationMin: route.durationMin,
-    effectiveConsumptionKwhPer100km: consumption,
-    effectiveRangeKm,
-    chargingStopRequired: true,
-    chargingStop: {
+    stops.push({
       station: chosen.station,
       distanceFromStartKm: chosen.distanceFromStartKm,
       corridorDistanceKm: chosen.corridorDistanceKm,
       socOnArrivalPercent: socOnArrival,
       chargingTimeMin,
       alternatives,
-    },
+    });
+
+    usedStationIds.add(chosen.station.id);
+    currentDistanceKm = chosen.distanceFromStartKm;
+    // Startpunkt fuer die naechste Etappe: entweder der Zielladestand nach
+    // dem Stopp, oder der tatsaechliche Ladestand bei Ankunft, falls dieser
+    // (z. B. bei kurzer Etappe) bereits darueber liegt -- dann wird nicht
+    // unnoetig "heruntergerechnet".
+    currentSocPercent = Math.max(targetSocAfterChargingPercent, socOnArrival);
+  }
+
+  const remainingDistanceKm = route.distanceKm - currentDistanceKm;
+  const arrivalSocPercent = socPercentAfter(currentSocPercent, energyForDistance(remainingDistanceKm));
+
+  return {
+    distanceKm: route.distanceKm,
+    durationMin: route.durationMin,
+    effectiveConsumptionKwhPer100km: consumption,
+    effectiveRangeKm,
+    chargingStopsRequired: stops.length > 0,
+    chargingStops: stops,
     departureSocPercent,
     arrivalSocPercent,
-    warning:
-      chosen.station.trailer_suitable === "unknown"
-        ? "Die Anhängertauglichkeit des gewählten Ladepunkts ist noch nicht von der Community bestätigt -- bitte Details prüfen."
-        : null,
+    warning,
   };
 }

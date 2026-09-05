@@ -52,12 +52,12 @@ async function annotatePersonalCompatibility(
   plan: TripPlan,
   userTrailerLengthM: number | null
 ): Promise<TripPlan> {
-  if (!plan.chargingStop || userTrailerLengthM === null) return plan;
+  if (plan.chargingStops.length === 0 || userTrailerLengthM === null) return plan;
 
-  const stationIds = [
-    plan.chargingStop.station.id,
-    ...plan.chargingStop.alternatives.map((a) => a.station.id),
-  ];
+  const stationIds = plan.chargingStops.flatMap((stop) => [
+    stop.station.id,
+    ...stop.alternatives.map((a) => a.station.id),
+  ]);
 
   const { data: reviews } = await supabase
     .from("charging_reviews")
@@ -79,14 +79,14 @@ async function annotatePersonalCompatibility(
 
   return {
     ...plan,
-    chargingStop: {
-      ...plan.chargingStop,
-      personalCompatibility: personalCompatibilityFor(plan.chargingStop.station.id),
-      alternatives: plan.chargingStop.alternatives.map((alt) => ({
+    chargingStops: plan.chargingStops.map((stop) => ({
+      ...stop,
+      personalCompatibility: personalCompatibilityFor(stop.station.id),
+      alternatives: stop.alternatives.map((alt) => ({
         ...alt,
         personalCompatibility: personalCompatibilityFor(alt.station.id),
       })),
-    },
+    })),
   };
 }
 
@@ -204,7 +204,7 @@ export async function replanChargingStop(input: {
   targetSocAfterChargingPercent: number;
   detourToleranceKm: number;
   excludedStationIds: string[];
-  forcedStationId?: string;
+  forcedStationIdByIndex?: Record<number, string>;
 }): Promise<TripPlan> {
   const supabase = await createClient();
   const {
@@ -246,7 +246,7 @@ export async function replanChargingStop(input: {
     targetSocAfterChargingPercent: input.targetSocAfterChargingPercent,
     detourToleranceKm: input.detourToleranceKm,
     excludedStationIds: input.excludedStationIds,
-    forcedStationId: input.forcedStationId,
+    forcedStationIdByIndex: input.forcedStationIdByIndex,
   });
 
   const userTrailerLengthM =
