@@ -109,10 +109,10 @@ export default async function SavedRoutesPage() {
                     Gespeichert am {formatDate(route.created_at)}
                   </p>
                 </div>
-                <div className="flex shrink-0 items-center gap-3 text-sm">
+                <div className="flex shrink-0 flex-wrap items-center gap-1 text-sm">
                   <a
                     href={`/routenplaner?savedRouteId=${route.id}`}
-                    className="text-emerald-700 hover:underline dark:text-emerald-400"
+                    className="flex min-h-11 items-center px-2 text-emerald-700 hover:underline dark:text-emerald-400"
                   >
                     Im Routenplaner öffnen
                   </a>
@@ -120,7 +120,7 @@ export default async function SavedRoutesPage() {
                     <input type="hidden" name="id" value={route.id} />
                     <button
                       type="submit"
-                      className="text-red-600 hover:underline"
+                      className="flex min-h-11 items-center px-2 text-red-600 hover:underline"
                       aria-label={`Route "${route.name}" entfernen`}
                     >
                       Entfernen
@@ -157,7 +157,7 @@ export default async function SavedRoutesPage() {
                         <div className="mt-2 flex flex-col gap-2">
                           <NavigationLink
                             href={fullRouteUrl}
-                            className="w-fit rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700"
+                            className="w-fit min-h-11 rounded-md bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-700"
                           >
                             Gesamte Route navigieren (Google Maps)
                           </NavigationLink>
@@ -171,7 +171,7 @@ export default async function SavedRoutesPage() {
                                   <NavigationLink
                                     key={segment.label}
                                     href={segment.url}
-                                    className="rounded-md border border-black/15 px-3 py-1.5 text-xs hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/5"
+                                    className="min-h-11 rounded-md border border-black/15 px-3 py-2.5 text-sm hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/5"
                                   >
                                     {segment.label}
                                   </NavigationLink>

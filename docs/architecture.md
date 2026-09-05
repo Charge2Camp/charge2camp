@@ -229,9 +229,44 @@ Natives `Linking.openURL` das Oeffnen).
 `/profil/routen` plant jede gespeicherte Route serverseitig neu (siehe
 oben) und zeigt neben "Gesamte Route navigieren" auch einen
 Google-Maps-Link pro Etappe (Start → 1. Ladestopp, 1. → 2. Ladestopp,
-...). Da `NavigationProvider.buildUrl` eine reine Funktion ist, werden
-diese Links direkt serverseitig als `<a href>` gerendert -- kein
-Client-JavaScript noetig, kein `window.open`.
+...). `NavigationProvider.buildUrl` ist eine reine Funktion (die URL wird
+serverseitig berechnet), das Oeffnen selbst laeuft aber ueber die kleine
+Client-Komponente `NavigationLink`
+([src/components/profile/navigation-link.tsx](../src/components/profile/navigation-link.tsx)):
+sie ruft `window.open(url, "ecamper-navigation-" + Date.now(), ...)` auf
+statt eines simplen `<a target="_blank">` -- ein eindeutiger Fenstername
+pro Klick sorgt dafuer, dass zuverlaessig ein neuer Tab entsteht (ein
+wiederholt gleicher Name wuerde einen schon offenen Tab nur still im
+Hintergrund umleiten) und der eCamper-Tab selbst nie verlassen wird.
+
+## Mobile/Touch-Design (Routenplaner)
+
+`/routenplaner` und das Routenuebersicht-Popup sind mobile-first fuer
+Touch-Bedienung (iPhone) ausgelegt:
+
+- **Viewport-Meta** (`export const viewport` in
+  [src/app/layout.tsx](../src/app/layout.tsx)): ohne dieses Meta faellt
+  iOS Safari auf eine Desktop-Layout-Breite von ca. 980px zurueck --
+  saemtliche Tailwind-Breakpoints (`sm:`, `md:`, ...) wuerden dann auf
+  echten Handys falsch auswerten. Nutzer-Zoom bleibt bewusst erlaubt
+  (kein `maximumScale`/`userScalable: false`, das waere ein
+  Barrierefreiheits-Problem, WCAG 1.4.4).
+- **Eingabefelder mit `text-base`** (16px) statt des von umschliessenden
+  Labels geerbten `text-sm` (14px): iOS Safari zoomt beim Fokussieren
+  eines Feldes mit Schriftgroesse < 16px automatisch hinein, was auf
+  einem Formular mit vielen Feldern als sehr stoerend empfunden wird.
+- **Tap-Ziele ≥ 44px** (Apple HIG) fuer alle wiederholt genutzten
+  Buttons -- "Löschen", "Diesen Ladepunkt wählen",
+  "Alternativen anzeigen", Schliessen-Button (✕), Segment-Navigations-
+  Buttons, "+ Zwischenstopp hinzufügen" -- über `min-h-11`/`min-h-12`
+  plus grosszügigeres Padding statt der kompakteren Desktop-Groessen.
+- **Routenübersicht-Popup als Vollbild-Sheet auf kleinen Screens**: statt
+  einer kleinen, mittig schwebenden Karte mit totem Rand füllt das Popup
+  unterhalb von `sm:` (640px) den gesamten Bildschirm (`inset-0`, keine
+  abgerundeten Ecken) -- bessere Erreichbarkeit mit dem Daumen und mehr
+  Platz für die Liste. Ab `sm:` wieder die bisherige zentrierte Karte.
+- **Aktions-Buttons stapeln sich vertikal** auf schmalen Screens
+  (`flex-col sm:flex-row`) statt sich nebeneinander zu quetschen.
 
 ## Profil-Struktur (Phase 2, erweitert)
 

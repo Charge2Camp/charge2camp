@@ -62,7 +62,7 @@ function AlternativeRow({
         type="button"
         disabled={disabled}
         onClick={onSelect}
-        className="whitespace-nowrap rounded-md border border-emerald-600 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-600/10 disabled:opacity-50 dark:text-emerald-400"
+        className="min-h-11 whitespace-nowrap rounded-md border border-emerald-600 px-3 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-600/10 disabled:opacity-50 dark:text-emerald-400"
       >
         Diesen Ladepunkt wählen
       </button>
@@ -127,15 +127,19 @@ export function RouteOverviewDialog({
   const legEndKm = [...middlePoints.map((p) => p.distanceFromStartKm), plan.distanceKm];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-lg bg-white dark:bg-neutral-900">
+    // Mobile: vollflaechiges Sheet (kein verschwendeter Rand, groesserer
+    // Bereich fuer die Liste) -- ab sm: wieder eine zentrierte Karte wie
+    // bisher. Bessere Erreichbarkeit mit dem Daumen auf dem iPhone als eine
+    // kleine, mittig schwebende Box mit viel totem Rand drumherum.
+    <div className="fixed inset-0 z-50 bg-black/50 sm:flex sm:items-center sm:justify-center sm:p-4">
+      <div className="flex h-full w-full flex-col overflow-hidden bg-white dark:bg-neutral-900 sm:h-auto sm:max-h-[90vh] sm:w-full sm:max-w-lg sm:rounded-lg">
         <div className="flex items-center justify-between border-b border-black/10 p-4 dark:border-white/10">
           <h2 className="text-lg font-semibold">Routenübersicht</h2>
           <button
             type="button"
             onClick={onRequestClose}
             aria-label="Schließen"
-            className="rounded-md px-2 py-1 text-black/50 hover:bg-black/5 dark:text-white/50 dark:hover:bg-white/10"
+            className="flex h-11 w-11 items-center justify-center rounded-md text-xl text-black/50 hover:bg-black/5 dark:text-white/50 dark:hover:bg-white/10"
           >
             ✕
           </button>
@@ -148,25 +152,25 @@ export function RouteOverviewDialog({
               Du hast Ladepunkte gelöscht oder Alternativen gewählt. Diese Änderungen sind bisher nur eine
               Vorschau — wähle, ob sie in deine Routenplanung übernommen oder verworfen werden sollen.
             </p>
-            <div className="mt-4 flex flex-wrap gap-3">
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
               <button
                 type="button"
                 onClick={onApplyChanges}
-                className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+                className="min-h-12 rounded-md bg-emerald-600 px-4 py-3 text-sm font-medium text-white hover:bg-emerald-700"
               >
                 Änderungen übernehmen
               </button>
               <button
                 type="button"
                 onClick={onDiscardChanges}
-                className="rounded-md border border-red-600/50 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-600/10 dark:text-red-400"
+                className="min-h-12 rounded-md border border-red-600/50 px-4 py-3 text-sm font-medium text-red-700 hover:bg-red-600/10 dark:text-red-400"
               >
                 Änderungen verwerfen
               </button>
               <button
                 type="button"
                 onClick={onCancelClose}
-                className="rounded-md px-4 py-2 text-sm font-medium text-black/60 hover:bg-black/5 dark:text-white/60 dark:hover:bg-white/10"
+                className="min-h-12 rounded-md px-4 py-3 text-sm font-medium text-black/60 hover:bg-black/5 dark:text-white/60 dark:hover:bg-white/10"
               >
                 Weiter bearbeiten
               </button>
@@ -242,7 +246,7 @@ export function RouteOverviewDialog({
                           type="button"
                           disabled={busy}
                           onClick={() => onDeleteStop(index, stop.station.id)}
-                          className="whitespace-nowrap rounded-md border border-red-600/50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-600/10 disabled:opacity-50 dark:text-red-400"
+                          className="min-h-11 whitespace-nowrap rounded-md border border-red-600/50 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-600/10 disabled:opacity-50 dark:text-red-400"
                         >
                           Löschen
                         </button>
@@ -253,7 +257,7 @@ export function RouteOverviewDialog({
                           <button
                             type="button"
                             onClick={() => setExpandedStopIndex(showAlternatives ? null : index)}
-                            className="text-sm font-medium text-emerald-700 hover:underline dark:text-emerald-400"
+                            className="inline-flex min-h-11 items-center py-2 text-sm font-medium text-emerald-700 hover:underline dark:text-emerald-400"
                           >
                             {showAlternatives
                               ? "Alternativen ausblenden"
@@ -309,20 +313,20 @@ export function RouteOverviewDialog({
         )}
 
         {!confirmingClose && dirty && (
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-black/10 p-4 dark:border-white/10">
+          <div className="flex flex-col gap-3 border-t border-black/10 p-4 dark:border-white/10 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
             <p className="text-xs text-black/50 dark:text-white/50">Ungespeicherte Änderungen an der Ladeplanung.</p>
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={onApplyChanges}
-                className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+                className="min-h-12 flex-1 rounded-md bg-emerald-600 px-4 py-3 text-sm font-medium text-white hover:bg-emerald-700 sm:flex-none"
               >
                 Übernehmen
               </button>
               <button
                 type="button"
                 onClick={onDiscardChanges}
-                className="rounded-md border border-red-600/50 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-600/10 dark:text-red-400"
+                className="min-h-12 flex-1 rounded-md border border-red-600/50 px-4 py-3 text-sm font-medium text-red-700 hover:bg-red-600/10 dark:text-red-400 sm:flex-none"
               >
                 Verwerfen
               </button>

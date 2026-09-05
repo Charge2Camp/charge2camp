@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { SiteHeader } from "@/components/site-header";
@@ -18,6 +18,17 @@ export const metadata: Metadata = {
   title: "eCamper – Camping mit Elektroauto",
   description:
     "Finde Campingplätze und plane deine Route mit anhängertauglichen Ladestopps.",
+};
+
+// Ohne dieses Viewport-Meta faellt iOS Safari auf eine Desktop-Layout-
+// Breite von ca. 980px zurueck -- alle Tailwind-Breakpoints (sm:, md:, ...)
+// wuerden dann auf echten Handys falsch auswerten (die Seite "denkt", sie
+// sei auf einem breiten Bildschirm). Nutzer-Zoom bleibt bewusst erlaubt
+// (kein maximumScale/userScalable:false -- das waere ein
+// Barrierefreiheits-Problem, WCAG 1.4.4).
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
