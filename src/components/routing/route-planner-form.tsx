@@ -12,6 +12,7 @@ import {
   DEFAULT_MIN_SOC_AT_STOP_PERCENT,
   DEFAULT_TARGET_SOC_AFTER_CHARGING_PERCENT,
   MAX_DETOUR_TOLERANCE_KM,
+  type TripPlan,
 } from "@/lib/route-planning";
 import { TRAILER_SUITABILITY_COLORS, TRAILER_SUITABILITY_LABELS } from "@/lib/trailer-suitability";
 import type { Caravan, Vehicle } from "@/types/database";
@@ -97,6 +98,16 @@ export function RoutePlannerForm({
   const [overviewOpen, setOverviewOpen] = useState(false);
   const [replanBusy, setReplanBusy] = useState(false);
   const [replanError, setReplanError] = useState<string | null>(null);
+  // Entwurfsstand waehrend die Routenuebersicht geoeffnet ist: Loeschen/
+  // Alternativen-Auswahl wirkt sich zunaechst NUR hier aus. Karte und
+  // Zusammenfassung ausserhalb des Popups zeigen weiterhin den zuletzt
+  // bestaetigten Stand, bis der Nutzer beim Schliessen explizit "Übernehmen"
+  // oder "Verwerfen" waehlt.
+  const [draftPlan, setDraftPlan] = useState<TripPlan | null>(null);
+  const [draftExcludedStationIds, setDraftExcludedStationIds] = useState<string[]>([]);
+  const [draftForcedStationIdByIndex, setDraftForcedStationIdByIndex] = useState<Record<number, string>>({});
+  const [overviewDirty, setOverviewDirty] = useState(false);
+  const [confirmingOverviewClose, setConfirmingOverviewClose] = useState(false);
 
   const vehicleById = useMemo(() => new Map(vehicles.map((v) => [v.id, v])), [vehicles]);
 
@@ -129,13 +140,29 @@ export function RoutePlannerForm({
     setExcludedStationIds([]);
     setForcedStationIdByIndex({});
     setOverviewOpen(false);
+    setDraftPlan(null);
+    setOverviewDirty(false);
+    setConfirmingOverviewClose(false);
     setReplanError(null);
+  }
+
+  function handleOpenOverview() {
+    if (!result) return;
+    setDraftPlan(result.plan);
+    setDraftExcludedStationIds(excludedStationIds);
+    setDraftForcedStationIdByIndex(forcedStationIdByIndex);
+    setOverviewDirty(false);
+    setConfirmingOverviewClose(false);
+    setReplanError(null);
+    setOverviewOpen(true);
   }
 
   // Ruft die Ladeplanung neu ab, ohne Start/Ziel neu zu geocodieren oder die
   // Route neu zu berechnen (Streckengeometrie bleibt gleich) -- genutzt zum
   // Loeschen eines vorgeschlagenen Ladestopps oder Waehlen einer Alternative
-  // aus der Routenuebersicht.
+  // aus der Routenuebersicht. Aendert bewusst nur den ENTWURFS-Stand, nicht
+  // den bestaetigten `result`/`excludedStationIds`/`forcedStationIdByIndex`
+  // -- die Uebernahme passiert erst explizit beim Schliessen des Popups.
   async function handleReplan(overrides: {
     excludedStationIds?: string[];
     forcedStationIdByIndex?: Record<number, string>;
@@ -144,8 +171,8 @@ export function RoutePlannerForm({
     setReplanBusy(true);
     setReplanError(null);
     try {
-      const nextExcluded = overrides.excludedStationIds ?? excludedStationIds;
-      const nextForced = overrides.forcedStationIdByIndex ?? forcedStationIdByIndex;
+      const nextExcluded = overrides.excludedStationIds ?? draftExcludedStationIds;
+      const nextForced = overrides.forcedStationIdByIndex ?? draftForcedStationIdByIndex;
       const newPlan = await replanChargingStop({
         vehicleId,
         caravanId: caravanId || undefined,
@@ -161,9 +188,10 @@ export function RoutePlannerForm({
         excludedStationIds: nextExcluded,
         forcedStationIdByIndex: nextForced,
       });
-      setResult({ ...result, plan: newPlan });
-      setExcludedStationIds(nextExcluded);
-      setForcedStationIdByIndex(nextForced);
+      setDraftPlan(newPlan);
+      setDraftExcludedStationIds(nextExcluded);
+      setDraftForcedStationIdByIndex(nextForced);
+      setOverviewDirty(true);
     } catch (err) {
       setReplanError(err instanceof Error ? err.message : "Ladestopp konnte nicht neu geplant werden.");
     } finally {
@@ -176,7 +204,7 @@ export function RoutePlannerForm({
   // werden nach der Aenderung frei neu bestimmt.
   function clearForcedFrom(stopIndex: number): Record<number, string> {
     const next: Record<number, string> = {};
-    for (const [key, value] of Object.entries(forcedStationIdByIndex)) {
+    for (const [key, value] of Object.entries(draftForcedStationIdByIndex)) {
       if (Number(key) < stopIndex) next[Number(key)] = value;
     }
     return next;
@@ -184,7 +212,7 @@ export function RoutePlannerForm({
 
   function handleDeleteStop(stopIndex: number, stationId: string) {
     handleReplan({
-      excludedStationIds: [...excludedStationIds, stationId],
+      excludedStationIds: [...draftExcludedStationIds, stationId],
       forcedStationIdByIndex: clearForcedFrom(stopIndex),
     });
   }
@@ -193,6 +221,32 @@ export function RoutePlannerForm({
     handleReplan({
       forcedStationIdByIndex: { ...clearForcedFrom(stopIndex), [stopIndex]: stationId },
     });
+  }
+
+  // Schliessen angefordert (X-Button im Popup): bei ungespeicherten
+  // Aenderungen erst explizit nachfragen, statt sie stillschweigend zu
+  // uebernehmen oder zu verwerfen.
+  function handleRequestCloseOverview() {
+    if (overviewDirty) {
+      setConfirmingOverviewClose(true);
+    } else {
+      setOverviewOpen(false);
+    }
+  }
+
+  function handleApplyOverviewChanges() {
+    if (result && draftPlan) {
+      setResult({ ...result, plan: draftPlan });
+      setExcludedStationIds(draftExcludedStationIds);
+      setForcedStationIdByIndex(draftForcedStationIdByIndex);
+    }
+    setOverviewOpen(false);
+    setConfirmingOverviewClose(false);
+  }
+
+  function handleDiscardOverviewChanges() {
+    setOverviewOpen(false);
+    setConfirmingOverviewClose(false);
   }
 
   return (
@@ -404,7 +458,7 @@ export function RoutePlannerForm({
           <div className="flex flex-wrap items-center justify-between gap-3">
             <button
               type="button"
-              onClick={() => setOverviewOpen(true)}
+              onClick={handleOpenOverview}
               className="rounded-md border border-emerald-600 px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-600/10 dark:text-emerald-400"
             >
               Routenübersicht anzeigen
@@ -479,7 +533,7 @@ export function RoutePlannerForm({
                   Geplante Ladestopps ({result.plan.chargingStops.length}) — Details und Alternativen in der{" "}
                   <button
                     type="button"
-                    onClick={() => setOverviewOpen(true)}
+                    onClick={handleOpenOverview}
                     className="underline hover:no-underline"
                   >
                     Routenübersicht
@@ -518,12 +572,19 @@ export function RoutePlannerForm({
         </div>
       )}
 
-      {result && (
+      {result && draftPlan && (
         <RouteOverviewDialog
           open={overviewOpen}
-          onClose={() => setOverviewOpen(false)}
-          result={result}
+          start={result.start}
+          end={result.end}
+          plan={draftPlan}
           busy={replanBusy}
+          dirty={overviewDirty}
+          confirmingClose={confirmingOverviewClose}
+          onRequestClose={handleRequestCloseOverview}
+          onApplyChanges={handleApplyOverviewChanges}
+          onDiscardChanges={handleDiscardOverviewChanges}
+          onCancelClose={() => setConfirmingOverviewClose(false)}
           onDeleteStop={(stopIndex, stationId) => handleDeleteStop(stopIndex, stationId)}
           onSelectAlternative={(stopIndex, stationId) => handleSelectAlternative(stopIndex, stationId)}
         />
