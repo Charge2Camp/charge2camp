@@ -3,9 +3,55 @@
 import { useMemo, useState } from "react";
 import { planRoute, type RoutePlanResult } from "@/app/routenplaner/actions";
 import { MapView } from "@/components/map/map-view";
-import { DEFAULT_CONSUMPTION_KWH_PER_100KM } from "@/lib/route-planning";
+import {
+  DEFAULT_CONSUMPTION_KWH_PER_100KM,
+  DEFAULT_DEPARTURE_SOC_PERCENT,
+  DEFAULT_DETOUR_TOLERANCE_KM,
+  DEFAULT_MIN_SOC_AT_DESTINATION_PERCENT,
+  DEFAULT_MIN_SOC_AT_STOP_PERCENT,
+  DEFAULT_TARGET_SOC_AFTER_CHARGING_PERCENT,
+  MAX_DETOUR_TOLERANCE_KM,
+} from "@/lib/route-planning";
 import { TRAILER_SUITABILITY_COLORS, TRAILER_SUITABILITY_LABELS } from "@/lib/trailer-suitability";
 import type { Caravan, Vehicle } from "@/types/database";
+
+function SocSlider({
+  name,
+  label,
+  value,
+  onChange,
+  unit = "%",
+  max = 100,
+}: {
+  name: string;
+  label: string;
+  value: number;
+  onChange: (value: number) => void;
+  unit?: string;
+  max?: number;
+}) {
+  return (
+    <label className="flex flex-col gap-1 text-sm">
+      <span className="flex items-center justify-between">
+        <span>{label}</span>
+        <span className="font-medium tabular-nums">
+          {value}
+          {unit}
+        </span>
+      </span>
+      <input
+        name={name}
+        type="range"
+        min="0"
+        max={max}
+        step="1"
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="accent-emerald-600"
+      />
+    </label>
+  );
+}
 
 const CONSUMPTION_SOURCE_LABELS = {
   manual: "manuell eingegeben",
@@ -31,6 +77,15 @@ export function RoutePlannerForm({
   const [result, setResult] = useState<RoutePlanResult | null>(null);
   const [vehicleId, setVehicleId] = useState("");
   const [consumption, setConsumption] = useState("");
+  const [departureSoc, setDepartureSoc] = useState(DEFAULT_DEPARTURE_SOC_PERCENT);
+  const [minSocAtStop, setMinSocAtStop] = useState(DEFAULT_MIN_SOC_AT_STOP_PERCENT);
+  const [minSocAtDestination, setMinSocAtDestination] = useState(
+    DEFAULT_MIN_SOC_AT_DESTINATION_PERCENT
+  );
+  const [targetSocAfterCharging, setTargetSocAfterCharging] = useState(
+    DEFAULT_TARGET_SOC_AFTER_CHARGING_PERCENT
+  );
+  const [detourTolerance, setDetourTolerance] = useState(DEFAULT_DETOUR_TOLERANCE_KM);
 
   const vehicleById = useMemo(() => new Map(vehicles.map((v) => [v.id, v])), [vehicles]);
 
@@ -135,6 +190,50 @@ export function RoutePlannerForm({
             className="rounded-md border border-black/15 px-3 py-2 dark:border-white/15 dark:bg-transparent"
           />
         </label>
+
+        <div className="rounded-lg border border-black/10 p-4 dark:border-white/10 sm:col-span-2">
+          <p className="mb-3 text-sm font-medium">Ladeeinstellungen</p>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <SocSlider
+              name="departure_soc_percent"
+              label="Ladestand bei Abfahrt"
+              value={departureSoc}
+              onChange={setDepartureSoc}
+            />
+            <SocSlider
+              name="min_soc_at_stop_percent"
+              label="Mindest-Restakku bei Zwischenladung"
+              value={minSocAtStop}
+              onChange={setMinSocAtStop}
+            />
+            <SocSlider
+              name="min_soc_at_destination_percent"
+              label="Mindest-Restakku am Ziel"
+              value={minSocAtDestination}
+              onChange={setMinSocAtDestination}
+            />
+            <SocSlider
+              name="target_soc_after_charging_percent"
+              label="Ladeziel an Zwischenstopps"
+              value={targetSocAfterCharging}
+              onChange={setTargetSocAfterCharging}
+            />
+            <div className="sm:col-span-2">
+              <SocSlider
+                name="detour_tolerance_km"
+                label="Umweg-Toleranz für anhängertauglichere Ladepunkte"
+                value={detourTolerance}
+                onChange={setDetourTolerance}
+                unit=" km"
+                max={MAX_DETOUR_TOLERANCE_KM}
+              />
+              <p className="mt-1 text-xs text-black/40 dark:text-white/40">
+                Wie viele km Umweg bist du bereit zu fahren, um statt des nächstgelegenen einen
+                anhängertauglicheren Ladepunkt anzusteuern?
+              </p>
+            </div>
+          </div>
+        </div>
 
         <label className="flex items-center gap-2 self-end text-sm">
           <input type="checkbox" name="prefer_trailer_suitable" value="1" defaultChecked />
@@ -249,6 +348,7 @@ export function RoutePlannerForm({
                 </div>
                 <ul className="mt-3 space-y-1 text-sm text-black/70 dark:text-white/70">
                   <li>Nach {result.plan.chargingStop.distanceFromStartKm.toFixed(0)} km ab Start</li>
+                  <li>Umweg von der Route: ca. {result.plan.chargingStop.corridorDistanceKm.toFixed(0)} km</li>
                   {result.plan.chargingStop.socOnArrivalPercent !== null && (
                     <li>Ladestand bei Ankunft: {result.plan.chargingStop.socOnArrivalPercent.toFixed(0)}%</li>
                   )}

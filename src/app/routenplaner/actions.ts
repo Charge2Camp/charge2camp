@@ -22,6 +22,13 @@ function parseOptionalPositiveNumber(value: FormDataEntryValue | null): number |
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
+/** Wie parseOptionalPositiveNumber, erlaubt aber 0 (z. B. Umweg-Toleranz "0 km"). */
+function parseOptionalNonNegativeNumber(value: FormDataEntryValue | null): number | null {
+  if (!value || typeof value !== "string" || value.trim() === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+}
+
 function requireString(value: FormDataEntryValue | null, label: string): string {
   if (!value || typeof value !== "string" || !value.trim()) {
     throw new Error(`${label} fehlt.`);
@@ -85,6 +92,16 @@ export async function planRoute(formData: FormData): Promise<RoutePlanResult> {
       ? "profile"
       : "default";
 
+  const departureSocPercent = parseOptionalNonNegativeNumber(formData.get("departure_soc_percent"));
+  const minSocAtStopPercent = parseOptionalNonNegativeNumber(formData.get("min_soc_at_stop_percent"));
+  const minSocAtDestinationPercent = parseOptionalNonNegativeNumber(
+    formData.get("min_soc_at_destination_percent")
+  );
+  const targetSocAfterChargingPercent = parseOptionalNonNegativeNumber(
+    formData.get("target_soc_after_charging_percent")
+  );
+  const detourToleranceKm = parseOptionalNonNegativeNumber(formData.get("detour_tolerance_km"));
+
   const plan = planTrip({
     route,
     vehicle: vehicle as Vehicle,
@@ -92,6 +109,11 @@ export async function planRoute(formData: FormData): Promise<RoutePlanResult> {
     preferTrailerSuitable,
     minPowerKw: minPowerKwRaw ? Number(minPowerKwRaw) : undefined,
     consumptionKwhPer100km,
+    ...(departureSocPercent !== null && { departureSocPercent }),
+    ...(minSocAtStopPercent !== null && { minSocAtStopPercent }),
+    ...(minSocAtDestinationPercent !== null && { minSocAtDestinationPercent }),
+    ...(targetSocAfterChargingPercent !== null && { targetSocAfterChargingPercent }),
+    ...(detourToleranceKm !== null && { detourToleranceKm }),
   });
 
   return {

@@ -117,6 +117,25 @@ Quantile später).
   einem einzelnen Stopp gefunden wird, statt eine falsche Route
   vorzutäuschen.
 
+**SOC-Eingaben statt interner Annahmen (angelehnt an A Better Routeplanner):**
+Vier Ladestand-Werte sind Formulareingaben (Schieberegler) statt fester
+Konstanten — Ladestand bei Abfahrt, Mindest-Restakku bei Zwischenladung,
+Ladeziel an einem Zwischenstopp und Mindest-Restakku am Ziel. Die
+Reichweite zwischen zwei Ladeständen wird darüber generisch berechnet
+(`rangeBetweenSoc`), damit z. B. "wie weit komme ich von 100 % auf 20 %"
+und "wie weit komme ich von 80 % auf 20 % nach dem Stopp" konsistent
+denselben Weg nutzen.
+
+**Umweg-Toleranz für anhängertauglichere Ladepunkte:** Ein Schieberegler
+(0–100 km, Standard 20 km) bestimmt, wie weit ein Ladepunkt abseits der
+Streckengeometrie liegen darf, um noch als Kandidat zu gelten. Je höher die
+Toleranz, desto eher wird ein weiter entfernter, aber besser
+anhängertauglich bewerteter Ladepunkt einem näheren, schlechter bewerteten
+vorgezogen (Sortierung bleibt: Anhängertauglichkeit vor Entfernung, §26/
+§27). Die Korridor-Distanz der Ladesäule zur Route dient dabei als
+Näherung für den tatsächlichen Umweg — eine echte Neuberechnung der Route
+über die Ladesäule wäre für den MVP zu aufwändig.
+
 **Realistischer Verbrauch statt Herstellerangaben:** Der für die
 Reichweitenberechnung verwendete Verbrauch wird **nie** aus
 Batteriekapazität/Hersteller-Reichweite abgeleitet (diese Werte sind
