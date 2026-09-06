@@ -1,5 +1,6 @@
 psycopg2-binary>=2.9
 requests>=2.31
+meilisearch>=0.31
 # Nutzt den System-/Windows-Zertifikatsspeicher fuer HTTPS-Anfragen (analog
 # zu `cross-env NODE_OPTIONS=--use-system-ca` im Node-Teil dieses Projekts,
 # siehe package.json) -- ohne dieses Paket schlagen requests.get()-Aufrufe

@@ -112,3 +112,37 @@ oder innerhalb der Grenzfläche, `walking` ≤1200 m Gehstrecke, sonst
 (`REFRESH MATERIALIZED VIEW CONCURRENTLY`). Ein einzelner OSRM-Fehler
 bricht den Lauf nicht ab (`walk_distance_m` bleibt `NULL`, Fehlerquote wird
 geloggt).
+
+## Auftrag E — Suchindex (Meilisearch)
+
+Braucht einen laufenden Meilisearch-Server — per Docker Compose aus dem
+Projekt-Root (`docker-compose.yml`):
+
+```bash
+docker compose up -d meilisearch
+```
+
+Läuft unter `http://localhost:7700` mit dem Master-Key aus `.env.local`
+(`MEILI_MASTER_KEY`, Default `charge2camp-dev-master-key` — für einen
+öffentlich erreichbaren Server vor Go-Live unbedingt ändern). Health-Check:
+`curl http://localhost:7700/health`.
+
+```bash
+.venv/Scripts/python.exe index_meilisearch.py
+```
+
+Liest `core.campsite_search` komplett neu ein und schreibt den Index
+`campsites` (Felder, `filterableAttributes`/`sortableAttributes`/
+`searchableAttributes`, `_geo`-Feld siehe Auftragsdokument Abschnitt 10).
+
+**Abweichung vom Auftragsdokument:** kein inkrementeller Lauf über
+`updated_at` — `core.campsite_search` ist eine materialisierte Sicht ohne
+eigene Änderungs-Zeitspalte und wird ohnehin als Ganzes per
+`REFRESH MATERIALIZED VIEW CONCURRENTLY` aktualisiert (siehe `build_links.py`
+oben). Ein voller Reindex dauert bei ~4000 Dokumenten nur wenige Sekunden,
+ein inkrementeller Lauf wäre unnötige Komplexität für den aktuellen
+Datenumfang.
+
+Nach jedem `build_links.py`-Lauf (neue Verknüpfungen) oder Import mit
+geänderten Merkmalen/Ladeinfos: `index_meilisearch.py` erneut ausführen,
+sonst zeigt die Suche veraltete Facetten/Distanzen.

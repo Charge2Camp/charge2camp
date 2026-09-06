@@ -1,0 +1,23 @@
+# Meilisearch-Suchindex fuer Auftrag D/E (siehe CLAUDE_CODE_AUFTRAG.md
+# Abschnitt 9/10). Die Postgres-Datenbank laeuft weiterhin ueber die
+# Supabase-CLI (`npx supabase start`), nicht hier -- diese Datei ergaenzt
+# nur den zusaetzlichen Suchindex-Service. Die separate Fuss-Routing-OSRM-
+# Instanz (siehe ingest/osrm/README.md) bleibt bewusst ausserhalb dieser
+# Compose-Datei, da sie bereits ueber eigene `docker run`-Befehle verwaltet
+# wird und nicht parallel dazu kollidieren soll.
+services:
+  meilisearch:
+    image: getmeili/meilisearch:v1.10
+    container_name: charge2camp-meilisearch
+    restart: unless-stopped
+    ports:
+      - "7700:7700"
+    environment:
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-charge2camp-dev-master-key}
+      MEILI_ENV: development
+      MEILI_NO_ANALYTICS: "true"
+    volumes:
+      - meilisearch-data:/meili_data
+
+volumes:
+  meilisearch-data:

@@ -62,6 +62,34 @@ Solange kein echter Provider konfiguriert ist (siehe `.env.example`), liefert
 der `mock`-Adapter klar als Demo gekennzeichnete Daten — niemals Fake-Daten,
 die wie echte Live-Daten aussehen (§39).
 
+## Such-/Filter-API (Auftrag D/E)
+
+Route Handlers unter `src/app/api/` (statt FastAPI wie im Auftragsdokument
+angenommen — Next.js Route Handlers, per Projektentscheidung), gegen den
+echten Datenlayer (`raw`/`core`/`enrich`, siehe [database.md](database.md)):
+
+- `GET /api/campsites/search` — liest den Meilisearch-Index `campsites`
+  (Auftrag E, `ingest/index_meilisearch.py`), liefert gefilterte Treffer
+  **mit** Facetten-Trefferzählern (`amenities`, `charging`), ohne teure
+  eigene `COUNT`-Abfragen. Adapter: `src/lib/search/meilisearch.ts`.
+- `GET /api/campsites/{external_key}` — volles Objekt inkl. verknüpfter
+  Ladepunkte mit Anschlüssen, direkt aus Postgres/PostgREST.
+- `GET /api/charge-points/search` — analog, aber noch ohne eigenen
+  Suchindex (Auftrag E deckt nur Campingplätze ab), deshalb direkt gegen
+  `core.charge_point_geo` mit serverseitiger Umkreis-/Boundingbox-
+  Vorfilterung und Nachfilterung in JS für Connector/Anhängertauglichkeit.
+
+Bekannte, bewusste Lücken (siehe Code-Kommentare in den jeweiligen
+`route.ts`): `connector`-Filter auf Campingplatz-Ebene nicht unterstützt
+(der Suchindex kennt nur aggregierte Ladeinfos, keine Steckertypen einzelner
+Ladepunkte); `trailer=yes_or_unhitch` nicht unterstützt (nur `yes`, da
+`core.campsite_search` nur die Distanz zum nächsten `yes`-Ladepunkt
+vorberechnet). Beide geben einen klaren 400-Fehler statt still falsche
+Ergebnisse zu liefern.
+
+Die Anreicherungs-Endpunkte (`POST /api/enrich/...`, Community-Meldungen zur
+Anhängertauglichkeit / Website-Recherche) sind noch nicht umgesetzt.
+
 ## Konventionen
 
 - Keine API-Keys im Code, ausschließlich über Environment Variables.
