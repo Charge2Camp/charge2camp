@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { BottomTabBar } from "@/components/bottom-tab-bar";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -45,8 +46,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col">
         <SiteHeader />
-        <main className="flex-1">{children}</main>
+        {/* Bottom-Tab-Bar (mobile) ist fixed -- Bodenabstand verhindert, dass
+            sie den unteren Seiteninhalt ueberdeckt. Nur auf Mobile-Breiten
+            noetig, da die Bar selbst md:hidden ist. */}
+        <main className="flex-1 pb-16 md:pb-0">{children}</main>
         <SiteFooter />
+        <BottomTabBar />
       </body>
     </html>
   );

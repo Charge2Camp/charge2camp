@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { LogoutButton } from "@/components/logout-button";
-import { MobileNav } from "@/components/mobile-nav";
 
 const NAV_LINKS = [
   { href: "/campingplaetze", label: "Campingplätze" },
@@ -23,7 +22,6 @@ export async function SiteHeader() {
     <header className="relative border-b border-black/10 pt-[env(safe-area-inset-top)] dark:border-white/10">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-2">
         <div className="flex items-center gap-2">
-          <MobileNav />
           <Link href="/" className="flex items-center gap-2 py-2 font-semibold">
             <span className="text-emerald-600">Charge</span>2Camp
           </Link>
@@ -37,7 +35,10 @@ export async function SiteHeader() {
           ))}
         </nav>
 
-        <div className="flex items-center gap-1 text-sm sm:gap-2">
+        {/* Auf Mobile-Breiten uebernimmt die Bottom-Tab-Bar (bottom-tab-bar.tsx)
+            sowohl den Profil-Zugriff als auch den Anmelden-Link -- hier
+            deshalb ab md: sichtbar, um doppelte Navigation zu vermeiden. */}
+        <div className="hidden items-center gap-1 text-sm sm:gap-2 md:flex">
           {user ? (
             <>
               <Link
