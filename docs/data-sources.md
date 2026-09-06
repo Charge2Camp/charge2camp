@@ -28,7 +28,7 @@ werden.
 
 | Anbieter | URL | Lizenz | Kosten | Status |
 |---|---|---|---|---|
-| Open Charge Map | https://openchargemap.org | ODbL / CC0 (je nach Datensatz) | kostenlos, API-Key nötig | Research Required |
+| Open Charge Map | https://openchargemap.org | je Datenanbieter unterschiedlich, überwiegend CC BY 4.0/CC0 (**nicht** ODbL — siehe [LIZENZEN.md](LIZENZEN.md)) | kostenlos, API-Key nötig | aktiv seit Auftrag A (Datenschicht) |
 | Eco-Movement | https://ecomovement.com | kommerziell | kostenpflichtig | Research Required — Adapter/Mock zunächst |
 | Eigene Startdaten (300+ anhängertaugliche Ladepunkte) | privat | eigene Daten | kostenlos | rechtliche Prüfung vor Import ausstehen (§17) |
 
