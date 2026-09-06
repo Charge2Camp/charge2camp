@@ -19,6 +19,15 @@ Ablauf pro Campingplatz (Auftrag Abschnitt 8):
 Ein einzelner OSRM-Fehler bricht den Lauf NICHT ab: walk_distance_m/
 walk_duration_s bleiben NULL fuer den betroffenen Campingplatz, die
 Fehlerquote wird am Ende geloggt (Auftrag Abschnitt 8, "Bei OSRM-Fehlern").
+
+Sanity-Guard (durch Auftrag F/sql/90_quality_checks.sql #8 entdeckt): liegt
+Start- oder Zielpunkt ausserhalb des geladenen OSRM-Kartenausschnitts,
+snapped OSRM beide Koordinaten stillschweigend auf denselben naechst-
+gelegenen Strassenknoten im Ausschnitt, statt einen Fehler zu melden --
+das ergibt eine "Gehstrecke" von 0 m bei mehreren Kilometern Luftlinie.
+Physikalisch unmoegliche Ergebnisse (walk_distance_m < air_distance_m,
+mit etwas Toleranz fuer Snapping-Ungenauigkeit) werden deshalb verworfen
+(auf NULL gesetzt) statt als echte Gehstrecke gespeichert zu werden.
 """
 
 from __future__ import annotations
@@ -37,6 +46,11 @@ CANDIDATE_RADIUS_M = 5000
 CANDIDATE_LIMIT = 50
 ON_SITE_AIR_DISTANCE_M = 150
 WALKING_MAX_M = 1200
+# Toleranz fuer GPS-/Snapping-Ungenauigkeit: eine echte Gehstrecke ist nie
+# kuerzer als die Luftlinie, aber ein paar Meter Toleranz verhindert falsche
+# Verwuerfe bei fast identischen Standorten (z. B. Ladepunkt direkt am
+# Campingplatz-Eingang).
+IMPLAUSIBLE_TOLERANCE_M = 20
 
 FETCH_CAMPSITES_SQL = """
 select id, external_key, ST_X(geom::geometry) as lon, ST_Y(geom::geometry) as lat
@@ -107,6 +121,7 @@ def main() -> None:
     osrm_errors = 0
     campsites_without_candidates = 0
     total_links = 0
+    implausible_results = 0
 
     try:
         with import_run(conn, source="osm", scope="build_links") as (run_id, state):
@@ -138,6 +153,10 @@ def main() -> None:
                         cp_id, cp_key, cp_lon, cp_lat, air_distance_m, within_boundary = candidate
                         walk_distance_m = walk["distance"] if walk and walk["distance"] is not None else None
                         walk_duration_s = walk["duration"] if walk and walk["duration"] is not None else None
+                        if walk_distance_m is not None and walk_distance_m < air_distance_m - IMPLAUSIBLE_TOLERANCE_M:
+                            implausible_results += 1
+                            walk_distance_m = None
+                            walk_duration_s = None
                         relation = classify(air_distance_m, within_boundary, walk_distance_m)
                         rows.append(
                             (
@@ -168,6 +187,12 @@ def main() -> None:
         logger.info("%d Campingplaetze ohne Ladepunkt-Kandidaten im Umkreis von %d m.", campsites_without_candidates, CANDIDATE_RADIUS_M)
     if osrm_errors:
         logger.warning("OSRM-Fehler bei %d von %d Campingplaetzen (walk_distance_m=NULL gesetzt).", osrm_errors, len(campsites))
+    if implausible_results:
+        logger.warning(
+            "%d Ergebnisse verworfen (walk_distance_m < air_distance_m -- vermutlich Punkte ausserhalb der "
+            "geladenen OSRM-Karte, siehe Docstring). walk_distance_m=NULL gesetzt statt falscher Distanz.",
+            implausible_results,
+        )
 
 
 if __name__ == "__main__":
