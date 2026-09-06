@@ -1,93 +1,68 @@
 import { createClient } from "@/lib/supabase/server";
-import type { Campsite } from "@/types/database";
+import type { CampsiteSearchRow, CoreAmenity } from "@/types/database";
 
-export const AMENITY_FIELDS = [
-  "pool",
-  "sea",
-  "lake",
-  "river",
-  "mountain",
-  "family_friendly",
-  "dogs_allowed",
-  "restaurant",
-  "supermarket",
-  "wifi",
-] as const;
-
-export type AmenityField = (typeof AMENITY_FIELDS)[number];
-
-export const AMENITY_LABELS: Record<AmenityField, string> = {
-  pool: "Pool",
-  sea: "Meer",
-  lake: "See",
-  river: "Fluss",
-  mountain: "Berge",
-  family_friendly: "Familienfreundlich",
-  dogs_allowed: "Hunde erlaubt",
-  restaurant: "Restaurant",
-  supermarket: "Supermarkt",
-  wifi: "WLAN",
-};
-
-export const EV_FIELDS = [
-  "ev_charging_available",
-  "ev_charging_on_site",
-  "ev_charging_nearby",
-] as const;
-
-export type EvField = (typeof EV_FIELDS)[number];
-
-export const EV_LABELS: Record<EvField, string> = {
-  ev_charging_available: "Ladepunkt vorhanden",
-  ev_charging_on_site: "Ladepunkt auf dem Platz",
-  ev_charging_nearby: "Ladepunkt in Laufnähe",
-};
+/** Merkmalskatalog aus core.amenity (siehe Migration
+ * 20260913000100_data_layer_seed_amenities) -- dynamisch statt hart codiert,
+ * damit neue Merkmale nicht an zwei Stellen gepflegt werden muessen. */
+export async function fetchAmenityCatalog(): Promise<CoreAmenity[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .schema("core")
+    .from("amenity")
+    .select("*")
+    .order("category")
+    .order("label_de");
+  if (error) throw new Error(error.message);
+  return (data as CoreAmenity[]) ?? [];
+}
 
 export interface CampsiteFilters {
   q?: string;
   country?: string;
-  region?: string;
-  amenities: AmenityField[];
-  ev: EvField[];
+  amenities: string[];
+  charging?: "on_site" | "walking";
 }
 
 export function parseCampsiteFilters(
-  searchParams: Record<string, string | string[] | undefined>
+  searchParams: Record<string, string | string[] | undefined>,
+  amenityKeys: string[]
 ): CampsiteFilters {
   const get = (key: string) => {
     const v = searchParams[key];
     return Array.isArray(v) ? v[0] : v;
   };
 
+  const chargingRaw = get("charging");
   return {
     q: get("q")?.trim() || undefined,
     country: get("country") || undefined,
-    region: get("region") || undefined,
-    amenities: AMENITY_FIELDS.filter((f) => get(f) === "1"),
-    ev: EV_FIELDS.filter((f) => get(f) === "1"),
+    amenities: amenityKeys.filter((key) => get(key) === "1"),
+    charging: chargingRaw === "on_site" || chargingRaw === "walking" ? chargingRaw : undefined,
   };
 }
 
-export async function fetchCampsites(filters: CampsiteFilters): Promise<Campsite[]> {
+/** Liest aus core.campsite_search (Lesesicht mit Merkmalen + vorberechneter
+ * Ladepunkt-Naehe, siehe Migration 20260913000200). */
+export async function fetchCampsites(filters: CampsiteFilters): Promise<CampsiteSearchRow[]> {
   const supabase = await createClient();
-  let query = supabase.from("campsites").select("*");
+  let query = supabase.schema("core").from("campsite_search").select("*");
 
   if (filters.q) query = query.ilike("name", `%${filters.q}%`);
-  if (filters.country) query = query.eq("country", filters.country);
-  if (filters.region) query = query.eq("region", filters.region);
-  for (const field of filters.amenities) query = query.eq(field, true);
-  for (const field of filters.ev) query = query.eq(field, true);
+  if (filters.country) query = query.eq("country_code", filters.country);
+  if (filters.amenities.length > 0) query = query.contains("amenities", filters.amenities);
+  if (filters.charging === "on_site") query = query.eq("charging_on_site", true);
+  if (filters.charging === "walking") query = query.not("nearest_walk_m", "is", null);
 
-  const { data, error } = await query.order("name");
+  const { data, error } = await query.order("name").limit(5000);
   if (error) throw new Error(error.message);
-  return (data as Campsite[]) ?? [];
+  return (data as CampsiteSearchRow[]) ?? [];
 }
 
 /** Alle Campingplatz-Namen (unabhaengig von aktiven Filtern) fuer die
  * Vorschlagsliste im Suchfeld -- siehe NameSuggestField. */
 export async function fetchCampsiteNameOptions(): Promise<string[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase.from("campsites").select("name").order("name");
+  const { data, error } = await supabase.schema("core").from("campsite").select("name").order("name").limit(5000);
   if (error) throw new Error(error.message);
   return Array.from(new Set((data ?? []).map((row) => row.name).filter(Boolean)));
 }
@@ -99,37 +74,30 @@ export interface CampsiteDestinationOption {
   longitude: number;
 }
 
-/** Name + Koordinaten aller eigenen Campingplaetze, fuer die Ziel-Vorschlaege
- * im Routenplaner (AddressAutocomplete `localSuggestions`) -- die
- * Koordinaten sind bereits bekannt, ein erneutes Geocoding des (bei
- * Demo-Daten oft gar nicht real auffindbaren) Namens ist beim Absenden
- * dadurch nicht noetig, siehe routenplaner/actions.ts. */
+/** Name + Koordinaten aller Campingplaetze, fuer die Ziel-Vorschlaege im
+ * Routenplaner (AddressAutocomplete `localSuggestions`) -- die Koordinaten
+ * sind bereits bekannt, kein erneutes Geocoding des Namens noetig (siehe
+ * routenplaner/actions.ts). */
 export async function fetchCampsiteDestinationOptions(): Promise<CampsiteDestinationOption[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
-    .from("campsites")
-    .select("id, name, latitude, longitude")
-    .order("name");
+    .schema("core")
+    .from("campsite_search")
+    .select("id, name, lat, lon")
+    .order("name")
+    .limit(5000);
   if (error) throw new Error(error.message);
-  return (data as CampsiteDestinationOption[]) ?? [];
+  return (data ?? []).map((r) => ({ id: r.id, name: r.name, latitude: r.lat, longitude: r.lon }));
 }
 
-export async function fetchCampsiteLocationOptions(): Promise<{
-  countries: string[];
-  regions: string[];
-}> {
+/** Bekannte Laendercodes fuer den Land-Filter. */
+export async function fetchCampsiteCountryOptions(): Promise<string[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase.from("campsites").select("country, region");
+  const { data, error } = await supabase.schema("core").from("campsite").select("country_code").limit(5000);
   if (error) throw new Error(error.message);
-
   const countries = new Set<string>();
-  const regions = new Set<string>();
   for (const row of data ?? []) {
-    if (row.country) countries.add(row.country);
-    if (row.region) regions.add(row.region);
+    if (row.country_code) countries.add(row.country_code);
   }
-  return {
-    countries: Array.from(countries).sort(),
-    regions: Array.from(regions).sort(),
-  };
+  return Array.from(countries).sort();
 }

@@ -25,11 +25,11 @@ export default async function FavoritenPage() {
 
   const [{ data: campsites }, { data: stations }] = await Promise.all([
     campsiteIds.length
-      ? supabase.from("campsites").select("id, name").in("id", campsiteIds)
+      ? supabase.schema("core").from("campsite").select("id, name").in("id", campsiteIds)
       : Promise.resolve({ data: [] as { id: string; name: string }[] }),
     stationIds.length
-      ? supabase.from("charging_stations").select("id, name, provider").in("id", stationIds)
-      : Promise.resolve({ data: [] as { id: string; name: string | null; provider: string }[] }),
+      ? supabase.schema("core").from("charge_point").select("id, name, operator").in("id", stationIds)
+      : Promise.resolve({ data: [] as { id: string; name: string | null; operator: string | null }[] }),
   ]);
 
   const campsiteById = new Map((campsites ?? []).map((c) => [c.id, c]));
@@ -75,7 +75,7 @@ export default async function FavoritenPage() {
                 </span>
                 {station ? (
                   <Link href={`/ladepunkte/${station.id}`} className="hover:underline">
-                    {station.name ?? station.provider}
+                    {station.name ?? station.operator}
                   </Link>
                 ) : (
                   <span className="text-black/50 dark:text-white/50">Ladepunkt nicht mehr verfügbar</span>

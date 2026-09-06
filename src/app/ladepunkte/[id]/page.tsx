@@ -1,12 +1,12 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import type { Caravan, ChargingReview, ChargingStation, Vehicle } from "@/types/database";
+import type { Caravan, ChargingReview, CoreChargePointGeo, CoreConnector, TrailerSuitabilityRecord, Vehicle } from "@/types/database";
 import { MapView } from "@/components/map/map-view";
 import { ChargingReviewForm } from "@/components/charging-stations/review-form";
 import { ChargingStationFavoriteButton } from "@/components/charging-stations/favorite-button";
 import { RigLengthDistributionChart } from "@/components/charging-stations/rig-length-distribution";
-import { TRAILER_SUITABILITY_COLORS, TRAILER_SUITABILITY_LABELS } from "@/lib/trailer-suitability";
+import { TRAILER_VERDICT_COLORS, TRAILER_VERDICT_LABELS } from "@/lib/trailer-verdict";
 import {
   assessPersonalCompatibility,
   bucketReviewsByRigLength,
@@ -38,13 +38,10 @@ export default async function ChargingStationDetailPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [{ data: station }, { data: reviews }, favoriteResult] = await Promise.all([
-    supabase.from("charging_stations").select("*").eq("id", id).maybeSingle(),
-    supabase
-      .from("charging_reviews")
-      .select("*")
-      .eq("charging_station_id", id)
-      .order("created_at", { ascending: false }),
+  const [{ data: station }, { data: connectors }, { data: reviews }, favoriteResult] = await Promise.all([
+    supabase.schema("core").from("charge_point_geo").select("*").eq("id", id).maybeSingle(),
+    supabase.schema("core").from("connector").select("*").eq("charge_point_id", id),
+    supabase.from("charging_reviews").select("*").eq("charging_station_id", id).order("created_at", { ascending: false }),
     user
       ? supabase
           .from("favorites")
@@ -57,9 +54,19 @@ export default async function ChargingStationDetailPage({
   ]);
 
   if (!station) notFound();
-  const s = station as ChargingStation;
+  const s = station as CoreChargePointGeo;
+  const stationConnectors = (connectors as CoreConnector[]) ?? [];
   const allReviews = (reviews as ChargingReview[]) ?? [];
   const isFavorite = Boolean(favoriteResult.data);
+
+  const { data: trailerRow } = await supabase
+    .schema("enrich")
+    .from("trailer_suitability")
+    .select("*")
+    .eq("charge_point_key", s.external_key)
+    .maybeSingle();
+  const trailer = trailerRow as TrailerSuitabilityRecord | null;
+  const verdict = trailer?.verdict ?? "unknown";
 
   let ownCaravans: Caravan[] = [];
   let ownVehicles: Vehicle[] = [];
@@ -91,14 +98,14 @@ export default async function ChargingStationDetailPage({
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
-      <p className="text-sm text-black/50 dark:text-white/50">{s.provider}</p>
-      <h1 className="text-3xl font-bold">{s.name ?? s.provider}</h1>
+      <p className="text-sm text-black/50 dark:text-white/50">{s.operator}</p>
+      <h1 className="text-3xl font-bold">{s.name ?? s.operator}</h1>
 
       <span
         className="mt-2 inline-block rounded-full px-3 py-1 text-sm text-white"
-        style={{ backgroundColor: TRAILER_SUITABILITY_COLORS[s.trailer_suitable] }}
+        style={{ backgroundColor: TRAILER_VERDICT_COLORS[verdict] }}
       >
-        {TRAILER_SUITABILITY_LABELS[s.trailer_suitable]}
+        {TRAILER_VERDICT_LABELS[verdict]}
       </span>
 
       <div className="mt-4 flex items-center gap-2">
@@ -112,33 +119,34 @@ export default async function ChargingStationDetailPage({
       </div>
 
       <div className="mt-6 h-[320px] overflow-hidden rounded-lg border border-black/10 dark:border-white/10">
-        <MapView markers={[{ id: s.id, latitude: s.latitude, longitude: s.longitude, label: s.name ?? s.provider }]} />
+        <MapView markers={[{ id: s.id, latitude: s.lat, longitude: s.lon, label: s.name ?? s.operator ?? "" }]} />
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
         <section>
           <h2 className="font-semibold">Technische Daten</h2>
           <ul className="mt-2 space-y-1 text-sm">
-            {s.power_kw && <li>Ladeleistung: {s.power_kw} kW</li>}
-            {s.connector_type && <li>Steckertyp: {s.connector_type}</li>}
-            {s.connector_count && <li>Anzahl Anschlüsse: {s.connector_count}</li>}
-            {s.price != null && (
+            {s.max_power_kw && <li>Max. Ladeleistung: {s.max_power_kw} kW</li>}
+            {stationConnectors.length > 0 && (
               <li>
-                Preis: {s.price.toFixed(2)} {s.currency ?? "EUR"}/kWh
+                Anschlüsse:{" "}
+                {stationConnectors
+                  .map((c) => `${c.quantity}× ${c.standard ?? "unbekannt"}${c.power_kw ? ` (${c.power_kw} kW)` : ""}`)
+                  .join(", ")}
               </li>
             )}
-            {s.opening_hours && <li>Öffnungszeiten: {s.opening_hours}</li>}
+            {s.access_type && <li>Zugang: {s.access_type}</li>}
             {s.address && <li>Adresse: {s.address}</li>}
           </ul>
-          {s.trailer_notes && (
-            <p className="mt-3 text-sm text-black/70 dark:text-white/70">{s.trailer_notes}</p>
-          )}
-          {s.status.startsWith("demo_") && (
+          {!s.is_operational && (
             <p className="mt-3 text-xs text-amber-700 dark:text-amber-400">
-              [DEMO] Live-Status (frei/belegt/außer Betrieb) ist in diesem Testdatensatz nicht
-              verfügbar.
+              Laut Quelle aktuell nicht betriebsbereit gemeldet.
             </p>
           )}
+          <p className="mt-3 text-xs text-black/40 dark:text-white/40">
+            Live-Status (frei/belegt/außer Betrieb) ist für echte Ladepunkte nicht verfügbar --
+            nur der zuletzt von der Quelle gemeldete Betriebsstatus.
+          </p>
         </section>
 
         <section>

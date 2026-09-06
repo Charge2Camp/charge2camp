@@ -1,5 +1,3 @@
-import type { Campsite } from "@/types/database";
-
 /**
  * Zentrale Gewichtung des EV-Camping-Scores (§11 der Spezifikation).
  * Regelbasiert, keine KI. Werte summieren sich auf 100 Punkte max.
@@ -54,15 +52,16 @@ function dataFreshnessFactor(lastVerifiedAt: string | null): number {
  * Schnelllader (>=100 kW) und muss vom Aufrufer ermittelt werden (siehe
  * src/lib/geo.ts), da dafuer die charging_stations-Tabelle abgefragt wird.
  */
+export interface EvScoreInput {
+  ev_charging_on_site: boolean;
+  max_charging_power_kw: number | null;
+  number_of_charging_points: number | null;
+  rating_avg: number | null;
+  last_verified_at: string | null;
+}
+
 export function calculateEvCampingScore(
-  campsite: Pick<
-    Campsite,
-    | "ev_charging_on_site"
-    | "max_charging_power_kw"
-    | "number_of_charging_points"
-    | "rating_avg"
-    | "last_verified_at"
-  >,
+  campsite: EvScoreInput,
   nearestFastChargerKm: number | null
 ): EvScoreBreakdown {
   const onSite = campsite.ev_charging_on_site ? EV_SCORE_WEIGHTS.onSite : 0;

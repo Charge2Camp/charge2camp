@@ -50,8 +50,9 @@ export default async function RoutePlannerPage({
     fetchCampsiteDestinationOptions(),
     destinationStationId
       ? supabase
-          .from("charging_stations")
-          .select("name, provider, latitude, longitude")
+          .schema("core")
+          .from("charge_point_geo")
+          .select("name, operator, lat, lon")
           .eq("id", destinationStationId)
           .maybeSingle()
       : Promise.resolve({ data: null }),
@@ -79,9 +80,9 @@ export default async function RoutePlannerPage({
     destinationCampsite ??
     (stationResult.data
       ? {
-          name: stationResult.data.name ?? stationResult.data.provider,
-          latitude: stationResult.data.latitude,
-          longitude: stationResult.data.longitude,
+          name: stationResult.data.name ?? stationResult.data.operator,
+          latitude: stationResult.data.lat,
+          longitude: stationResult.data.lon,
         }
       : undefined);
 

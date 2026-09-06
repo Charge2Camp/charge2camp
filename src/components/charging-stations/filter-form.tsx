@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { NameSuggestField } from "@/components/name-suggest-field";
 import type { ChargingStationFilters } from "@/lib/charging-stations";
-import { TRAILER_SUITABILITY_LABELS, TRAILER_SUITABILITY_VALUES } from "@/lib/trailer-suitability";
+import { TRAILER_VERDICT_LABELS, TRAILER_VERDICT_VALUES } from "@/lib/trailer-verdict";
 
 export function ChargingStationFilterForm({
   filters,
@@ -49,15 +49,15 @@ export function ChargingStationFilterForm({
 
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-1 font-medium">Anhängertauglichkeit</legend>
-        {TRAILER_SUITABILITY_VALUES.map((value) => (
+        {TRAILER_VERDICT_VALUES.map((value) => (
           <label key={value} className="flex min-h-11 items-center gap-2">
             <input
               type="checkbox"
               name={`trailer_${value}`}
               value="1"
-              defaultChecked={filters.trailerSuitable.includes(value)}
+              defaultChecked={filters.trailerVerdict.includes(value)}
             />
-            {TRAILER_SUITABILITY_LABELS[value]}
+            {TRAILER_VERDICT_LABELS[value]}
           </label>
         ))}
       </fieldset>

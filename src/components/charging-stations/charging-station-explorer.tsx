@@ -3,18 +3,16 @@
 import { useState } from "react";
 import Link from "next/link";
 import { MapView } from "@/components/map/map-view";
-import { TRAILER_SUITABILITY_COLORS, TRAILER_SUITABILITY_LABELS } from "@/lib/trailer-suitability";
-import type { ChargingStation } from "@/types/database";
+import { TRAILER_VERDICT_COLORS, TRAILER_VERDICT_LABELS } from "@/lib/trailer-verdict";
+import type { ChargingStationView } from "@/lib/charging-stations";
 
-function StatusBadge({ status }: { status: string }) {
-  if (status.startsWith("demo_")) {
-    return (
-      <span className="rounded bg-amber-500/10 px-2 py-0.5 text-xs text-amber-700 dark:text-amber-400">
-        [DEMO] Live-Status nicht verfügbar
-      </span>
-    );
-  }
-  return <span className="rounded bg-black/5 px-2 py-0.5 text-xs dark:bg-white/10">{status}</span>;
+function OperationalBadge({ isOperational }: { isOperational: boolean }) {
+  if (isOperational) return null;
+  return (
+    <span className="rounded bg-red-500/10 px-2 py-0.5 text-xs text-red-700 dark:text-red-400">
+      Laut Quelle nicht betriebsbereit
+    </span>
+  );
 }
 
 function ChargingStationCard({
@@ -22,10 +20,13 @@ function ChargingStationCard({
   selected,
   onHover,
 }: {
-  station: ChargingStation;
+  station: ChargingStationView;
   selected: boolean;
   onHover: (id: string | null) => void;
 }) {
+  const verdict = station.trailer?.verdict ?? "unknown";
+  const connectorSummary = Array.from(new Set(station.connectors.map((c) => c.standard).filter(Boolean))).join(", ");
+
   return (
     <Link
       href={`/ladepunkte/${station.id}`}
@@ -39,53 +40,48 @@ function ChargingStationCard({
     >
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="font-medium">{station.name ?? station.provider}</p>
-          <p className="text-sm text-black/60 dark:text-white/60">{station.provider}</p>
+          <p className="font-medium">{station.name ?? station.operator}</p>
+          <p className="text-sm text-black/60 dark:text-white/60">{station.operator}</p>
         </div>
-        <StatusBadge status={station.status} />
+        <OperationalBadge isOperational={station.is_operational} />
       </div>
 
       <div className="mt-2 flex flex-wrap gap-2 text-xs">
         <span
           className="rounded-full px-2 py-0.5 text-white"
-          style={{ backgroundColor: TRAILER_SUITABILITY_COLORS[station.trailer_suitable] }}
+          style={{ backgroundColor: TRAILER_VERDICT_COLORS[verdict] }}
         >
-          {TRAILER_SUITABILITY_LABELS[station.trailer_suitable]}
+          {TRAILER_VERDICT_LABELS[verdict]}
         </span>
-        {station.power_kw && (
+        {station.max_power_kw && (
           <span className="rounded-full border border-black/10 px-2 py-0.5 dark:border-white/10">
-            {station.power_kw} kW
+            {station.max_power_kw} kW
           </span>
         )}
-        {station.connector_type && (
+        {connectorSummary && (
           <span className="rounded-full border border-black/10 px-2 py-0.5 dark:border-white/10">
-            {station.connector_type}
-          </span>
-        )}
-        {station.price != null && (
-          <span className="rounded-full border border-black/10 px-2 py-0.5 dark:border-white/10">
-            {station.price.toFixed(2)} {station.currency ?? "EUR"}/kWh
+            {connectorSummary}
           </span>
         )}
       </div>
 
-      {station.trailer_notes && (
-        <p className="mt-2 text-sm text-black/70 dark:text-white/70">{station.trailer_notes}</p>
+      {station.trailer?.notes && (
+        <p className="mt-2 text-sm text-black/70 dark:text-white/70">{station.trailer.notes}</p>
       )}
     </Link>
   );
 }
 
-export function ChargingStationExplorer({ stations }: { stations: ChargingStation[] }) {
+export function ChargingStationExplorer({ stations }: { stations: ChargingStationView[] }) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [mobileTab, setMobileTab] = useState<"list" | "map">("list");
 
   const markers = stations.map((s) => ({
     id: s.id,
-    latitude: s.latitude,
-    longitude: s.longitude,
-    label: s.name ?? s.provider,
-    color: TRAILER_SUITABILITY_COLORS[s.trailer_suitable],
+    latitude: s.lat,
+    longitude: s.lon,
+    label: s.name ?? s.operator ?? "",
+    color: TRAILER_VERDICT_COLORS[s.trailer?.verdict ?? "unknown"],
   }));
 
   return (

@@ -1,5 +1,6 @@
 import {
-  fetchCampsiteLocationOptions,
+  fetchAmenityCatalog,
+  fetchCampsiteCountryOptions,
   fetchCampsiteNameOptions,
   fetchCampsites,
   parseCampsiteFilters,
@@ -12,10 +13,15 @@ export default async function CampsitesPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const filters = parseCampsiteFilters(await searchParams);
-  const [campsites, { countries, regions }, nameOptions] = await Promise.all([
+  const resolvedSearchParams = await searchParams;
+  const amenityCatalog = await fetchAmenityCatalog();
+  const filters = parseCampsiteFilters(
+    resolvedSearchParams,
+    amenityCatalog.map((a) => a.key)
+  );
+  const [campsites, countries, nameOptions] = await Promise.all([
     fetchCampsites(filters),
-    fetchCampsiteLocationOptions(),
+    fetchCampsiteCountryOptions(),
     fetchCampsiteNameOptions(),
   ]);
 
@@ -23,7 +29,9 @@ export default async function CampsitesPage({
     <div className="mx-auto max-w-6xl px-4 py-10">
       <h1 className="text-2xl font-semibold">Campingplätze</h1>
       <p className="mt-1 text-sm text-black/60 dark:text-white/60">
-        {campsites.length} Campingplätze gefunden
+        {campsites.length >= 5000
+          ? `Mindestens ${campsites.length} Campingplätze gefunden -- Filter eingrenzen für vollständige Ergebnisse`
+          : `${campsites.length} Campingplätze gefunden`}
       </p>
 
       <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[280px_1fr]">
@@ -31,12 +39,12 @@ export default async function CampsitesPage({
           <CampsiteFilterForm
             filters={filters}
             countries={countries}
-            regions={regions}
+            amenityCatalog={amenityCatalog}
             nameOptions={nameOptions}
           />
         </aside>
 
-        <CampsiteExplorer campsites={campsites} />
+        <CampsiteExplorer campsites={campsites} amenityLabels={Object.fromEntries(amenityCatalog.map((a) => [a.key, a.label_de]))} />
       </div>
     </div>
   );

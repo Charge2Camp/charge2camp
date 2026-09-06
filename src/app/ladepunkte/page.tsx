@@ -23,7 +23,9 @@ export default async function ChargingStationsPage({
     <div className="mx-auto max-w-6xl px-4 py-10">
       <h1 className="text-2xl font-semibold">Ladepunkte</h1>
       <p className="mt-1 text-sm text-black/60 dark:text-white/60">
-        {stations.length} Ladepunkte gefunden
+        {stations.length >= 5000
+          ? `Mindestens ${stations.length} Ladepunkte gefunden -- Filter eingrenzen für vollständige Ergebnisse`
+          : `${stations.length} Ladepunkte gefunden`}
       </p>
 
       <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[280px_1fr]">

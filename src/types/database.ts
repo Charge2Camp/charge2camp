@@ -234,6 +234,137 @@ export interface Favorite {
   created_at: string;
 }
 
+// ============================================================================
+// Echte Daten (raw/core/enrich-Schema, siehe CLAUDE_CODE_AUFTRAG.md und
+// supabase/migrations/20260913000000_data_layer_schema.sql). Bewusst
+// GETRENNT von den obigen Campsite/ChargingStation-Typen: der Routenplaner
+// (Trip-Planung mit dem kuratierten Muenchen-Meran-Demo-Korridor) nutzt
+// weiterhin public.campsites/public.charging_stations unveraendert. Nur
+// /campingplaetze und /ladepunkte (Browsing/Entdecken) lesen aus core.*.
+// ============================================================================
+
+export interface CoreCampsite {
+  id: string;
+  external_key: string;
+  name: string;
+  slug: string | null;
+  address: string | null;
+  postcode: string | null;
+  city: string | null;
+  country_code: string | null;
+  website: string | null;
+  phone: string | null;
+  email: string | null;
+  capacity: number | null;
+  source: string;
+  last_seen_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Zeile aus core.campsite_search (Lesesicht fuer Liste/Filter, siehe
+ * Migration 20260913000200). */
+export interface CampsiteSearchRow {
+  id: string;
+  external_key: string;
+  name: string;
+  slug: string | null;
+  country_code: string | null;
+  city: string | null;
+  website: string | null;
+  lat: number;
+  lon: number;
+  amenities: string[];
+  charging_on_site: boolean;
+  on_site_power_kw: number | null;
+  pitch_charging: boolean | null;
+  charging_type: string | null;
+  charging_origin: string | null;
+  nearest_walk_m: number | null;
+  nearest_trailer_ok_m: number | null;
+  nearby_max_power_kw: number | null;
+  charge_points_walkable: number;
+}
+
+export interface CoreAmenity {
+  key: string;
+  category: string;
+  label_de: string;
+  label_en: string | null;
+  value_type: "bool" | "num" | "text";
+}
+
+export interface CoreCampsiteAmenity {
+  campsite_id: string;
+  amenity_key: string;
+  value_bool: boolean | null;
+  value_num: number | null;
+  value_text: string | null;
+  source: string;
+  confidence: number;
+}
+
+export interface CoreConnector {
+  id: number;
+  charge_point_id: string;
+  standard: string | null;
+  power_kw: number | null;
+  current_type: string | null;
+  quantity: number;
+}
+
+export interface CoreChargePoint {
+  id: string;
+  external_key: string;
+  name: string | null;
+  operator: string | null;
+  network: string | null;
+  address: string | null;
+  postcode: string | null;
+  city: string | null;
+  country_code: string | null;
+  access_type: string | null;
+  is_operational: boolean;
+  max_power_kw: number | null;
+  connector_count: number | null;
+  source: string;
+  source_updated_at: string | null;
+  last_seen_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Zeile aus core.charge_point_geo (legt lat/lon offen, siehe Migration
+ * 20260916000100_charge_point_geo_view). */
+export interface CoreChargePointGeo extends CoreChargePoint {
+  lat: number;
+  lon: number;
+}
+
+export type TrailerVerdict = "yes" | "unhitch" | "no" | "unknown";
+
+export interface TrailerSuitabilityRecord {
+  charge_point_key: string;
+  verdict: TrailerVerdict;
+  drive_through: boolean | null;
+  pull_in_length_m: number | null;
+  maneuvering_space: "ample" | "tight" | "none" | null;
+  notes: string | null;
+  origin: string;
+  confirm_count: number;
+  dispute_count: number;
+  verified_at: string | null;
+}
+
+export interface CoreCampsiteChargeLink {
+  campsite_id: string;
+  charge_point_id: string;
+  relation: "on_site" | "walking" | "nearby_drive";
+  air_distance_m: number;
+  walk_distance_m: number | null;
+  walk_duration_s: number | null;
+}
+
 // Minimal Supabase `Database` generic so `createClient<Database>()` type-checks.
 // This is intentionally loose (not table-by-table typed) until real generated
 // types replace it.

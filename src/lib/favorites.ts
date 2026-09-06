@@ -24,29 +24,26 @@ export async function fetchFavoriteDestinations(userId: string): Promise<Favorit
 
   const [{ data: campsites }, { data: stations }] = await Promise.all([
     campsiteIds.length
-      ? supabase.from("campsites").select("id, name, latitude, longitude").in("id", campsiteIds)
-      : Promise.resolve({ data: [] as { id: string; name: string; latitude: number; longitude: number }[] }),
+      ? supabase.schema("core").from("campsite_search").select("id, name, lat, lon").in("id", campsiteIds)
+      : Promise.resolve({ data: [] as { id: string; name: string; lat: number; lon: number }[] }),
     stationIds.length
-      ? supabase
-          .from("charging_stations")
-          .select("id, name, provider, latitude, longitude")
-          .in("id", stationIds)
+      ? supabase.schema("core").from("charge_point_geo").select("id, name, operator, lat, lon").in("id", stationIds)
       : Promise.resolve({
-          data: [] as { id: string; name: string | null; provider: string; latitude: number; longitude: number }[],
+          data: [] as { id: string; name: string | null; operator: string | null; lat: number; lon: number }[],
         }),
   ]);
 
   const result: FavoriteDestinationOption[] = [];
   for (const c of campsites ?? []) {
-    result.push({ id: c.id, entityType: "campsite", name: c.name, latitude: c.latitude, longitude: c.longitude });
+    result.push({ id: c.id, entityType: "campsite", name: c.name, latitude: c.lat, longitude: c.lon });
   }
   for (const s of stations ?? []) {
     result.push({
       id: s.id,
       entityType: "charging_station",
-      name: s.name ?? s.provider,
-      latitude: s.latitude,
-      longitude: s.longitude,
+      name: s.name ?? s.operator ?? "",
+      latitude: s.lat,
+      longitude: s.lon,
     });
   }
   return result;

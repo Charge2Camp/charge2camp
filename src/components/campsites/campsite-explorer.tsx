@@ -3,14 +3,16 @@
 import { useState } from "react";
 import Link from "next/link";
 import { MapView } from "@/components/map/map-view";
-import type { Campsite } from "@/types/database";
+import type { CampsiteSearchRow } from "@/types/database";
 
 function CampsiteCard({
   campsite,
+  amenityLabels,
   selected,
   onHover,
 }: {
-  campsite: Campsite;
+  campsite: CampsiteSearchRow;
+  amenityLabels: Record<string, string>;
   selected: boolean;
   onHover: (id: string | null) => void;
 }) {
@@ -27,31 +29,41 @@ function CampsiteCard({
     >
       <p className="font-medium">{campsite.name}</p>
       <p className="text-sm text-black/60 dark:text-white/60">
-        {[campsite.region, campsite.country].filter(Boolean).join(", ")}
+        {[campsite.city, campsite.country_code].filter(Boolean).join(", ")}
       </p>
       <div className="mt-2 flex flex-wrap gap-2 text-xs text-black/50 dark:text-white/50">
-        {campsite.ev_charging_on_site && (
+        {campsite.charging_on_site && (
           <span className="rounded bg-emerald-600/10 px-2 py-0.5 text-emerald-700 dark:text-emerald-400">
             Ladepunkt auf dem Platz
           </span>
         )}
-        {campsite.sea && <span>Meer</span>}
-        {campsite.lake && <span>See</span>}
-        {campsite.mountain && <span>Berge</span>}
-        {campsite.rating_avg && <span>★ {campsite.rating_avg.toFixed(1)}</span>}
+        {!campsite.charging_on_site && campsite.nearest_walk_m != null && (
+          <span className="rounded bg-emerald-600/10 px-2 py-0.5 text-emerald-700 dark:text-emerald-400">
+            Ladepunkt {campsite.nearest_walk_m} m entfernt
+          </span>
+        )}
+        {campsite.amenities.slice(0, 3).map((key) => (
+          <span key={key}>{amenityLabels[key] ?? key}</span>
+        ))}
       </div>
     </Link>
   );
 }
 
-export function CampsiteExplorer({ campsites }: { campsites: Campsite[] }) {
+export function CampsiteExplorer({
+  campsites,
+  amenityLabels,
+}: {
+  campsites: CampsiteSearchRow[];
+  amenityLabels: Record<string, string>;
+}) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [mobileTab, setMobileTab] = useState<"list" | "map">("list");
 
   const markers = campsites.map((c) => ({
     id: c.id,
-    latitude: c.latitude,
-    longitude: c.longitude,
+    latitude: c.lat,
+    longitude: c.lon,
     label: c.name,
   }));
 
@@ -91,6 +103,7 @@ export function CampsiteExplorer({ campsites }: { campsites: Campsite[] }) {
               <CampsiteCard
                 key={c.id}
                 campsite={c}
+                amenityLabels={amenityLabels}
                 selected={hoveredId === c.id}
                 onHover={setHoveredId}
               />

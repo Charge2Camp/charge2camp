@@ -1,12 +1,11 @@
 import type { EvScoreBreakdown } from "@/lib/scoring/ev-camping-score";
-import type { Campsite } from "@/types/database";
 
 export function EvScoreBadge({
   breakdown,
   campsite,
 }: {
   breakdown: EvScoreBreakdown;
-  campsite: Pick<Campsite, "max_charging_power_kw" | "number_of_charging_points" | "rating_avg">;
+  campsite: { max_charging_power_kw: number | null; number_of_charging_points: number | null; rating_avg: number | null };
 }) {
   const reasons: string[] = [];
   if (breakdown.onSite > 0) reasons.push("Ladepunkt auf dem Platz");
