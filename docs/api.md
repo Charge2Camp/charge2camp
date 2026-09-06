@@ -87,6 +87,35 @@ Ladepunkte); `trailer=yes_or_unhitch` nicht unterstützt (nur `yes`, da
 vorberechnet). Beide geben einen klaren 400-Fehler statt still falsche
 Ergebnisse zu liefern.
 
+### Anreicherungs-Endpunkte
+
+Schreiben über `SECURITY DEFINER`-Postgres-Funktionen (siehe
+[supabase/migrations/20260918000000_enrichment_endpoints.sql](../supabase/migrations/20260918000000_enrichment_endpoints.sql)),
+da es für `enrich.*` bewusst keine INSERT/UPDATE-RLS-Policies gibt (nur
+lesende "readable by everyone"-Policies) — die eigentliche
+Berechtigungsprüfung (eingeloggt vs. Admin über `profiles.is_admin`) macht
+jeder Route Handler selbst, vor dem RPC-Aufruf:
+
+- `POST /api/enrich/charge-points/{key}/trailer` — jeder eingeloggte Nutzer
+  kann eine Anhängertauglichkeits-Meldung abgeben (`enrich.trailer_report`,
+  `status='pending'`).
+- `POST /api/enrich/charge-points/{key}/trailer/moderate` — nur Admins.
+  Freigabe/Ablehnung; bei Freigabe automatische Neuberechnung von
+  `enrich.trailer_suitability` aus allen freigegebenen Meldungen für diesen
+  Ladepunkt (gewichtete Mehrheit nach `app_user.trust_level`, Gleichstand
+  zugunsten der konservativeren Aussage `no` > `unhitch` > `yes`). Eine
+  bereits moderierte Meldung kann nicht erneut moderiert werden (400).
+- `POST /api/enrich/campsites/{key}/charging` — nur Admins (internes
+  Website-Recherche-Workflow). Schreibt `enrich.campsite_charging` mit
+  `origin='website_research'`, `checked_at=now()`,
+  `recheck_after=now()+9 Monate`.
+- `GET /api/enrich/research-queue` — nur Admins. Campingplätze mit Website
+  ohne bisherige Recherche, plus fällige Rechecks, sortiert nach Land/Ort.
+
+Alle vier Endpunkte validieren, dass der referenzierte Campingplatz/
+Ladepunkt in `core.*` existiert (404, keine verwaisten `enrich.*`-Zeilen —
+siehe `sql/90_quality_checks.sql` Check 5).
+
 Die Anreicherungs-Endpunkte (`POST /api/enrich/...`, Community-Meldungen zur
 Anhängertauglichkeit / Website-Recherche) sind noch nicht umgesetzt.
 
