@@ -1,0 +1,35 @@
+-- Merkmalskatalog core.amenity -- bewusst 29 Merkmale, nicht 250. Ein
+-- Filter, der bei 90% der Plaetze ungepflegt ist, schadet mehr als er
+-- nuetzt (siehe CLAUDE_CODE_AUFTRAG.md Abschnitt 5.4).
+insert into core.amenity (key, category, label_de, label_en, value_type) values
+('beach_nearby',     'lage',       'Strandnähe (< 500 m)',    'Near beach',        'bool'),
+('lake_access',      'lage',       'Direkt am See',           'Lakefront',         'bool'),
+('river_access',     'lage',       'Am Fluss',                'Riverside',         'bool'),
+('mountain',         'lage',       'Berglage',                'Mountain location', 'bool'),
+('quiet_location',   'lage',       'Ruhige Lage',             'Quiet',             'bool'),
+('pool',             'wasser',     'Schwimmbad',              'Pool',              'bool'),
+('pool_indoor',      'wasser',     'Hallenbad',               'Indoor pool',       'bool'),
+('pool_heated',      'wasser',     'Beheiztes Becken',        'Heated pool',       'bool'),
+('waterslide',       'wasser',     'Wasserrutsche',           'Waterslide',        'bool'),
+('playground',       'familie',    'Spielplatz',              'Playground',        'bool'),
+('kids_program',     'familie',    'Kinderanimation',         'Kids club',         'bool'),
+('family_bathroom',  'familie',    'Familienbad',             'Family bathroom',   'bool'),
+('wifi',             'infra',      'WLAN',                    'WiFi',              'bool'),
+('restaurant',       'infra',      'Restaurant',              'Restaurant',        'bool'),
+('shop',             'infra',      'Supermarkt / Kiosk',      'Shop',              'bool'),
+('laundry',          'infra',      'Waschmaschine',           'Laundry',           'bool'),
+('sanitary_heated',  'infra',      'Beheizte Sanitäranlagen', 'Heated sanitary',   'bool'),
+('dump_station',     'infra',      'Ver-/Entsorgungsstation', 'Dump station',      'bool'),
+('pitch_size_sqm',   'stellplatz', 'Stellplatzgröße (m²)',    'Pitch size',        'num'),
+('pitch_electric_a', 'stellplatz', 'Stromanschluss (A)',      'Pitch power',       'num'),
+('hardstanding',     'stellplatz', 'Befestigter Untergrund',  'Hardstanding',      'bool'),
+('shaded_pitches',   'stellplatz', 'Schattige Plätze',        'Shaded pitches',    'bool'),
+('caravans_allowed', 'stellplatz', 'Wohnwagen erlaubt',       'Caravans allowed',  'bool'),
+('dogs_allowed',     'sonstig',    'Hunde erlaubt',           'Dogs allowed',      'bool'),
+('open_all_year',    'sonstig',    'Ganzjährig geöffnet',     'Open all year',     'bool'),
+('accessible',       'sonstig',    'Barrierefrei',            'Accessible',        'bool'),
+('charging_on_site', 'laden',      'Ladepunkt auf dem Platz', 'Charging on site',  'bool'),
+('charging_at_pitch','laden',      'Laden am Stellplatz',     'Charging at pitch', 'bool'),
+('charging_dc',      'laden',      'Schnelllader (DC)',       'DC fast charging',  'bool'),
+('trailer_friendly', 'laden',      'Anhängertaugliche Zufahrt','Trailer friendly', 'bool')
+on conflict (key) do nothing;

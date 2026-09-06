@@ -47,3 +47,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Python-Ingest-Skripte (Datenschicht, siehe ingest/README.md)
+/ingest/.venv
+/ingest/.testdata
+/ingest/.cache
+/ingest/osm/data
+/ingest/osrm/data
+__pycache__/
+*.pyc

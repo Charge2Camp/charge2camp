@@ -1,0 +1,7 @@
+psycopg2-binary>=2.9
+requests>=2.31
+# Nutzt den System-/Windows-Zertifikatsspeicher fuer HTTPS-Anfragen (analog
+# zu `cross-env NODE_OPTIONS=--use-system-ca` im Node-Teil dieses Projekts,
+# siehe package.json) -- ohne dieses Paket schlagen requests.get()-Aufrufe
+# auf diesem Rechner mit CERTIFICATE_VERIFY_FAILED fehl, siehe common.py.
+pip-system-certs>=4.0
