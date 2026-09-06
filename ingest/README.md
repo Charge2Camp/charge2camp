@@ -10,6 +10,46 @@ Diese Skripte laufen **gegen dieselbe Datenbank** wie die Next.js-App (kein
 separater Datenbank-Container) — vor dem Ausführen also `npx supabase start`
 in Projekt-Root.
 
+**Abweichung von Auftragsdokument §12, Punkt 1** (`docker compose up -d`
+startet DB, Meilisearch, OSRM, Adminer): per Architekturentscheidung läuft
+die DB über die Supabase-CLI statt in `docker-compose.yml` (Supabase Studio
+übernimmt dabei auch die Rolle von Adminer), und der Fuß-Routing-OSRM-Server
+läuft separat über eigene `docker run`-Befehle
+([osrm/README.md](osrm/README.md)), nicht in derselben Compose-Datei --
+`docker compose up -d` (Projekt-Root) startet nur noch Meilisearch. Siehe
+Schritt 2/7/8 im Ablauf unten für die tatsächlichen Befehle.
+
+## Kompletter Ablauf: vom leeren Rechner bis zur ersten Suchanfrage
+
+Kurzfassung aller Schritte unten, in der Reihenfolge zum Nachvollziehen
+(jeder einzelne Schritt ist weiter unten bzw. in den verlinkten READMEs
+ausführlich erklärt):
+
+1. Docker Desktop installieren und starten.
+2. Projekt-Root: `npm install`, dann `npx supabase start` (Postgres, Auth,
+   PostgREST, wendet alle `supabase/migrations/*.sql` automatisch an).
+3. `cd ingest`, virtuelle Umgebung anlegen + `requirements.txt`
+   installieren (siehe "Setup" unten).
+4. **Auftrag A:** `import_ocm.py --api --bbox ...` (echter OCM-API-Key
+   nötig, siehe unten) oder `--file` mit einem Export.
+5. **Auftrag B:** OSM-Extrakt besorgen ([osm/README.md](osm/README.md)),
+   dann `import_osm_campsites.py --file ...`.
+6. **Auftrag B §7 (optional, siehe unten):** `derive_spatial_amenities.py`
+   für `pool`/`playground`.
+7. **Auftrag C:** OSRM-Fuß-Server aufbauen
+   ([osrm/README.md](osrm/README.md)), dann `build_links.py`.
+8. **Auftrag E:** `docker compose up -d meilisearch` (Projekt-Root), dann
+   `index_meilisearch.py`.
+9. Next.js-Dev-Server starten (`npm run dev` in Projekt-Root) und die
+   **erste Suchanfrage** stellen:
+   ```bash
+   curl "http://localhost:3000/api/campsites/search?amenities=pool,playground&charging=walking&max_walk_m=800"
+   ```
+   Antwort enthält `total`, gefilterte `items` und Facetten-Trefferzähler
+   unter `facets` (siehe [docs/api.md](../docs/api.md)).
+10. Datenqualität prüfen: `psql $DATABASE_URL -f ../sql/90_quality_checks.sql`
+    (siehe unten) und `test_enrich_immutability.py` (wichtigster Test).
+
 ## Setup
 
 ```bash
@@ -89,11 +129,46 @@ des Campingplatz-Objekts ablesbar sind (`wifi`, `laundry`, `dump_station`,
 offenen `enrich.research_task`-Eintrag an (Arbeitsliste für die
 Website-Recherche), rührt aber nie einen bestehenden an.
 
-**Noch nicht Teil dieses Skripts** (separater Folgeschritt, siehe
-Auftragsdokument Abschnitt 7): Merkmale, die eine räumliche Suche nach
-*anderen* OSM-Objekten "innerhalb boundary" brauchen (`pool`, `playground`,
-`shop`, `restaurant`, `charging_on_site`), sowie die räumlich abgeleiteten
-Lage-Merkmale (`beach_nearby`, `lake_access`, `river_access`, `mountain`).
+**Noch nicht Teil dieses Skripts** (separater Folgeschritt, siehe unten):
+Merkmale, die eine räumliche Suche nach *anderen* OSM-Objekten "innerhalb
+boundary" brauchen (`pool`, `playground`, `shop`, `restaurant`,
+`charging_on_site`), sowie die räumlich abgeleiteten Lage-Merkmale
+(`beach_nearby`, `lake_access`, `river_access`, `mountain`).
+
+### Auftrag B §7 — Räumlich abgeleitete Merkmale (`pool`, `playground`)
+
+`derive_spatial_amenities.py` deckt **nur `pool` und `playground`** ab
+(bewusste Eingrenzung, siehe Modulkommentar): `shop=*`/`amenity=restaurant,
+cafe` sind auf Länderebene um Größenordnungen häufiger und damit ein
+eigener, teurerer Extraktionsschritt; `charging_on_site` kommt bereits
+zuverlässiger aus den echten Ladepunkt-Standortdaten
+(`core.campsite_charge_link`, siehe `core.campsite_search`).
+
+```bash
+cd osm
+MSYS_NO_PATHCONV=1 docker run --rm -v "$(pwd)/data:/data" charge2camp-osmium \
+    tags-filter /data/italy-latest.osm.pbf \
+    n/leisure=swimming_pool w/leisure=swimming_pool \
+    n/swimming_pool=yes w/swimming_pool=yes \
+    n/leisure=playground w/leisure=playground \
+    n/playground=yes w/playground=yes \
+    -o /data/italy-poolplayground.osm.pbf --overwrite
+MSYS_NO_PATHCONV=1 docker run --rm -v "$(pwd)/data:/data" charge2camp-osmium \
+    export /data/italy-poolplayground.osm.pbf -f geojsonseq \
+    -u type_id --geometry-types point,polygon \
+    -o /data/italy-poolplayground.geojsonseq --overwrite
+cd ..
+
+.venv/Scripts/python.exe derive_spatial_amenities.py osm/data/italy-poolplayground.geojsonseq
+```
+
+(Wiederholen für weitere Regionen, alle Dateien können auch in einem Lauf
+übergeben werden: `derive_spatial_amenities.py datei1.geojsonseq datei2.geojsonseq ...`.)
+Setzt `core.campsite_amenity` mit `source='osm_spatial'`, `confidence=70` --
+überschreibt nie eine höhere Konfidenz (z. B. `website_research=90`).
+Danach `core.campsite_search` neu auffrischen und `index_meilisearch.py`
+erneut laufen lassen (siehe Auftrag E unten), sonst zeigt die Suche die
+neuen Merkmale nicht.
 
 ## Auftrag C — Fußweg-Verknüpfung
 
@@ -146,3 +221,24 @@ Datenumfang.
 Nach jedem `build_links.py`-Lauf (neue Verknüpfungen) oder Import mit
 geänderten Merkmalen/Ladeinfos: `index_meilisearch.py` erneut ausführen,
 sonst zeigt die Suche veraltete Facetten/Distanzen.
+
+## Auftrag F — Datenqualität und der wichtigste Test des Projekts
+
+```bash
+# Zehn Qualitätsabfragen (Abdeckung, Dubletten, Widersprüche, ... --
+# siehe sql/90_quality_checks.sql für Details je Abfrage):
+docker exec -i supabase_db_eCamper psql -U postgres -d postgres < ../sql/90_quality_checks.sql
+# oder direkt, falls psql lokal installiert ist:
+psql "$DATABASE_URL" -f ../sql/90_quality_checks.sql
+
+# Der wichtigste Test: ein zweiter Import darf enrich.* NIEMALS verändern.
+.venv/Scripts/python.exe test_enrich_immutability.py
+```
+
+`test_enrich_immutability.py` nimmt einen bereits importierten Ladepunkt,
+setzt eine erkennbare Test-Anhängertauglichkeit, führt `import_ocm.py --file`
+für genau diesen Ladepunkt erneut aus und prüft, dass `enrich.
+trailer_suitability` unverändert bleibt (und `core.charge_point.updated_at`
+sich tatsächlich geändert hat, sonst wäre der Test nicht aussagekräftig).
+Räumt danach den Originalwert wieder auf, hinterlässt keine Spuren in der
+Datenbank. Exit-Code 0 = bestanden.
