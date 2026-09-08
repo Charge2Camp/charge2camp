@@ -5,6 +5,7 @@ import { VehicleForm } from "@/components/profile/vehicle-form";
 import { VehicleList } from "@/components/profile/vehicle-list";
 import { CaravanForm } from "@/components/profile/caravan-form";
 import { CaravanList } from "@/components/profile/caravan-list";
+import { CollapsibleFormSection } from "@/components/collapsible-form-section";
 
 export default async function GespannPage() {
   const supabase = await createClient();
@@ -40,26 +41,29 @@ export default async function GespannPage() {
         .order("series"),
     ]);
 
+  const vehicleList = (vehicles as Vehicle[]) ?? [];
+  const caravanList = (caravans as Caravan[]) ?? [];
+
   return (
     <div className="flex flex-col gap-12">
       <section>
         <h2 className="text-lg font-semibold">Elektroauto</h2>
         <div className="mt-4">
-          <VehicleList vehicles={(vehicles as Vehicle[]) ?? []} />
+          <VehicleList vehicles={vehicleList} />
         </div>
-        <div className="mt-6 rounded-lg border border-black/10 p-4 dark:border-white/10">
+        <CollapsibleFormSection addLabel="Elektroauto hinzufügen" defaultOpen={vehicleList.length === 0}>
           <VehicleForm models={(vehicleModels as VehicleModel[]) ?? []} />
-        </div>
+        </CollapsibleFormSection>
       </section>
 
       <section>
         <h2 className="text-lg font-semibold">Wohnwagen</h2>
         <div className="mt-4">
-          <CaravanList caravans={(caravans as Caravan[]) ?? []} />
+          <CaravanList caravans={caravanList} />
         </div>
-        <div className="mt-6 rounded-lg border border-black/10 p-4 dark:border-white/10">
+        <CollapsibleFormSection addLabel="Wohnwagen hinzufügen" defaultOpen={caravanList.length === 0}>
           <CaravanForm models={(caravanModels as CaravanModel[]) ?? []} />
-        </div>
+        </CollapsibleFormSection>
       </section>
     </div>
   );
