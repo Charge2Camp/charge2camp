@@ -22,3 +22,15 @@ export const TRAILER_SUITABILITY_COLORS: Record<TrailerSuitability, string> = {
   unknown: "#8E9A94", // status-unknown
   unsuitable: "#B4443A", // status-down
 };
+
+// Kartenpin-SVGs aus docs/design/brand-guide.md Abschnitt 7 (siehe auch
+// trailer-verdict.ts fuer dieselbe Zuordnung bei den core.*-Ladepunkten).
+// Der Demo-Korridor kennt kein "bedingt tauglich" (eng/Rangieren) --
+// "likely" faellt daher auf den Drive-Through-Pin (bester Fall, passt zur
+// obigen Lime-Einordnung), nicht auf den Rangier-Pin.
+export const TRAILER_SUITABILITY_ICON_SRC: Record<TrailerSuitability, string> = {
+  confirmed: "/pins/pin-ohne-abkoppeln.svg",
+  likely: "/pins/pin-drive-through.svg",
+  unknown: "/pins/pin-ungeprueft.svg",
+  unsuitable: "/pins/pin-nicht-tauglich.svg",
+};

@@ -25,7 +25,7 @@ import {
 } from "@/lib/route-planning";
 import { googleMapsNavigationProvider } from "@/lib/providers/navigation";
 import { buildRouteTimeline } from "@/lib/route-timeline";
-import { TRAILER_SUITABILITY_COLORS, TRAILER_SUITABILITY_LABELS } from "@/lib/trailer-suitability";
+import { TRAILER_SUITABILITY_COLORS, TRAILER_SUITABILITY_ICON_SRC, TRAILER_SUITABILITY_LABELS } from "@/lib/trailer-suitability";
 import type { CampsiteDestinationOption } from "@/lib/campsites";
 import type { FavoriteDestinationOption } from "@/lib/favorites";
 import type { Caravan, Vehicle } from "@/types/database";
@@ -815,7 +815,7 @@ export function RoutePlannerForm({
                   latitude: stop.station.latitude,
                   longitude: stop.station.longitude,
                   label: `${index + 1}. Ladestopp: ${stop.station.name ?? stop.station.provider}`,
-                  color: "#f59e0b",
+                  iconSrc: TRAILER_SUITABILITY_ICON_SRC[stop.station.trailer_suitable],
                 })),
                 ...result.manualWaypoints.map((waypoint, index) => ({
                   id: `manual-stop-${index}`,
