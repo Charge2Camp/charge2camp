@@ -102,8 +102,6 @@ function buildChargingStopPopupHtml(stop: RoutePlanResult["plan"]["chargingStops
   const confirmedLine = stop.lastConfirmedAt
     ? `Zuletzt von der Community bestätigt am ${new Date(stop.lastConfirmedAt).toLocaleDateString("de-DE")}`
     : "Noch nicht von der Community bestätigt";
-  const costLine =
-    stop.estimatedCostEur !== null ? `${stop.estimatedCostEur.toFixed(2)} €` : "unbekannt (kein Preis hinterlegt)";
 
   return `
     <div style="font-family: var(--font-ui, system-ui), sans-serif; font-size: 13px; line-height: 1.5; max-width: 240px;">
@@ -115,7 +113,6 @@ function buildChargingStopPopupHtml(stop: RoutePlanResult["plan"]["chargingStops
         <li>Umweg von der Route: ca. ${stop.corridorDistanceKm.toFixed(0)} km</li>
         <li>Ladestand bei Ankunft: ${stop.socOnArrivalPercent.toFixed(0)}%</li>
         ${stop.chargingTimeMin !== null ? `<li>Voraussichtliche Ladezeit: ${formatDuration(stop.chargingTimeMin)}</li>` : ""}
-        <li>Geschätzte Ladekosten: ${costLine}</li>
         <li>${confirmedLine}</li>
       </ul>
     </div>
@@ -889,15 +886,6 @@ export function RoutePlannerForm({
               <p className="text-black/50 dark:text-white/50">Reichweite (Gespann)</p>
               <p className="text-lg font-semibold">{result.plan.effectiveRangeKm.toFixed(0)} km</p>
             </div>
-            {result.plan.totalEstimatedCostEur !== null && (
-              <div>
-                <p className="text-black/50 dark:text-white/50">Geschätzte Ladekosten</p>
-                <p className="text-lg font-semibold">
-                  {result.plan.costEstimateIncomplete && "ab "}
-                  {result.plan.totalEstimatedCostEur.toFixed(2)} €
-                </p>
-              </div>
-            )}
           </div>
 
           {result.manualWaypoints.length > 0 && (
@@ -925,27 +913,6 @@ export function RoutePlannerForm({
           {result.plan.warning && (
             <p className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-amber-700 dark:text-amber-400">
               {result.plan.warning}
-            </p>
-          )}
-
-          {result.roadRestrictions.status === "checked" && result.roadRestrictions.warnings.length > 0 && (
-            <p className="rounded-md border border-red-600/30 bg-red-600/5 p-3 text-sm text-red-700 dark:text-red-400">
-              ⚠ {result.roadRestrictions.warnings.length}{" "}
-              {result.roadRestrictions.warnings.length === 1
-                ? "bekannte Straßenrestriktion"
-                : "bekannte Straßenrestriktionen"}{" "}
-              entlang der Route, die dein Gespann überschreitet — Details in der{" "}
-              <button type="button" onClick={() => setOverviewOpen(true)} className="underline">
-                Routenübersicht
-              </button>
-              .
-            </p>
-          )}
-
-          {result.roadRestrictions.status === "failed" && (
-            <p className="rounded-md border border-black/10 bg-black/5 p-3 text-xs text-black/50 dark:border-white/10 dark:bg-white/5 dark:text-white/50">
-              Straßenrestriktionen (Höhe/Breite/Gewicht) konnten nicht geprüft werden — der Dienst war nicht
-              erreichbar.
             </p>
           )}
 
@@ -988,10 +955,6 @@ export function RoutePlannerForm({
                         <li>Voraussichtliche Ladezeit: {formatDuration(stop.chargingTimeMin)}</li>
                       )}
                       <li>
-                        Geschätzte Ladekosten:{" "}
-                        {stop.estimatedCostEur !== null ? `${stop.estimatedCostEur.toFixed(2)} €` : "unbekannt (kein Preis hinterlegt)"}
-                      </li>
-                      <li>
                         {stop.lastConfirmedAt
                           ? `Zuletzt von der Community bestätigt am ${new Date(stop.lastConfirmedAt).toLocaleDateString("de-DE")}`
                           : "Noch nicht von der Community bestätigt"}
@@ -1017,7 +980,6 @@ export function RoutePlannerForm({
           end={result.end}
           manualWaypoints={result.manualWaypoints}
           plan={draftPlan}
-          roadRestrictions={result.roadRestrictions}
           busy={replanBusy}
           dirty={overviewDirty}
           confirmingClose={confirmingOverviewClose}

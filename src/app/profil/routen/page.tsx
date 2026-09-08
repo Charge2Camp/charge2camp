@@ -147,8 +147,6 @@ export default async function SavedRoutesPage() {
                       {result.plan.chargingStops.length === 0
                         ? "Kein Ladestopp nötig"
                         : `${result.plan.chargingStops.length} Ladestopp${result.plan.chargingStops.length === 1 ? "" : "s"}`}
-                      {result.plan.totalEstimatedCostEur !== null &&
-                        ` · geschätzte Ladekosten: ${result.plan.costEstimateIncomplete ? "ab " : ""}${result.plan.totalEstimatedCostEur.toFixed(2)} €`}
                     </p>
 
                     {(() => {

@@ -70,10 +70,6 @@ export interface ChargingStopCandidate {
 export interface ChargingStopPlan extends ChargingStopCandidate {
   socOnArrivalPercent: number;
   chargingTimeMin: number | null;
-  /** Tatsaechlich nachgeladene Energiemenge (kWh), fuer die Kostenschaetzung. */
-  energyChargedKwh: number;
-  /** Ladekosten (station.price * energyChargedKwh), null wenn kein Preis hinterlegt. */
-  estimatedCostEur: number | null;
   /** Weitere Kandidaten fuer DIESEN Stopp im Streckenkorridor (gleiche Sortierung: Anhaengertauglichkeit vor Umweg), zur Anzeige als Alternativen. */
   alternatives: ChargingStopCandidate[];
 }
@@ -89,26 +85,7 @@ export interface TripPlan {
   departureSocPercent: number;
   /** null, wenn das Ziel mit den aktuellen Ladestopps/Einstellungen nicht erreichbar ist. */
   arrivalSocPercent: number | null;
-  /** Summe der geschaetzten Ladekosten aller Stopps; null wenn kein Stopp einen Preis hinterlegt hat. */
-  totalEstimatedCostEur: number | null;
-  /** true, wenn mindestens ein Stopp keinen Preis hinterlegt hat -- totalEstimatedCostEur ist dann nur eine Teilsumme. */
-  costEstimateIncomplete: boolean;
   warning: string | null;
-}
-
-/** Fasst die geschaetzten Ladekosten aller Stopps zusammen -- ehrlich als
- * unvollstaendig markiert statt fehlende Preise stillschweigend als 0 EUR
- * zu behandeln (keine Scheindaten). */
-function summarizeCost(stops: ChargingStopPlan[]): {
-  totalEstimatedCostEur: number | null;
-  costEstimateIncomplete: boolean;
-} {
-  if (stops.length === 0) return { totalEstimatedCostEur: null, costEstimateIncomplete: false };
-  const known = stops.filter((s) => s.estimatedCostEur !== null);
-  return {
-    totalEstimatedCostEur: known.length > 0 ? known.reduce((sum, s) => sum + (s.estimatedCostEur ?? 0), 0) : null,
-    costEstimateIncomplete: known.length < stops.length,
-  };
 }
 
 /** Reichweite (km), die zwischen zwei Ladestaenden (in %) zur Verfuegung
@@ -227,7 +204,6 @@ export function planTrip({
         chargingStops: stops,
         departureSocPercent,
         arrivalSocPercent: null,
-        ...summarizeCost(stops),
         warning,
       };
     }
@@ -276,7 +252,6 @@ export function planTrip({
         chargingStops: stops,
         departureSocPercent,
         arrivalSocPercent: null,
-        ...summarizeCost(stops),
         warning,
       };
     }
@@ -299,7 +274,6 @@ export function planTrip({
     const chargingTimeMin = chosen.station.power_kw
       ? Math.max(0, (energyChargedKwh / chosen.station.power_kw) * 60)
       : null;
-    const estimatedCostEur = chosen.station.price !== null ? energyChargedKwh * chosen.station.price : null;
 
     if (!warning && chosen.station.trailer_suitable === "unknown") {
       warning =
@@ -312,8 +286,6 @@ export function planTrip({
       corridorDistanceKm: chosen.corridorDistanceKm,
       socOnArrivalPercent: socOnArrival,
       chargingTimeMin,
-      energyChargedKwh,
-      estimatedCostEur,
       alternatives,
     });
 
@@ -338,7 +310,6 @@ export function planTrip({
     chargingStops: stops,
     departureSocPercent,
     arrivalSocPercent,
-    ...summarizeCost(stops),
     warning,
   };
 }

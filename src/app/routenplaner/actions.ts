@@ -4,9 +4,6 @@ import { createClient } from "@/lib/supabase/server";
 import { geocodeAddress } from "@/lib/providers/geocoding/nominatim";
 import { osrmProvider } from "@/lib/providers/routing/osrm";
 import type { RouteResult } from "@/lib/providers/routing/types";
-import { overpassRoadRestrictionProvider } from "@/lib/providers/road-restrictions/overpass";
-import type { RoadRestrictionKind } from "@/lib/providers/road-restrictions/types";
-import { combineGespannDimensions, type GespannDimensions } from "@/lib/gespann-dimensions";
 import { DEFAULT_CONSUMPTION_KWH_PER_100KM, distanceAlongRouteKm, planTrip, type TripPlan } from "@/lib/route-planning";
 import { assessPersonalCompatibility, summarizeCommunitySuitability } from "@/lib/scoring/trailer-compatibility";
 import type { ManualWaypoint, ManualWaypointWithDistance } from "@/lib/route-timeline";
@@ -43,23 +40,6 @@ export interface RoutePlanResult {
   caravan: Pick<Caravan, "manufacturer" | "model"> | null;
   consumptionSource: "manual" | "profile" | "default";
   plan: TripPlan;
-  /** Bekannte Strassenrestriktionen (Hoehe/Breite/Gewicht) entlang der Route, siehe checkRoadRestrictions weiter unten. */
-  roadRestrictions: RoadRestrictionCheck;
-}
-
-export interface RoadRestrictionWarning {
-  kind: RoadRestrictionKind;
-  limitValue: number;
-  distanceFromStartKm: number;
-}
-
-export interface RoadRestrictionCheck {
-  /** "not_applicable": kein Wohnwagen oder keine Gespann-Masse hinterlegt.
-   * "checked": Pruefung gelaufen (warnings kann trotzdem leer sein).
-   * "failed": Overpass-Anfrage fehlgeschlagen (z. B. Timeout/Rate-Limit) --
-   * bewusst NICHT als "keine Restriktionen" interpretieren. */
-  status: "not_applicable" | "checked" | "failed";
-  warnings: RoadRestrictionWarning[];
 }
 
 /** Alle vom Nutzer einstellbaren Ladeplanungs-Parameter -- Formular-Slider
@@ -155,37 +135,6 @@ async function annotateChargingStops(
       })),
     })),
   };
-}
-
-/**
- * Prueft die Streckengeometrie auf bekannte OSM-Strassenrestriktionen
- * (Hoehen-/Breiten-/Gewichtsbeschraenkungen), die die Gespann-Masse
- * ueberschreiten (§ Phase 7 Gespannlogik). Nur eine Warnung, keine
- * automatische Umfahrung -- siehe Kommentar in overpass.ts. Ein
- * Fehlschlag der Anfrage (oeffentlicher Dienst ohne SLA) blockiert die
- * Routenplanung nicht, wird aber ehrlich als "failed" markiert statt eine
- * falsche "keine Restriktionen"-Aussage vorzutaeuschen.
- */
-async function checkRoadRestrictions(
-  route: Pick<RouteResult, "geometry" | "distanceKm">,
-  dimensions: GespannDimensions
-): Promise<RoadRestrictionCheck> {
-  if (dimensions.heightM === null && dimensions.widthM === null && dimensions.weightKg === null) {
-    return { status: "not_applicable", warnings: [] };
-  }
-  try {
-    const hits = await overpassRoadRestrictionProvider.checkRoute(route.geometry, dimensions);
-    const warnings = hits
-      .map((hit) => ({
-        kind: hit.kind,
-        limitValue: hit.limitValue,
-        distanceFromStartKm: distanceAlongRouteKm(hit.location, route),
-      }))
-      .sort((a, b) => a.distanceFromStartKm - b.distanceFromStartKm);
-    return { status: "checked", warnings };
-  } catch {
-    return { status: "failed", warnings: [] };
-  }
 }
 
 /**
@@ -308,7 +257,6 @@ async function buildRoutePlanResult({
     distanceFromStartKm: distanceAlongRouteKm(w, route),
   }));
 
-  const roadRestrictions = await checkRoadRestrictions(route, combineGespannDimensions(vehicle, caravan));
   const mapGeometry = await buildMapGeometry({ start, end, manualWaypointsWithDistance, chargingStops: annotatedPlan.chargingStops, fallback: route.geometry });
 
   return {
@@ -321,7 +269,6 @@ async function buildRoutePlanResult({
     caravan: caravan ? { manufacturer: caravan.manufacturer, model: caravan.model } : null,
     consumptionSource,
     plan: annotatedPlan,
-    roadRestrictions,
   };
 }
 
