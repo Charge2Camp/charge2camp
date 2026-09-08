@@ -14,6 +14,16 @@
  * liegen, statt jede einzeln entfernen zu muessen. */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Die Routenlinie in MapView wird auf einem eigenen <canvas> mit
+ * z-index: 10 gezeichnet, Marker haben deshalb z-index: 20 (siehe
+ * map-view.tsx) -- MapLibre-Popups (z. B. Ladestopp-Details beim Antippen
+ * eines Pins) haben von Haus aus keinen expliziten z-index und lagen
+ * dadurch trotzdem hinter der Routenlinie. Muessen ueber allem liegen,
+ * inkl. den Markern selbst. */
+.maplibregl-popup {
+  z-index: 30;
+}
+
 /* charge2camp Design-Tokens (docs/design/brand-guide.md +
    docs/design/tokens.json) -- EIN Markensystem, kein Hell/Dunkel-Toggle:
    die App ist hell (--c-surface), Kopf-/Fussbereiche und Bottom-Tab-Bar
