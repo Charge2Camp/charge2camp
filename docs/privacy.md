@@ -42,7 +42,16 @@ erforderlich — das ist nicht Teil des technischen MVP.
 - **E-Mail-Adresse ändern:** `/profil/daten`, ruft den Supabase-eigenen
   Bestätigungsablauf auf (`auth.updateUser({ email })`) — je nach
   Projekteinstellung erst nach Klick auf einen Bestätigungslink wirksam.
-  Passwort ändern ist weiterhin nicht umgesetzt.
+- **Passwort ändern:** `/profil/daten`
+  ([src/components/profile/change-password-form.tsx](../src/components/profile/change-password-form.tsx)).
+  Verlangt das aktuelle Passwort (per erneutem `signInWithPassword`
+  geprüft, bevor `auth.updateUser({ password })` das neue setzt) — ohne
+  das könnte eine übernommene/liegen gelassene Session das Konto ohne
+  Passwortkenntnis komplett übernehmen. Ein falsches aktuelles Passwort
+  ist ein alltäglicher Fall, kein Ausnahmefehler: die Server Action gibt
+  deshalb ein Ergebnisobjekt zurück (`useActionState`) statt zu werfen,
+  damit die Fehlermeldung inline im Formular erscheint statt auf Next.js'
+  generischer Serverfehler-Seite zu landen.
 
 ## Cookies
 

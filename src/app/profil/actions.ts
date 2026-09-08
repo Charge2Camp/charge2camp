@@ -308,3 +308,51 @@ export async function deleteAccount() {
   await supabase.auth.signOut();
   redirect("/");
 }
+
+/** Passwort aendern -- verlangt bewusst das aktuelle Passwort (per
+ * erneutem signInWithPassword geprueft), bevor auth.updateUser das neue
+ * setzt. `updateUser` allein wuerde jede bestehende Session akzeptieren,
+ * ohne das aktuelle Passwort zu kennen -- bei einem uebernommenen/liegen
+ * gelassenen Geraet koennte sonst jemand ohne Passwortkenntnis das Konto
+ * komplett uebernehmen. */
+export interface ChangePasswordState {
+  error?: string;
+  success?: boolean;
+}
+
+/** Ein falsches aktuelles Passwort ist hier -- anders als z. B. bei
+ * deleteVehicle -- ein alltaeglicher, erwarteter Fall (Tippfehler), keine
+ * Ausnahme. Deshalb bewusst KEIN throw (Next.js zeigt dafuer nur eine
+ * generische "Serverfehler"-Seite, siehe change-password-form.tsx) --
+ * stattdessen ein Ergebnisobjekt fuer useActionState, damit der Fehler
+ * inline im Formular erscheint. */
+export async function changePassword(
+  _prevState: ChangePasswordState,
+  formData: FormData
+): Promise<ChangePasswordState> {
+  const { supabase } = await requireUserId();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user?.email) return { error: "Nicht angemeldet." };
+
+  const currentPassword = requireString(formData.get("current_password"));
+  const newPassword = requireString(formData.get("new_password"));
+  const newPasswordConfirm = requireString(formData.get("new_password_confirm"));
+
+  if (newPassword !== newPasswordConfirm) {
+    return { error: "Die beiden neuen Passwörter stimmen nicht überein." };
+  }
+
+  const { error: reauthError } = await supabase.auth.signInWithPassword({
+    email: user.email,
+    password: currentPassword,
+  });
+  if (reauthError) return { error: "Aktuelles Passwort ist falsch." };
+
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) return { error: error.message };
+
+  revalidatePath("/profil/daten");
+  return { success: true };
+}

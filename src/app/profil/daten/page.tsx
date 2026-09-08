@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { HomeAddressForm } from "@/components/profile/home-address-form";
 import { DeleteAccountForm } from "@/components/profile/delete-account-form";
+import { ChangePasswordForm } from "@/components/profile/change-password-form";
 import { changeEmail } from "@/app/profil/actions";
 
 function formatDate(iso: string): string {
@@ -71,9 +72,14 @@ export default async function MeineDatenPage() {
             Ändern
           </button>
         </form>
-        <p className="mt-2 text-xs text-black/50 dark:text-white/50">
-          Passwort ändern ist hier noch nicht möglich und folgt in einer späteren Phase.
+      </div>
+
+      <div className="mt-8">
+        <h3 className="font-medium">Passwort ändern</h3>
+        <p className="mt-1 text-xs text-black/50 dark:text-white/50">
+          Zur Sicherheit wird das aktuelle Passwort erneut abgefragt.
         </p>
+        <ChangePasswordForm />
       </div>
 
       <div className="mt-8">

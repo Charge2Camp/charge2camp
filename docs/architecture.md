@@ -350,9 +350,8 @@ Routen, Favoriten, Bewertungen) und einer Unterseiten-Navigation
 `src/app/profil/layout.tsx`):
 
 - `/profil/daten` — E-Mail, Konto erstellt am, Zuhause-Adresse. Dazu
-  E-Mail-Adresse ändern, DSGVO-Datenexport und Konto löschen (mit
-  Tipp-Bestätigung) — siehe [privacy.md](privacy.md). Passwort ändern
-  noch nicht umgesetzt.
+  E-Mail-/Passwort-Änderung, DSGVO-Datenexport und Konto löschen (mit
+  Tipp-Bestätigung) — siehe [privacy.md](privacy.md).
 - `/profil/gespann` — Elektroauto(s) + Wohnwagen (bisheriger Hauptinhalt
   von `/profil`).
 - `/profil/routen` — gespeicherte Routen inkl. Segment-Navigation (s. o.).
