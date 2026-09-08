@@ -29,6 +29,8 @@ import { TRAILER_SUITABILITY_COLORS, TRAILER_SUITABILITY_LABELS } from "@/lib/tr
 import type { CampsiteDestinationOption } from "@/lib/campsites";
 import type { FavoriteDestinationOption } from "@/lib/favorites";
 import type { Caravan, Vehicle } from "@/types/database";
+import { useDelayedLoading } from "@/lib/use-delayed-loading";
+import { LoadingIndicator } from "@/components/loading-indicator";
 
 function SocSlider({
   name,
@@ -106,6 +108,7 @@ export function RoutePlannerForm({
   initialSavedRouteId?: string;
 }) {
   const [loading, setLoading] = useState(false);
+  const showLoadingIndicator = useDelayedLoading(loading);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<RoutePlanResult | null>(null);
   const [start, setStart] = useState("");
@@ -171,6 +174,7 @@ export function RoutePlannerForm({
   const [overviewDirty, setOverviewDirty] = useState(false);
   const [confirmingOverviewClose, setConfirmingOverviewClose] = useState(false);
   const [loadingSavedRoute, setLoadingSavedRoute] = useState(Boolean(initialSavedRouteId));
+  const showSavedRouteLoadingIndicator = useDelayedLoading(loadingSavedRoute);
   const [saveRouteName, setSaveRouteName] = useState("");
   const [savingRoute, setSavingRoute] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -448,9 +452,7 @@ export function RoutePlannerForm({
 
   return (
     <div className="flex flex-col gap-8">
-      {loadingSavedRoute && (
-        <p className="text-sm text-black/60 dark:text-white/60">Gespeicherte Route wird geladen…</p>
-      )}
+      {showSavedRouteLoadingIndicator && <LoadingIndicator text="Gespeicherte Route wird geladen…" />}
 
       <form
         onSubmit={async (e) => {
@@ -744,6 +746,8 @@ export function RoutePlannerForm({
             </button>
           )}
         </div>
+
+        {showLoadingIndicator && <LoadingIndicator text="Route wird berechnet…" />}
       </form>
 
       {error && <p className="text-sm text-red-600">{error}</p>}

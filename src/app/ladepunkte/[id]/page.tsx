@@ -6,7 +6,7 @@ import { MapView } from "@/components/map/map-view";
 import { ChargingReviewForm } from "@/components/charging-stations/review-form";
 import { ChargingStationFavoriteButton } from "@/components/charging-stations/favorite-button";
 import { RigLengthDistributionChart } from "@/components/charging-stations/rig-length-distribution";
-import { TRAILER_VERDICT_COLORS, TRAILER_VERDICT_LABELS } from "@/lib/trailer-verdict";
+import { TRAILER_PIN_COLORS, TRAILER_PIN_ICON_SRC, TRAILER_PIN_LABELS, getTrailerPinState } from "@/lib/trailer-verdict";
 import { formatConnectorStandard } from "@/lib/connector-standard";
 import { formatAccessType } from "@/lib/access-type";
 import {
@@ -68,7 +68,7 @@ export default async function ChargingStationDetailPage({
     .eq("charge_point_key", s.external_key)
     .maybeSingle();
   const trailer = trailerRow as TrailerSuitabilityRecord | null;
-  const verdict = trailer?.verdict ?? "unknown";
+  const pinState = getTrailerPinState(trailer);
 
   let ownCaravans: Caravan[] = [];
   let ownVehicles: Vehicle[] = [];
@@ -105,9 +105,9 @@ export default async function ChargingStationDetailPage({
 
       <span
         className="mt-2 inline-block rounded-full px-3 py-1 text-sm text-white"
-        style={{ backgroundColor: TRAILER_VERDICT_COLORS[verdict] }}
+        style={{ backgroundColor: TRAILER_PIN_COLORS[pinState] }}
       >
-        {TRAILER_VERDICT_LABELS[verdict]}
+        {TRAILER_PIN_LABELS[pinState]}
       </span>
 
       <div className="mt-4 flex items-center gap-2">
@@ -121,7 +121,17 @@ export default async function ChargingStationDetailPage({
       </div>
 
       <div className="mt-6 h-[320px] overflow-hidden rounded-lg border border-black/10 dark:border-white/10">
-        <MapView markers={[{ id: s.id, latitude: s.lat, longitude: s.lon, label: s.name ?? s.operator ?? "" }]} />
+        <MapView
+          markers={[
+            {
+              id: s.id,
+              latitude: s.lat,
+              longitude: s.lon,
+              label: s.name ?? s.operator ?? "",
+              iconSrc: TRAILER_PIN_ICON_SRC[pinState],
+            },
+          ]}
+        />
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">

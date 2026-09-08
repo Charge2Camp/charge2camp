@@ -1,4 +1,4 @@
-import type { TrailerVerdict } from "@/types/database";
+import type { TrailerSuitabilityRecord, TrailerVerdict } from "@/types/database";
 
 /** Labels/Farben fuer enrich.trailer_suitability.verdict (echte Daten,
  * core.charge_point) -- bewusst getrennt von TRAILER_SUITABILITY_* in
@@ -26,4 +26,46 @@ export const TRAILER_VERDICT_COLORS: Record<TrailerVerdict, string> = {
   unhitch: "#E8A33D",
   no: "#B4443A",
   unknown: "#8E9A94",
+};
+
+/** Die fuenf Kartenpin-Zustaende aus docs/design/brand-guide.md Abschnitt
+ * 7 -- eine Skala von schlecht nach ideal. `yes` teilt sich abhaengig vom
+ * `drive_through`-Flag (enrich.trailer_suitability, bereits im Schema
+ * vorhanden) in zwei Pins auf: "ohne Abkoppeln" (Stellplatz vorhanden,
+ * muss aber rangiert werden) vs. "Drive-Through" (durchfahren, kein
+ * Rangieren noetig) -- der beste Fall. */
+export type TrailerPinState = "nicht_tauglich" | "bedingt_tauglich" | "ohne_abkoppeln" | "drive_through" | "ungeprueft";
+
+export function getTrailerPinState(
+  trailer: Pick<TrailerSuitabilityRecord, "verdict" | "drive_through"> | null | undefined
+): TrailerPinState {
+  const verdict = trailer?.verdict ?? "unknown";
+  if (verdict === "no") return "nicht_tauglich";
+  if (verdict === "unhitch") return "bedingt_tauglich";
+  if (verdict === "yes") return trailer?.drive_through ? "drive_through" : "ohne_abkoppeln";
+  return "ungeprueft";
+}
+
+export const TRAILER_PIN_LABELS: Record<TrailerPinState, string> = {
+  nicht_tauglich: "Nicht anhängertauglich",
+  bedingt_tauglich: "Bedingt tauglich (eng, Rangieren nötig)",
+  ohne_abkoppeln: "Laden ohne Abkoppeln",
+  drive_through: "Drive-Through-Laden",
+  ungeprueft: "Ungeprüft",
+};
+
+export const TRAILER_PIN_COLORS: Record<TrailerPinState, string> = {
+  nicht_tauglich: "#B4443A",
+  bedingt_tauglich: "#E8A33D",
+  ohne_abkoppeln: "#1D9E75",
+  drive_through: "#C6F24E",
+  ungeprueft: "#8E9A94",
+};
+
+export const TRAILER_PIN_ICON_SRC: Record<TrailerPinState, string> = {
+  nicht_tauglich: "/pins/pin-nicht-tauglich.svg",
+  bedingt_tauglich: "/pins/pin-bedingt-tauglich.svg",
+  ohne_abkoppeln: "/pins/pin-ohne-abkoppeln.svg",
+  drive_through: "/pins/pin-drive-through.svg",
+  ungeprueft: "/pins/pin-ungeprueft.svg",
 };

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { MapView } from "@/components/map/map-view";
-import { TRAILER_VERDICT_COLORS, TRAILER_VERDICT_LABELS } from "@/lib/trailer-verdict";
+import { TRAILER_PIN_COLORS, TRAILER_PIN_ICON_SRC, TRAILER_PIN_LABELS, getTrailerPinState } from "@/lib/trailer-verdict";
 import { formatConnectorStandard } from "@/lib/connector-standard";
 import type { ChargingStationView } from "@/lib/charging-stations";
 
@@ -25,7 +25,7 @@ function ChargingStationCard({
   selected: boolean;
   onHover: (id: string | null) => void;
 }) {
-  const verdict = station.trailer?.verdict ?? "unknown";
+  const pinState = getTrailerPinState(station.trailer);
   const connectorSummary = Array.from(new Set(station.connectors.map((c) => formatConnectorStandard(c.standard)))).join(
     ", "
   );
@@ -52,9 +52,9 @@ function ChargingStationCard({
       <div className="mt-2 flex flex-wrap gap-2 text-xs">
         <span
           className="rounded-full px-2 py-0.5 text-white"
-          style={{ backgroundColor: TRAILER_VERDICT_COLORS[verdict] }}
+          style={{ backgroundColor: TRAILER_PIN_COLORS[pinState] }}
         >
-          {TRAILER_VERDICT_LABELS[verdict]}
+          {TRAILER_PIN_LABELS[pinState]}
         </span>
         {station.max_power_kw && (
           <span className="rounded-full border border-black/10 px-2 py-0.5 dark:border-white/10">
@@ -91,7 +91,7 @@ export function ChargingStationExplorer({ stations }: { stations: ChargingStatio
     latitude: s.lat,
     longitude: s.lon,
     label: s.name ?? s.operator ?? "",
-    color: TRAILER_VERDICT_COLORS[s.trailer?.verdict ?? "unknown"],
+    iconSrc: TRAILER_PIN_ICON_SRC[getTrailerPinState(s.trailer)],
   }));
 
   return (

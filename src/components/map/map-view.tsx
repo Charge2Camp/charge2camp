@@ -11,6 +11,12 @@ export interface MapMarker {
   longitude: number;
   label: string;
   color?: string;
+  /** Pfad zu einem Kartenpin-SVG (public/pins/, siehe docs/design/
+   * brand-guide.md Abschnitt 7) statt des schlichten Farbpunkts --
+   * aktuell fuer die Anhaengertauglichkeits-Zustaende der Ladepunkte
+   * (src/lib/trailer-verdict.ts getTrailerPinState). Ist `color` UND
+   * `iconSrc` gesetzt, hat `iconSrc` Vorrang. */
+  iconSrc?: string;
 }
 
 export interface RoutePoint {
@@ -26,24 +32,50 @@ const ROUTE_LINE_COLOR = "#059669";
 type ClusterProps = { cluster: true; cluster_id: number; point_count: number };
 type PointProps = { cluster: false; markerId: string; color?: string };
 
+/** Fuer Pin-Marker (m.iconSrc gesetzt) liegt die Tap-Flaeche unten
+ * zentriert -- die Pin-Spitze (SVG-Koordinate y=22 von 24) beruehrt den
+ * Ankerpunkt, das Wrapper-Element wird deshalb mit `anchor: "bottom"`
+ * (siehe renderIndividualMarkers) statt der sonst genutzten Bildmitte
+ * platziert. Ausgewaehlter Pin: 1.35x groesser statt andersfarbig
+ * (docs/design/brand-guide.md Abschnitt 7), Wachstum von der Spitze aus
+ * (transform-origin: bottom), damit die Spitze am Ort bleibt. */
 function buildIndividualMarkerElement(m: MapMarker, selected: boolean, onClick: () => void): HTMLButtonElement {
-  // Sichtbarer Punkt bleibt bewusst klein (16px, passt zur Kartenoptik),
-  // aber die Tap-Flaeche wird auf 44px (Apple HIG) vergroessert -- ein
-  // umschliessendes, unsichtbares Button-Element zentriert den Punkt, ohne
-  // die geografische Ankerposition zu veraendern (weiterhin mittig).
   const el = document.createElement("button");
   el.type = "button";
   el.setAttribute("aria-label", m.label);
-  el.style.width = "44px";
-  el.style.height = "44px";
-  el.style.display = "flex";
-  el.style.alignItems = "center";
-  el.style.justifyContent = "center";
   el.style.background = "transparent";
   el.style.border = "none";
   el.style.padding = "0";
   el.style.cursor = "pointer";
   el.onclick = onClick;
+
+  if (m.iconSrc) {
+    el.style.width = "44px";
+    el.style.height = "58px";
+    el.style.display = "flex";
+    el.style.alignItems = "flex-end";
+    el.style.justifyContent = "center";
+
+    const img = document.createElement("img");
+    img.src = m.iconSrc;
+    img.alt = "";
+    img.style.width = "32px";
+    img.style.height = "32px";
+    img.style.transform = selected ? "scale(1.35)" : "scale(1)";
+    img.style.transformOrigin = "bottom center";
+    el.appendChild(img);
+    return el;
+  }
+
+  // Sichtbarer Punkt bleibt bewusst klein (16px, passt zur Kartenoptik),
+  // aber die Tap-Flaeche wird auf 44px (Apple HIG) vergroessert -- ein
+  // umschliessendes, unsichtbares Button-Element zentriert den Punkt, ohne
+  // die geografische Ankerposition zu veraendern (weiterhin mittig).
+  el.style.width = "44px";
+  el.style.height = "44px";
+  el.style.display = "flex";
+  el.style.alignItems = "center";
+  el.style.justifyContent = "center";
 
   const dot = document.createElement("span");
   dot.style.width = "16px";
@@ -193,7 +225,9 @@ export function MapView({
       clearMarkers();
       for (const m of items) {
         const el = buildIndividualMarkerElement(m, m.id === selectedId, () => onMarkerClick?.(m.id));
-        const marker = new Marker({ element: el }).setLngLat([m.longitude, m.latitude]).addTo(map);
+        const marker = new Marker({ element: el, anchor: m.iconSrc ? "bottom" : "center" })
+          .setLngLat([m.longitude, m.latitude])
+          .addTo(map);
         markersRef.current.set(m.id, marker);
       }
     };
@@ -221,11 +255,20 @@ export function MapView({
           const { markerId } = feature.properties;
           const original = markers.find((m) => m.id === markerId);
           const el = buildIndividualMarkerElement(
-            { id: markerId, latitude, longitude, label: original?.label ?? "", color: feature.properties.color },
+            {
+              id: markerId,
+              latitude,
+              longitude,
+              label: original?.label ?? "",
+              color: feature.properties.color,
+              iconSrc: original?.iconSrc,
+            },
             markerId === selectedId,
             () => onMarkerClick?.(markerId)
           );
-          const marker = new Marker({ element: el }).setLngLat([longitude, latitude]).addTo(map);
+          const marker = new Marker({ element: el, anchor: original?.iconSrc ? "bottom" : "center" })
+            .setLngLat([longitude, latitude])
+            .addTo(map);
           markersRef.current.set(markerId, marker);
         }
       });
