@@ -18,7 +18,12 @@
 
 create extension if not exists postgis;
 create extension if not exists pg_trgm;
-create extension if not exists "uuid-ossp";
+-- gen_random_uuid() ist seit Postgres 13 im Core enthalten (keine Extension
+-- noetig) -- konsistent mit den uuid-Spalten der uebrigen Migrationen
+-- (siehe 20260904210000_init_schema.sql). uuid-ossp/uuid_generate_v4()
+-- wurde urspruenglich hier verwendet, schlug aber beim ersten Deploy gegen
+-- ein gehostetes Supabase-Projekt fehl (Funktion nicht im search_path
+-- auffindbar) -- deshalb auf die Core-Funktion umgestellt.
 
 create schema if not exists raw;
 create schema if not exists core;
@@ -62,7 +67,7 @@ create table raw.campsite (
 -- ============ CORE ============
 
 create table core.charge_point (
-    id             uuid primary key default uuid_generate_v4(),
+    id             uuid primary key default gen_random_uuid(),
     external_key   text not null unique,     -- 'ocm:12345'
     name           text,
     operator       text,
@@ -99,7 +104,7 @@ create index idx_conn_cp  on core.connector (charge_point_id);
 create index idx_conn_std on core.connector (standard);
 
 create table core.campsite (
-    id            uuid primary key default uuid_generate_v4(),
+    id            uuid primary key default gen_random_uuid(),
     external_key  text not null unique,      -- 'osm:way/123456'
     name          text not null,
     slug          text unique,
@@ -165,7 +170,7 @@ create index idx_link_rel on core.campsite_charge_link (relation);
 -- ============ ENRICH ============
 
 create table enrich.app_user (
-    id           uuid primary key default uuid_generate_v4(),
+    id           uuid primary key default gen_random_uuid(),
     display_name text,
     trust_level  smallint not null default 1,  -- 1=neu 3=verifiziert 5=Moderator
     created_at   timestamptz not null default now()

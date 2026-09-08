@@ -56,3 +56,6 @@ next-env.d.ts
 /ingest/osrm/data
 __pycache__/
 *.pyc
+
+.vercel
+.env*

@@ -9,6 +9,15 @@ Anhängertauglichkeit und Gespann-Routing an einem Ort.
 
 Volle Spezifikation und Phasenplan: [docs/architecture.md](docs/architecture.md).
 
+## Live-Testumgebung
+
+**https://charge2camp.vercel.app** — echte Daten (Bayern/Österreich/Italien,
+siehe [ingest/README.md](ingest/README.md)), gehostetes Supabase-Projekt.
+Zum Testen vom Smartphone aus registrieren (`/register`, keine E-Mail-
+Bestätigung nötig) und einloggen. Meilisearch/OSRM-Fußrouting laufen dort
+(noch) nicht — betrifft nur `/api/campsites/search` und neue
+Fußweg-Verknüpfungen, nicht die Haupt-App.
+
 ## Stack
 
 Next.js (App Router) + TypeScript + Tailwind CSS + Supabase (Postgres + Auth).

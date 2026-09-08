@@ -3,6 +3,27 @@ import type { CoreChargePointGeo, CoreConnector, TrailerSuitabilityRecord, Trail
 
 const FAST_CHARGER_MIN_KW = 100;
 
+/** PostgREST kodiert `.in(...)` als Query-Parameter in der URL -- bei
+ * mehreren tausend IDs (siehe fetchChargingStations, bis zu 5000 Stationen)
+ * wird die URL laenger als das von Cloudflare/dem Hosting erlaubte Limit
+ * (lokal gegen Docker-Supabase nicht aufgefallen, dort kein CDN davor;
+ * auf dem gehosteten Projekt "414 Request-URI Too Large"). Deshalb in
+ * Batches abfragen statt einer einzigen riesigen IN-Liste. */
+async function fetchInBatches<T>(
+  ids: string[],
+  batchSize: number,
+  fetchBatch: (batchIds: string[]) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>
+): Promise<T[]> {
+  const results: T[] = [];
+  for (let i = 0; i < ids.length; i += batchSize) {
+    const batch = ids.slice(i, i + batchSize);
+    const { data, error } = await fetchBatch(batch);
+    if (error) throw new Error(error.message);
+    results.push(...(data ?? []));
+  }
+  return results;
+}
+
 export interface ChargingStationFilters {
   q?: string;
   trailerVerdict: TrailerVerdict[];
@@ -55,28 +76,24 @@ export async function fetchChargingStations(filters: ChargingStationFilters): Pr
 
   const ids = stations.map((s) => s.id);
   const keys = stations.map((s) => s.external_key);
+  const BATCH_SIZE = 150;
 
-  const [{ data: connectorRows, error: connectorError }, { data: trailerRows, error: trailerError }] =
-    await Promise.all([
-      ids.length > 0
-        ? supabase.schema("core").from("connector").select("*").in("charge_point_id", ids)
-        : Promise.resolve({ data: [] as CoreConnector[], error: null }),
-      keys.length > 0
-        ? supabase.schema("enrich").from("trailer_suitability").select("*").in("charge_point_key", keys)
-        : Promise.resolve({ data: [] as TrailerSuitabilityRecord[], error: null }),
-    ]);
-  if (connectorError) throw new Error(connectorError.message);
-  if (trailerError) throw new Error(trailerError.message);
+  const [connectorRows, trailerRows] = await Promise.all([
+    fetchInBatches<CoreConnector>(ids, BATCH_SIZE, (batch) =>
+      supabase.schema("core").from("connector").select("*").in("charge_point_id", batch)
+    ),
+    fetchInBatches<TrailerSuitabilityRecord>(keys, BATCH_SIZE, (batch) =>
+      supabase.schema("enrich").from("trailer_suitability").select("*").in("charge_point_key", batch)
+    ),
+  ]);
 
   const connectorsByChargePointId = new Map<string, CoreConnector[]>();
-  for (const c of (connectorRows as CoreConnector[]) ?? []) {
+  for (const c of connectorRows) {
     const list = connectorsByChargePointId.get(c.charge_point_id) ?? [];
     list.push(c);
     connectorsByChargePointId.set(c.charge_point_id, list);
   }
-  const trailerByKey = new Map(
-    ((trailerRows as TrailerSuitabilityRecord[]) ?? []).map((t) => [t.charge_point_key, t])
-  );
+  const trailerByKey = new Map(trailerRows.map((t) => [t.charge_point_key, t]));
 
   let results: ChargingStationView[] = stations.map((s) => ({
     ...s,

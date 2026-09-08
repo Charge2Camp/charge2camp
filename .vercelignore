@@ -1,0 +1,8 @@
+# Python-Ingest-Tooling (Datenschicht) wird nie deployed -- nur lokal/CI
+# gegen die Datenbank ausgefuehrt, nicht Teil der Next.js-Laufzeit.
+# Enthaelt mehrere GB an OSM-/OSRM-Rohdaten (siehe ingest/README.md).
+/ingest
+
+# Lokale Supabase-CLI-Zustandsdateien
+/supabase/.temp
+/supabase/.branches
