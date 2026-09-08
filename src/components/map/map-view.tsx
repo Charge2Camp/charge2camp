@@ -47,6 +47,11 @@ function buildIndividualMarkerElement(m: MapMarker, selected: boolean, onClick: 
   el.style.border = "none";
   el.style.padding = "0";
   el.style.cursor = "pointer";
+  // Die Routenlinie liegt auf einem eigenen Canvas-Layer mit z-10 (siehe
+  // MapView), damit sie ueber den Kartenkacheln liegt -- Marker brauchen
+  // deshalb einen hoeheren z-index, sonst verschwinden Pin-Icons unter der
+  // Route.
+  el.style.zIndex = "20";
   el.onclick = onClick;
 
   if (m.iconSrc) {
@@ -106,6 +111,7 @@ function buildClusterMarkerElement(pointCount: number, onClick: () => void): HTM
   el.style.fontSize = "13px";
   el.style.fontWeight = "600";
   el.style.cursor = "pointer";
+  el.style.zIndex = "20";
   el.textContent = pointCount > 999 ? "999+" : String(pointCount);
   el.onclick = onClick;
   return el;
