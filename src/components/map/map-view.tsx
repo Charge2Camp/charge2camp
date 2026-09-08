@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { LngLatBounds, MapLibreMap, Marker, NavigationControl } from "maplibre-gl";
+import { LngLatBounds, MapLibreMap, Marker, NavigationControl, Popup } from "maplibre-gl";
 import Supercluster, { type PointFeature } from "supercluster";
 import { osmStyle } from "./osm-style";
 
@@ -17,6 +17,11 @@ export interface MapMarker {
    * (src/lib/trailer-verdict.ts getTrailerPinState). Ist `color` UND
    * `iconSrc` gesetzt, hat `iconSrc` Vorrang. */
   iconSrc?: string;
+  /** Optionaler Popup-Inhalt (rohes HTML, per Popup.setHTML), der beim Klick
+   * auf den Marker erscheint -- z. B. Ladestopp-Details im Routenplaner.
+   * Ohne gesetztes popupHtml verhaelt sich der Marker wie bisher (nur
+   * onMarkerClick, kein Popup). */
+  popupHtml?: string;
 }
 
 export interface RoutePoint {
@@ -227,6 +232,15 @@ export function MapView({
       markersRef.current.clear();
     };
 
+    // Popup wird ueber Marker.setPopup angehaengt -- MapLibre haengt dafuer
+    // intern einen eigenen click-Listener an das Marker-Element (zusaetzlich
+    // zu unserem el.onclick fuer onMarkerClick), das Icon oeffnet/schliesst
+    // das Popup beim Antippen also automatisch, ohne eigene Zustandslogik.
+    const attachPopup = (marker: Marker, popupHtml: string | undefined) => {
+      if (!popupHtml) return;
+      marker.setPopup(new Popup({ offset: 25, closeButton: true, maxWidth: "260px" }).setHTML(popupHtml));
+    };
+
     const renderIndividualMarkers = (items: MapMarker[]) => {
       clearMarkers();
       for (const m of items) {
@@ -234,6 +248,7 @@ export function MapView({
         const marker = new Marker({ element: el, anchor: m.iconSrc ? "bottom" : "center" })
           .setLngLat([m.longitude, m.latitude])
           .addTo(map);
+        attachPopup(marker, m.popupHtml);
         markersRef.current.set(m.id, marker);
       }
     };
@@ -275,6 +290,7 @@ export function MapView({
           const marker = new Marker({ element: el, anchor: original?.iconSrc ? "bottom" : "center" })
             .setLngLat([longitude, latitude])
             .addTo(map);
+          attachPopup(marker, original?.popupHtml);
           markersRef.current.set(markerId, marker);
         }
       });

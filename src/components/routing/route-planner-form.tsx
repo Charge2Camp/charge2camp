@@ -82,6 +82,46 @@ function formatDuration(minutes: number): string {
   return h > 0 ? `${h} Std. ${m} Min.` : `${m} Min.`;
 }
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// Popup-Inhalt fuer den Ladestopp-Marker auf der Routenkarte (MapView,
+// popupHtml) -- dieselben Angaben wie die Ladestopp-Karten unten im
+// Ergebnis, damit man sie nicht erst suchen/scrollen muss, um zu sehen,
+// worum es bei einem angetippten Pin geht.
+function buildChargingStopPopupHtml(stop: RoutePlanResult["plan"]["chargingStops"][number], index: number): string {
+  const name = escapeHtml(stop.station.name ?? stop.station.provider ?? "Ladepunkt");
+  const badgeColor = TRAILER_SUITABILITY_COLORS[stop.station.trailer_suitable];
+  const badgeLabel = escapeHtml(TRAILER_SUITABILITY_LABELS[stop.station.trailer_suitable]);
+  const confirmedLine = stop.lastConfirmedAt
+    ? `Zuletzt von der Community bestätigt am ${new Date(stop.lastConfirmedAt).toLocaleDateString("de-DE")}`
+    : "Noch nicht von der Community bestätigt";
+  const costLine =
+    stop.estimatedCostEur !== null ? `${stop.estimatedCostEur.toFixed(2)} €` : "unbekannt (kein Preis hinterlegt)";
+
+  return `
+    <div style="font-family: var(--font-ui, system-ui), sans-serif; font-size: 13px; line-height: 1.5; max-width: 240px;">
+      <p style="font-weight: 600; margin: 0 0 4px;">${index + 1}. Ladestopp</p>
+      <span style="display: inline-block; background: ${badgeColor}; color: white; border-radius: 999px; padding: 1px 8px; font-size: 11px; margin-bottom: 6px;">${badgeLabel}</span>
+      <p style="margin: 0 0 6px; font-weight: 500;">${name}</p>
+      <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 2px; opacity: 0.8;">
+        <li>Nach ${stop.distanceFromStartKm.toFixed(0)} km ab Start</li>
+        <li>Umweg von der Route: ca. ${stop.corridorDistanceKm.toFixed(0)} km</li>
+        <li>Ladestand bei Ankunft: ${stop.socOnArrivalPercent.toFixed(0)}%</li>
+        ${stop.chargingTimeMin !== null ? `<li>Voraussichtliche Ladezeit: ${formatDuration(stop.chargingTimeMin)}</li>` : ""}
+        <li>Geschätzte Ladekosten: ${costLine}</li>
+        <li>${confirmedLine}</li>
+      </ul>
+    </div>
+  `;
+}
+
 export function RoutePlannerForm({
   vehicles,
   caravans,
@@ -816,6 +856,7 @@ export function RoutePlannerForm({
                   longitude: stop.station.longitude,
                   label: `${index + 1}. Ladestopp: ${stop.station.name ?? stop.station.provider}`,
                   iconSrc: TRAILER_SUITABILITY_ICON_SRC[stop.station.trailer_suitable],
+                  popupHtml: buildChargingStopPopupHtml(stop, index),
                 })),
                 ...result.manualWaypoints.map((waypoint, index) => ({
                   id: `manual-stop-${index}`,
