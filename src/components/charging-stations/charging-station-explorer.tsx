@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { MapView } from "@/components/map/map-view";
 import { TRAILER_VERDICT_COLORS, TRAILER_VERDICT_LABELS } from "@/lib/trailer-verdict";
+import { formatConnectorStandard } from "@/lib/connector-standard";
 import type { ChargingStationView } from "@/lib/charging-stations";
 
 function OperationalBadge({ isOperational }: { isOperational: boolean }) {
@@ -25,7 +26,9 @@ function ChargingStationCard({
   onHover: (id: string | null) => void;
 }) {
   const verdict = station.trailer?.verdict ?? "unknown";
-  const connectorSummary = Array.from(new Set(station.connectors.map((c) => c.standard).filter(Boolean))).join(", ");
+  const connectorSummary = Array.from(new Set(station.connectors.map((c) => formatConnectorStandard(c.standard)))).join(
+    ", "
+  );
 
   return (
     <Link

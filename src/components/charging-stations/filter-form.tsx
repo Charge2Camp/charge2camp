@@ -2,6 +2,7 @@ import Link from "next/link";
 import { NameSuggestField } from "@/components/name-suggest-field";
 import type { ChargingStationFilters } from "@/lib/charging-stations";
 import { TRAILER_VERDICT_LABELS, TRAILER_VERDICT_VALUES } from "@/lib/trailer-verdict";
+import { formatConnectorStandard } from "@/lib/connector-standard";
 
 export function ChargingStationFilterForm({
   filters,
@@ -36,7 +37,7 @@ export function ChargingStationFilterForm({
           <option value="">Alle</option>
           {connectorTypes.map((c) => (
             <option key={c} value={c}>
-              {c}
+              {formatConnectorStandard(c)}
             </option>
           ))}
         </select>

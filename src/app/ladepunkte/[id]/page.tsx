@@ -7,6 +7,8 @@ import { ChargingReviewForm } from "@/components/charging-stations/review-form";
 import { ChargingStationFavoriteButton } from "@/components/charging-stations/favorite-button";
 import { RigLengthDistributionChart } from "@/components/charging-stations/rig-length-distribution";
 import { TRAILER_VERDICT_COLORS, TRAILER_VERDICT_LABELS } from "@/lib/trailer-verdict";
+import { formatConnectorStandard } from "@/lib/connector-standard";
+import { formatAccessType } from "@/lib/access-type";
 import {
   assessPersonalCompatibility,
   bucketReviewsByRigLength,
@@ -131,11 +133,11 @@ export default async function ChargingStationDetailPage({
               <li>
                 Anschlüsse:{" "}
                 {stationConnectors
-                  .map((c) => `${c.quantity}× ${c.standard ?? "unbekannt"}${c.power_kw ? ` (${c.power_kw} kW)` : ""}`)
+                  .map((c) => `${c.quantity}× ${formatConnectorStandard(c.standard)}${c.power_kw ? ` (${c.power_kw} kW)` : ""}`)
                   .join(", ")}
               </li>
             )}
-            {s.access_type && <li>Zugang: {s.access_type}</li>}
+            {s.access_type && <li>Zugang: {formatAccessType(s.access_type)}</li>}
             {s.address && <li>Adresse: {s.address}</li>}
           </ul>
           {!s.is_operational && (
