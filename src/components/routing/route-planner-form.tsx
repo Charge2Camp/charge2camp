@@ -866,7 +866,7 @@ export function RoutePlannerForm({
                   color: "#3b82f6",
                 })),
               ]}
-              route={result.geometry}
+              route={result.mapGeometry}
             />
           </div>
 

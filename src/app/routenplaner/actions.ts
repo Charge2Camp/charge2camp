@@ -23,7 +23,20 @@ interface GeoPoint {
 export interface RoutePlanResult {
   start: { latitude: number; longitude: number; displayName: string };
   end: { latitude: number; longitude: number; displayName: string };
+  /** Direkte Route (nur mit manuellen Zwischenstopps, OHNE Ladestopp-Umwege)
+   * -- Basis fuer die Ladeplanung/Korridor-Naeheberechnung (planTrip,
+   * distanceAlongRouteKm) und fuer replanChargingStop beim Suchen von
+   * Alternativ-Ladepunkten. NICHT fuer die Kartendarstellung verwenden,
+   * dafuer siehe mapGeometry -- sonst wuerde ein bereits gewaehlter
+   * Ladestopp die Korridor-Suche nach Alternativen fuer genau diesen Stopp
+   * verzerren (die Route wuerde ja schon zu ihm hinbiegen). */
   geometry: { latitude: number; longitude: number }[];
+  /** Route inklusive Umwegen zu allen geplanten Ladestopps (und manuellen
+   * Zwischenstopps), ausschliesslich fuer die Kartendarstellung -- sonst
+   * würde die gezeichnete Linie an den Ladepunkten vorbeilaufen, obwohl die
+   * Fahrt tatsaechlich dort haelt. Faellt bei OSRM-Fehler auf `geometry`
+   * zurueck (siehe buildRoutePlanResult). */
+  mapGeometry: { latitude: number; longitude: number }[];
   /** Manuell hinzugefuegte, zwingend zu durchfahrende Zwischenstopps (§ ABRP-Vorbild "Add Stop") -- unabhaengig von der Ladeplanung, siehe route-timeline.ts. */
   manualWaypoints: ManualWaypointWithDistance[];
   vehicle: Pick<Vehicle, "manufacturer" | "model">;
@@ -176,6 +189,59 @@ async function checkRoadRestrictions(
 }
 
 /**
+ * Die eigentliche Ladeplanung (planTrip) laeuft gegen die DIREKTE Route
+ * (start -> manuelle Zwischenstopps -> end, siehe Kommentar bei
+ * RoutePlanResult.geometry) -- Ladestopps werden nur als "nahe am
+ * Streckenkorridor" ausgewaehlt, die gezeichnete Linie faehrt also nicht
+ * wirklich zu ihnen. Fuer die Kartendarstellung wird deshalb hier ein
+ * zweiter Routing-Aufruf gemacht, der Start/Ziel/manuelle Zwischenstopps
+ * UND alle geplanten Ladestopps in Fahrtreihenfolge (sortiert nach ihrer
+ * Position auf der direkten Route) als Wegpunkte durchfaehrt. Schlaegt das
+ * fehl (OSRM-Demo-Server ohne SLA), faellt es auf die direkte Route zurueck
+ * -- lieber eine ungenaue Linie zeigen als die ganze Planung scheitern zu
+ * lassen.
+ */
+async function buildMapGeometry({
+  start,
+  end,
+  manualWaypointsWithDistance,
+  chargingStops,
+  fallback,
+}: {
+  start: GeoPoint;
+  end: GeoPoint;
+  manualWaypointsWithDistance: ManualWaypointWithDistance[];
+  chargingStops: TripPlan["chargingStops"];
+  fallback: RouteResult["geometry"];
+}): Promise<RouteResult["geometry"]> {
+  const detourWaypoints = [
+    ...manualWaypointsWithDistance.map((w) => ({
+      latitude: w.latitude,
+      longitude: w.longitude,
+      distanceFromStartKm: w.distanceFromStartKm,
+    })),
+    ...chargingStops.map((stop) => ({
+      latitude: stop.station.latitude,
+      longitude: stop.station.longitude,
+      distanceFromStartKm: stop.distanceFromStartKm,
+    })),
+  ].sort((a, b) => a.distanceFromStartKm - b.distanceFromStartKm);
+
+  if (detourWaypoints.length === 0) return fallback;
+
+  try {
+    const detourRoute = await osrmProvider.planRoute({
+      start,
+      end,
+      waypoints: detourWaypoints.map(({ latitude, longitude }) => ({ latitude, longitude })),
+    });
+    return detourRoute.geometry;
+  } catch {
+    return fallback;
+  }
+}
+
+/**
  * Gemeinsamer Kern von `planRoute` (frische Planung, geocodiert Start/Ziel
  * zuerst) und `loadSavedRoute` (Start/Ziel-Koordinaten bereits bekannt,
  * kein erneutes Geocoding noetig): Routing + Ladeplanung + persoenliche
@@ -243,11 +309,13 @@ async function buildRoutePlanResult({
   }));
 
   const roadRestrictions = await checkRoadRestrictions(route, combineGespannDimensions(vehicle, caravan));
+  const mapGeometry = await buildMapGeometry({ start, end, manualWaypointsWithDistance, chargingStops: annotatedPlan.chargingStops, fallback: route.geometry });
 
   return {
     start: { latitude: start.latitude, longitude: start.longitude, displayName: start.displayName },
     end: { latitude: end.latitude, longitude: end.longitude, displayName: end.displayName },
     geometry: route.geometry,
+    mapGeometry,
     manualWaypoints: manualWaypointsWithDistance,
     vehicle: { manufacturer: vehicle.manufacturer, model: vehicle.model },
     caravan: caravan ? { manufacturer: caravan.manufacturer, model: caravan.model } : null,
