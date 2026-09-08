@@ -150,7 +150,7 @@ export function ChargingStationExplorer({ stations }: { stations: ChargingStatio
             mobileTab === "list" ? "hidden md:block" : ""
           }`}
         >
-          <MapView markers={markers} selectedId={hoveredId ?? undefined} onMarkerClick={setHoveredId} />
+          <MapView markers={markers} selectedId={hoveredId ?? undefined} onMarkerClick={setHoveredId} cluster />
         </div>
       </div>
     </div>

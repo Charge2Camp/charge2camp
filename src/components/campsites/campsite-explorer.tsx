@@ -139,7 +139,7 @@ export function CampsiteExplorer({
           {/* onMarkerClick gibt Touch-Nutzern (kein :hover auf dem Handy/
               Tablet) eine Moeglichkeit, den zugehoerigen Listeneintrag
               hervorzuheben, indem sie auf einen Pin tippen. */}
-          <MapView markers={markers} selectedId={hoveredId ?? undefined} onMarkerClick={setHoveredId} />
+          <MapView markers={markers} selectedId={hoveredId ?? undefined} onMarkerClick={setHoveredId} cluster />
         </div>
       </div>
     </div>
