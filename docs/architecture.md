@@ -349,15 +349,16 @@ Routen, Favoriten, Bewertungen) und einer Unterseiten-Navigation
 (`src/components/profile/profile-sub-nav.tsx`, Layout in
 `src/app/profil/layout.tsx`):
 
-- `/profil/daten` — E-Mail, Konto erstellt am (Aendern von E-Mail/Passwort
-  noch nicht umgesetzt, ehrlich als "folgt spaeter" gekennzeichnet).
+- `/profil/daten` — E-Mail, Konto erstellt am, Zuhause-Adresse. Dazu
+  E-Mail-Adresse ändern, DSGVO-Datenexport und Konto löschen (mit
+  Tipp-Bestätigung) — siehe [privacy.md](privacy.md). Passwort ändern
+  noch nicht umgesetzt.
 - `/profil/gespann` — Elektroauto(s) + Wohnwagen (bisheriger Hauptinhalt
   von `/profil`).
 - `/profil/routen` — gespeicherte Routen inkl. Segment-Navigation (s. o.).
-- `/profil/favoriten` — liest die bereits bestehende `favorites`-Tabelle,
-  aber es gibt noch KEINEN "Merken"-Button auf Campingplatz-/
-  Ladepunkt-Detailseiten -- Seite zeigt das ehrlich an, statt eine
-  scheinbar funktionierende Funktion vorzutaeuschen.
+- `/profil/favoriten` — Herz-Button auf Campingplatz-/Ladepunkt-
+  Detailseiten (mit "Route hierher planen") schreibt in die `favorites`-
+  Tabelle; diese Seite listet sie inkl. Auswahl-Popup im Routenplaner.
 - `/profil/bewertungen` — Campingplatz-/Ladepunkt-Bewertungen.
 - `/profil/einstellungen` — Platzhalter ("noch keine App-Einstellungen"),
   keine Scheinfunktionen.

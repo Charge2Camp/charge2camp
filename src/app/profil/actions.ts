@@ -1,7 +1,9 @@
 "use server";
 
+import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { geocodeAddress } from "@/lib/providers/geocoding/nominatim";
 
 function parseOptionalNumber(value: FormDataEntryValue | null): number | null {
@@ -269,4 +271,40 @@ export async function setHomeAddress(formData: FormData) {
   if (error) throw new Error(error.message);
   revalidatePath("/profil/daten");
   revalidatePath("/routenplaner");
+}
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Stoesst den Supabase-eigenen E-Mail-Aenderungsablauf an: je nach
+ * Projekteinstellung (`mailer_secure_email_change_enabled`) muss der
+ * Nutzer den Wechsel per Bestaetigungslink in der neuen (und ggf. alten)
+ * Mailbox bestaetigen, bevor `auth.users.email` sich tatsaechlich aendert
+ * -- dieser Server Action loest nur den Versand aus, nicht die Aenderung
+ * selbst. `profiles.email` wird bewusst NICHT hier mitgeschrieben (waere
+ * vor der Bestaetigung eine falsche Angabe); die Seite zeigt ohnehin
+ * `auth.getUser().email`, nicht die profiles-Spalte. */
+export async function changeEmail(formData: FormData) {
+  const { supabase } = await requireUserId();
+  const newEmail = requireString(formData.get("email")).toLowerCase();
+  if (!EMAIL_PATTERN.test(newEmail)) throw new Error("Bitte eine gültige E-Mail-Adresse eingeben.");
+
+  const { error } = await supabase.auth.updateUser({ email: newEmail });
+  if (error) throw new Error(error.message);
+  revalidatePath("/profil/daten");
+}
+
+/** Loescht das Konto unwiderruflich. Nutzt den Admin-/Service-Role-Client
+ * (admin.auth.admin.deleteUser), weil eine normale Nutzer-Session ihr
+ * eigenes auth.users-Konto nicht selbst loeschen darf. Kaskadiert per FK
+ * (`on delete cascade`) auf profiles/vehicles/caravans/favorites/
+ * Bewertungen/gespeicherte Routen -- siehe docs/privacy.md. */
+export async function deleteAccount() {
+  const { supabase, userId } = await requireUserId();
+
+  const admin = createAdminClient();
+  const { error } = await admin.auth.admin.deleteUser(userId);
+  if (error) throw new Error(error.message);
+
+  await supabase.auth.signOut();
+  redirect("/");
 }
