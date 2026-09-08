@@ -7,6 +7,7 @@ import {
 } from "@/lib/campsites";
 import { CampsiteFilterForm } from "@/components/campsites/filter-form";
 import { CampsiteExplorer } from "@/components/campsites/campsite-explorer";
+import { MobileFilterSheet } from "@/components/mobile-filter-sheet";
 
 export default async function CampsitesPage({
   searchParams,
@@ -35,7 +36,7 @@ export default async function CampsitesPage({
       </p>
 
       <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[280px_1fr]">
-        <aside className="lg:sticky lg:top-4 lg:self-start">
+        <aside className="hidden lg:sticky lg:top-4 lg:block lg:self-start">
           <CampsiteFilterForm
             filters={filters}
             countries={countries}
@@ -44,7 +45,25 @@ export default async function CampsitesPage({
           />
         </aside>
 
-        <CampsiteExplorer campsites={campsites} amenityLabels={Object.fromEntries(amenityCatalog.map((a) => [a.key, a.label_de]))} />
+        <div>
+          <MobileFilterSheet
+            activeFilterCount={
+              (filters.q ? 1 : 0) + (filters.country ? 1 : 0) + (filters.charging ? 1 : 0) + filters.amenities.length
+            }
+          >
+            <CampsiteFilterForm
+              filters={filters}
+              countries={countries}
+              amenityCatalog={amenityCatalog}
+              nameOptions={nameOptions}
+            />
+          </MobileFilterSheet>
+
+          <CampsiteExplorer
+            campsites={campsites}
+            amenityLabels={Object.fromEntries(amenityCatalog.map((a) => [a.key, a.label_de]))}
+          />
+        </div>
       </div>
     </div>
   );

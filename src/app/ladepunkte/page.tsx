@@ -6,6 +6,7 @@ import {
 } from "@/lib/charging-stations";
 import { ChargingStationFilterForm } from "@/components/charging-stations/filter-form";
 import { ChargingStationExplorer } from "@/components/charging-stations/charging-station-explorer";
+import { MobileFilterSheet } from "@/components/mobile-filter-sheet";
 
 export default async function ChargingStationsPage({
   searchParams,
@@ -29,7 +30,7 @@ export default async function ChargingStationsPage({
       </p>
 
       <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[280px_1fr]">
-        <aside className="lg:sticky lg:top-4 lg:self-start">
+        <aside className="hidden lg:sticky lg:top-4 lg:block lg:self-start">
           <ChargingStationFilterForm
             filters={filters}
             connectorTypes={connectorTypes}
@@ -37,7 +38,24 @@ export default async function ChargingStationsPage({
           />
         </aside>
 
-        <ChargingStationExplorer stations={stations} />
+        <div>
+          <MobileFilterSheet
+            activeFilterCount={
+              (filters.q ? 1 : 0) +
+              (filters.connectorType ? 1 : 0) +
+              (filters.fastChargersOnly ? 1 : 0) +
+              filters.trailerVerdict.length
+            }
+          >
+            <ChargingStationFilterForm
+              filters={filters}
+              connectorTypes={connectorTypes}
+              nameOptions={nameOptions}
+            />
+          </MobileFilterSheet>
+
+          <ChargingStationExplorer stations={stations} />
+        </div>
       </div>
     </div>
   );

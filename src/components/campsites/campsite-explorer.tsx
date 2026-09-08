@@ -50,6 +50,8 @@ function CampsiteCard({
   );
 }
 
+const PAGE_SIZE = 30;
+
 export function CampsiteExplorer({
   campsites,
   amenityLabels,
@@ -59,6 +61,13 @@ export function CampsiteExplorer({
 }) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [mobileTab, setMobileTab] = useState<"list" | "map">("list");
+  // Bei bis zu 5000 Treffern (core.campsite_search, siehe fetchCampsites)
+  // wuerde die Liste sonst komplett auf einmal ins DOM gerendert -- auf
+  // dem Handy spuerbar langsam (siehe Design-Review). Karte zeigt trotzdem
+  // weiterhin ALLE Treffer als Marker, nur die Listen-Karten wachsen
+  // schrittweise.
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const visibleCampsites = campsites.slice(0, visibleCount);
 
   const markers = campsites.map((c) => ({
     id: c.id,
@@ -99,15 +108,26 @@ export function CampsiteExplorer({
               Keine Campingplätze gefunden. Filter anpassen?
             </p>
           ) : (
-            campsites.map((c) => (
-              <CampsiteCard
-                key={c.id}
-                campsite={c}
-                amenityLabels={amenityLabels}
-                selected={hoveredId === c.id}
-                onHover={setHoveredId}
-              />
-            ))
+            <>
+              {visibleCampsites.map((c) => (
+                <CampsiteCard
+                  key={c.id}
+                  campsite={c}
+                  amenityLabels={amenityLabels}
+                  selected={hoveredId === c.id}
+                  onHover={setHoveredId}
+                />
+              ))}
+              {visibleCount < campsites.length && (
+                <button
+                  type="button"
+                  onClick={() => setVisibleCount((n) => n + PAGE_SIZE)}
+                  className="min-h-11 rounded-md border border-black/15 px-4 py-2 text-sm font-medium hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/5"
+                >
+                  Weitere anzeigen ({visibleCampsites.length} von {campsites.length})
+                </button>
+              )}
+            </>
           )}
         </div>
 

@@ -72,9 +72,16 @@ function ChargingStationCard({
   );
 }
 
+const PAGE_SIZE = 30;
+
 export function ChargingStationExplorer({ stations }: { stations: ChargingStationView[] }) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [mobileTab, setMobileTab] = useState<"list" | "map">("list");
+  // Siehe campsite-explorer.tsx: bis zu 5000 Treffer (fetchChargingStations)
+  // auf einmal ins DOM zu rendern ist auf dem Handy spuerbar langsam --
+  // Karte zeigt trotzdem weiterhin ALLE Treffer als Marker.
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const visibleStations = stations.slice(0, visibleCount);
 
   const markers = stations.map((s) => ({
     id: s.id,
@@ -116,14 +123,25 @@ export function ChargingStationExplorer({ stations }: { stations: ChargingStatio
               Keine Ladepunkte gefunden. Filter anpassen?
             </p>
           ) : (
-            stations.map((s) => (
-              <ChargingStationCard
-                key={s.id}
-                station={s}
-                selected={hoveredId === s.id}
-                onHover={setHoveredId}
-              />
-            ))
+            <>
+              {visibleStations.map((s) => (
+                <ChargingStationCard
+                  key={s.id}
+                  station={s}
+                  selected={hoveredId === s.id}
+                  onHover={setHoveredId}
+                />
+              ))}
+              {visibleCount < stations.length && (
+                <button
+                  type="button"
+                  onClick={() => setVisibleCount((n) => n + PAGE_SIZE)}
+                  className="min-h-11 rounded-md border border-black/15 px-4 py-2 text-sm font-medium hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/5"
+                >
+                  Weitere anzeigen ({visibleStations.length} von {stations.length})
+                </button>
+              )}
+            </>
           )}
         </div>
 
