@@ -1,15 +1,18 @@
-import Link from "next/link";
 import { NameSuggestField } from "@/components/name-suggest-field";
 import type { CampsiteFilters } from "@/lib/campsites";
 import type { CoreAmenity } from "@/types/database";
 
 /** Merkmale nach Kategorie gruppiert -- bei 30 Eintraegen ist eine flache
  * Liste unuebersichtlich (siehe core.amenity, Migration
- * 20260913000100_data_layer_seed_amenities). */
+ * 20260913000100_data_layer_seed_amenities). Kategorie "laden"
+ * (Elektromobilitaet) bewusst ausgeklammert -- die steht als Quick-Filter
+ * direkt auf der Seite (siehe quick-filters.tsx), nicht hier im
+ * "Weitere Filter"-Pop-up. */
 function groupByCategory(amenities: CoreAmenity[]): Map<string, CoreAmenity[]> {
   const groups = new Map<string, CoreAmenity[]>();
   for (const amenity of amenities) {
     if (amenity.value_type !== "bool") continue; // nur Ja/Nein-Merkmale als Checkbox filterbar
+    if (amenity.category === "laden") continue;
     const list = groups.get(amenity.category) ?? [];
     list.push(amenity);
     groups.set(amenity.category, list);
@@ -23,18 +26,21 @@ const CATEGORY_LABELS: Record<string, string> = {
   familie: "Familie",
   infra: "Infrastruktur",
   stellplatz: "Stellplatz",
-  laden: "Elektromobilität",
   sonstig: "Sonstiges",
 };
 
+/** "Weitere Filter" -- Suche + alle Merkmals-Kategorien ausser
+ * Elektromobilitaet (siehe quick-filters.tsx) und Land (siehe
+ * campingplaetze/page.tsx). Kein eigenes <form>: die Felder gehoeren zum
+ * umschliessenden <form> in campingplaetze/page.tsx, damit ein Submit
+ * Quick-Filter und "weitere Filter" gemeinsam anwendet, egal ob er aus dem
+ * Pop-up oder von den Quick-Filtern ausgeloest wird. */
 export function CampsiteFilterForm({
   filters,
-  countries,
   amenityCatalog,
   nameOptions,
 }: {
   filters: CampsiteFilters;
-  countries: string[];
   amenityCatalog: CoreAmenity[];
   /** Alle Campingplatz-Namen, fuer Vorschlaege im Suchfeld ab drei Zeichen. */
   nameOptions: string[];
@@ -42,7 +48,7 @@ export function CampsiteFilterForm({
   const groups = groupByCategory(amenityCatalog);
 
   return (
-    <form className="flex flex-col gap-5 text-sm" action="/campingplaetze">
+    <div className="flex flex-col gap-5 text-sm">
       <label className="flex flex-col gap-1">
         Suche
         <NameSuggestField
@@ -52,35 +58,6 @@ export function CampsiteFilterForm({
           options={nameOptions}
           className="w-full rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
         />
-      </label>
-
-      <label className="flex flex-col gap-1">
-        Land
-        <select
-          name="country"
-          defaultValue={filters.country ?? ""}
-          className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
-        >
-          <option value="">Alle</option>
-          {countries.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <label className="flex flex-col gap-1">
-        Lademöglichkeit
-        <select
-          name="charging"
-          defaultValue={filters.charging ?? ""}
-          className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
-        >
-          <option value="">Egal</option>
-          <option value="on_site">Auf dem Platz</option>
-          <option value="walking">Fußläufig erreichbar</option>
-        </select>
       </label>
 
       {Array.from(groups.entries()).map(([category, amenities]) => (
@@ -100,20 +77,12 @@ export function CampsiteFilterForm({
         </fieldset>
       ))}
 
-      <div className="flex gap-2">
-        <button
-          type="submit"
-          className="min-h-12 rounded-md bg-action px-4 py-3 font-medium text-base hover:bg-action-hover"
-        >
-          Filtern
-        </button>
-        <Link
-          href="/campingplaetze"
-          className="flex min-h-12 items-center rounded-md border border-black/10 px-4 hover:bg-black/5 dark:border-white/10 dark:hover:bg-white/10"
-        >
-          Zurücksetzen
-        </Link>
-      </div>
-    </form>
+      <button
+        type="submit"
+        className="min-h-12 rounded-md bg-action px-4 py-3 font-medium text-base hover:bg-action-hover"
+      >
+        Filtern
+      </button>
+    </div>
   );
 }

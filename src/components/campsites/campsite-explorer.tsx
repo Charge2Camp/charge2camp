@@ -55,9 +55,14 @@ const PAGE_SIZE = 30;
 export function CampsiteExplorer({
   campsites,
   amenityLabels,
+  emptyMessage = "Keine Campingplätze gefunden. Filter anpassen?",
 }: {
   campsites: CampsiteSearchRow[];
   amenityLabels: Record<string, string>;
+  /** Text, wenn `campsites` leer ist -- z. B. anders formuliert, solange
+   * die Favoriten statt echter Filterergebnisse angezeigt werden (siehe
+   * campingplaetze/page.tsx). */
+  emptyMessage?: string;
 }) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [mobileTab, setMobileTab] = useState<"list" | "map">("list");
@@ -104,9 +109,7 @@ export function CampsiteExplorer({
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div className={`flex flex-col gap-3 ${mobileTab === "map" ? "hidden md:flex" : ""}`}>
           {campsites.length === 0 ? (
-            <p className="text-sm text-black/50 dark:text-white/50">
-              Keine Campingplätze gefunden. Filter anpassen?
-            </p>
+            <p className="text-sm text-black/50 dark:text-white/50">{emptyMessage}</p>
           ) : (
             <>
               {visibleCampsites.map((c) => (

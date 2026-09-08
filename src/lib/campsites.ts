@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import type { CampsiteSearchRow, CoreAmenity } from "@/types/database";
+import type { CampsiteSearchRow, CoreAmenity, Favorite } from "@/types/database";
 
 /** Merkmalskatalog aus core.amenity (siehe Migration
  * 20260913000100_data_layer_seed_amenities) -- dynamisch statt hart codiert,
@@ -88,6 +88,25 @@ export async function fetchCampsiteDestinationOptions(): Promise<CampsiteDestina
     .limit(5000);
   if (error) throw new Error(error.message);
   return (data ?? []).map((r) => ({ id: r.id, name: r.name, latitude: r.lat, longitude: r.lon }));
+}
+
+/** Vom Nutzer gemerkte Campingplaetze mit vollen Merkmalen (core.campsite_search)
+ * -- gezeigt statt der ungefilterten Gesamtliste, solange keine Filter aktiv
+ * sind (siehe campingplaetze/page.tsx). Nicht angemeldet oder noch keine
+ * Favoriten gemerkt: leere Liste, kein Fehler. */
+export async function fetchFavoriteCampsites(userId: string): Promise<CampsiteSearchRow[]> {
+  const supabase = await createClient();
+  const { data: favorites } = await supabase
+    .from("favorites")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("entity_type", "campsite");
+  const campsiteIds = ((favorites as Favorite[]) ?? []).map((f) => f.entity_id);
+  if (campsiteIds.length === 0) return [];
+
+  const { data, error } = await supabase.schema("core").from("campsite_search").select("*").in("id", campsiteIds);
+  if (error) throw new Error(error.message);
+  return (data as CampsiteSearchRow[]) ?? [];
 }
 
 /** Bekannte Laendercodes fuer den Land-Filter. */
