@@ -188,11 +188,11 @@ export function AddressAutocomplete({
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => (item.type === "local" ? selectLocal(item.suggestion) : selectRemote(item.suggestion))}
                 className={`flex min-h-11 w-full items-center gap-2 px-3 py-2 text-left ${
-                  i === highlightedIndex ? "bg-emerald-600/10" : "hover:bg-black/5 dark:hover:bg-white/5"
+                  i === highlightedIndex ? "bg-route/10" : "hover:bg-black/5 dark:hover:bg-white/5"
                 }`}
               >
                 {item.type === "local" && (
-                  <span className="shrink-0 rounded-full bg-emerald-600/15 px-1.5 py-0.5 text-xs text-emerald-700 dark:text-emerald-400">
+                  <span className="shrink-0 rounded-full bg-route/15 px-1.5 py-0.5 text-xs text-route">
                     {localSuggestionLabel}
                   </span>
                 )}

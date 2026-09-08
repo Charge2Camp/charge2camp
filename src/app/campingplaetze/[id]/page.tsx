@@ -86,7 +86,7 @@ export default async function CampsiteDetailPage({
       <div className="mt-4 flex items-center gap-2">
         <Link
           href={`/routenplaner?destination_campsite_id=${site.id}`}
-          className="inline-flex min-h-11 items-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+          className="inline-flex min-h-11 items-center rounded-md bg-action px-4 py-2 text-sm font-medium text-base hover:bg-action-hover"
         >
           Route hierher planen
         </Link>
@@ -136,7 +136,7 @@ export default async function CampsiteDetailPage({
                       href={site.website}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-emerald-600 hover:underline"
+                      className="text-route hover:underline"
                     >
                       {site.website}
                     </a>
@@ -230,7 +230,7 @@ export default async function CampsiteDetailPage({
         <div className="mt-4">
           {!user ? (
             <p className="text-sm text-black/50 dark:text-white/50">
-              <Link href="/login" className="text-emerald-600 hover:underline">
+              <Link href="/login" className="text-route hover:underline">
                 Anmelden
               </Link>{" "}
               um eine Bewertung abzugeben.

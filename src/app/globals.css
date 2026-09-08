@@ -1,27 +1,90 @@
 @import "tailwindcss";
 @import "maplibre-gl/dist/maplibre-gl.css";
 
+/* charge2camp ist EIN festes Markendesign, kein Hell/Dunkel-Toggle (siehe
+ * Kommentar weiter unten) -- Tailwinds `dark:`-Variante reagiert per
+ * Vorgabe aber auf `prefers-color-scheme: dark` des Betriebssystems,
+ * unabhaengig von den eigenen CSS-Variablen. Ohne dieses Override wuerden
+ * hunderte bestehende `dark:*`-Klassen im Code (z. B. `dark:text-white/60`)
+ * auf Geraeten mit System-Dark-Mode weiterhin greifen und z. B. fast
+ * unsichtbaren hellen Text auf der jetzt hellen Flaeche erzeugen. Diese
+ * Zeile bindet `dark:` stattdessen an eine `.dark`-Klasse, die nirgends
+ * gesetzt wird -- die Variante greift dadurch nie, die (harmlosen)
+ * `dark:*`-Klassen im bestehenden Code bleiben als inerter toter Code
+ * liegen, statt jede einzeln entfernen zu muessen. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* charge2camp Design-Tokens (docs/design/brand-guide.md +
+   docs/design/tokens.json) -- EIN Markensystem, kein Hell/Dunkel-Toggle:
+   die App ist hell (--c-surface), Kopf-/Fussbereiche und Bottom-Tab-Bar
+   sind dunkelgruen (--c-base), siehe website/index.html im Design-Paket
+   als Referenzumsetzung. Deshalb bewusst KEIN
+   `@media (prefers-color-scheme: dark)`-Override mehr (anders als vorher) --
+   das wuerde dem festen Markenkontrast widersprechen. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --c-base: #0F3B36;
+  --c-base-deep: #0A2A26;
+  --c-base-soft: #1A5049;
+  --c-action: #C6F24E;
+  --c-action-hover: #B2DE3A;
+  --c-route: #1D9E75;
+  --c-surface: #F2F0E8;
+  --c-card: #FDFCF9;
+  --c-line: #E0DED4;
+  --c-tint-trailer: #E8F5C0;
+
+  --c-text: #0F3B36;
+  --c-text-muted: #5C6B66;
+  --c-text-inverse: #F2F0E8;
+  --c-text-inverse-muted: #8FA8A0;
+
+  --c-status-free: #1D9E75;
+  --c-status-busy: #E8A33D;
+  --c-status-down: #B4443A;
+  --c-status-unknown: #8E9A94;
+
+  /* --font-display/--font-ui werden von next/font ueber die className am
+     <html>-Tag gesetzt (layout.tsx), nicht hier -- next/font hostet die
+     Schriftdateien selbst statt sie ueber Google Fonts nachzuladen. */
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-base: var(--c-base);
+  --color-base-deep: var(--c-base-deep);
+  --color-base-soft: var(--c-base-soft);
+  --color-action: var(--c-action);
+  --color-action-hover: var(--c-action-hover);
+  --color-route: var(--c-route);
+  --color-surface: var(--c-surface);
+  --color-card: var(--c-card);
+  --color-line: var(--c-line);
+  --color-tint-trailer: var(--c-tint-trailer);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-text: var(--c-text);
+  --color-text-muted: var(--c-text-muted);
+  --color-text-inverse: var(--c-text-inverse);
+  --color-text-inverse-muted: var(--c-text-inverse-muted);
+
+  --color-status-free: var(--c-status-free);
+  --color-status-busy: var(--c-status-busy);
+  --color-status-down: var(--c-status-down);
+  --color-status-unknown: var(--c-status-unknown);
+
+  --font-display: var(--font-display);
+  --font-sans: var(--font-ui);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--c-surface);
+  color: var(--c-text);
+  font-family: var(--font-ui);
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+}
+
+:focus-visible {
+  outline: 3px solid var(--c-action);
+  outline-offset: 2px;
 }

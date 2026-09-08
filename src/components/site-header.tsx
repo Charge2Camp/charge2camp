@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { LogoutButton } from "@/components/logout-button";
@@ -16,20 +17,26 @@ export async function SiteHeader() {
   } = await supabase.auth.getUser();
 
   return (
-    // Das oberste Padding nutzt env(safe-area-inset-top) und respektiert so
-    // die Notch/Dynamic Island, sobald die Seite randlos (viewport-fit=cover)
+    // Kopfbereich in --c-base (dunkelgruen), siehe docs/design/brand-guide.md
+    // Abschnitt 3 ("Kopfbereiche, Text, dunkle Flaechen") -- Referenz-
+    // umsetzung in docs/design (website/index.html, .top). Das oberste
+    // Padding nutzt env(safe-area-inset-top) und respektiert so die
+    // Notch/Dynamic Island, sobald die Seite randlos (viewport-fit=cover)
     // laeuft -- auf normalen Browsern ist der Wert 0 und aendert nichts.
-    <header className="relative border-b border-black/10 pt-[env(safe-area-inset-top)] dark:border-white/10">
+    <header className="relative bg-base pt-[env(safe-area-inset-top)]">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-2">
         <div className="flex items-center gap-2">
-          <Link href="/" className="flex items-center gap-2 py-2 font-semibold">
-            <span className="text-emerald-600">Charge</span>2Camp
+          <Link href="/" className="flex items-center gap-2 py-2">
+            <Image src="/logo/icon-dark.svg" alt="" width={36} height={36} className="rounded-[9px]" />
+            <span className="font-display text-lg font-bold text-text-inverse">
+              charge<span className="text-action">2</span>camp
+            </span>
           </Link>
         </div>
 
-        <nav className="hidden items-center gap-6 text-sm md:flex">
+        <nav className="hidden items-center gap-6 text-sm text-text-inverse-muted md:flex">
           {NAV_LINKS.map((link) => (
-            <Link key={link.href} href={link.href} className="hover:text-emerald-600">
+            <Link key={link.href} href={link.href} className="hover:text-text-inverse">
               {link.label}
             </Link>
           ))}
@@ -43,23 +50,23 @@ export async function SiteHeader() {
             <>
               <Link
                 href="/profil"
-                className="flex min-h-11 items-center rounded-md px-2 hover:bg-black/5 hover:text-emerald-600 dark:hover:bg-white/10 sm:px-3"
+                className="flex min-h-11 items-center rounded-md px-2 text-text-inverse-muted hover:bg-base-soft hover:text-text-inverse sm:px-3"
               >
                 Mein Profil
               </Link>
-              <LogoutButton />
+              <LogoutButton variant="inverse" />
             </>
           ) : (
             <>
               <Link
                 href="/login"
-                className="flex min-h-11 items-center rounded-md px-2 hover:bg-black/5 hover:text-emerald-600 dark:hover:bg-white/10 sm:px-3"
+                className="flex min-h-11 items-center rounded-md px-2 text-text-inverse-muted hover:bg-base-soft hover:text-text-inverse sm:px-3"
               >
                 Anmelden
               </Link>
               <Link
                 href="/register"
-                className="flex min-h-11 items-center rounded-md bg-emerald-600 px-3 text-white hover:bg-emerald-700"
+                className="flex min-h-11 items-center rounded-md bg-action px-3 font-medium text-base hover:bg-action-hover"
               >
                 Registrieren
               </Link>

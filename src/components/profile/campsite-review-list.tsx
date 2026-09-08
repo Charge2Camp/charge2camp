@@ -48,7 +48,7 @@ function EditForm({ review, onCancel }: { review: CampsiteReviewWithCampsite; on
       <div className="flex gap-2">
         <button
           type="submit"
-          className="min-h-11 rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+          className="min-h-11 rounded-md bg-action px-4 py-2 text-sm font-medium text-base hover:bg-action-hover"
         >
           Speichern
         </button>
@@ -89,7 +89,7 @@ export function CampsiteReviewList({ reviews }: { reviews: CampsiteReviewWithCam
               <div className="flex items-center justify-between">
                 <Link
                   href={review.campsites ? `/campingplaetze/${review.campsites.id}` : "#"}
-                  className="font-medium text-emerald-600 hover:underline"
+                  className="font-medium text-route hover:underline"
                 >
                   {review.campsites?.name ?? "Campingplatz"}
                 </Link>
@@ -102,7 +102,7 @@ export function CampsiteReviewList({ reviews }: { reviews: CampsiteReviewWithCam
                 <button
                   type="button"
                   onClick={() => setEditingId(review.id)}
-                  className="flex min-h-11 items-center px-2 -mx-2 text-emerald-600 hover:underline"
+                  className="flex min-h-11 items-center px-2 -mx-2 text-route hover:underline"
                 >
                   Bearbeiten
                 </button>

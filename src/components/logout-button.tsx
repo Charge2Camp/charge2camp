@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-export function LogoutButton() {
+export function LogoutButton({ variant = "default" }: { variant?: "default" | "inverse" }) {
   const router = useRouter();
   const supabase = createClient();
 
@@ -16,7 +16,11 @@ export function LogoutButton() {
   return (
     <button
       onClick={handleLogout}
-      className="flex min-h-11 items-center rounded-md border border-black/10 px-3 hover:bg-black/5 dark:border-white/10 dark:hover:bg-white/10"
+      className={
+        variant === "inverse"
+          ? "flex min-h-11 items-center rounded-md border border-base-soft px-3 text-text-inverse-muted hover:bg-base-soft hover:text-text-inverse"
+          : "flex min-h-11 items-center rounded-md border border-line px-3 hover:bg-black/5"
+      }
     >
       Abmelden
     </button>

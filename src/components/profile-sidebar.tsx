@@ -6,6 +6,7 @@ import { LogoutButton } from "@/components/logout-button";
 
 const TABS = [
   { href: "/profil", label: "Übersicht" },
+  { href: "/community", label: "Community" },
   { href: "/profil/daten", label: "Meine Daten" },
   { href: "/profil/gespann", label: "Mein Gespann" },
   { href: "/profil/routen", label: "Meine Routen" },
@@ -18,7 +19,10 @@ const TABS = [
  * Bildschirmrand, ausgeloest ueber die "Profil"-Kachel in der
  * Bottom-Tab-Bar (siehe bottom-tab-bar-client.tsx). Nur auf Mobile/Touch
  * relevant (md:hidden) -- am Desktop uebernimmt weiterhin die
- * ProfileSubNav-Leiste innerhalb der Profilseite dieselbe Navigation. */
+ * ProfileSubNav-Leiste innerhalb der Profilseite dieselbe Navigation.
+ * Enthaelt bewusst auch "Community" (docs/design/brand-guide.md Abschnitt
+ * 6: auf schmalen Geraeten liegt Community im Profil statt in der
+ * Bottom-Tab-Bar). */
 export function ProfileSidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const pathname = usePathname();
 
@@ -32,14 +36,14 @@ export function ProfileSidebar({ open, onClose }: { open: boolean; onClose: () =
         onClick={onClose}
         className="absolute inset-0 bg-black/50"
       />
-      <div className="absolute inset-y-0 right-0 flex w-72 max-w-[80vw] flex-col bg-white pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] shadow-xl dark:bg-neutral-900">
-        <div className="flex items-center justify-between border-b border-black/10 p-4 dark:border-white/10">
-          <h2 className="text-lg font-semibold">Mein Profil</h2>
+      <div className="absolute inset-y-0 right-0 flex w-72 max-w-[80vw] flex-col bg-card pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] shadow-xl">
+        <div className="flex items-center justify-between border-b border-line p-4">
+          <h2 className="font-display text-lg font-bold">Mein Profil</h2>
           <button
             type="button"
             onClick={onClose}
             aria-label="Schließen"
-            className="flex h-11 w-11 items-center justify-center rounded-md text-xl text-black/50 hover:bg-black/5 dark:text-white/50 dark:hover:bg-white/10"
+            className="flex h-11 w-11 items-center justify-center rounded-md text-xl text-text-muted hover:bg-black/5"
           >
             ✕
           </button>
@@ -55,8 +59,8 @@ export function ProfileSidebar({ open, onClose }: { open: boolean; onClose: () =
                 onClick={onClose}
                 className={
                   active
-                    ? "flex min-h-12 items-center rounded-md bg-emerald-600 px-3 text-white"
-                    : "flex min-h-12 items-center rounded-md px-3 hover:bg-black/5 dark:hover:bg-white/10"
+                    ? "flex min-h-12 items-center rounded-md bg-route px-3 text-white"
+                    : "flex min-h-12 items-center rounded-md px-3 hover:bg-black/5"
                 }
               >
                 {tab.label}
@@ -65,7 +69,7 @@ export function ProfileSidebar({ open, onClose }: { open: boolean; onClose: () =
           })}
         </nav>
 
-        <div className="border-t border-black/10 p-2 dark:border-white/10">
+        <div className="border-t border-line p-2">
           <LogoutButton />
         </div>
       </div>

@@ -14,7 +14,7 @@ export default function HomePage() {
       <div className="flex flex-wrap justify-center gap-3 pt-2">
         <Link
           href="/campingplaetze"
-          className="rounded-md bg-emerald-600 px-5 py-3 font-medium text-white hover:bg-emerald-700"
+          className="rounded-md bg-action px-5 py-3 font-medium text-base hover:bg-action-hover"
         >
           Campingplatz finden
         </Link>

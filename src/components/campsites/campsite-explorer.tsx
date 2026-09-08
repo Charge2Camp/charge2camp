@@ -23,7 +23,7 @@ function CampsiteCard({
       onMouseLeave={() => onHover(null)}
       className={`block rounded-lg border p-4 transition-colors ${
         selected
-          ? "border-emerald-600 bg-emerald-600/5"
+          ? "border-route bg-route/5"
           : "border-black/10 hover:bg-black/5 dark:border-white/10 dark:hover:bg-white/10"
       }`}
     >
@@ -33,12 +33,12 @@ function CampsiteCard({
       </p>
       <div className="mt-2 flex flex-wrap gap-2 text-xs text-black/50 dark:text-white/50">
         {campsite.charging_on_site && (
-          <span className="rounded bg-emerald-600/10 px-2 py-0.5 text-emerald-700 dark:text-emerald-400">
+          <span className="rounded bg-route/10 px-2 py-0.5 text-route">
             Ladepunkt auf dem Platz
           </span>
         )}
         {!campsite.charging_on_site && campsite.nearest_walk_m != null && (
-          <span className="rounded bg-emerald-600/10 px-2 py-0.5 text-emerald-700 dark:text-emerald-400">
+          <span className="rounded bg-route/10 px-2 py-0.5 text-route">
             Ladepunkt {campsite.nearest_walk_m} m entfernt
           </span>
         )}
@@ -83,7 +83,7 @@ export function CampsiteExplorer({
           onClick={() => setMobileTab("list")}
           className={`min-h-11 flex-1 rounded-md border px-3 py-2 text-sm ${
             mobileTab === "list"
-              ? "border-emerald-600 bg-emerald-600 text-white"
+              ? "border-route bg-route text-white"
               : "border-black/10 dark:border-white/10"
           }`}
         >
@@ -93,7 +93,7 @@ export function CampsiteExplorer({
           onClick={() => setMobileTab("map")}
           className={`min-h-11 flex-1 rounded-md border px-3 py-2 text-sm ${
             mobileTab === "map"
-              ? "border-emerald-600 bg-emerald-600 text-white"
+              ? "border-route bg-route text-white"
               : "border-black/10 dark:border-white/10"
           }`}
         >

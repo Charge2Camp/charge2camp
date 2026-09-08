@@ -62,7 +62,7 @@ function SocSlider({
         step="1"
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="accent-emerald-600"
+        className="accent-route"
       />
     </label>
   );
@@ -726,7 +726,7 @@ export function RoutePlannerForm({
           <button
             type="submit"
             disabled={loading || vehicles.length === 0}
-            className="min-h-12 rounded-md bg-emerald-600 px-5 py-3 font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+            className="min-h-12 rounded-md bg-action px-5 py-3 font-medium text-base hover:bg-action-hover disabled:opacity-50"
           >
             {loading
               ? "Route wird berechnet…"
@@ -754,14 +754,14 @@ export function RoutePlannerForm({
             <button
               type="button"
               onClick={handleOpenOverview}
-              className="min-h-12 rounded-md border border-emerald-600 px-4 py-3 text-sm font-medium text-emerald-700 hover:bg-emerald-600/10 dark:text-emerald-400"
+              className="min-h-12 rounded-md border border-route px-4 py-3 text-sm font-medium text-route hover:bg-route/10 "
             >
               Routenübersicht anzeigen
             </button>
             <button
               type="button"
               onClick={handleStartNavigation}
-              className="min-h-12 rounded-md bg-emerald-600 px-4 py-3 text-sm font-medium text-white hover:bg-emerald-700"
+              className="min-h-12 rounded-md bg-action px-4 py-3 text-sm font-medium text-base hover:bg-action-hover"
             >
               Navigation starten (Google Maps)
             </button>
@@ -788,7 +788,7 @@ export function RoutePlannerForm({
               {savingRoute ? "Wird gespeichert…" : "Im Profil speichern"}
             </button>
             {saveSuccess && (
-              <p className="w-full text-sm text-emerald-700 dark:text-emerald-400">
+              <p className="w-full text-sm text-route">
                 Gespeichert — zu finden unter{" "}
                 <a href="/profil/routen" className="underline">
                   Mein Profil → Meine Routen
@@ -905,7 +905,7 @@ export function RoutePlannerForm({
           )}
 
           {!result.plan.chargingStopsRequired ? (
-            <p className="rounded-md border border-emerald-600/30 bg-emerald-600/5 p-3 text-sm text-emerald-700 dark:text-emerald-400">
+            <p className="rounded-md border border-route/30 bg-route/5 p-3 text-sm text-route">
               Kein Ladestopp nötig — die Strecke liegt innerhalb der Reichweite deines Gespanns.
               {result.plan.arrivalSocPercent !== null &&
                 ` Voraussichtlicher Ankunfts-Ladestand: ${result.plan.arrivalSocPercent.toFixed(0)}%.`}

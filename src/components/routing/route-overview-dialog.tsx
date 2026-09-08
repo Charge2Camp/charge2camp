@@ -64,7 +64,7 @@ function AlternativeRow({
         type="button"
         disabled={disabled}
         onClick={onSelect}
-        className="min-h-11 whitespace-nowrap rounded-md border border-emerald-600 px-3 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-600/10 disabled:opacity-50 dark:text-emerald-400"
+        className="min-h-11 whitespace-nowrap rounded-md border border-route px-3 py-2 text-sm font-medium text-route hover:bg-route/10 disabled:opacity-50 "
       >
         Diesen Ladepunkt wählen
       </button>
@@ -160,7 +160,7 @@ export function RouteOverviewDialog({
               <button
                 type="button"
                 onClick={onApplyChanges}
-                className="min-h-12 rounded-md bg-emerald-600 px-4 py-3 text-sm font-medium text-white hover:bg-emerald-700"
+                className="min-h-12 rounded-md bg-action px-4 py-3 text-sm font-medium text-base hover:bg-action-hover"
               >
                 Änderungen übernehmen
               </button>
@@ -219,7 +219,7 @@ export function RouteOverviewDialog({
               </div>
             )}
             <ol className="flex flex-col gap-3">
-              <li className="rounded-lg border border-emerald-600/30 bg-emerald-600/5 p-3">
+              <li className="rounded-lg border border-route/30 bg-route/5 p-3">
                 <p className="font-medium">Start: {start.displayName}</p>
                 <p className="text-sm text-black/60 dark:text-white/60">
                   Ladestand bei Abfahrt: {plan.departureSocPercent}%
@@ -297,7 +297,7 @@ export function RouteOverviewDialog({
                           <button
                             type="button"
                             onClick={() => setExpandedStopIndex(showAlternatives ? null : index)}
-                            className="inline-flex min-h-11 items-center py-2 text-sm font-medium text-emerald-700 hover:underline dark:text-emerald-400"
+                            className="inline-flex min-h-11 items-center py-2 text-sm font-medium text-route hover:underline "
                           >
                             {showAlternatives
                               ? "Alternativen ausblenden"
@@ -340,7 +340,7 @@ export function RouteOverviewDialog({
                 </li>
               )}
 
-              <li className="rounded-lg border border-emerald-600/30 bg-emerald-600/5 p-3">
+              <li className="rounded-lg border border-route/30 bg-route/5 p-3">
                 <p className="font-medium">Ziel: {end.displayName}</p>
                 {plan.arrivalSocPercent !== null && (
                   <p className="text-sm text-black/60 dark:text-white/60">
@@ -359,7 +359,7 @@ export function RouteOverviewDialog({
               <button
                 type="button"
                 onClick={onApplyChanges}
-                className="min-h-12 flex-1 rounded-md bg-emerald-600 px-4 py-3 text-sm font-medium text-white hover:bg-emerald-700 sm:flex-none"
+                className="min-h-12 flex-1 rounded-md bg-action px-4 py-3 text-sm font-medium text-base hover:bg-action-hover sm:flex-none"
               >
                 Übernehmen
               </button>

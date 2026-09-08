@@ -24,8 +24,8 @@ export function EvScoreBadge({
   if (breakdown.dataFreshness > 0) reasons.push("aktuelle Daten");
 
   return (
-    <div className="rounded-lg border border-emerald-600/30 bg-emerald-600/5 p-4">
-      <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">
+    <div className="rounded-lg border border-route/30 bg-route/5 p-4">
+      <p className="text-sm font-medium text-route">
         EV-Camping-Score
       </p>
       <p className="text-3xl font-bold">{breakdown.score}/100</p>

@@ -71,12 +71,12 @@ export default function RegisterPage() {
         </label>
 
         {error && <p className="text-sm text-red-600">{error}</p>}
-        {message && <p className="text-sm text-emerald-600">{message}</p>}
+        {message && <p className="text-sm text-route">{message}</p>}
 
         <button
           type="submit"
           disabled={loading}
-          className="min-h-12 rounded-md bg-emerald-600 px-4 py-3 font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+          className="min-h-12 rounded-md bg-action px-4 py-3 font-medium text-base hover:bg-action-hover disabled:opacity-50"
         >
           {loading ? "Wird erstellt…" : "Registrieren"}
         </button>
@@ -84,7 +84,7 @@ export default function RegisterPage() {
 
       <p className="text-sm text-black/60 dark:text-white/60">
         Bereits registriert?{" "}
-        <Link href="/login" className="text-emerald-600 hover:underline">
+        <Link href="/login" className="text-route hover:underline">
           Anmelden
         </Link>
       </p>

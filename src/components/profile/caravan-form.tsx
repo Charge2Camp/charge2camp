@@ -217,7 +217,7 @@ export function CaravanForm({ models }: { models: CaravanModel[] }) {
       <div>
         <button
           type="submit"
-          className="min-h-12 rounded-md bg-emerald-600 px-4 py-3 font-medium text-white hover:bg-emerald-700"
+          className="min-h-12 rounded-md bg-action px-4 py-3 font-medium text-base hover:bg-action-hover"
         >
           Wohnwagen hinzufügen
         </button>

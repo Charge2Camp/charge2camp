@@ -14,9 +14,16 @@ export const TRAILER_VERDICT_LABELS: Record<TrailerVerdict, string> = {
   unknown: "Noch nicht bewertet",
 };
 
+// Farben aus docs/design/brand-guide.md Abschnitt 7 ("Fuenf Zustaende,
+// jeweils eigene Farbe und eigenes Zeichen") -- hier auf die vier
+// vorhandenen Rohzustaende gemappt: yes = route (--c-route, entspricht
+// "ohne Abkoppeln"/"Drive-Through" je nach drive_through-Flag, siehe
+// enrich.trailer_suitability), unhitch = status-busy (--c-status-busy,
+// "bedingt tauglich"), no = status-down (--c-status-down, "nicht
+// tauglich"), unknown = status-unknown (--c-status-unknown, "ungeprueft").
 export const TRAILER_VERDICT_COLORS: Record<TrailerVerdict, string> = {
-  yes: "#059669",
-  unhitch: "#d97706",
-  no: "#dc2626",
-  unknown: "#6b7280",
+  yes: "#1D9E75",
+  unhitch: "#E8A33D",
+  no: "#B4443A",
+  unknown: "#8E9A94",
 };

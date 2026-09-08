@@ -42,7 +42,7 @@ export default async function CommunityPage() {
         <>
           <Link
             href={r.campsites ? `/campingplaetze/${r.campsites.id}` : "#"}
-            className="font-medium text-emerald-600 hover:underline"
+            className="font-medium text-route hover:underline"
           >
             {r.campsites?.name ?? "Campingplatz"}
           </Link>{" "}
@@ -58,7 +58,7 @@ export default async function CommunityPage() {
         <>
           <Link
             href={r.charging_stations ? `/ladepunkte/${r.charging_stations.id}` : "#"}
-            className="font-medium text-emerald-600 hover:underline"
+            className="font-medium text-route hover:underline"
           >
             {r.charging_stations?.name ?? r.charging_stations?.provider ?? "Ladepunkt"}
           </Link>{" "}

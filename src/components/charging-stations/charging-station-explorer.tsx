@@ -37,7 +37,7 @@ function ChargingStationCard({
       onMouseLeave={() => onHover(null)}
       className={`block rounded-lg border p-4 transition-colors ${
         selected
-          ? "border-emerald-600 bg-emerald-600/5"
+          ? "border-route bg-route/5"
           : "border-black/10 hover:bg-black/5 dark:border-white/10 dark:hover:bg-white/10"
       }`}
     >
@@ -101,7 +101,7 @@ export function ChargingStationExplorer({ stations }: { stations: ChargingStatio
           onClick={() => setMobileTab("list")}
           className={`min-h-11 flex-1 rounded-md border px-3 py-2 text-sm ${
             mobileTab === "list"
-              ? "border-emerald-600 bg-emerald-600 text-white"
+              ? "border-route bg-route text-white"
               : "border-black/10 dark:border-white/10"
           }`}
         >
@@ -111,7 +111,7 @@ export function ChargingStationExplorer({ stations }: { stations: ChargingStatio
           onClick={() => setMobileTab("map")}
           className={`min-h-11 flex-1 rounded-md border px-3 py-2 text-sm ${
             mobileTab === "map"
-              ? "border-emerald-600 bg-emerald-600 text-white"
+              ? "border-route bg-route text-white"
               : "border-black/10 dark:border-white/10"
           }`}
         >

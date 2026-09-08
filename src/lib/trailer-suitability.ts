@@ -14,9 +14,11 @@ export const TRAILER_SUITABILITY_LABELS: Record<TrailerSuitability, string> = {
   unsuitable: "Nicht anhängertauglich",
 };
 
+// Farben aus docs/design/brand-guide.md Abschnitt 7 (siehe auch
+// trailer-verdict.ts fuer dieselbe Zuordnung bei den core.*-Ladepunkten).
 export const TRAILER_SUITABILITY_COLORS: Record<TrailerSuitability, string> = {
-  confirmed: "#059669", // grün
-  likely: "#84cc16", // hellgrün
-  unknown: "#9ca3af", // grau
-  unsuitable: "#dc2626", // rot
+  confirmed: "#1D9E75", // route
+  likely: "#C6F24E", // action (naeher an "Drive-Through"/besserer Fall als status-busy)
+  unknown: "#8E9A94", // status-unknown
+  unsuitable: "#B4443A", // status-down
 };

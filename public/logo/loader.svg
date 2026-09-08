@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="120" height="120" role="img" aria-label="Wird geladen">
+<style>
+.c2c-fill{width:0;animation:c2c-fill 1.9s ease-in-out infinite}
+@keyframes c2c-fill{0%,6%{width:0}62%,88%{width:50px}100%{width:0}}
+.c2c-details{opacity:0;animation:c2c-details 1.9s ease-in-out infinite}
+@keyframes c2c-details{0%,50%{opacity:0}68%,88%{opacity:1}100%{opacity:0}}
+.c2c-bar{stroke:#24534B;animation:c2c-bar 1.9s ease-in-out infinite}
+@keyframes c2c-bar{0%{stroke:#24534B}35%,88%{stroke:#F2F0E8}100%{stroke:#24534B}}
+.c2c-coupling{fill:#24534B;animation:c2c-coupling 1.9s ease-in-out infinite}
+@keyframes c2c-coupling{0%{fill:#24534B}28%,88%{fill:#F2F0E8}100%{fill:#24534B}}
+.c2c-spark{cx:29px;opacity:0;animation:c2c-spark .63s linear infinite}
+@keyframes c2c-spark{0%{cx:29px;opacity:0}18%{opacity:1}44%{cx:42px;opacity:1}55%,100%{cx:45px;opacity:0}}
+.c2c-bolt{opacity:.35;animation:c2c-bolt .63s ease-in-out infinite}
+@keyframes c2c-bolt{0%,100%{opacity:.35}40%{opacity:1}}
+@media (prefers-reduced-motion:reduce){
+.c2c-fill{animation:none;width:50px}
+.c2c-details{animation:none;opacity:1}
+.c2c-bar{animation:none;stroke:#F2F0E8}
+.c2c-coupling{animation:none;fill:#F2F0E8}
+.c2c-spark{display:none}
+.c2c-bolt{animation:none;opacity:1}
+}
+</style>
+<defs><clipPath id="c2c-body"><path d="M40 62V48c0-5 3-8 7-10l7-2.5c2-.5 3-.5 5-.5h26c3 0 5 2 5 5v22Z"/></clipPath></defs>
+<rect width="100" height="100" rx="24" fill="#0F3B36"/>
+<circle cx="64" cy="62" r="8" fill="#C6F24E"/>
+<circle cx="64" cy="62" r="3" fill="#0F3B36"/>
+<path d="M40 62V48c0-5 3-8 7-10l7-2.5c2-.5 3-.5 5-.5h26c3 0 5 2 5 5v22Z" fill="#24534B"/>
+<g clip-path="url(#c2c-body)"><rect class="c2c-fill" x="40" y="34" height="29" fill="#F2F0E8"/></g>
+<g class="c2c-details">
+<rect x="64" y="42" width="15" height="10" rx="2.5" fill="#0F3B36"/>
+<rect x="48" y="41" width="9" height="19" rx="2" fill="#0F3B36"/>
+</g>
+<path class="c2c-bar" d="M40 60h-7" stroke-width="4" stroke-linecap="round" fill="none"/>
+<circle class="c2c-coupling" cx="31" cy="60" r="4.5"/>
+<circle class="c2c-spark" cy="60" r="2.6" fill="#C6F24E"/>
+<rect x="12" y="22" width="18" height="48" rx="7" fill="#C6F24E"/>
+<rect x="16" y="27" width="10" height="12" rx="2.5" fill="#0F3B36"/>
+<path class="c2c-bolt" d="M23 44 17 56h4l-1.5 10L26 54h-4Z" fill="#0F3B36"/>
+</svg>

@@ -178,7 +178,7 @@ function EditForm({
       <div className="flex gap-2">
         <button
           type="submit"
-          className="min-h-11 rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+          className="min-h-11 rounded-md bg-action px-4 py-2 text-sm font-medium text-base hover:bg-action-hover"
         >
           Speichern
         </button>
@@ -219,7 +219,7 @@ export function ChargingReviewList({ reviews }: { reviews: ChargingReviewWithSta
               <div className="flex items-center justify-between">
                 <Link
                   href={review.charging_stations ? `/ladepunkte/${review.charging_stations.id}` : "#"}
-                  className="font-medium text-emerald-600 hover:underline"
+                  className="font-medium text-route hover:underline"
                 >
                   {review.charging_stations?.name ?? review.charging_stations?.provider ?? "Ladepunkt"}
                 </Link>
@@ -243,7 +243,7 @@ export function ChargingReviewList({ reviews }: { reviews: ChargingReviewWithSta
                 <button
                   type="button"
                   onClick={() => setEditingId(review.id)}
-                  className="flex min-h-11 items-center px-2 -mx-2 text-emerald-600 hover:underline"
+                  className="flex min-h-11 items-center px-2 -mx-2 text-route hover:underline"
                 >
                   Bearbeiten
                 </button>

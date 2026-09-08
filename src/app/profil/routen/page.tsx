@@ -112,7 +112,7 @@ export default async function SavedRoutesPage() {
                 <div className="flex shrink-0 flex-wrap items-center gap-1 text-sm">
                   <a
                     href={`/routenplaner?savedRouteId=${route.id}`}
-                    className="flex min-h-11 items-center px-2 text-emerald-700 hover:underline dark:text-emerald-400"
+                    className="flex min-h-11 items-center px-2 text-route hover:underline "
                   >
                     Im Routenplaner öffnen
                   </a>
@@ -157,7 +157,7 @@ export default async function SavedRoutesPage() {
                         <div className="mt-2 flex flex-col gap-2">
                           <NavigationLink
                             href={fullRouteUrl}
-                            className="w-fit min-h-11 rounded-md bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-700"
+                            className="w-fit min-h-11 rounded-md bg-action px-4 py-2.5 text-sm font-medium text-base hover:bg-action-hover"
                           >
                             Gesamte Route navigieren (Google Maps)
                           </NavigationLink>

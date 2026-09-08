@@ -49,12 +49,12 @@ export function ChangePasswordForm() {
       </label>
 
       {state.error && <p className="text-sm text-red-600">{state.error}</p>}
-      {state.success && <p className="text-sm text-emerald-600">Passwort geändert.</p>}
+      {state.success && <p className="text-sm text-route">Passwort geändert.</p>}
 
       <button
         type="submit"
         disabled={pending}
-        className="mt-1 min-h-11 self-start rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-60"
+        className="mt-1 min-h-11 self-start rounded-md bg-action px-4 py-2 text-sm font-medium text-base hover:bg-action-hover disabled:opacity-60"
       >
         {pending ? "Wird geändert…" : "Passwort ändern"}
       </button>

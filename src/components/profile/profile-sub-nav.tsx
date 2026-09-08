@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 
 const TABS = [
   { href: "/profil", label: "Übersicht" },
+  { href: "/community", label: "Community" },
   { href: "/profil/daten", label: "Meine Daten" },
   { href: "/profil/gespann", label: "Mein Gespann" },
   { href: "/profil/routen", label: "Meine Routen" },
@@ -29,7 +30,7 @@ export function ProfileSubNav() {
             href={tab.href}
             className={
               active
-                ? "flex min-h-11 items-center rounded-md bg-emerald-600 px-3 text-white"
+                ? "flex min-h-11 items-center rounded-md bg-route px-3 text-white"
                 : "flex min-h-11 items-center rounded-md px-3 hover:bg-black/5 dark:hover:bg-white/10"
             }
           >

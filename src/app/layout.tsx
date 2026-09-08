@@ -1,22 +1,26 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, Manrope } from "next/font/google";
 import "./globals.css";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { BottomTabBar } from "@/components/bottom-tab-bar";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// charge2camp-Markentypografie (docs/design/brand-guide.md Abschnitt 4):
+// Manrope 700 fuer Ueberschriften, Inter 400/500 fuer Fliesstext/UI.
+const manrope = Manrope({
+  variable: "--font-display",
+  weight: ["700"],
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const inter = Inter({
+  variable: "--font-ui",
+  weight: ["400", "500"],
   subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
-  title: "Charge2Camp – Camping mit Elektroauto",
+  title: "charge2camp – Camping mit Elektroauto",
   description:
     "Finde Campingplätze und plane deine Route mit anhängertauglichen Ladestopps.",
 };
@@ -42,9 +46,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="de"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${manrope.variable} ${inter.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-full flex flex-col bg-surface text-text">
         <SiteHeader />
         {/* Bottom-Tab-Bar (mobile) ist fixed -- Bodenabstand verhindert, dass
             sie den unteren Seiteninhalt ueberdeckt. Nur auf Mobile-Breiten

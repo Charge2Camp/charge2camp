@@ -28,7 +28,7 @@ export function MobileFilterSheet({
       >
         Filter
         {activeFilterCount > 0 && (
-          <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-600 px-1 text-xs text-white">
+          <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-route px-1 text-xs text-white">
             {activeFilterCount}
           </span>
         )}

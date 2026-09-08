@@ -70,14 +70,14 @@ export function FavoritesPickerDialog({
                 <button
                   type="button"
                   onClick={() => handlePick("start")}
-                  className="min-h-12 flex-1 rounded-md border border-emerald-600 px-4 py-3 text-sm font-medium text-emerald-700 hover:bg-emerald-600/10 dark:text-emerald-400"
+                  className="min-h-12 flex-1 rounded-md border border-route px-4 py-3 text-sm font-medium text-route hover:bg-route/10 "
                 >
                   Als Start verwenden
                 </button>
                 <button
                   type="button"
                   onClick={() => handlePick("end")}
-                  className="min-h-12 flex-1 rounded-md bg-emerald-600 px-4 py-3 text-sm font-medium text-white hover:bg-emerald-700"
+                  className="min-h-12 flex-1 rounded-md bg-action px-4 py-3 text-sm font-medium text-base hover:bg-action-hover"
                 >
                   Als Ziel verwenden
                 </button>

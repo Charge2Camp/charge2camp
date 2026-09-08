@@ -67,7 +67,7 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={loading}
-          className="min-h-12 rounded-md bg-emerald-600 px-4 py-3 font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+          className="min-h-12 rounded-md bg-action px-4 py-3 font-medium text-base hover:bg-action-hover disabled:opacity-50"
         >
           {loading ? "Wird angemeldet…" : "Anmelden"}
         </button>
@@ -75,7 +75,7 @@ export default function LoginPage() {
 
       <p className="text-sm text-black/60 dark:text-white/60">
         Noch kein Konto?{" "}
-        <Link href="/register" className="text-emerald-600 hover:underline">
+        <Link href="/register" className="text-route hover:underline">
           Registrieren
         </Link>
       </p>

@@ -52,7 +52,7 @@ export function CampsiteReviewForm({ campsiteId }: { campsiteId: string }) {
 
       <button
         type="submit"
-        className="min-h-12 self-start rounded-md bg-emerald-600 px-4 py-3 text-sm font-medium text-white hover:bg-emerald-700"
+        className="min-h-12 self-start rounded-md bg-action px-4 py-3 text-sm font-medium text-base hover:bg-action-hover"
       >
         Bewertung abschicken
       </button>

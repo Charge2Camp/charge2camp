@@ -67,7 +67,7 @@ export default async function MeineDatenPage() {
           </label>
           <button
             type="submit"
-            className="min-h-11 rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+            className="min-h-11 rounded-md bg-action px-4 py-2 text-sm font-medium text-base hover:bg-action-hover"
           >
             Ändern
           </button>
