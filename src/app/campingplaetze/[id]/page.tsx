@@ -4,7 +4,12 @@ import { createClient } from "@/lib/supabase/server";
 import type { CampsiteReview } from "@/types/database";
 import type { CampsiteSearchRow, CoreCampsite } from "@/types/database";
 import { fetchAmenityCatalog } from "@/lib/campsites";
-import { fetchLinkedChargePoints, fetchNearbyChargePoints, type NearbyChargePoint } from "@/lib/campsite-charging-links";
+import {
+  fetchLinkedChargePoints,
+  fetchNearbyChargePoints,
+  type LinkedChargePoint,
+  type NearbyChargePoint,
+} from "@/lib/campsite-charging-links";
 import { calculateEvCampingScore } from "@/lib/scoring/ev-camping-score";
 import { MapView } from "@/components/map/map-view";
 import { EvScoreBadge } from "@/components/campsites/ev-score-badge";
@@ -13,6 +18,11 @@ import { CampsiteFavoriteButton } from "@/components/campsites/favorite-button";
 import { NearbyChargePointsList } from "@/components/campsites/nearby-charge-points";
 
 const NEARBY_RADIUS_KM = 25;
+// Auch nicht-fussläufige Schnelllader sind erwaehnenswert, wenn sie stark
+// genug sind, um den Umweg mit dem Auto zu rechtfertigen -- 150 kW+ laedt
+// ein Gespann in Minuten statt Stunden.
+const FAST_CHARGER_MIN_KW = 150;
+const FAST_CHARGER_RADIUS_KM = 15;
 
 function escapeHtml(value: string): string {
   return value
@@ -86,6 +96,35 @@ export default async function CampsiteDetailPage({
 
   const amenityLabels = Object.fromEntries(amenityCatalog.map((a) => [a.key, a.label_de]));
   const activeAmenities = search?.amenities ?? [];
+
+  // "Ladepunkte in der Naehe" zeigt primaer fussläufig erreichbare
+  // Ladepunkte (linkedChargePoints, schon auf max. 15 Gehminuten
+  // beschraenkt, siehe fetchLinkedChargePoints), ergaenzt um Schnelllader
+  // ab FAST_CHARGER_MIN_KW im FAST_CHARGER_RADIUS_KM-Umkreis, die den
+  // Umweg mit dem Auto lohnen -- deutlich als "nicht fußläufig"
+  // gekennzeichnet (siehe NearbyChargePointsList).
+  const linkedIds = new Set(linkedChargePoints.map((l) => l.id));
+  const nonWalkableFastChargers: LinkedChargePoint[] = nearbyChargePoints
+    .filter(
+      (p) =>
+        !linkedIds.has(p.id) && p.max_power_kw != null && p.max_power_kw >= FAST_CHARGER_MIN_KW && p.distance_m <= FAST_CHARGER_RADIUS_KM * 1000
+    )
+    .map((p) => ({
+      id: p.id,
+      external_key: "",
+      name: p.name,
+      operator: p.operator,
+      max_power_kw: p.max_power_kw,
+      relation: "nearby_drive",
+      air_distance_m: p.distance_m,
+      walk_distance_m: null,
+      walk_duration_s: null,
+      latitude: p.latitude,
+      longitude: p.longitude,
+      trailerVerdict: p.trailerVerdict,
+      walkable: false,
+    }));
+  const nearbyListChargePoints = [...linkedChargePoints, ...nonWalkableFastChargers];
 
   const onSiteChargePoints = linkedChargePoints.filter((l) => l.relation === "on_site");
   const fastChargers = linkedChargePoints.filter((l) => (l.max_power_kw ?? 0) >= 100 && l.walk_distance_m != null);
@@ -198,6 +237,11 @@ export default async function CampsiteDetailPage({
                 popupHtml: buildNearbyChargePointPopupHtml(p),
               })),
             ]}
+            fitBoundsPoints={[
+              { latitude: search.lat, longitude: search.lon },
+              ...linkedChargePoints.map((l) => ({ latitude: l.latitude, longitude: l.longitude })),
+            ]}
+            fitBoundsMaxZoom={17}
             cluster
           />
         </div>
@@ -218,14 +262,15 @@ export default async function CampsiteDetailPage({
         )}
       </section>
 
-      {linkedChargePoints.length > 0 ? (
+      {nearbyListChargePoints.length > 0 ? (
         <section className="mt-8">
           <h2 className="font-semibold">Ladepunkte in der Nähe</h2>
-          <NearbyChargePointsList points={linkedChargePoints} />
+          <NearbyChargePointsList points={nearbyListChargePoints} />
         </section>
       ) : (
         <p className="mt-8 text-xs text-black/40 dark:text-white/40">
-          Noch keine Fußweg-Verknüpfung zu Ladepunkten für diesen Campingplatz berechnet.
+          Keine Ladepunkte innerhalb von 15 Gehminuten bekannt (oder noch keine Fußweg-Verknüpfung für diesen
+          Campingplatz berechnet).
         </p>
       )}
 

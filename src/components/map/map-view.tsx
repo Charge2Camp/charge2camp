@@ -130,6 +130,8 @@ export function MapView({
   cluster = false,
   fallbackCenter = { latitude: 51.1657, longitude: 10.4515 }, // Deutschland
   fallbackZoom = 4.5,
+  fitBoundsPoints,
+  fitBoundsMaxZoom = 12,
 }: {
   markers: MapMarker[];
   route?: RoutePoint[];
@@ -141,6 +143,19 @@ export function MapView({
   cluster?: boolean;
   fallbackCenter?: { latitude: number; longitude: number };
   fallbackZoom?: number;
+  /** Ueberschreibt, welche Punkte fuer den initialen Kartenausschnitt
+   * (fitBounds) herangezogen werden -- unabhaengig davon, welche Marker
+   * tatsaechlich angezeigt werden. Fuer die Campingplatz-Detailseite:
+   * alle Ladepunkte im Umkreis werden als Marker gezeigt, der Ausschnitt
+   * soll aber nur auf Campingplatz + fussläufig erreichbare Ladepunkte
+   * eingezoomt sein. Ohne diese Prop faellt es wie bisher auf `route`
+   * bzw. alle `markers` zurueck. */
+  fitBoundsPoints?: { latitude: number; longitude: number }[];
+  /** Maximaler Zoom beim initialen fitBounds -- Standard 12 passt fuer
+   * Routen (die ueber viele km verlaufen), ist fuer einen engen
+   * Campingplatz+fussläufige-Ladepunkte-Ausschnitt (siehe fitBoundsPoints)
+   * aber zu weit rausgezoomt. */
+  fitBoundsMaxZoom?: number;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -319,15 +334,18 @@ export function MapView({
     map.fire("render");
 
     const routeCoords = route?.map((p): [number, number] => [p.longitude, p.latitude]) ?? [];
-    const boundsPoints =
-      routeCoords.length > 0 ? routeCoords : markers.map((m) => [m.longitude, m.latitude] as [number, number]);
+    const boundsPoints = fitBoundsPoints
+      ? fitBoundsPoints.map((p): [number, number] => [p.longitude, p.latitude])
+      : routeCoords.length > 0
+        ? routeCoords
+        : markers.map((m) => [m.longitude, m.latitude] as [number, number]);
 
     if (boundsPoints.length > 1) {
       const bounds = boundsPoints.reduce(
         (b, p) => b.extend(p),
         new LngLatBounds(boundsPoints[0], boundsPoints[0])
       );
-      map.fitBounds(bounds, { padding: 60, maxZoom: 12 });
+      map.fitBounds(bounds, { padding: 60, maxZoom: fitBoundsMaxZoom });
     } else if (boundsPoints.length === 1) {
       map.flyTo({ center: boundsPoints[0], zoom: 10 });
     }
@@ -335,7 +353,7 @@ export function MapView({
     return () => {
       if (cluster) map.off("moveend", renderFn);
     };
-  }, [markers, route, selectedId, onMarkerClick, cluster]);
+  }, [markers, route, selectedId, onMarkerClick, cluster, fitBoundsPoints, fitBoundsMaxZoom]);
 
   return (
     <div ref={containerRef} className="relative h-full w-full">

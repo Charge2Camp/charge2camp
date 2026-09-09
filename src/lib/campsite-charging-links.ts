@@ -15,13 +15,32 @@ export interface LinkedChargePoint {
   latitude: number;
   longitude: number;
   trailerVerdict: TrailerVerdict;
+  /** false bei nachtraeglich per Umkreissuche eingemischten Schnellladern
+   * (siehe fetchNearbyChargePoints/campingplaetze/[id]/page.tsx) -- die
+   * sind nicht Teil der Fussweg-Verknuepfung, die Liste zeigt fuer sie
+   * "nicht fußläufig" statt einer Gehdistanz. */
+  walkable: boolean;
 }
+
+// "nearby_drive" (core.campsite_charge_link.relation) heisst per
+// ingest/build_links.py-Klassifizierung explizit "nicht innerhalb der
+// Fussweg-Schwelle (1200 m) erreichbar" -- der Ladepunkt hat trotzdem
+// einen echten walk_distance_m/walk_duration_s-Wert (OSRM findet fast
+// immer IRGENDeine Fussroute, auch ueber mehrere Kilometer Umweg), der
+// bisher ungefiltert in die "Ladepunkte in der Naehe"-Liste einfloss --
+// dadurch konnten dort ganz unrealistische Fusswege (mehrere km) als
+// naechstliegende Treffer erscheinen. Ausschliesslich "on_site"/"walking"
+// zulassen, plus als zusaetzliche Praezision (die 1200-m-Schwelle ist nur
+// eine Distanz-Naeherung fuer ca. 15 Gehminuten) eine harte
+// Dauer-Obergrenze, wo eine tatsaechliche OSRM-Gehzeit vorliegt.
+const MAX_WALK_DURATION_S = 15 * 60;
 
 /** Liest die von ingest/build_links.py vorberechnete Campingplatz-
  * Ladepunkt-Verknuepfung (siehe Auftrag C) -- echte Gehstrecken statt
- * Luftlinie. Kann fuer Campingplaetze ausserhalb des bisher per OSRM
- * abgedeckten Gebiets leer sein (noch nicht Teil dieser Umstellung, siehe
- * docs/architecture.md). */
+ * Luftlinie, beschraenkt auf realistisch zu Fuss erreichbare Ladepunkte
+ * (siehe MAX_WALK_DURATION_S oben). Kann fuer Campingplaetze ausserhalb
+ * des bisher per OSRM abgedeckten Gebiets leer sein (noch nicht Teil
+ * dieser Umstellung, siehe docs/architecture.md). */
 export async function fetchLinkedChargePoints(campsiteId: string): Promise<LinkedChargePoint[]> {
   const supabase = await createClient();
   const { data: links, error } = await supabase
@@ -54,6 +73,8 @@ export async function fetchLinkedChargePoints(campsiteId: string): Promise<Linke
 
   const result: LinkedChargePoint[] = [];
   for (const link of linkRows) {
+    if (link.relation === "nearby_drive") continue;
+    if (link.walk_duration_s !== null && link.walk_duration_s > MAX_WALK_DURATION_S) continue;
     const point = pointById.get(link.charge_point_id);
     if (!point) continue;
     result.push({
@@ -69,6 +90,7 @@ export async function fetchLinkedChargePoints(campsiteId: string): Promise<Linke
       latitude: point.lat,
       longitude: point.lon,
       trailerVerdict: trailerByKey.get(point.external_key)?.verdict ?? "unknown",
+      walkable: true,
     });
   }
   return result;
@@ -83,6 +105,7 @@ export interface NearbyChargePoint {
   longitude: number;
   distance_m: number;
   iconSrc: string;
+  trailerVerdict: TrailerVerdict;
 }
 
 /** Echter Umkreis-Radius per PostGIS (core.charge_points_within_radius,
@@ -115,14 +138,18 @@ export async function fetchNearbyChargePoints(
     drive_through: boolean | null;
   }[];
 
-  return rows.map((r) => ({
-    id: r.id,
-    name: r.name,
-    operator: r.operator,
-    max_power_kw: r.max_power_kw,
-    latitude: r.lat,
-    longitude: r.lon,
-    distance_m: r.distance_m,
-    iconSrc: TRAILER_PIN_ICON_SRC[getTrailerPinState({ verdict: r.verdict ?? "unknown", drive_through: r.drive_through })],
-  }));
+  return rows.map((r) => {
+    const trailerVerdict = r.verdict ?? "unknown";
+    return {
+      id: r.id,
+      name: r.name,
+      operator: r.operator,
+      max_power_kw: r.max_power_kw,
+      latitude: r.lat,
+      longitude: r.lon,
+      distance_m: r.distance_m,
+      iconSrc: TRAILER_PIN_ICON_SRC[getTrailerPinState({ verdict: trailerVerdict, drive_through: r.drive_through })],
+      trailerVerdict,
+    };
+  });
 }

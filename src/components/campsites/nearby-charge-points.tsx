@@ -12,10 +12,16 @@ export function NearbyChargePointsList({ points }: { points: LinkedChargePoint[]
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = points.find((p) => p.id === selectedId) ?? null;
 
+  // Fussläufige Punkte zuerst (schon auf max. 15 Gehminuten begrenzt), dann
+  // nicht-fussläufige Schnelllader -- damit die Liste nicht von einem
+  // 150kW+-Lader verdraengt wird, der weiter weg liegt als ein normaler,
+  // aber zu Fuss erreichbarer Ladepunkt.
+  const sorted = [...points].sort((a, b) => Number(b.walkable) - Number(a.walkable));
+
   return (
     <>
       <ul className="mt-2 flex flex-col gap-2">
-        {points.slice(0, 5).map((point) => (
+        {sorted.slice(0, 8).map((point) => (
           <li key={point.id}>
             <button
               type="button"
@@ -32,10 +38,19 @@ export function NearbyChargePointsList({ points }: { points: LinkedChargePoint[]
                   </span>
                 </p>
               </div>
-              <span className="shrink-0 pl-3 text-black/50 dark:text-white/50">
-                {point.walk_distance_m != null
-                  ? `${(point.walk_distance_m / 1000).toFixed(1)} km zu Fuß`
-                  : `${(point.air_distance_m / 1000).toFixed(1)} km Luftlinie`}
+              <span className="shrink-0 pl-3 text-right text-black/50 dark:text-white/50">
+                {!point.walkable ? (
+                  <>
+                    <span className="block rounded-full bg-black/10 px-2 py-0.5 text-xs font-medium text-black/70 dark:bg-white/10 dark:text-white/70">
+                      nicht fußläufig
+                    </span>
+                    <span className="mt-1 block">{(point.air_distance_m / 1000).toFixed(1)} km Luftlinie</span>
+                  </>
+                ) : point.walk_distance_m != null ? (
+                  `${(point.walk_distance_m / 1000).toFixed(1)} km zu Fuß`
+                ) : (
+                  `${(point.air_distance_m / 1000).toFixed(1)} km Luftlinie`
+                )}
               </span>
             </button>
           </li>
@@ -71,8 +86,13 @@ export function NearbyChargePointsList({ points }: { points: LinkedChargePoint[]
             <ul className="mt-3 space-y-1 text-sm text-black/70 dark:text-white/70">
               {selected.operator && selected.name && <li>Betreiber: {selected.operator}</li>}
               {selected.max_power_kw && <li>Max. Ladeleistung: {selected.max_power_kw} kW</li>}
+              {!selected.walkable && (
+                <li className="font-medium text-black dark:text-white">
+                  Nicht fußläufig erreichbar – nur mit dem Auto sinnvoll erreichbar
+                </li>
+              )}
               <li>
-                {selected.walk_distance_m != null
+                {selected.walkable && selected.walk_distance_m != null
                   ? `${(selected.walk_distance_m / 1000).toFixed(1)} km zu Fuß`
                   : `${(selected.air_distance_m / 1000).toFixed(1)} km Luftlinie`}
               </li>
