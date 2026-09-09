@@ -14,9 +14,20 @@ import {
 } from "@/lib/trailer-verdict";
 import { ReviewStateBadge } from "@/components/charging-stations/review-state-badge";
 import { formatConnectorStandard } from "@/lib/connector-standard";
+import { distanceKm } from "@/lib/geo";
 import type { ChargingStationView } from "@/lib/charging-stations";
 
 const PAGE_SIZE = 30;
+
+type SortOption = "name_asc" | "name_desc" | "power_desc" | "power_asc" | "distance";
+
+const SORT_LABELS: Record<SortOption, string> = {
+  name_asc: "Name (A–Z)",
+  name_desc: "Name (Z–A)",
+  power_desc: "Ladeleistung (hoch–niedrig)",
+  power_asc: "Ladeleistung (niedrig–hoch)",
+  distance: "Entfernung zum Standort",
+};
 
 function escapeHtml(value: string): string {
   return value
@@ -162,6 +173,58 @@ export function ChargingStationMapExplorer({
   // schrittweise wachsend statt paginiert.
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
+  const [sortOption, setSortOption] = useState<SortOption>("name_asc");
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [locationLoading, setLocationLoading] = useState(false);
+
+  function handleSortChange(next: SortOption) {
+    setSortOption(next);
+    setVisibleCount(PAGE_SIZE);
+    if (next === "distance" && !userLocation && !locationLoading) {
+      if (!navigator.geolocation) {
+        setLocationError("Standortbestimmung wird von diesem Gerät nicht unterstützt.");
+        return;
+      }
+      setLocationLoading(true);
+      setLocationError(null);
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({ latitude: position.coords.latitude, longitude: position.coords.longitude });
+          setLocationLoading(false);
+        },
+        () => {
+          setLocationError("Standort konnte nicht ermittelt werden -- Berechtigung erteilt?");
+          setLocationLoading(false);
+        },
+        { enableHighAccuracy: false, timeout: 10000 }
+      );
+    }
+  }
+
+  const sortedStations = useMemo(() => {
+    const list = [...stations];
+    switch (sortOption) {
+      case "name_asc":
+        return list.sort((a, b) => (a.name ?? a.operator ?? "").localeCompare(b.name ?? b.operator ?? ""));
+      case "name_desc":
+        return list.sort((a, b) => (b.name ?? b.operator ?? "").localeCompare(a.name ?? a.operator ?? ""));
+      case "power_desc":
+        return list.sort((a, b) => (b.max_power_kw ?? 0) - (a.max_power_kw ?? 0));
+      case "power_asc":
+        return list.sort((a, b) => (a.max_power_kw ?? 0) - (b.max_power_kw ?? 0));
+      case "distance":
+        if (!userLocation) return list;
+        return list.sort(
+          (a, b) =>
+            distanceKm(userLocation, { latitude: a.lat, longitude: a.lon }) -
+            distanceKm(userLocation, { latitude: b.lat, longitude: b.lon })
+        );
+      default:
+        return list;
+    }
+  }, [stations, sortOption, userLocation]);
+
   // Memoisiert, sonst entsteht bei jedem Render (z. B. onMarkerClick ->
   // setHoveredId) ein neues Array mit neuen Objektreferenzen -- MapView
   // erkennt das als "Marker haben sich geaendert", raeumt alle Marker
@@ -248,24 +311,49 @@ export function ChargingStationMapExplorer({
             {FilterButton}
           </div>
 
+          {stations.length > 0 && (
+            <div className="mb-4 flex flex-col gap-1">
+              <label className="flex items-center gap-2 text-sm">
+                Sortieren nach
+                <select
+                  value={sortOption}
+                  onChange={(e) => handleSortChange(e.target.value as SortOption)}
+                  className="min-h-11 rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+                >
+                  {(Object.keys(SORT_LABELS) as SortOption[]).map((option) => (
+                    <option key={option} value={option}>
+                      {SORT_LABELS[option]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {sortOption === "distance" && locationLoading && (
+                <p className="text-xs text-black/50 dark:text-white/50">Standort wird ermittelt…</p>
+              )}
+              {sortOption === "distance" && locationError && (
+                <p className="text-xs text-red-600">{locationError}</p>
+              )}
+            </div>
+          )}
+
           {stations.length === 0 ? (
             <p className="text-sm text-black/50 dark:text-white/50">{emptyMessage}</p>
           ) : (
             <>
               <ul className="flex flex-col gap-3">
-                {stations.slice(0, visibleCount).map((s) => (
+                {sortedStations.slice(0, visibleCount).map((s) => (
                   <li key={s.id}>
                     <ChargingStationCard station={s} selected={hoveredId === s.id} onHover={setHoveredId} />
                   </li>
                 ))}
               </ul>
-              {visibleCount < stations.length && (
+              {visibleCount < sortedStations.length && (
                 <button
                   type="button"
                   onClick={() => setVisibleCount((n) => n + PAGE_SIZE)}
                   className="mt-3 min-h-11 w-full rounded-md border border-black/15 px-4 text-sm font-medium hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/5"
                 >
-                  Weitere anzeigen ({Math.min(visibleCount, stations.length)} von {stations.length})
+                  Weitere anzeigen ({Math.min(visibleCount, sortedStations.length)} von {sortedStations.length})
                 </button>
               )}
             </>
