@@ -3,12 +3,59 @@
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { MapView } from "@/components/map/map-view";
-import { TRAILER_PIN_COLORS, TRAILER_PIN_ICON_SRC, TRAILER_PIN_LABELS, getTrailerPinState } from "@/lib/trailer-verdict";
+import {
+  TRAILER_PIN_COLORS,
+  TRAILER_PIN_ICON_SRC,
+  TRAILER_PIN_LABELS,
+  getTrailerPinState,
+  getReviewState,
+  REVIEW_STATE_COLORS,
+  REVIEW_STATE_LABELS,
+} from "@/lib/trailer-verdict";
 import { ReviewStateBadge } from "@/components/charging-stations/review-state-badge";
 import { formatConnectorStandard } from "@/lib/connector-standard";
 import type { ChargingStationView } from "@/lib/charging-stations";
 
 const PAGE_SIZE = 30;
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/** Pop-up beim Antippen eines Kartenpins -- Kurzinfo direkt auf der Karte
+ * (Nutzerwunsch), mit Link zur vollen Detailseite statt sofort dorthin zu
+ * navigieren. Rohes HTML statt React/Tailwind, da MapLibre-Popups per
+ * `setHTML` befuellt werden (siehe MapView), gleiches Muster wie
+ * buildNearbyChargePointPopupHtml auf der Campingplatz-Detailseite. */
+function buildStationPopupHtml(station: ChargingStationView): string {
+  const name = escapeHtml(station.name ?? station.operator ?? "Ladepunkt");
+  const pinState = getTrailerPinState(station.trailer);
+  const reviewState = getReviewState(station.trailer?.origin);
+  const connectorSummary = Array.from(new Set(station.connectors.map((c) => formatConnectorStandard(c.standard)))).join(
+    ", "
+  );
+
+  return `
+    <div style="font-family: system-ui, sans-serif; font-size: 13px; line-height: 1.5; max-width: 240px;">
+      <p style="margin: 0 0 6px; font-weight: 600;">${name}</p>
+      <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px;">
+        <span style="display: inline-block; padding: 2px 8px; border-radius: 999px; color: #fff; font-size: 11px; background: ${TRAILER_PIN_COLORS[pinState]};">${escapeHtml(TRAILER_PIN_LABELS[pinState])}</span>
+        <span style="display: inline-block; padding: 2px 8px; border-radius: 999px; color: #fff; font-size: 11px; background: ${REVIEW_STATE_COLORS[reviewState]};">${escapeHtml(REVIEW_STATE_LABELS[reviewState])}</span>
+      </div>
+      <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 2px; opacity: 0.85;">
+        ${station.max_power_kw ? `<li>${station.max_power_kw} kW</li>` : ""}
+        ${connectorSummary ? `<li>${escapeHtml(connectorSummary)}</li>` : ""}
+        ${!station.is_operational ? `<li style="color: #B4443A;">Laut Quelle nicht betriebsbereit</li>` : ""}
+      </ul>
+      <a href="/ladepunkte/${station.id}" style="display: inline-block; margin-top: 8px; color: #1D9E75; font-weight: 500;">Zur Ladestation →</a>
+    </div>
+  `;
+}
 
 function OperationalBadge({ isOperational }: { isOperational: boolean }) {
   if (isOperational) return null;
@@ -121,6 +168,7 @@ export function ChargingStationMapExplorer({
     longitude: s.lon,
     label: s.name ?? s.operator ?? "",
     iconSrc: TRAILER_PIN_ICON_SRC[getTrailerPinState(s.trailer)],
+    popupHtml: buildStationPopupHtml(s),
   }));
 
   const FilterButton = (
