@@ -11,6 +11,7 @@ import {
   type NearbyChargePoint,
 } from "@/lib/campsite-charging-links";
 import { calculateEvCampingScore } from "@/lib/scoring/ev-camping-score";
+import { CAMPSITE_PIN_ICON_SRC } from "@/lib/trailer-verdict";
 import { MapView } from "@/components/map/map-view";
 import { EvScoreBadge } from "@/components/campsites/ev-score-badge";
 import { CampsiteReviewForm } from "@/components/campsites/review-form";
@@ -238,7 +239,7 @@ export default async function CampsiteDetailPage({
         <div className="mt-6 h-[400px] overflow-hidden rounded-lg border border-black/10 dark:border-white/10">
           <MapView
             markers={[
-              { id: site.id, latitude: search.lat, longitude: search.lon, label: site.name },
+              { id: site.id, latitude: search.lat, longitude: search.lon, label: site.name, iconSrc: CAMPSITE_PIN_ICON_SRC },
               ...nearbyChargePoints.map((p) => ({
                 id: p.id,
                 latitude: p.latitude,

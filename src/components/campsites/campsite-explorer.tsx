@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { MapView } from "@/components/map/map-view";
+import { CAMPSITE_PIN_ICON_SRC } from "@/lib/trailer-verdict";
 import type { CampsiteSearchRow } from "@/types/database";
 
 function CampsiteCard({
@@ -79,6 +80,7 @@ export function CampsiteExplorer({
     latitude: c.lat,
     longitude: c.lon,
     label: c.name,
+    iconSrc: CAMPSITE_PIN_ICON_SRC,
   }));
 
   return (

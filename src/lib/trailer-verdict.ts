@@ -69,3 +69,10 @@ export const TRAILER_PIN_ICON_SRC: Record<TrailerPinState, string> = {
   drive_through: "/pins/pin-drive-through.svg",
   ungeprueft: "/pins/pin-ungeprueft.svg",
 };
+
+/** Kartenpin fuer Campingplatz-Standorte (docs/design/brand-guide.md
+ * Abschnitt 7 erweitert um einen sechsten, CI-konformen Zustand) -- dunkles
+ * Basisgruen mit Zelt-Glyph, bewusst ausserhalb der Anhaengertauglichkeits-
+ * Farbskala (rot/orange/gruen/lime/grau), damit Campingplatz-Standorte auf
+ * derselben Karte klar von Ladepunkt-Pins unterscheidbar bleiben. */
+export const CAMPSITE_PIN_ICON_SRC = "/pins/pin-campingplatz.svg";
