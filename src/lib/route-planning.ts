@@ -240,6 +240,17 @@ export function planTrip({
         const diff = rank[a.station.trailer_suitable] - rank[b.station.trailer_suitable];
         if (diff !== 0) return diff;
       }
+      // Reichweite moeglichst ausnutzen: unter gleich geeigneten Kandidaten
+      // den am weitesten entfernten (naeher an rangeToStopKm) bevorzugen,
+      // nicht einfach den erstbesten in Streckennaehe. Ohne dieses Kriterium
+      // wurde hier zuvor rein nach corridorDistanceKm sortiert, wodurch ein
+      // Ladepunkt direkt an der Route kurz nach der Abfahrt/dem letzten
+      // Stopp gewaehlt werden konnte, obwohl mit dem aktuellen Ladestand
+      // noch ein Vielfaches der Strecke moeglich gewesen waere -- Stopps
+      // lagen dadurch teils nur ~20 km auseinander statt die Reichweite
+      // auszunutzen (Nutzerfeedback).
+      const distanceDiff = b.distanceFromStartKm - a.distanceFromStartKm;
+      if (Math.abs(distanceDiff) > 0.001) return distanceDiff;
       return a.corridorDistanceKm - b.corridorDistanceKm;
     });
 
