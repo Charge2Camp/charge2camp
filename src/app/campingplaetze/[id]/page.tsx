@@ -185,28 +185,16 @@ export default async function CampsiteDetailPage({
         {user && <CampsiteFavoriteButton campsiteId={site.id} initialIsFavorite={isFavorite} />}
       </div>
 
-      <section className="mt-6">
-        <h2 className="font-semibold">EV-Informationen</h2>
-        <ul className="mt-2 space-y-1 text-sm">
-          <li>
-            Ladepunkt auf dem Platz:{" "}
-            {search?.charging_on_site ? "ja" : search?.nearest_walk_m != null ? "in Laufnähe" : "nein bekannt"}
-          </li>
-          {search?.on_site_power_kw && <li>Max. Ladeleistung: {search.on_site_power_kw} kW</li>}
-          {numberOfChargingPoints !== null && <li>Anzahl Ladepunkte auf dem Platz: {numberOfChargingPoints}</li>}
-        </ul>
-
-        <div className="mt-4">
-          <EvScoreBadge
-            breakdown={scoreBreakdown}
-            campsite={{
-              max_charging_power_kw: search?.on_site_power_kw ?? null,
-              number_of_charging_points: numberOfChargingPoints,
-              rating_avg: ratingAvg,
-            }}
-          />
-        </div>
-      </section>
+      <div className="mt-6">
+        <EvScoreBadge
+          breakdown={scoreBreakdown}
+          campsite={{
+            max_charging_power_kw: search?.on_site_power_kw ?? null,
+            number_of_charging_points: numberOfChargingPoints,
+            rating_avg: ratingAvg,
+          }}
+        />
+      </div>
 
       {(site.address || site.website || site.phone) && (
         <section className="mt-6">
@@ -280,6 +268,18 @@ export default async function CampsiteDetailPage({
             ))}
           </ul>
         )}
+      </section>
+
+      <section className="mt-6">
+        <h2 className="font-semibold">EV-Informationen</h2>
+        <ul className="mt-2 space-y-1 text-sm">
+          <li>
+            Ladepunkt auf dem Platz:{" "}
+            {search?.charging_on_site ? "ja" : search?.nearest_walk_m != null ? "in Laufnähe" : "nein bekannt"}
+          </li>
+          {search?.on_site_power_kw && <li>Max. Ladeleistung: {search.on_site_power_kw} kW</li>}
+          {numberOfChargingPoints !== null && <li>Anzahl Ladepunkte auf dem Platz: {numberOfChargingPoints}</li>}
+        </ul>
       </section>
 
       {nearbyListChargePoints.length > 0 ? (
