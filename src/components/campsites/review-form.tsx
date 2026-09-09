@@ -3,8 +3,13 @@
 import { useState } from "react";
 import { addCampsiteReview } from "@/app/campingplaetze/[id]/actions";
 
+/** Campingplatz-Bewertungen fragen bewusst nur die Lademoeglichkeit ab
+ * (kein freier Sterne-Picker) -- die daraus abgeleitete Sternebewertung
+ * (siehe deriveCampsiteRating() in ev-camping-score.ts) fliesst als
+ * Community-Bewertungsfaktor in den EV-Camping-Score ein. */
 export function CampsiteReviewForm({ campsiteId }: { campsiteId: string }) {
-  const [rating, setRating] = useState(5);
+  const [chargingOnSite, setChargingOnSite] = useState<"yes" | "no" | "">("");
+  const [chargingWalkable, setChargingWalkable] = useState<"yes" | "no" | "">("");
   const [error, setError] = useState<string | null>(null);
 
   return (
@@ -17,27 +22,63 @@ export function CampsiteReviewForm({ campsiteId }: { campsiteId: string }) {
           setError(e instanceof Error ? e.message : "Bewertung konnte nicht gespeichert werden.");
         }
       }}
-      className="flex flex-col gap-3 rounded-lg border border-black/10 p-4 dark:border-white/10"
+      className="flex flex-col gap-4 rounded-lg border border-black/10 p-4 dark:border-white/10"
     >
       <input type="hidden" name="campsite_id" value={campsiteId} />
 
-      <label className="flex flex-col gap-1 text-sm">
-        Bewertung
-        <div className="flex gap-1">
-          {[1, 2, 3, 4, 5].map((value) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => setRating(value)}
-              aria-label={`${value} Sterne`}
-              className={`flex h-11 w-11 items-center justify-center text-2xl ${value <= rating ? "text-amber-500" : "text-black/20 dark:text-white/20"}`}
-            >
-              ★
-            </button>
-          ))}
+      <fieldset className="flex flex-col gap-2 text-sm">
+        <legend className="mb-1">Laden auf dem Platz möglich?</legend>
+        <div className="flex gap-4">
+          <label className="flex min-h-11 items-center gap-2">
+            <input
+              type="radio"
+              name="charging_on_site"
+              value="yes"
+              checked={chargingOnSite === "yes"}
+              onChange={() => setChargingOnSite("yes")}
+              required
+            />
+            Ja
+          </label>
+          <label className="flex min-h-11 items-center gap-2">
+            <input
+              type="radio"
+              name="charging_on_site"
+              value="no"
+              checked={chargingOnSite === "no"}
+              onChange={() => setChargingOnSite("no")}
+            />
+            Nein
+          </label>
         </div>
-        <input type="hidden" name="rating" value={rating} />
-      </label>
+      </fieldset>
+
+      <fieldset className="flex flex-col gap-2 text-sm">
+        <legend className="mb-1">Nutzbare Ladelösung fußläufig erreichbar?</legend>
+        <div className="flex gap-4">
+          <label className="flex min-h-11 items-center gap-2">
+            <input
+              type="radio"
+              name="charging_walkable"
+              value="yes"
+              checked={chargingWalkable === "yes"}
+              onChange={() => setChargingWalkable("yes")}
+              required
+            />
+            Ja
+          </label>
+          <label className="flex min-h-11 items-center gap-2">
+            <input
+              type="radio"
+              name="charging_walkable"
+              value="no"
+              checked={chargingWalkable === "no"}
+              onChange={() => setChargingWalkable("no")}
+            />
+            Nein
+          </label>
+        </div>
+      </fieldset>
 
       <label className="flex flex-col gap-1 text-sm">
         Kommentar (optional)

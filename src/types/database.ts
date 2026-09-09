@@ -164,6 +164,10 @@ export interface CampsiteReview {
   user_id: string;
   campsite_id: string;
   rating: number;
+  /** Laden auf dem Platz moeglich -- Nutzerangabe, siehe deriveCampsiteRating(). */
+  charging_on_site: boolean;
+  /** Nutzbare Ladeloesung fussläufig erreichbar -- Nutzerangabe. */
+  charging_walkable: boolean;
   comment: string | null;
   created_at: string;
 }

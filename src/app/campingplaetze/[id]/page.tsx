@@ -149,6 +149,41 @@ export default async function CampsiteDetailPage({
         </div>
       </section>
 
+      {(site.address || site.website || site.phone) && (
+        <section className="mt-6">
+          <h2 className="font-semibold">Adresse</h2>
+          <dl className="mt-2 space-y-1 text-sm">
+            {site.address && (
+              <div>
+                <dt className="inline text-black/50 dark:text-white/50">Adresse: </dt>
+                <dd className="inline">{site.address}</dd>
+              </div>
+            )}
+            {site.phone && (
+              <div>
+                <dt className="inline text-black/50 dark:text-white/50">Telefon: </dt>
+                <dd className="inline">{site.phone}</dd>
+              </div>
+            )}
+            {site.website && (
+              <div>
+                <dt className="inline text-black/50 dark:text-white/50">Website: </dt>
+                <dd className="inline">
+                  <a
+                    href={site.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-route hover:underline"
+                  >
+                    {site.website}
+                  </a>
+                </dd>
+              </div>
+            )}
+          </dl>
+        </section>
+      )}
+
       {search && (
         <div className="mt-6 h-[400px] overflow-hidden rounded-lg border border-black/10 dark:border-white/10">
           <MapView
@@ -180,38 +215,6 @@ export default async function CampsiteDetailPage({
               </li>
             ))}
           </ul>
-        )}
-
-        {(site.address || site.website || site.phone) && (
-          <dl className="mt-4 space-y-1 text-sm">
-            {site.address && (
-              <div>
-                <dt className="inline text-black/50 dark:text-white/50">Adresse: </dt>
-                <dd className="inline">{site.address}</dd>
-              </div>
-            )}
-            {site.phone && (
-              <div>
-                <dt className="inline text-black/50 dark:text-white/50">Telefon: </dt>
-                <dd className="inline">{site.phone}</dd>
-              </div>
-            )}
-            {site.website && (
-              <div>
-                <dt className="inline text-black/50 dark:text-white/50">Website: </dt>
-                <dd className="inline">
-                  <a
-                    href={site.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-route hover:underline"
-                  >
-                    {site.website}
-                  </a>
-                </dd>
-              </div>
-            )}
-          </dl>
         )}
       </section>
 

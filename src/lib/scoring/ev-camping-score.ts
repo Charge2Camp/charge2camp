@@ -26,6 +26,20 @@ export interface EvScoreBreakdown {
   nearestFastChargerKm: number | null;
 }
 
+/** Campingplatz-Bewertungen fragen bewusst nur zwei EV-relevante Ja/Nein-
+ * Fragen ab (kein freier Sterne-Picker, siehe review-form.tsx) -- der
+ * gespeicherte `rating`-Wert (1-5, weiterhin genutzt vom bestehenden
+ * communityRating-Faktor unten) wird daraus abgeleitet, statt direkt
+ * erfragt zu werden: Laden auf dem Platz ist das staerkste Signal,
+ * fussläufig nutzbares Laden das schwaechere Zusatzsignal, kein Laden
+ * ueberhaupt das schlechteste. */
+export function deriveCampsiteRating(chargingOnSite: boolean, chargingWalkable: boolean): number {
+  if (chargingOnSite && chargingWalkable) return 5;
+  if (chargingOnSite) return 4;
+  if (chargingWalkable) return 3;
+  return 1;
+}
+
 function clamp01(value: number): number {
   return Math.max(0, Math.min(1, value));
 }

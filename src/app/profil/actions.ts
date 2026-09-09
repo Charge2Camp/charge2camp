@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { geocodeAddress } from "@/lib/providers/geocoding/nominatim";
+import { deriveCampsiteRating } from "@/lib/scoring/ev-camping-score";
 
 function parseOptionalNumber(value: FormDataEntryValue | null): number | null {
   if (!value || typeof value !== "string" || value.trim() === "") return null;
@@ -109,17 +110,19 @@ export async function updateCampsiteReview(formData: FormData) {
   const { supabase, userId } = await requireUserId();
   const id = requireString(formData.get("id"));
   const campsiteId = formData.get("campsite_id");
-  const rating = Number(formData.get("rating"));
+  const chargingOnSite = parseOptionalBoolean(formData.get("charging_on_site"));
+  const chargingWalkable = parseOptionalBoolean(formData.get("charging_walkable"));
   const comment = formData.get("comment");
 
-  if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
-    throw new Error("Bewertung muss zwischen 1 und 5 liegen.");
-  }
+  if (chargingOnSite === null) throw new Error("Bitte angeben, ob Laden auf dem Platz möglich ist.");
+  if (chargingWalkable === null) throw new Error("Bitte angeben, ob eine nutzbare Ladelösung fußläufig erreichbar ist.");
 
   const { error } = await supabase
     .from("campsite_reviews")
     .update({
-      rating,
+      rating: deriveCampsiteRating(chargingOnSite, chargingWalkable),
+      charging_on_site: chargingOnSite,
+      charging_walkable: chargingWalkable,
       comment: typeof comment === "string" && comment.trim() ? comment.trim() : null,
     })
     .eq("id", id)

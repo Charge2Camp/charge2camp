@@ -19,7 +19,7 @@ export function EvScoreBadge({
     reasons.push(`Schnelllader ${breakdown.nearestFastChargerKm.toFixed(1)} km entfernt`);
   }
   if (breakdown.communityRating > 0 && campsite.rating_avg) {
-    reasons.push(`positive Community-Bewertungen (★ ${campsite.rating_avg.toFixed(1)})`);
+    reasons.push(`Bewertung: ${campsite.rating_avg.toFixed(1)} Sterne`);
   }
   if (breakdown.dataFreshness > 0) reasons.push("aktuelle Daten");
 
