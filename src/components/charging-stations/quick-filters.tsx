@@ -11,9 +11,24 @@ import { TRAILER_VERDICT_LABELS, TRAILER_VERDICT_VALUES } from "@/lib/trailer-ve
  * ladepunkte/page.tsx (zusammen mit den "weiteren Filtern" aus
  * filter-form.tsx), damit ein einziger Submit alle aktiven Filter
  * gemeinsam anwendet. */
-export function ChargingStationQuickFilters({ filters }: { filters: ChargingStationFilters }) {
+export function ChargingStationQuickFilters({
+  filters,
+  isLoggedIn,
+}: {
+  filters: ChargingStationFilters;
+  /** "Nur Favoriten" ist ohne Login wirkungslos (leeres Ergebnis) -- Checkbox
+   * dann gar nicht erst anzeigen statt einer verwirrenden leeren Karte. */
+  isLoggedIn: boolean;
+}) {
   return (
     <div className="flex flex-col gap-5 text-sm">
+      {isLoggedIn && (
+        <label className="flex min-h-11 items-center gap-2">
+          <input type="checkbox" name="favorites" value="1" defaultChecked={filters.favoritesOnly} />
+          Nur meine Favoriten
+        </label>
+      )}
+
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-1 font-medium">Anhängertauglichkeit</legend>
         <div className="flex flex-wrap gap-x-5 gap-y-1">

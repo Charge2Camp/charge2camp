@@ -2,12 +2,11 @@ import { NameSuggestField } from "@/components/name-suggest-field";
 import type { ChargingStationFilters } from "@/lib/charging-stations";
 import { formatConnectorStandard } from "@/lib/connector-standard";
 
-/** "Weitere Filter" -- Suche + Steckertyp. Anhaengertauglichkeit und
- * Schnelllader stehen als Quick-Filter direkt auf der Seite (siehe
- * quick-filters.tsx). Kein eigenes <form>: die Felder gehoeren zum
- * umschliessenden <form> in ladepunkte/page.tsx, damit ein Submit
- * Quick-Filter und "weitere Filter" gemeinsam anwendet, egal ob er aus dem
- * Pop-up oder von den Quick-Filtern ausgeloest wird. */
+/** "Weitere Filter" -- Suche + Steckertyp. Anhaengertauglichkeit, Schnelllader
+ * und Favoriten stehen als Quick-Filter im selben Panel (siehe
+ * quick-filters.tsx, das auch den einzigen Submit/Zuruecksetzen-Button
+ * traegt). Kein eigenes <form>/kein eigener Submit-Button hier: die Felder
+ * gehoeren zum umschliessenden <form> im Filter-Panel der Ladepunkte-Seite. */
 export function ChargingStationFilterForm({
   filters,
   connectorTypes,
@@ -46,13 +45,6 @@ export function ChargingStationFilterForm({
           ))}
         </select>
       </label>
-
-      <button
-        type="submit"
-        className="min-h-12 rounded-md bg-action px-4 py-3 font-medium text-base hover:bg-action-hover"
-      >
-        Filtern
-      </button>
     </div>
   );
 }

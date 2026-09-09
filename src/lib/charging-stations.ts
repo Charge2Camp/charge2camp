@@ -14,20 +14,26 @@ const FAST_CHARGER_MIN_KW = 100;
  * wird die URL laenger als das von Cloudflare/dem Hosting erlaubte Limit
  * (lokal gegen Docker-Supabase nicht aufgefallen, dort kein CDN davor;
  * auf dem gehosteten Projekt "414 Request-URI Too Large"). Deshalb in
- * Batches abfragen statt einer einzigen riesigen IN-Liste. */
+ * Batches abfragen statt einer einzigen riesigen IN-Liste -- alle Batches
+ * PARALLEL (nicht nacheinander), sonst summieren sich bei tausenden IDs die
+ * einzelnen Round-Trips zu spuerbaren Sekunden Ladezeit (die Ladepunkte-
+ * Seite laedt seit der kartenzentrierten Umstellung IMMER die volle Menge,
+ * nicht mehr nur bei aktivem Filter). */
 async function fetchInBatches<T>(
   ids: string[],
   batchSize: number,
   fetchBatch: (batchIds: string[]) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>
 ): Promise<T[]> {
-  const results: T[] = [];
-  for (let i = 0; i < ids.length; i += batchSize) {
-    const batch = ids.slice(i, i + batchSize);
-    const { data, error } = await fetchBatch(batch);
+  const batches: string[][] = [];
+  for (let i = 0; i < ids.length; i += batchSize) batches.push(ids.slice(i, i + batchSize));
+
+  const results = await Promise.all(batches.map((batch) => fetchBatch(batch)));
+  const rows: T[] = [];
+  for (const { data, error } of results) {
     if (error) throw new Error(error.message);
-    results.push(...(data ?? []));
+    rows.push(...(data ?? []));
   }
-  return results;
+  return rows;
 }
 
 export interface ChargingStationFilters {
@@ -35,6 +41,10 @@ export interface ChargingStationFilters {
   trailerVerdict: TrailerVerdict[];
   fastChargersOnly: boolean;
   connectorType?: string;
+  /** Nur eigene Favoriten -- ersetzt (bei Aktivierung) alle anderen Filter,
+   * siehe ladepunkte/page.tsx: eigener Fetch-Pfad ueber
+   * fetchFavoriteChargingStations statt fetchChargingStations. */
+  favoritesOnly: boolean;
 }
 
 export function parseChargingStationFilters(
@@ -54,6 +64,7 @@ export function parseChargingStationFilters(
     trailerVerdict: verdicts,
     fastChargersOnly: get("fast") === "1",
     connectorType: get("connector") || undefined,
+    favoritesOnly: get("favorites") === "1",
   };
 }
 
@@ -102,15 +113,22 @@ async function enrichStations(
 }
 
 /** trailerVerdict/connectorType filtern erst NACH dem Laden (in JS) statt
- * in der SQL-Abfrage -- fuer den MVP-Datenumfang ausreichend. */
-export async function fetchChargingStations(filters: ChargingStationFilters): Promise<ChargingStationView[]> {
+ * in der SQL-Abfrage -- fuer den MVP-Datenumfang ausreichend.
+ * `limit` bewusst ueberschreibbar: die kartenzentrierte Ladepunkte-Seite
+ * laedt ohne aktiven Filter (Karten-Erstueberblick) eine kleinere Menge als
+ * bei gezielter Filterung (siehe ladepunkte/page.tsx) -- ueber 18.000 echte
+ * Ladepunkte insgesamt waeren ungefiltert sonst spuerbar langsam. */
+export async function fetchChargingStations(
+  filters: ChargingStationFilters,
+  limit = 5000
+): Promise<ChargingStationView[]> {
   const supabase = await createClient();
   let query = supabase.schema("core").from("charge_point_geo").select("*");
 
   if (filters.q) query = query.ilike("name", `%${filters.q}%`);
   if (filters.fastChargersOnly) query = query.gte("max_power_kw", FAST_CHARGER_MIN_KW);
 
-  const { data, error } = await query.order("name").limit(5000);
+  const { data, error } = await query.order("name").limit(limit);
   if (error) throw new Error(error.message);
   const stations = (data as CoreChargePointGeo[]) ?? [];
 

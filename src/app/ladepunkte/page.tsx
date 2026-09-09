@@ -8,8 +8,7 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import { ChargingStationFilterForm } from "@/components/charging-stations/filter-form";
 import { ChargingStationQuickFilters } from "@/components/charging-stations/quick-filters";
-import { FurtherFiltersSheet } from "@/components/further-filters-sheet";
-import { ChargingStationExplorer } from "@/components/charging-stations/charging-station-explorer";
+import { ChargingStationMapExplorer } from "@/components/charging-stations/charging-station-map-explorer";
 
 export default async function ChargingStationsPage({
   searchParams,
@@ -18,68 +17,70 @@ export default async function ChargingStationsPage({
 }) {
   const filters = parseChargingStationFilters(await searchParams);
 
-  // Ohne jeden Filter waere die Liste die komplette, bis zu 5000 Eintraege
-  // umfassende Rohmenge -- weder uebersichtlich noch ein sinnvoller
-  // Startzustand (gleiches Muster wie campingplaetze/page.tsx). Stattdessen
-  // zeigen wir die eigenen Favoriten (falls angemeldet); die volle Liste
-  // gibt es erst, sobald mindestens ein Filter aktiv ist.
-  const hasActiveFilters = Boolean(
-    filters.q || filters.connectorType || filters.fastChargersOnly || filters.trailerVerdict.length > 0
-  );
-
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [stations, connectorTypes, nameOptions] = await Promise.all([
-    hasActiveFilters
-      ? fetchChargingStations(filters)
-      : user
-        ? fetchFavoriteChargingStations(user.id)
-        : Promise.resolve([]),
+  // Bewusst kartenzentriert (siehe charging-station-map-explorer.tsx): ohne
+  // aktiven Filter zeigt die Karte einen geclusterten Ueberblick (wie auf
+  // der Campingplaetze-Karte bereits erprobt) fuer den Ueberblick beim
+  // Reiseplanen -- anders als vorher gibt es keinen "nur Favoriten"-
+  // Startzustand mehr, Favoriten sind stattdessen ein expliziter Quick-
+  // Filter (siehe favoritesOnly). Ohne jeden Filter bewusst auf 1500 statt
+  // 5000 begrenzt (siehe fetchChargingStations) -- bei ueber 18.000 echten
+  // Ladepunkten insgesamt waere der ungefilterte Erstueberblick sonst
+  // spuerbar langsam; sobald gezielt gefiltert wird, gilt wieder das volle
+  // Limit.
+  const hasActiveFilters = Boolean(
+    filters.q || filters.connectorType || filters.fastChargersOnly || filters.trailerVerdict.length > 0
+  );
+  const stationLimit = hasActiveFilters ? 5000 : 1500;
+  const stations =
+    filters.favoritesOnly && user
+      ? await fetchFavoriteChargingStations(user.id)
+      : await fetchChargingStations(filters, stationLimit);
+
+  const [connectorTypes, nameOptions] = await Promise.all([
     fetchConnectorTypeOptions(),
     fetchChargingStationNameOptions(),
   ]);
 
-  const furtherFilterCount = (filters.q ? 1 : 0) + (filters.connectorType ? 1 : 0);
+  const activeFilterCount =
+    (filters.q ? 1 : 0) +
+    (filters.connectorType ? 1 : 0) +
+    (filters.fastChargersOnly ? 1 : 0) +
+    (filters.favoritesOnly ? 1 : 0) +
+    filters.trailerVerdict.length;
 
-  let heading: string;
   let emptyMessage: string;
-  if (hasActiveFilters) {
-    heading =
-      stations.length >= 5000
-        ? `Mindestens ${stations.length} Ladepunkte gefunden -- Filter eingrenzen für vollständige Ergebnisse`
-        : `${stations.length} Ladepunkte gefunden`;
-    emptyMessage = "Keine Ladepunkte gefunden. Filter anpassen?";
-  } else if (user) {
-    heading =
-      stations.length > 0
-        ? "Deine gemerkten Ladepunkte -- filtern, um alle zu durchsuchen"
-        : "Noch keine Favoriten gemerkt -- filtern, um Ladepunkte zu durchsuchen";
-    emptyMessage =
-      "Noch keine Favoriten gemerkt. Auf der Detailseite eines Ladepunkts über das Herz-Symbol merken, oder Filter setzen, um alle zu durchsuchen.";
+  if (filters.favoritesOnly) {
+    emptyMessage = user
+      ? "Noch keine Favoriten gemerkt. Auf der Detailseite eines Ladepunkts über das Herz-Symbol merken."
+      : "Anmelden, um Favoriten zu sehen.";
   } else {
-    heading = "Filtern, um Ladepunkte zu durchsuchen, oder anmelden, um Favoriten zu sehen";
-    emptyMessage = "Filter setzen, um Ladepunkte zu durchsuchen.";
+    emptyMessage = "Keine Ladepunkte gefunden. Filter anpassen?";
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10">
+    <div className="mx-auto max-w-6xl px-4 py-6">
       <h1 className="text-2xl font-semibold">Ladepunkte</h1>
-      <p className="mt-1 text-sm text-black/60 dark:text-white/60">{heading}</p>
 
-      <form action="/ladepunkte" className="mt-8 flex flex-col gap-4">
-        <ChargingStationQuickFilters filters={filters} />
-
-        <FurtherFiltersSheet activeFilterCount={furtherFilterCount}>
-          <ChargingStationFilterForm filters={filters} connectorTypes={connectorTypes} nameOptions={nameOptions} />
-        </FurtherFiltersSheet>
+      <form action="/ladepunkte">
+        <ChargingStationMapExplorer
+          stations={stations}
+          stationCountLabel={stations.length >= stationLimit ? `${stations.length}+` : `${stations.length}`}
+          emptyMessage={emptyMessage}
+          activeFilterCount={activeFilterCount}
+          filterPanel={
+            <div className="flex flex-col gap-6">
+              <ChargingStationQuickFilters filters={filters} isLoggedIn={Boolean(user)} />
+              <hr className="border-black/10 dark:border-white/10" />
+              <ChargingStationFilterForm filters={filters} connectorTypes={connectorTypes} nameOptions={nameOptions} />
+            </div>
+          }
+        />
       </form>
-
-      <div className="mt-8">
-        <ChargingStationExplorer stations={stations} emptyMessage={emptyMessage} />
-      </div>
     </div>
   );
 }
