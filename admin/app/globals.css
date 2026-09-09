@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+/* Kernfarb-Tokens 1:1 aus der Haupt-App uebernommen (src/app/globals.css)
+ * fuer Wiedererkennbarkeit -- kein Rebuild der vollen Marken-CSS (Fonts,
+ * Ladeanimation), da internes Werkzeug. Kein Hell/Dunkel-Toggle. */
+:root {
+  --c-base: #0f3b36;
+  --c-action: #c6f24e;
+  --c-action-hover: #b2de3a;
+  --c-route: #1d9e75;
+  --c-surface: #f2f0e8;
+  --c-card: #fdfcf9;
+  --c-line: #e0ded4;
+
+  --c-text: #0f3b36;
+  --c-text-muted: #5c6b66;
+  --c-text-inverse: #f2f0e8;
+
+  --c-status-busy: #e8a33d;
+  --c-status-down: #b4443a;
+  --c-status-unknown: #8e9a94;
+}
+
+@theme inline {
+  --color-base: var(--c-base);
+  --color-action: var(--c-action);
+  --color-action-hover: var(--c-action-hover);
+  --color-route: var(--c-route);
+  --color-surface: var(--c-surface);
+  --color-card: var(--c-card);
+  --color-line: var(--c-line);
+
+  --color-text: var(--c-text);
+  --color-text-muted: var(--c-text-muted);
+  --color-text-inverse: var(--c-text-inverse);
+
+  --color-status-busy: var(--c-status-busy);
+  --color-status-down: var(--c-status-down);
+  --color-status-unknown: var(--c-status-unknown);
+}
+
+body {
+  background: var(--c-surface);
+  color: var(--c-text);
+}
+
+:focus-visible {
+  outline: 3px solid var(--c-action);
+  outline-offset: 2px;
+}

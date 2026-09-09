@@ -59,3 +59,16 @@ __pycache__/
 
 .vercel
 .env*
+
+# admin/ ist eine eigenstaendige zweite Next.js-App im selben Repo
+# (eigenes package.json/Deploy, siehe admin/README.md) -- braucht dieselben
+# Ignores, die obigen Regeln sind auf den Repo-Root verankert (fuehrendes
+# "/") und greifen dort nicht.
+/admin/node_modules
+/admin/.next/
+/admin/out/
+/admin/.vercel
+/admin/.env*
+!/admin/.env.example
+/admin/*.tsbuildinfo
+/admin/next-env.d.ts
