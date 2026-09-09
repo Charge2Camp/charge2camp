@@ -153,6 +153,7 @@ export async function fetchChargingStationNameOptions(): Promise<string[]> {
     .schema("core")
     .from("charge_point")
     .select("name, operator")
+    .eq("is_active", true)
     .order("name")
     .limit(5000);
   if (error) throw new Error(error.message);

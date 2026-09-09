@@ -62,7 +62,13 @@ export async function fetchCampsites(filters: CampsiteFilters): Promise<Campsite
  * Vorschlagsliste im Suchfeld -- siehe NameSuggestField. */
 export async function fetchCampsiteNameOptions(): Promise<string[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase.schema("core").from("campsite").select("name").order("name").limit(5000);
+  const { data, error } = await supabase
+    .schema("core")
+    .from("campsite")
+    .select("name")
+    .eq("is_active", true)
+    .order("name")
+    .limit(5000);
   if (error) throw new Error(error.message);
   return Array.from(new Set((data ?? []).map((row) => row.name).filter(Boolean)));
 }

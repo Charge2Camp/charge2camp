@@ -73,6 +73,19 @@ export async function overrideTrailerSuitability(chargePointKey: string, formDat
   revalidatePath(`/ladestationen`);
 }
 
+/** core.charge_point_geo (die einzige Quelle, aus der die Haupt-App
+ * Ladestationen liest) ist eine einfache VIEW mit `where cp.is_active` --
+ * kein Refresh noetig, die Aenderung wirkt sofort (siehe Migration
+ * 20260909020000_campsite_charge_point_active_flag.sql). */
+export async function setChargePointActive(chargePointId: string, isActive: boolean) {
+  await requireAdmin();
+  const supabase = createServiceClient();
+  const { error } = await supabase.schema("core").from("charge_point").update({ is_active: isActive }).eq("id", chargePointId);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/ladestationen/${chargePointId}`);
+  revalidatePath("/ladestationen");
+}
+
 export async function deleteChargingReview(reviewId: string, chargePointId: string) {
   await requireAdmin();
   const supabase = createServiceClient();

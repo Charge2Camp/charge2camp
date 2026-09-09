@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase/service";
 import type { ChargePoint, ChargingReview, TrailerSuitability } from "@/lib/types";
-import { deleteChargingReview, overrideTrailerSuitability, updateChargePoint } from "./actions";
+import { deleteChargingReview, overrideTrailerSuitability, setChargePointActive, updateChargePoint } from "./actions";
 
 export default async function ChargePointDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -23,10 +23,30 @@ export default async function ChargePointDetailPage({ params }: { params: Promis
 
   return (
     <div className="flex max-w-2xl flex-col gap-8">
-      <div>
-        <h1 className="text-2xl font-semibold">{s.name ?? s.operator ?? "(ohne Namen)"}</h1>
-        <p className="mt-1 text-sm text-text-muted">{s.external_key}</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold">{s.name ?? s.operator ?? "(ohne Namen)"}</h1>
+          <p className="mt-1 text-sm text-text-muted">{s.external_key}</p>
+        </div>
+        <form action={setChargePointActive.bind(null, id, !s.is_active)}>
+          <button
+            type="submit"
+            className={`min-h-11 whitespace-nowrap rounded-md border px-3 text-sm font-medium ${
+              s.is_active
+                ? "border-status-down text-status-down hover:bg-status-down/10"
+                : "border-route text-route hover:bg-route/10"
+            }`}
+          >
+            {s.is_active ? "Deaktivieren (unsichtbar machen)" : "Wieder aktivieren"}
+          </button>
+        </form>
       </div>
+
+      {!s.is_active && (
+        <p className="rounded-md border border-status-down/40 bg-status-down/5 p-3 text-sm text-status-down">
+          Diese Ladestation ist deaktiviert und in der App aktuell unsichtbar.
+        </p>
+      )}
 
       <section>
         <h2 className="text-lg font-semibold">Stammdaten</h2>

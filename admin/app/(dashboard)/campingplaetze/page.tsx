@@ -9,11 +9,11 @@ export default async function CampsitesPage({ searchParams }: { searchParams: Pr
   const page = Math.max(1, Number(pageParam) || 1);
   const supabase = createServiceClient();
 
-  let query = supabase.schema("core").from("campsite").select("id, name, city, country_code", { count: "exact" });
+  let query = supabase.schema("core").from("campsite").select("id, name, city, country_code, is_active", { count: "exact" });
   if (q) query = query.ilike("name", `%${q}%`);
 
   const { data, count } = await query.order("name").range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
-  const campsites = (data ?? []) as Pick<Campsite, "id" | "name" | "city" | "country_code">[];
+  const campsites = (data ?? []) as Pick<Campsite, "id" | "name" | "city" | "country_code" | "is_active">[];
   const totalPages = Math.max(1, Math.ceil((count ?? 0) / PAGE_SIZE));
 
   return (
@@ -44,7 +44,12 @@ export default async function CampsitesPage({ searchParams }: { searchParams: Pr
             className="flex items-center justify-between rounded-md border border-line bg-card p-3 text-sm hover:bg-line/20"
           >
             <p className="font-medium">{c.name}</p>
-            <p className="text-text-muted">{[c.city, c.country_code].filter(Boolean).join(", ")}</p>
+            <div className="flex items-center gap-2">
+              {!c.is_active && (
+                <span className="rounded bg-status-down/10 px-2 py-0.5 text-xs font-medium text-status-down">deaktiviert</span>
+              )}
+              <p className="text-text-muted">{[c.city, c.country_code].filter(Boolean).join(", ")}</p>
+            </div>
           </Link>
         ))}
         {campsites.length === 0 && <p className="text-sm text-text-muted">Keine Treffer.</p>}

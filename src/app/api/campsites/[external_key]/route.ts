@@ -23,6 +23,7 @@ export async function GET(
     .from("campsite")
     .select("*")
     .eq("external_key", externalKey)
+    .eq("is_active", true)
     .maybeSingle();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   if (!campsite) return NextResponse.json({ error: "Campingplatz nicht gefunden." }, { status: 404 });

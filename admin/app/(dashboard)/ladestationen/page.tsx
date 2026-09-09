@@ -23,7 +23,7 @@ export default async function ChargingStationsPage({
   let query = supabase
     .schema("core")
     .from("charge_point")
-    .select("id, external_key, name, operator, city, country_code, is_operational", { count: "exact" });
+    .select("id, external_key, name, operator, city, country_code, is_operational, is_active", { count: "exact" });
   if (q) query = query.or(`name.ilike.%${q}%,operator.ilike.%${q}%`);
 
   const { data, count } = await query
@@ -32,7 +32,7 @@ export default async function ChargingStationsPage({
 
   const stations = (data ?? []) as Pick<
     ChargePoint,
-    "id" | "external_key" | "name" | "operator" | "city" | "country_code" | "is_operational"
+    "id" | "external_key" | "name" | "operator" | "city" | "country_code" | "is_operational" | "is_active"
   >[];
 
   const keys = stations.map((s) => s.external_key);
@@ -78,6 +78,9 @@ export default async function ChargingStationsPage({
                 <p className="text-text-muted">{[s.city, s.country_code].filter(Boolean).join(", ")}</p>
               </div>
               <div className="flex items-center gap-2">
+                {!s.is_active && (
+                  <span className="rounded bg-status-down/10 px-2 py-0.5 text-xs font-medium text-status-down">deaktiviert</span>
+                )}
                 {!s.is_operational && <span className="rounded bg-status-down/10 px-2 py-0.5 text-xs text-status-down">außer Betrieb</span>}
                 {verdict && (
                   <span className="rounded-full border border-line px-2 py-0.5 text-xs">

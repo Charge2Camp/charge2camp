@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase/service";
 import type { Amenity, Campsite, CampsiteAmenity, CampsiteReview } from "@/lib/types";
-import { deleteCampsiteReview, updateAmenities, updateCampsite } from "./actions";
+import { deleteCampsiteReview, setCampsiteActive, updateAmenities, updateCampsite } from "./actions";
 
 const CATEGORY_LABELS: Record<string, string> = {
   lage: "Lage",
@@ -44,10 +44,30 @@ export default async function CampsiteDetailPage({ params }: { params: Promise<{
 
   return (
     <div className="flex max-w-2xl flex-col gap-8">
-      <div>
-        <h1 className="text-2xl font-semibold">{c.name}</h1>
-        <p className="mt-1 text-sm text-text-muted">{c.external_key}</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold">{c.name}</h1>
+          <p className="mt-1 text-sm text-text-muted">{c.external_key}</p>
+        </div>
+        <form action={setCampsiteActive.bind(null, id, !c.is_active)}>
+          <button
+            type="submit"
+            className={`min-h-11 whitespace-nowrap rounded-md border px-3 text-sm font-medium ${
+              c.is_active
+                ? "border-status-down text-status-down hover:bg-status-down/10"
+                : "border-route text-route hover:bg-route/10"
+            }`}
+          >
+            {c.is_active ? "Deaktivieren (unsichtbar machen)" : "Wieder aktivieren"}
+          </button>
+        </form>
       </div>
+
+      {!c.is_active && (
+        <p className="rounded-md border border-status-down/40 bg-status-down/5 p-3 text-sm text-status-down">
+          Dieser Campingplatz ist deaktiviert und in der App aktuell unsichtbar.
+        </p>
+      )}
 
       <section>
         <h2 className="text-lg font-semibold">Stammdaten</h2>

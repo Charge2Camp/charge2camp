@@ -21,6 +21,7 @@ export interface ChargePoint {
   connector_count: number | null;
   source: string;
   last_seen_at: string;
+  is_active: boolean;
 }
 
 export interface Connector {
@@ -77,6 +78,7 @@ export interface Campsite {
   email: string | null;
   capacity: number | null;
   source: string;
+  is_active: boolean;
 }
 
 export interface Amenity {

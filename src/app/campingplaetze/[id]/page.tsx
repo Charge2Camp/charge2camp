@@ -26,7 +26,7 @@ export default async function CampsiteDetailPage({
 
   const [{ data: campsite }, { data: searchRow }, { data: reviews }, favoriteResult, amenityCatalog, linkedChargePoints] =
     await Promise.all([
-      supabase.schema("core").from("campsite").select("*").eq("id", id).maybeSingle(),
+      supabase.schema("core").from("campsite").select("*").eq("id", id).eq("is_active", true).maybeSingle(),
       supabase.schema("core").from("campsite_search").select("*").eq("id", id).maybeSingle(),
       supabase.from("campsite_reviews").select("*").eq("campsite_id", id).order("created_at", { ascending: false }),
       user

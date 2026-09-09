@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // admin/ ist eine eigenstaendige zweite Next.js-App im selben Repo mit
+    // eigener eslint.config.mjs -- soll nicht von der Haupt-App-Config
+    // mitgelintet werden (eigene tsconfig/"@/"-Aliase).
+    "admin/**",
   ]),
 ]);
 

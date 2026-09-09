@@ -50,6 +50,26 @@ export async function updateAmenities(campsiteId: string, amenityKeys: string[],
   revalidatePath(`/campingplaetze/${campsiteId}`);
 }
 
+/** core.campsite_search (Quelle der Haupt-App-Liste/Suche/Karte) ist eine
+ * MATERIALIZED VIEW -- anders als bei Ladestationen (einfache VIEW) wirkt
+ * eine is_active-Aenderung an core.campsite deshalb NICHT sofort. Die RPC
+ * core.refresh_campsite_search() (siehe Migration
+ * 20260909020000_campsite_charge_point_active_flag.sql) stoesst den
+ * Refresh CONCURRENTLY an -- unkritisch bei der Groesse dieser Tabelle. */
+export async function setCampsiteActive(campsiteId: string, isActive: boolean) {
+  await requireAdmin();
+  const supabase = createServiceClient();
+
+  const { error } = await supabase.schema("core").from("campsite").update({ is_active: isActive }).eq("id", campsiteId);
+  if (error) throw new Error(error.message);
+
+  const { error: refreshError } = await supabase.schema("core").rpc("refresh_campsite_search");
+  if (refreshError) throw new Error(refreshError.message);
+
+  revalidatePath(`/campingplaetze/${campsiteId}`);
+  revalidatePath("/campingplaetze");
+}
+
 export async function deleteCampsiteReview(reviewId: string, campsiteId: string) {
   await requireAdmin();
   const supabase = createServiceClient();
