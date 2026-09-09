@@ -14,7 +14,7 @@ export default async function CommunityPage() {
       .limit(20),
     supabase
       .from("charging_reviews")
-      .select("id, suitable, comment, created_at, charging_stations(id, name, provider)")
+      .select("id, suitable, comment, created_at, charging_station_id")
       .order("created_at", { ascending: false })
       .limit(20),
   ]);
@@ -31,7 +31,7 @@ export default async function CommunityPage() {
     suitable: "yes" | "no" | "limited";
     comment: string | null;
     created_at: string;
-    charging_stations: { id: string; name: string | null; provider: string } | null;
+    charging_station_id: string;
   };
 
   const campsiteReviewList = (campsiteReviews as CampsiteReviewRow[] | null) ?? [];
@@ -40,6 +40,18 @@ export default async function CommunityPage() {
     ? await supabase.schema("core").from("campsite").select("id, name").in("id", campsiteIds)
     : { data: [] as { id: string; name: string }[] };
   const campsiteById = new Map((campsites ?? []).map((c) => [c.id, c]));
+
+  // Kein PostgREST-Embed -- charging_reviews.charging_station_id zeigt seit
+  // Migration 20260916000000 auf core.charge_point statt public.
+  // charging_stations, ein Embed unter dem alten Tabellennamen findet daher
+  // keine passende FK-Relation mehr (siehe gleiches Muster in
+  // profil/bewertungen/page.tsx).
+  const chargingReviewList = (chargingReviews as ChargingReviewRow[] | null) ?? [];
+  const chargingStationIds = [...new Set(chargingReviewList.map((r) => r.charging_station_id))];
+  const { data: chargePoints } = chargingStationIds.length
+    ? await supabase.schema("core").from("charge_point").select("id, name, operator").in("id", chargingStationIds)
+    : { data: [] as { id: string; name: string | null; operator: string | null }[] };
+  const chargePointById = new Map((chargePoints ?? []).map((c) => [c.id, c]));
 
   const activity = [
     ...campsiteReviewList.map((r) => {
@@ -61,22 +73,25 @@ export default async function CommunityPage() {
         ),
       };
     }),
-    ...((chargingReviews as unknown as ChargingReviewRow[] | null) ?? []).map((r) => ({
+    ...chargingReviewList.map((r) => {
+      const chargePoint = chargePointById.get(r.charging_station_id);
+      return {
       id: `charging-${r.id}`,
       createdAt: r.created_at,
       node: (
         <>
           <Link
-            href={r.charging_stations ? `/ladepunkte/${r.charging_stations.id}` : "#"}
+            href={chargePoint ? `/ladepunkte/${chargePoint.id}` : "#"}
             className="font-medium text-route hover:underline"
           >
-            {r.charging_stations?.name ?? r.charging_stations?.provider ?? "Ladepunkt"}
+            {chargePoint?.name ?? chargePoint?.operator ?? "Ladepunkt"}
           </Link>{" "}
           bewertet: Gespann nutzbar? {SUITABLE_LABELS[r.suitable]}
           {r.comment && <span className="text-black/70 dark:text-white/70"> — „{r.comment}“</span>}
         </>
       ),
-    })),
+      };
+    }),
   ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   return (

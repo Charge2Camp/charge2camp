@@ -7,7 +7,7 @@ import { CriterionField } from "@/components/charging-stations/criterion-field";
 import type { ChargingReview } from "@/types/database";
 
 export type ChargingReviewWithStation = ChargingReview & {
-  charging_stations: { id: string; name: string | null; provider: string } | null;
+  charging_stations: { id: string; name: string | null; operator: string | null } | null;
 };
 
 const SUITABLE_LABELS = { yes: "Ja", limited: "Mit Einschränkungen", no: "Nein" } as const;
@@ -221,7 +221,7 @@ export function ChargingReviewList({ reviews }: { reviews: ChargingReviewWithSta
                   href={review.charging_stations ? `/ladepunkte/${review.charging_stations.id}` : "#"}
                   className="font-medium text-route hover:underline"
                 >
-                  {review.charging_stations?.name ?? review.charging_stations?.provider ?? "Ladepunkt"}
+                  {review.charging_stations?.name ?? review.charging_stations?.operator ?? "Ladepunkt"}
                 </Link>
                 <span>{SUITABLE_LABELS[review.suitable]}</span>
               </div>
