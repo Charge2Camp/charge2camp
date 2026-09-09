@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { MapView } from "@/components/map/map-view";
 import {
@@ -162,14 +162,24 @@ export function ChargingStationMapExplorer({
   // schrittweise wachsend statt paginiert.
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
-  const markers = stations.map((s) => ({
-    id: s.id,
-    latitude: s.lat,
-    longitude: s.lon,
-    label: s.name ?? s.operator ?? "",
-    iconSrc: TRAILER_PIN_ICON_SRC[getTrailerPinState(s.trailer)],
-    popupHtml: buildStationPopupHtml(s),
-  }));
+  // Memoisiert, sonst entsteht bei jedem Render (z. B. onMarkerClick ->
+  // setHoveredId) ein neues Array mit neuen Objektreferenzen -- MapView
+  // erkennt das als "Marker haben sich geaendert", raeumt alle Marker
+  // (inkl. gerade geoeffnetem Pop-up) ab und berechnet fitBounds neu, die
+  // Karte springt dadurch beim Antippen eines Pins sofort zurueck auf die
+  // Gesamtansicht, noch bevor das Pop-up sichtbar wird.
+  const markers = useMemo(
+    () =>
+      stations.map((s) => ({
+        id: s.id,
+        latitude: s.lat,
+        longitude: s.lon,
+        label: s.name ?? s.operator ?? "",
+        iconSrc: TRAILER_PIN_ICON_SRC[getTrailerPinState(s.trailer)],
+        popupHtml: buildStationPopupHtml(s),
+      })),
+    [stations]
+  );
 
   const FilterButton = (
     <button
@@ -190,7 +200,16 @@ export function ChargingStationMapExplorer({
     <div className="relative mt-6">
       {viewMode === "map" ? (
         <div className="relative h-[70vh] min-h-[420px] overflow-hidden rounded-xl border border-black/10 dark:border-white/10 md:h-[75vh]">
-          <MapView markers={markers} selectedId={hoveredId ?? undefined} onMarkerClick={setHoveredId} cluster />
+          {/* Bewusst OHNE selectedId/onMarkerClick: es gibt in der Kartenansicht
+              keine gleichzeitig sichtbare Liste, deren Eintrag beim Antippen
+              eines Pins hervorgehoben werden muesste (anders als z. B. bei
+              campsite-explorer.tsx mit Split-View). Jede Aenderung von
+              selectedId loest in MapView ein komplettes Neu-Rendern aller
+              Marker + fitBounds aus (siehe dortiger useEffect) -- das wuerde
+              bei jedem Antippen eines Pins sofort das gerade geoeffnete
+              Pop-up zerstoeren und die Karte auf die Gesamtansicht
+              zuruecksetzen, noch bevor das Pop-up sichtbar wird. */}
+          <MapView markers={markers} cluster />
 
           <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-2 p-3">
             <span className="pointer-events-auto rounded-full bg-white/95 px-3 py-1.5 text-sm font-medium shadow-md dark:bg-neutral-900/95">
