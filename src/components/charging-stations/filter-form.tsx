@@ -1,9 +1,13 @@
-import Link from "next/link";
 import { NameSuggestField } from "@/components/name-suggest-field";
 import type { ChargingStationFilters } from "@/lib/charging-stations";
-import { TRAILER_VERDICT_LABELS, TRAILER_VERDICT_VALUES } from "@/lib/trailer-verdict";
 import { formatConnectorStandard } from "@/lib/connector-standard";
 
+/** "Weitere Filter" -- Suche + Steckertyp. Anhaengertauglichkeit und
+ * Schnelllader stehen als Quick-Filter direkt auf der Seite (siehe
+ * quick-filters.tsx). Kein eigenes <form>: die Felder gehoeren zum
+ * umschliessenden <form> in ladepunkte/page.tsx, damit ein Submit
+ * Quick-Filter und "weitere Filter" gemeinsam anwendet, egal ob er aus dem
+ * Pop-up oder von den Quick-Filtern ausgeloest wird. */
 export function ChargingStationFilterForm({
   filters,
   connectorTypes,
@@ -15,7 +19,7 @@ export function ChargingStationFilterForm({
   nameOptions: string[];
 }) {
   return (
-    <form className="flex flex-col gap-5 text-sm" action="/ladepunkte">
+    <div className="flex flex-col gap-5 text-sm">
       <label className="flex flex-col gap-1">
         Suche
         <NameSuggestField
@@ -43,40 +47,12 @@ export function ChargingStationFilterForm({
         </select>
       </label>
 
-      <label className="flex min-h-11 items-center gap-2">
-        <input type="checkbox" name="fast" value="1" defaultChecked={filters.fastChargersOnly} />
-        Nur Schnelllader (≥100 kW)
-      </label>
-
-      <fieldset className="flex flex-col gap-2">
-        <legend className="mb-1 font-medium">Anhängertauglichkeit</legend>
-        {TRAILER_VERDICT_VALUES.map((value) => (
-          <label key={value} className="flex min-h-11 items-center gap-2">
-            <input
-              type="checkbox"
-              name={`trailer_${value}`}
-              value="1"
-              defaultChecked={filters.trailerVerdict.includes(value)}
-            />
-            {TRAILER_VERDICT_LABELS[value]}
-          </label>
-        ))}
-      </fieldset>
-
-      <div className="flex gap-2">
-        <button
-          type="submit"
-          className="min-h-12 rounded-md bg-action px-4 py-3 font-medium text-base hover:bg-action-hover"
-        >
-          Filtern
-        </button>
-        <Link
-          href="/ladepunkte"
-          className="flex min-h-12 items-center rounded-md border border-black/10 px-4 hover:bg-black/5 dark:border-white/10 dark:hover:bg-white/10"
-        >
-          Zurücksetzen
-        </Link>
-      </div>
-    </form>
+      <button
+        type="submit"
+        className="min-h-12 rounded-md bg-action px-4 py-3 font-medium text-base hover:bg-action-hover"
+      >
+        Filtern
+      </button>
+    </div>
   );
 }

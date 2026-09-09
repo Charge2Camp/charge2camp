@@ -77,7 +77,16 @@ function ChargingStationCard({
 
 const PAGE_SIZE = 30;
 
-export function ChargingStationExplorer({ stations }: { stations: ChargingStationView[] }) {
+export function ChargingStationExplorer({
+  stations,
+  emptyMessage = "Keine Ladepunkte gefunden. Filter anpassen?",
+}: {
+  stations: ChargingStationView[];
+  /** Text, wenn `stations` leer ist -- z. B. anders formuliert, solange die
+   * Favoriten statt echter Filterergebnisse angezeigt werden (siehe
+   * ladepunkte/page.tsx). */
+  emptyMessage?: string;
+}) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [mobileTab, setMobileTab] = useState<"list" | "map">("list");
   // Siehe campsite-explorer.tsx: bis zu 5000 Treffer (fetchChargingStations)
@@ -122,9 +131,7 @@ export function ChargingStationExplorer({ stations }: { stations: ChargingStatio
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div className={`flex flex-col gap-3 ${mobileTab === "map" ? "hidden md:flex" : ""}`}>
           {stations.length === 0 ? (
-            <p className="text-sm text-black/50 dark:text-white/50">
-              Keine Ladepunkte gefunden. Filter anpassen?
-            </p>
+            <p className="text-sm text-black/50 dark:text-white/50">{emptyMessage}</p>
           ) : (
             <>
               {visibleStations.map((s) => (

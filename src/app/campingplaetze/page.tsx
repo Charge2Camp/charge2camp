@@ -9,7 +9,7 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import { CampsiteFilterForm } from "@/components/campsites/filter-form";
 import { CampsiteQuickFilters } from "@/components/campsites/quick-filters";
-import { CampsiteFurtherFiltersSheet } from "@/components/campsites/further-filters-sheet";
+import { FurtherFiltersSheet } from "@/components/further-filters-sheet";
 import { CampsiteExplorer } from "@/components/campsites/campsite-explorer";
 
 export default async function CampsitesPage({
@@ -76,9 +76,9 @@ export default async function CampsitesPage({
       <form action="/campingplaetze" className="mt-8 flex flex-col gap-4">
         <CampsiteQuickFilters filters={filters} countries={countries} amenityCatalog={amenityCatalog} />
 
-        <CampsiteFurtherFiltersSheet activeFilterCount={furtherFilterCount}>
+        <FurtherFiltersSheet activeFilterCount={furtherFilterCount}>
           <CampsiteFilterForm filters={filters} amenityCatalog={amenityCatalog} nameOptions={nameOptions} />
-        </CampsiteFurtherFiltersSheet>
+        </FurtherFiltersSheet>
       </form>
 
       <div className="mt-8">

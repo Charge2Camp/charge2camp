@@ -1,5 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
-import type { CoreChargePointGeo, CoreConnector, TrailerSuitabilityRecord, TrailerVerdict } from "@/types/database";
+import type {
+  CoreChargePointGeo,
+  CoreConnector,
+  Favorite,
+  TrailerSuitabilityRecord,
+  TrailerVerdict,
+} from "@/types/database";
 
 const FAST_CHARGER_MIN_KW = 100;
 
@@ -60,20 +66,13 @@ export interface ChargingStationView extends CoreChargePointGeo {
  * Textschluessel zusammen, nicht ueber eine PostgREST-embedbare FK-
  * Beziehung durch die core.charge_point_geo-VIEW -- deshalb zwei
  * Zusatzabfragen statt eines Embeds, im Code zusammengefuehrt (gleiches
- * Muster wie annotateChargingStops in routenplaner/actions.ts).
- * trailerVerdict/connectorType filtern deshalb erst NACH dem Laden (in JS)
- * statt in der SQL-Abfrage -- fuer den MVP-Datenumfang ausreichend. */
-export async function fetchChargingStations(filters: ChargingStationFilters): Promise<ChargingStationView[]> {
-  const supabase = await createClient();
-  let query = supabase.schema("core").from("charge_point_geo").select("*");
-
-  if (filters.q) query = query.ilike("name", `%${filters.q}%`);
-  if (filters.fastChargersOnly) query = query.gte("max_power_kw", FAST_CHARGER_MIN_KW);
-
-  const { data, error } = await query.order("name").limit(5000);
-  if (error) throw new Error(error.message);
-  const stations = (data as CoreChargePointGeo[]) ?? [];
-
+ * Muster wie annotateChargingStops in routenplaner/actions.ts). Gemeinsam
+ * fuer fetchChargingStations (Filtersuche) und fetchFavoriteChargingStations
+ * (Favoriten-Liste) genutzt, damit beide dieselben Kartendaten liefern. */
+async function enrichStations(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  stations: CoreChargePointGeo[]
+): Promise<ChargingStationView[]> {
   const ids = stations.map((s) => s.id);
   const keys = stations.map((s) => s.external_key);
   const BATCH_SIZE = 150;
@@ -95,11 +94,27 @@ export async function fetchChargingStations(filters: ChargingStationFilters): Pr
   }
   const trailerByKey = new Map(trailerRows.map((t) => [t.charge_point_key, t]));
 
-  let results: ChargingStationView[] = stations.map((s) => ({
+  return stations.map((s) => ({
     ...s,
     connectors: connectorsByChargePointId.get(s.id) ?? [],
     trailer: trailerByKey.get(s.external_key) ?? null,
   }));
+}
+
+/** trailerVerdict/connectorType filtern erst NACH dem Laden (in JS) statt
+ * in der SQL-Abfrage -- fuer den MVP-Datenumfang ausreichend. */
+export async function fetchChargingStations(filters: ChargingStationFilters): Promise<ChargingStationView[]> {
+  const supabase = await createClient();
+  let query = supabase.schema("core").from("charge_point_geo").select("*");
+
+  if (filters.q) query = query.ilike("name", `%${filters.q}%`);
+  if (filters.fastChargersOnly) query = query.gte("max_power_kw", FAST_CHARGER_MIN_KW);
+
+  const { data, error } = await query.order("name").limit(5000);
+  if (error) throw new Error(error.message);
+  const stations = (data as CoreChargePointGeo[]) ?? [];
+
+  let results = await enrichStations(supabase, stations);
 
   if (filters.trailerVerdict.length > 0) {
     results = results.filter((r) => r.trailer && filters.trailerVerdict.includes(r.trailer.verdict));
@@ -108,6 +123,26 @@ export async function fetchChargingStations(filters: ChargingStationFilters): Pr
     results = results.filter((r) => r.connectors.some((c) => c.standard === filters.connectorType));
   }
   return results;
+}
+
+/** Vom Nutzer gemerkte Ladepunkte mit vollen Kartendaten (core.charge_point_geo
+ * + Connectoren + Anhaengertauglichkeit) -- gezeigt statt der ungefilterten
+ * Gesamtliste, solange keine Filter aktiv sind (siehe ladepunkte/page.tsx,
+ * gleiches Muster wie fetchFavoriteCampsites in lib/campsites.ts). Nicht
+ * angemeldet oder noch keine Favoriten gemerkt: leere Liste, kein Fehler. */
+export async function fetchFavoriteChargingStations(userId: string): Promise<ChargingStationView[]> {
+  const supabase = await createClient();
+  const { data: favorites } = await supabase
+    .from("favorites")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("entity_type", "charging_station");
+  const stationIds = ((favorites as Favorite[]) ?? []).map((f) => f.entity_id);
+  if (stationIds.length === 0) return [];
+
+  const { data, error } = await supabase.schema("core").from("charge_point_geo").select("*").in("id", stationIds);
+  if (error) throw new Error(error.message);
+  return enrichStations(supabase, (data as CoreChargePointGeo[]) ?? []);
 }
 
 /** Anzeigename je Ladepunkt (Name, falls vorhanden, sonst Betreiber),
