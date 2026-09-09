@@ -7,10 +7,17 @@ import type { Caravan, Vehicle } from "@/types/database";
 
 export function ChargingReviewForm({
   stationId,
+  externalKey,
   vehicles,
   caravans,
 }: {
   stationId: string;
+  /** core.charge_point.external_key -- enrich.trailer_suitability/
+   * enrich.trailer_report sind ueber diesen Schluessel verknuepft, nicht
+   * ueber die UUID (siehe addChargingReview: speist die Antwort auf "Ist
+   * dieser Ladepunkt mit deinem Gespann nutzbar?" zusaetzlich in die
+   * Anhaengertauglichkeits-Meldewarteschlange ein). */
+  externalKey: string;
   vehicles: Vehicle[];
   caravans: Caravan[];
 }) {
@@ -56,6 +63,7 @@ export function ChargingReviewForm({
       className="flex flex-col gap-3 rounded-lg border border-black/10 p-4 dark:border-white/10"
     >
       <input type="hidden" name="charging_station_id" value={stationId} />
+      <input type="hidden" name="charge_point_external_key" value={externalKey} />
       <input type="hidden" name="vehicle_id" value={vehicleId} />
       <input type="hidden" name="caravan_id" value={caravanId} />
 

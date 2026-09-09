@@ -258,7 +258,7 @@ export default async function ChargingStationDetailPage({
               Du hast diesen Ladepunkt bereits bewertet ({SUITABLE_LABELS[ownReview.suitable]}).
             </p>
           ) : (
-            <ChargingReviewForm stationId={s.id} vehicles={ownVehicles} caravans={ownCaravans} />
+            <ChargingReviewForm stationId={s.id} externalKey={s.external_key} vehicles={ownVehicles} caravans={ownCaravans} />
           )}
         </div>
       </section>

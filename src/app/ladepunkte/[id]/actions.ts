@@ -27,6 +27,7 @@ export async function addChargingReview(formData: FormData) {
   if (!user) throw new Error("Nicht angemeldet.");
 
   const stationId = formData.get("charging_station_id");
+  const externalKey = formData.get("charge_point_external_key");
   const suitable = formData.get("suitable");
   const comment = formData.get("comment");
   const caravanModel = formData.get("caravan_model");
@@ -78,6 +79,34 @@ export async function addChargingReview(formData: FormData) {
   });
 
   if (error) throw new Error(error.message);
+
+  // "Ist dieser Ladepunkt mit deinem Gespann nutzbar?" ist inhaltlich exakt
+  // die Anhaengertauglichkeits-Frage, die enrich.trailer_suitability/die
+  // "Geprüft"/"Von der Community bewertet"-Badges antreibt -- bisher landete
+  // die Antwort aber NUR in charging_reviews, ohne die dafuer bereits
+  // gebaute Melde-/Moderations-Pipeline (enrich.trailer_report,
+  // enrich.submit_trailer_report(), Admin-Freigabe unter /ladestationen/
+  // meldungen) jemals zu erreichen -- deshalb hatten praktisch alle echten
+  // Ladepunkte weiterhin den Status "Ungeprüft". Jede Bewertung fliesst
+  // deshalb zusaetzlich dort ein. "limited" (mit Einschraenkungen) bildet
+  // auf "unhitch" ab (Wohnwagen muss abgekoppelt werden), passend zur
+  // gleichnamigen Kategorie im Rest der App. Bewusst nicht fatal: schlaegt
+  // das fehl, bleibt die eigentliche Bewertung trotzdem gespeichert.
+  if (typeof externalKey === "string" && externalKey) {
+    const verdict = suitable === "limited" ? "unhitch" : suitable;
+    const { error: reportError } = await supabase.schema("enrich").rpc("submit_trailer_report", {
+      p_charge_point_key: externalKey,
+      p_user_id: user.id,
+      p_display_name: user.email ?? null,
+      p_verdict: verdict,
+      p_drive_through: null,
+      p_notes: typeof comment === "string" && comment.trim() ? comment.trim() : null,
+      p_photo_url: null,
+      p_rig_length_m: parseOptionalNumber(formData.get("trailer_length_m")),
+    });
+    if (reportError) console.error("submit_trailer_report failed:", reportError.message);
+  }
+
   revalidatePath(`/ladepunkte/${stationId}`);
 }
 
