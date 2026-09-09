@@ -99,16 +99,27 @@ export default async function CampsiteDetailPage({
 
   // "Ladepunkte in der Naehe" zeigt primaer fussläufig erreichbare
   // Ladepunkte (linkedChargePoints, schon auf max. 15 Gehminuten
-  // beschraenkt, siehe fetchLinkedChargePoints), ergaenzt um Schnelllader
-  // ab FAST_CHARGER_MIN_KW im FAST_CHARGER_RADIUS_KM-Umkreis, die den
+  // beschraenkt, siehe fetchLinkedChargePoints) -- davon max. die 3
+  // staerksten (hoechste Ladeleistung = groesste Relevanz fuers Gespann-
+  // Laden), ergaenzt um max. 2 Schnelllader ab FAST_CHARGER_MIN_KW im
+  // FAST_CHARGER_RADIUS_KM-Umkreis (naechstgelegene zuerst), die den
   // Umweg mit dem Auto lohnen -- deutlich als "nicht fußläufig"
-  // gekennzeichnet (siehe NearbyChargePointsList).
+  // gekennzeichnet (siehe NearbyChargePointsList). Macht max. 5 Eintraege
+  // insgesamt.
+  const MAX_WALKABLE_LISTED = 3;
+  const MAX_FAST_CHARGERS_LISTED = 2;
+  const topWalkableChargePoints = [...linkedChargePoints]
+    .sort((a, b) => (b.max_power_kw ?? 0) - (a.max_power_kw ?? 0))
+    .slice(0, MAX_WALKABLE_LISTED);
+
   const linkedIds = new Set(linkedChargePoints.map((l) => l.id));
   const nonWalkableFastChargers: LinkedChargePoint[] = nearbyChargePoints
     .filter(
       (p) =>
         !linkedIds.has(p.id) && p.max_power_kw != null && p.max_power_kw >= FAST_CHARGER_MIN_KW && p.distance_m <= FAST_CHARGER_RADIUS_KM * 1000
     )
+    .sort((a, b) => a.distance_m - b.distance_m)
+    .slice(0, MAX_FAST_CHARGERS_LISTED)
     .map((p) => ({
       id: p.id,
       external_key: "",
@@ -124,7 +135,7 @@ export default async function CampsiteDetailPage({
       trailerVerdict: p.trailerVerdict,
       walkable: false,
     }));
-  const nearbyListChargePoints = [...linkedChargePoints, ...nonWalkableFastChargers];
+  const nearbyListChargePoints = [...topWalkableChargePoints, ...nonWalkableFastChargers];
 
   const onSiteChargePoints = linkedChargePoints.filter((l) => l.relation === "on_site");
   const fastChargers = linkedChargePoints.filter((l) => (l.max_power_kw ?? 0) >= 100 && l.walk_distance_m != null);
@@ -239,7 +250,7 @@ export default async function CampsiteDetailPage({
             ]}
             fitBoundsPoints={[
               { latitude: search.lat, longitude: search.lon },
-              ...linkedChargePoints.map((l) => ({ latitude: l.latitude, longitude: l.longitude })),
+              ...topWalkableChargePoints.map((l) => ({ latitude: l.latitude, longitude: l.longitude })),
             ]}
             fitBoundsMaxZoom={17}
             cluster

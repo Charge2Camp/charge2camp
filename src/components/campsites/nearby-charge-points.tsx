@@ -12,16 +12,13 @@ export function NearbyChargePointsList({ points }: { points: LinkedChargePoint[]
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = points.find((p) => p.id === selectedId) ?? null;
 
-  // Fussläufige Punkte zuerst (schon auf max. 15 Gehminuten begrenzt), dann
-  // nicht-fussläufige Schnelllader -- damit die Liste nicht von einem
-  // 150kW+-Lader verdraengt wird, der weiter weg liegt als ein normaler,
-  // aber zu Fuss erreichbarer Ladepunkt.
-  const sorted = [...points].sort((a, b) => Number(b.walkable) - Number(a.walkable));
-
+  // Reihenfolge/Auswahl (max. 3 fussläufige nach Ladeleistung + max. 2
+  // nicht-fussläufige Schnelllader nach Entfernung) wird bereits vom
+  // Aufrufer festgelegt (campingplaetze/[id]/page.tsx), hier nur gerendert.
   return (
     <>
       <ul className="mt-2 flex flex-col gap-2">
-        {sorted.slice(0, 8).map((point) => (
+        {points.map((point) => (
           <li key={point.id}>
             <button
               type="button"
