@@ -227,7 +227,16 @@ export function planTrip({
 
     candidates.sort((a, b) => {
       if (preferTrailerSuitable) {
-        const rank = { confirmed: 0, likely: 1, unknown: 2, unsuitable: 3 } as const;
+        // Reihenfolge folgt NICHT der Buchstaben-/Konfidenz-Anmutung von
+        // "confirmed" vs. "likely", sondern der Gespann-Freundlichkeit der
+        // Kartenpins, auf die trailer-suitability.ts (TRAILER_SUITABILITY_
+        // ICON_SRC) diese vier Rohzustaende abbildet: "likely" steht dort
+        // fuer den Drive-Through-Pin (durchfahren, kein Rangieren noetig --
+        // der beste Fall laut docs/design/brand-guide.md Abschnitt 7),
+        // "confirmed" fuer den Pin "ohne Abkoppeln" (Stellplatz vorhanden,
+        // muss aber rangiert werden) -- Drive-Through steht deshalb hier
+        // bewusst vor "confirmed".
+        const rank = { likely: 0, confirmed: 1, unknown: 2, unsuitable: 3 } as const;
         const diff = rank[a.station.trailer_suitable] - rank[b.station.trailer_suitable];
         if (diff !== 0) return diff;
       }

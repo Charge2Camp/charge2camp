@@ -1,8 +1,12 @@
 import type { TrailerSuitability } from "@/types/database";
 
+// Reihenfolge = Skala von ideal nach schlecht (siehe TRAILER_SUITABILITY_
+// ICON_SRC weiter unten): "likely" faellt auf den Drive-Through-Pin (bester
+// Fall), "confirmed" auf "ohne Abkoppeln" -- trotz der Namen also NICHT
+// nach Konfidenz sortiert, sondern nach Gespann-Freundlichkeit.
 export const TRAILER_SUITABILITY_VALUES: TrailerSuitability[] = [
-  "confirmed",
   "likely",
+  "confirmed",
   "unknown",
   "unsuitable",
 ];
