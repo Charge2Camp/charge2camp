@@ -12,8 +12,18 @@ export const EV_SCORE_WEIGHTS = {
   dataFreshness: 10, // Aktualität der Daten (last_verified_at)
 } as const;
 
-const FULL_POWER_KW = 150; // ab dieser Leistung gibt es die vollen Punkte
-const FULL_POINT_COUNT = 6; // ab dieser Anzahl Ladepunkte gibt es die vollen Punkte
+// Ladepunkte AUF DEM CAMPINGPLATZ sind so gut wie nie DC-Schnelllader --
+// realistisch ist dort AC-Laden mit 11-22 kW (Campingplatz-Stromkasten),
+// mehr als 22 kW auf dem Platz selbst ist die Ausnahme. Ein Schwellwert von
+// 150 kW (Schnelllader-Niveau) haette on-site-Lader also fast nie mit
+// voller Punktzahl belohnt -- die volle Punktzahl gibt es jetzt schon ab
+// 22 kW, alles darueber ist ein zusaetzlicher Bonus ohne Nachteil.
+const FULL_POWER_KW = 22; // ab dieser Leistung gibt es die vollen Punkte
+// Aus demselben Grund wie bei FULL_POWER_KW: 6 Ladepunkte auf einem
+// Campingplatz sind die Ausnahme, nicht der Normalfall -- schon 2
+// Ladepunkte auf dem Platz sind ein starkes Signal und verdienen die
+// volle Punktzahl.
+const FULL_POINT_COUNT = 2; // ab dieser Anzahl Ladepunkte gibt es die vollen Punkte
 
 export interface EvScoreBreakdown {
   score: number; // 0-100, gerundet
