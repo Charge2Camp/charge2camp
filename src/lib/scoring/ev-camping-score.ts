@@ -104,9 +104,16 @@ export function calculateEvCampingScore(
 ): EvScoreBreakdown {
   const onSite = campsite.ev_charging_on_site ? EV_SCORE_WEIGHTS.onSite : 0;
 
-  const power = campsite.ev_charging_on_site
-    ? clamp01((campsite.max_charging_power_kw ?? 0) / FULL_POWER_KW) * EV_SCORE_WEIGHTS.power
-    : 0;
+  // Unbekannte Ladeleistung heisst nicht "keine Ladeleistung" -- die
+  // meisten Campingplaetze ohne Angabe haben trotzdem einen normalen
+  // AC-Ladepunkt (siehe FULL_POWER_KW-Begruendung oben), 0 Punkte waere
+  // eine zu harte Strafe fuer fehlende statt schlechte Daten. Pauschal 10
+  // von 15 Punkten statt der vollen Bandbreite.
+  const power = !campsite.ev_charging_on_site
+    ? 0
+    : campsite.max_charging_power_kw == null
+      ? 10
+      : clamp01(campsite.max_charging_power_kw / FULL_POWER_KW) * EV_SCORE_WEIGHTS.power;
 
   const pointCount = campsite.ev_charging_on_site
     ? clamp01((campsite.number_of_charging_points ?? 0) / FULL_POINT_COUNT) *
