@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { CoreCampsiteChargeLink, CoreChargePointGeo, TrailerSuitabilityRecord, TrailerVerdict } from "@/types/database";
+import { getTrailerPinState, TRAILER_PIN_ICON_SRC } from "@/lib/trailer-verdict";
 
 export interface LinkedChargePoint {
   id: string;
@@ -71,4 +72,57 @@ export async function fetchLinkedChargePoints(campsiteId: string): Promise<Linke
     });
   }
   return result;
+}
+
+export interface NearbyChargePoint {
+  id: string;
+  name: string | null;
+  operator: string | null;
+  max_power_kw: number | null;
+  latitude: number;
+  longitude: number;
+  distance_m: number;
+  iconSrc: string;
+}
+
+/** Echter Umkreis-Radius per PostGIS (core.charge_points_within_radius,
+ * siehe Migration 20260909040000) -- fuer die Kartenansicht der
+ * Campingplatz-Detailseite, bewusst getrennt von fetchLinkedChargePoints
+ * (Fusswege-Verknuepfung, nur wenige Meter/Gehminuten, fuer die
+ * "Ladepunkte in der Naehe"-Liste). */
+export async function fetchNearbyChargePoints(
+  latitude: number,
+  longitude: number,
+  radiusKm: number
+): Promise<NearbyChargePoint[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.schema("core").rpc("charge_points_within_radius", {
+    p_lat: latitude,
+    p_lon: longitude,
+    p_radius_m: radiusKm * 1000,
+  });
+  if (error) throw new Error(error.message);
+
+  const rows = (data ?? []) as {
+    id: string;
+    name: string | null;
+    operator: string | null;
+    max_power_kw: number | null;
+    lat: number;
+    lon: number;
+    distance_m: number;
+    verdict: TrailerVerdict | null;
+    drive_through: boolean | null;
+  }[];
+
+  return rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    operator: r.operator,
+    max_power_kw: r.max_power_kw,
+    latitude: r.lat,
+    longitude: r.lon,
+    distance_m: r.distance_m,
+    iconSrc: TRAILER_PIN_ICON_SRC[getTrailerPinState({ verdict: r.verdict ?? "unknown", drive_through: r.drive_through })],
+  }));
 }

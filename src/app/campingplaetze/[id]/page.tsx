@@ -4,13 +4,42 @@ import { createClient } from "@/lib/supabase/server";
 import type { CampsiteReview } from "@/types/database";
 import type { CampsiteSearchRow, CoreCampsite } from "@/types/database";
 import { fetchAmenityCatalog } from "@/lib/campsites";
-import { fetchLinkedChargePoints } from "@/lib/campsite-charging-links";
+import { fetchLinkedChargePoints, fetchNearbyChargePoints, type NearbyChargePoint } from "@/lib/campsite-charging-links";
 import { calculateEvCampingScore } from "@/lib/scoring/ev-camping-score";
 import { MapView } from "@/components/map/map-view";
 import { EvScoreBadge } from "@/components/campsites/ev-score-badge";
 import { CampsiteReviewForm } from "@/components/campsites/review-form";
 import { CampsiteFavoriteButton } from "@/components/campsites/favorite-button";
-import { TRAILER_VERDICT_COLORS, TRAILER_VERDICT_LABELS } from "@/lib/trailer-verdict";
+import { NearbyChargePointsList } from "@/components/campsites/nearby-charge-points";
+
+const NEARBY_RADIUS_KM = 25;
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// Popup fuer die Kartenpins der Ladepunkte im 25-km-Umkreis (MapView,
+// popupHtml) -- Kurzinfo direkt auf der Karte, mit Link zur vollen
+// Detailseite, statt sofort dorthin zu navigieren.
+function buildNearbyChargePointPopupHtml(point: NearbyChargePoint): string {
+  const name = escapeHtml(point.name ?? point.operator ?? "Ladepunkt");
+  const distanceKm = (point.distance_m / 1000).toFixed(1);
+  return `
+    <div style="font-family: system-ui, sans-serif; font-size: 13px; line-height: 1.5; max-width: 220px;">
+      <p style="margin: 0 0 4px; font-weight: 600;">${name}</p>
+      <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 2px; opacity: 0.8;">
+        ${point.max_power_kw ? `<li>${point.max_power_kw} kW</li>` : ""}
+        <li>${distanceKm} km Luftlinie</li>
+      </ul>
+      <a href="/ladepunkte/${point.id}" style="display: inline-block; margin-top: 8px; color: #1D9E75; font-weight: 500;">Zur Ladestation →</a>
+    </div>
+  `;
+}
 
 export default async function CampsiteDetailPage({
   params,
@@ -24,28 +53,32 @@ export default async function CampsiteDetailPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [{ data: campsite }, { data: searchRow }, { data: reviews }, favoriteResult, amenityCatalog, linkedChargePoints] =
-    await Promise.all([
-      supabase.schema("core").from("campsite").select("*").eq("id", id).eq("is_active", true).maybeSingle(),
-      supabase.schema("core").from("campsite_search").select("*").eq("id", id).maybeSingle(),
-      supabase.from("campsite_reviews").select("*").eq("campsite_id", id).order("created_at", { ascending: false }),
-      user
-        ? supabase
-            .from("favorites")
-            .select("entity_id")
-            .eq("user_id", user.id)
-            .eq("entity_type", "campsite")
-            .eq("entity_id", id)
-            .maybeSingle()
-        : Promise.resolve({ data: null }),
-      fetchAmenityCatalog(),
-      fetchLinkedChargePoints(id),
-    ]);
+  const [{ data: campsite }, { data: searchRow }] = await Promise.all([
+    supabase.schema("core").from("campsite").select("*").eq("id", id).eq("is_active", true).maybeSingle(),
+    supabase.schema("core").from("campsite_search").select("*").eq("id", id).maybeSingle(),
+  ]);
 
   if (!campsite) notFound();
 
   const site = campsite as CoreCampsite;
   const search = searchRow as CampsiteSearchRow | null;
+
+  const [{ data: reviews }, favoriteResult, amenityCatalog, linkedChargePoints, nearbyChargePoints] = await Promise.all([
+    supabase.from("campsite_reviews").select("*").eq("campsite_id", id).order("created_at", { ascending: false }),
+    user
+      ? supabase
+          .from("favorites")
+          .select("entity_id")
+          .eq("user_id", user.id)
+          .eq("entity_type", "campsite")
+          .eq("entity_id", id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    fetchAmenityCatalog(),
+    fetchLinkedChargePoints(id),
+    search ? fetchNearbyChargePoints(search.lat, search.lon, NEARBY_RADIUS_KM) : Promise.resolve([]),
+  ]);
+
   const allReviews = (reviews as CampsiteReview[]) ?? [];
   const isFavorite = Boolean(favoriteResult.data);
   const ownReview = user ? allReviews.find((r) => r.user_id === user.id) : undefined;
@@ -93,113 +126,99 @@ export default async function CampsiteDetailPage({
         {user && <CampsiteFavoriteButton campsiteId={site.id} initialIsFavorite={isFavorite} />}
       </div>
 
+      <section className="mt-6">
+        <h2 className="font-semibold">EV-Informationen</h2>
+        <ul className="mt-2 space-y-1 text-sm">
+          <li>
+            Ladepunkt auf dem Platz:{" "}
+            {search?.charging_on_site ? "ja" : search?.nearest_walk_m != null ? "in Laufnähe" : "nein bekannt"}
+          </li>
+          {search?.on_site_power_kw && <li>Max. Ladeleistung: {search.on_site_power_kw} kW</li>}
+          {onSiteChargePoints.length > 0 && <li>Anzahl Ladepunkte auf dem Platz: {onSiteChargePoints.length}</li>}
+        </ul>
+
+        <div className="mt-4">
+          <EvScoreBadge
+            breakdown={scoreBreakdown}
+            campsite={{
+              max_charging_power_kw: search?.on_site_power_kw ?? null,
+              number_of_charging_points: onSiteChargePoints.length || null,
+              rating_avg: ratingAvg,
+            }}
+          />
+        </div>
+      </section>
+
       {search && (
-        <div className="mt-6 h-[320px] overflow-hidden rounded-lg border border-black/10 dark:border-white/10">
-          <MapView markers={[{ id: site.id, latitude: search.lat, longitude: search.lon, label: site.name }]} />
+        <div className="mt-6 h-[400px] overflow-hidden rounded-lg border border-black/10 dark:border-white/10">
+          <MapView
+            markers={[
+              { id: site.id, latitude: search.lat, longitude: search.lon, label: site.name },
+              ...nearbyChargePoints.map((p) => ({
+                id: p.id,
+                latitude: p.latitude,
+                longitude: p.longitude,
+                label: p.name ?? p.operator ?? "Ladepunkt",
+                iconSrc: p.iconSrc,
+                popupHtml: buildNearbyChargePointPopupHtml(p),
+              })),
+            ]}
+            cluster
+          />
         </div>
       )}
 
-      <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
-        <section>
-          <h2 className="font-semibold">Ausstattung</h2>
-          {activeAmenities.length === 0 ? (
-            <p className="mt-2 text-sm text-black/50 dark:text-white/50">Keine Angaben.</p>
-          ) : (
-            <ul className="mt-2 flex flex-wrap gap-2 text-sm">
-              {activeAmenities.map((key) => (
-                <li key={key} className="rounded-full border border-black/10 px-3 py-1 dark:border-white/10">
-                  {amenityLabels[key] ?? key}
-                </li>
-              ))}
-            </ul>
-          )}
-
-          {(site.address || site.website || site.phone) && (
-            <dl className="mt-4 space-y-1 text-sm">
-              {site.address && (
-                <div>
-                  <dt className="inline text-black/50 dark:text-white/50">Adresse: </dt>
-                  <dd className="inline">{site.address}</dd>
-                </div>
-              )}
-              {site.phone && (
-                <div>
-                  <dt className="inline text-black/50 dark:text-white/50">Telefon: </dt>
-                  <dd className="inline">{site.phone}</dd>
-                </div>
-              )}
-              {site.website && (
-                <div>
-                  <dt className="inline text-black/50 dark:text-white/50">Website: </dt>
-                  <dd className="inline">
-                    <a
-                      href={site.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-route hover:underline"
-                    >
-                      {site.website}
-                    </a>
-                  </dd>
-                </div>
-              )}
-            </dl>
-          )}
-        </section>
-
-        <section>
-          <h2 className="font-semibold">EV-Informationen</h2>
-          <ul className="mt-2 space-y-1 text-sm">
-            <li>
-              Ladepunkt auf dem Platz:{" "}
-              {search?.charging_on_site ? "ja" : search?.nearest_walk_m != null ? "in Laufnähe" : "nein bekannt"}
-            </li>
-            {search?.on_site_power_kw && <li>Max. Ladeleistung: {search.on_site_power_kw} kW</li>}
-            {onSiteChargePoints.length > 0 && <li>Anzahl Ladepunkte auf dem Platz: {onSiteChargePoints.length}</li>}
+      <section className="mt-6">
+        <h2 className="font-semibold">Ausstattung</h2>
+        {activeAmenities.length === 0 ? (
+          <p className="mt-2 text-sm text-black/50 dark:text-white/50">Keine Angaben.</p>
+        ) : (
+          <ul className="mt-2 flex flex-wrap gap-2 text-sm">
+            {activeAmenities.map((key) => (
+              <li key={key} className="rounded-full border border-black/10 px-3 py-1 dark:border-white/10">
+                {amenityLabels[key] ?? key}
+              </li>
+            ))}
           </ul>
+        )}
 
-          <div className="mt-4">
-            <EvScoreBadge
-              breakdown={scoreBreakdown}
-              campsite={{
-                max_charging_power_kw: search?.on_site_power_kw ?? null,
-                number_of_charging_points: onSiteChargePoints.length || null,
-                rating_avg: ratingAvg,
-              }}
-            />
-          </div>
-        </section>
-      </div>
+        {(site.address || site.website || site.phone) && (
+          <dl className="mt-4 space-y-1 text-sm">
+            {site.address && (
+              <div>
+                <dt className="inline text-black/50 dark:text-white/50">Adresse: </dt>
+                <dd className="inline">{site.address}</dd>
+              </div>
+            )}
+            {site.phone && (
+              <div>
+                <dt className="inline text-black/50 dark:text-white/50">Telefon: </dt>
+                <dd className="inline">{site.phone}</dd>
+              </div>
+            )}
+            {site.website && (
+              <div>
+                <dt className="inline text-black/50 dark:text-white/50">Website: </dt>
+                <dd className="inline">
+                  <a
+                    href={site.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-route hover:underline"
+                  >
+                    {site.website}
+                  </a>
+                </dd>
+              </div>
+            )}
+          </dl>
+        )}
+      </section>
 
       {linkedChargePoints.length > 0 ? (
         <section className="mt-8">
           <h2 className="font-semibold">Ladepunkte in der Nähe</h2>
-          <ul className="mt-2 flex flex-col gap-2">
-            {linkedChargePoints.slice(0, 5).map((point) => (
-              <li key={point.id}>
-                <Link
-                  href={`/ladepunkte/${point.id}`}
-                  className="flex items-center justify-between rounded-md border border-black/10 px-4 py-2 text-sm hover:bg-black/5 dark:border-white/10 dark:hover:bg-white/10"
-                >
-                  <div>
-                    <p className="font-medium">{point.name ?? point.operator}</p>
-                    <p className="text-black/60 dark:text-white/60">
-                      {point.max_power_kw ? `${point.max_power_kw} kW` : ""}
-                      {" · "}
-                      <span style={{ color: TRAILER_VERDICT_COLORS[point.trailerVerdict] }}>
-                        {TRAILER_VERDICT_LABELS[point.trailerVerdict]}
-                      </span>
-                    </p>
-                  </div>
-                  <span className="text-black/50 dark:text-white/50">
-                    {point.walk_distance_m != null
-                      ? `${(point.walk_distance_m / 1000).toFixed(1)} km zu Fuß`
-                      : `${(point.air_distance_m / 1000).toFixed(1)} km Luftlinie`}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
+          <NearbyChargePointsList points={linkedChargePoints} />
         </section>
       ) : (
         <p className="mt-8 text-xs text-black/40 dark:text-white/40">
