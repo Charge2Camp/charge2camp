@@ -7,6 +7,7 @@ import { ChargingReviewForm } from "@/components/charging-stations/review-form";
 import { ChargingStationFavoriteButton } from "@/components/charging-stations/favorite-button";
 import { RigLengthDistributionChart } from "@/components/charging-stations/rig-length-distribution";
 import { TRAILER_PIN_COLORS, TRAILER_PIN_ICON_SRC, TRAILER_PIN_LABELS, getTrailerPinState } from "@/lib/trailer-verdict";
+import { ReviewStateBadge } from "@/components/charging-stations/review-state-badge";
 import { formatConnectorStandard } from "@/lib/connector-standard";
 import { formatAccessType } from "@/lib/access-type";
 import {
@@ -103,12 +104,15 @@ export default async function ChargingStationDetailPage({
       <p className="text-sm text-black/50 dark:text-white/50">{s.operator}</p>
       <h1 className="text-3xl font-bold">{s.name ?? s.operator}</h1>
 
-      <span
-        className="mt-2 inline-block rounded-full px-3 py-1 text-sm text-white"
-        style={{ backgroundColor: TRAILER_PIN_COLORS[pinState] }}
-      >
-        {TRAILER_PIN_LABELS[pinState]}
-      </span>
+      <div className="mt-2 flex flex-wrap gap-2">
+        <span
+          className="inline-block rounded-full px-3 py-1 text-sm text-white"
+          style={{ backgroundColor: TRAILER_PIN_COLORS[pinState] }}
+        >
+          {TRAILER_PIN_LABELS[pinState]}
+        </span>
+        <ReviewStateBadge origin={trailer?.origin} className="px-3 py-1 text-sm" />
+      </div>
 
       <div className="mt-4 flex items-center gap-2">
         <Link

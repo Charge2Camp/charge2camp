@@ -15,6 +15,10 @@ export interface LinkedChargePoint {
   latitude: number;
   longitude: number;
   trailerVerdict: TrailerVerdict;
+  /** enrich.trailer_suitability.origin -- Grundlage fuer ReviewStateBadge
+   * (noch nicht bewertet / von der Community bewertet / geprueft), siehe
+   * src/lib/trailer-verdict.ts getReviewState(). */
+  trailerOrigin: string | null;
   /** false bei nachtraeglich per Umkreissuche eingemischten Schnellladern
    * (siehe fetchNearbyChargePoints/campingplaetze/[id]/page.tsx) -- die
    * sind nicht Teil der Fussweg-Verknuepfung, die Liste zeigt fuer sie
@@ -90,6 +94,7 @@ export async function fetchLinkedChargePoints(campsiteId: string): Promise<Linke
       latitude: point.lat,
       longitude: point.lon,
       trailerVerdict: trailerByKey.get(point.external_key)?.verdict ?? "unknown",
+      trailerOrigin: trailerByKey.get(point.external_key)?.origin ?? null,
       walkable: true,
     });
   }
@@ -106,6 +111,7 @@ export interface NearbyChargePoint {
   distance_m: number;
   iconSrc: string;
   trailerVerdict: TrailerVerdict;
+  trailerOrigin: string | null;
 }
 
 /** Echter Umkreis-Radius per PostGIS (core.charge_points_within_radius,
@@ -136,6 +142,7 @@ export async function fetchNearbyChargePoints(
     distance_m: number;
     verdict: TrailerVerdict | null;
     drive_through: boolean | null;
+    trailer_origin: string | null;
   }[];
 
   return rows.map((r) => {
@@ -150,6 +157,7 @@ export async function fetchNearbyChargePoints(
       distance_m: r.distance_m,
       iconSrc: TRAILER_PIN_ICON_SRC[getTrailerPinState({ verdict: trailerVerdict, drive_through: r.drive_through })],
       trailerVerdict,
+      trailerOrigin: r.trailer_origin,
     };
   });
 }

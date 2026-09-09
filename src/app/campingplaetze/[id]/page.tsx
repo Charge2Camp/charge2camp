@@ -134,6 +134,7 @@ export default async function CampsiteDetailPage({
       latitude: p.latitude,
       longitude: p.longitude,
       trailerVerdict: p.trailerVerdict,
+      trailerOrigin: p.trailerOrigin,
       walkable: false,
     }));
   const nearbyListChargePoints = [...topWalkableChargePoints, ...nonWalkableFastChargers];

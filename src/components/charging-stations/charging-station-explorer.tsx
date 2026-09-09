@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { MapView } from "@/components/map/map-view";
 import { TRAILER_PIN_COLORS, TRAILER_PIN_ICON_SRC, TRAILER_PIN_LABELS, getTrailerPinState } from "@/lib/trailer-verdict";
+import { ReviewStateBadge } from "@/components/charging-stations/review-state-badge";
 import { formatConnectorStandard } from "@/lib/connector-standard";
 import type { ChargingStationView } from "@/lib/charging-stations";
 
@@ -56,6 +57,7 @@ function ChargingStationCard({
         >
           {TRAILER_PIN_LABELS[pinState]}
         </span>
+        <ReviewStateBadge origin={station.trailer?.origin} />
         {station.max_power_kw && (
           <span className="rounded-full border border-black/10 px-2 py-0.5 dark:border-white/10">
             {station.max_power_kw} kW

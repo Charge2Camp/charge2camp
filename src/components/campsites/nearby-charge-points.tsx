@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { TRAILER_VERDICT_COLORS, TRAILER_VERDICT_LABELS } from "@/lib/trailer-verdict";
+import { ReviewStateBadge } from "@/components/charging-stations/review-state-badge";
 import type { LinkedChargePoint } from "@/lib/campsite-charging-links";
 
 /** "Ladepunkte in der Naehe" -- Klick auf einen Eintrag oeffnet die Details
@@ -34,6 +35,7 @@ export function NearbyChargePointsList({ points }: { points: LinkedChargePoint[]
                     {TRAILER_VERDICT_LABELS[point.trailerVerdict]}
                   </span>
                 </p>
+                <ReviewStateBadge origin={point.trailerOrigin} className="mt-1" />
               </div>
               <span className="shrink-0 pl-3 text-right text-black/50 dark:text-white/50">
                 {!point.walkable ? (
@@ -79,7 +81,8 @@ export function NearbyChargePointsList({ points }: { points: LinkedChargePoint[]
               style={{ backgroundColor: TRAILER_VERDICT_COLORS[selected.trailerVerdict] }}
             >
               {TRAILER_VERDICT_LABELS[selected.trailerVerdict]}
-            </span>
+            </span>{" "}
+            <ReviewStateBadge origin={selected.trailerOrigin} className="mt-2 px-3 py-1 text-sm" />
             <ul className="mt-3 space-y-1 text-sm text-black/70 dark:text-white/70">
               {selected.operator && selected.name && <li>Betreiber: {selected.operator}</li>}
               {selected.max_power_kw && <li>Max. Ladeleistung: {selected.max_power_kw} kW</li>}

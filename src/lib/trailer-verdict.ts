@@ -70,6 +70,50 @@ export const TRAILER_PIN_ICON_SRC: Record<TrailerPinState, string> = {
   ungeprueft: "/pins/pin-ungeprueft.svg",
 };
 
+/** Zusaetzlich zur Anhaengertauglichkeit (oben: PASST das Gespann rein?)
+ * eine zweite, unabhaengige Achse: WIE VERTRAUENSWUERDIG ist die Angabe?
+ * enrich.trailer_suitability.origin verraet die Herkunft:
+ * - kein Eintrag                      -> noch nie irgendwer hat sich dazu
+ *                                        geaeussert
+ * - origin='community'                -> aus der Melde-/Moderations-
+ *                                        Warteschlange (enrich.trailer_report
+ *                                        + moderate_trailer_report()) --
+ *                                        ein Admin hat die Meldung nur
+ *                                        durchgewunken, nicht selbst
+ *                                        geprueft
+ * - origin='admin_override'           -> ein Admin hat die Angabe im
+ *                                        Backend direkt selbst erfasst/
+ *                                        korrigiert (siehe admin/app/
+ *                                        (dashboard)/ladestationen/[id]/
+ *                                        actions.ts, overrideTrailerSuitability)
+ * - origin='auto'                     -> algorithmisch erzeugter
+ *                                        Platzhalter (verdict dabei fast
+ *                                        immer 'unknown') aus dem initialen
+ *                                        Datenimport, KEINE echte Bewertung
+ *                                        -- zaehlt wie "kein Eintrag"
+ * - jede andere Quelle (sascha_list/operator/staff aus dem initialen
+ *   Datenimport) zaehlt ebenfalls als "geprueft" -- das sind keine
+ *   ungeprueften Nutzerangaben, sondern kuratierte Quellen. */
+export type ReviewState = "not_reviewed" | "community" | "verified";
+
+export function getReviewState(origin: string | null | undefined): ReviewState {
+  if (!origin || origin === "auto") return "not_reviewed";
+  if (origin === "community") return "community";
+  return "verified";
+}
+
+export const REVIEW_STATE_LABELS: Record<ReviewState, string> = {
+  not_reviewed: "Noch nicht bewertet",
+  community: "Von der Community bewertet",
+  verified: "Geprüft",
+};
+
+export const REVIEW_STATE_COLORS: Record<ReviewState, string> = {
+  not_reviewed: "#8E9A94",
+  community: "#E8A33D",
+  verified: "#1D9E75",
+};
+
 /** Kartenpin fuer Campingplatz-Standorte (docs/design/brand-guide.md
  * Abschnitt 7 erweitert um einen sechsten, CI-konformen Zustand) -- dunkles
  * Basisgruen mit Zelt-Glyph, bewusst ausserhalb der Anhaengertauglichkeits-
