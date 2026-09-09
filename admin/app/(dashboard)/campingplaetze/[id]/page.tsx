@@ -1,7 +1,15 @@
 import { notFound } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase/service";
-import type { Amenity, Campsite, CampsiteAmenity, CampsiteReview } from "@/lib/types";
-import { deleteCampsiteReview, setCampsiteActive, updateAmenities, updateCampsite } from "./actions";
+import type { Amenity, Campsite, CampsiteAmenity, CampsiteCharging, CampsiteReview } from "@/lib/types";
+import { deleteCampsiteReview, overrideCampsiteCharging, setCampsiteActive, updateAmenities, updateCampsite } from "./actions";
+
+const CHARGING_TYPE_LABELS: Record<string, string> = {
+  wallbox: "Wallbox",
+  schuko_only: "nur Schuko-Steckdose",
+  dc_fast: "DC-Schnelllader",
+  cee: "CEE (Camping-Steckdose)",
+  mixed: "gemischt",
+};
 
 const CATEGORY_LABELS: Record<string, string> = {
   lage: "Lage",
@@ -21,16 +29,18 @@ export default async function CampsiteDetailPage({ params }: { params: Promise<{
   if (!campsite) notFound();
   const c = campsite as Campsite;
 
-  const [{ data: amenityCatalog }, { data: campsiteAmenities }, { data: reviews }] = await Promise.all([
+  const [{ data: amenityCatalog }, { data: campsiteAmenities }, { data: reviews }, { data: charging }] = await Promise.all([
     supabase.schema("core").from("amenity").select("*").eq("value_type", "bool").order("category").order("label_de"),
     supabase.schema("core").from("campsite_amenity").select("*").eq("campsite_id", id),
     supabase.from("campsite_reviews").select("*").eq("campsite_id", id).order("created_at", { ascending: false }),
+    supabase.schema("enrich").from("campsite_charging").select("*").eq("campsite_key", c.external_key).maybeSingle(),
   ]);
   const amenities = (amenityCatalog ?? []) as Amenity[];
   const activeAmenityKeys = new Set(
     ((campsiteAmenities ?? []) as CampsiteAmenity[]).filter((a) => a.value_bool).map((a) => a.amenity_key)
   );
   const campsiteReviews = (reviews ?? []) as CampsiteReview[];
+  const chargingInfo = charging as CampsiteCharging | null;
 
   const groups = new Map<string, Amenity[]>();
   for (const amenity of amenities) {
@@ -41,6 +51,7 @@ export default async function CampsiteDetailPage({ params }: { params: Promise<{
 
   const updateAction = updateCampsite.bind(null, id);
   const amenitiesAction = updateAmenities.bind(null, id, amenities.map((a) => a.key));
+  const chargingAction = overrideCampsiteCharging.bind(null, id, c.external_key);
 
   return (
     <div className="flex max-w-2xl flex-col gap-8">
@@ -124,6 +135,66 @@ export default async function CampsiteDetailPage({ params }: { params: Promise<{
           </label>
           <button type="submit" className="min-h-11 self-start rounded-md bg-action px-4 text-sm font-medium hover:bg-action-hover">
             Speichern
+          </button>
+        </form>
+      </section>
+
+      <section>
+        <h2 className="text-lg font-semibold">Ladeinfos auf dem Gelände</h2>
+        <p className="mt-1 text-sm text-text-muted">
+          Überschreibt die automatisch aus OSM-Daten abgeleitete Einschätzung (z. B. wenn ein Ladepunkt ohne
+          eigenen OSM-Eintrag existiert oder die Anzahl nicht stimmt).
+        </p>
+        <form action={chargingAction} className="mt-3 flex flex-col gap-4">
+          <label className="flex min-h-11 items-center gap-2 text-sm">
+            <input type="checkbox" name="has_charging" value="1" defaultChecked={chargingInfo?.has_charging ?? false} />
+            Laden auf dem Platz möglich
+          </label>
+          <label className="flex min-h-11 items-center gap-2 text-sm">
+            <input type="checkbox" name="pitch_charging" value="1" defaultChecked={chargingInfo?.pitch_charging ?? false} />
+            Laden direkt am Stellplatz
+          </label>
+          <div className="grid grid-cols-2 gap-4">
+            <label className="flex flex-col gap-1 text-sm">
+              Max. Ladeleistung (kW)
+              <input
+                type="number"
+                name="max_power_kw"
+                step="0.1"
+                min="0"
+                defaultValue={chargingInfo?.max_power_kw ?? ""}
+                className="min-h-11 rounded-md border border-line px-3 py-2 text-base"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              Anzahl Ladepunkte
+              <input
+                type="number"
+                name="point_count"
+                min="0"
+                step="1"
+                defaultValue={chargingInfo?.point_count ?? ""}
+                className="min-h-11 rounded-md border border-line px-3 py-2 text-base"
+              />
+            </label>
+          </div>
+          <label className="flex flex-col gap-1 text-sm">
+            Ladeart
+            <select
+              name="charging_type"
+              defaultValue={chargingInfo?.charging_type ?? ""}
+              className="min-h-11 rounded-md border border-line px-3 py-2 text-base"
+            >
+              <option value="">Unbekannt</option>
+              {Object.entries(CHARGING_TYPE_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button type="submit" className="min-h-11 self-start rounded-md bg-action px-4 text-sm font-medium hover:bg-action-hover">
+            Ladeinfos speichern
           </button>
         </form>
       </section>

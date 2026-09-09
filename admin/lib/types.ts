@@ -81,6 +81,16 @@ export interface Campsite {
   is_active: boolean;
 }
 
+export interface CampsiteCharging {
+  campsite_key: string;
+  has_charging: boolean;
+  charging_type: "wallbox" | "schuko_only" | "dc_fast" | "cee" | "mixed" | null;
+  max_power_kw: number | null;
+  point_count: number | null;
+  pitch_charging: boolean | null;
+  origin: string;
+}
+
 export interface Amenity {
   key: string;
   category: string;

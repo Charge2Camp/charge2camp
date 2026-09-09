@@ -281,6 +281,7 @@ export interface CampsiteSearchRow {
   amenities: string[];
   charging_on_site: boolean;
   on_site_power_kw: number | null;
+  on_site_point_count: number | null;
   pitch_charging: boolean | null;
   charging_type: string | null;
   charging_origin: string | null;

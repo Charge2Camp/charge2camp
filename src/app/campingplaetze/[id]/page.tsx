@@ -143,11 +143,19 @@ export default async function CampsiteDetailPage({
   const nearestFastChargerKm =
     fastChargers.length > 0 ? Math.min(...fastChargers.map((l) => (l.walk_distance_m ?? 0) / 1000)) : null;
 
+  // "Anzahl Ladepunkte auf dem Platz" wird per OSM-Verknuepfung (core.
+  // campsite_charge_link) geschaetzt, das erfasst nicht jeden real
+  // existierenden Ladepunkt (z. B. ohne eigenen OSM-Node). Ein Admin kann
+  // das im Backend manuell korrigieren (enrich.campsite_charging.
+  // point_count, siehe admin/app/(dashboard)/campingplaetze/[id]) -- diese
+  // Korrektur hat Vorrang vor der automatischen Zaehlung.
+  const numberOfChargingPoints = search?.on_site_point_count ?? (onSiteChargePoints.length || null);
+
   const scoreBreakdown = calculateEvCampingScore(
     {
       ev_charging_on_site: search?.charging_on_site ?? false,
       max_charging_power_kw: search?.on_site_power_kw ?? null,
-      number_of_charging_points: onSiteChargePoints.length || null,
+      number_of_charging_points: numberOfChargingPoints,
       rating_avg: ratingAvg,
       last_verified_at: null, // keine Verifizierungs-Zeitstempel fuer echte Daten, siehe docs/architecture.md
     },
@@ -185,7 +193,7 @@ export default async function CampsiteDetailPage({
             {search?.charging_on_site ? "ja" : search?.nearest_walk_m != null ? "in Laufnähe" : "nein bekannt"}
           </li>
           {search?.on_site_power_kw && <li>Max. Ladeleistung: {search.on_site_power_kw} kW</li>}
-          {onSiteChargePoints.length > 0 && <li>Anzahl Ladepunkte auf dem Platz: {onSiteChargePoints.length}</li>}
+          {numberOfChargingPoints !== null && <li>Anzahl Ladepunkte auf dem Platz: {numberOfChargingPoints}</li>}
         </ul>
 
         <div className="mt-4">
@@ -193,7 +201,7 @@ export default async function CampsiteDetailPage({
             breakdown={scoreBreakdown}
             campsite={{
               max_charging_power_kw: search?.on_site_power_kw ?? null,
-              number_of_charging_points: onSiteChargePoints.length || null,
+              number_of_charging_points: numberOfChargingPoints,
               rating_avg: ratingAvg,
             }}
           />

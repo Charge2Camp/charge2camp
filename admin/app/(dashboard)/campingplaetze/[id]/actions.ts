@@ -28,6 +28,49 @@ export async function updateCampsite(campsiteId: string, formData: FormData) {
   revalidatePath(`/campingplaetze/${campsiteId}`);
 }
 
+/** Manuelle Korrektur der Ladeinfos auf dem Campingplatz-Gelaende selbst --
+ * core.campsite_search (Lesesicht der Haupt-App) uebernimmt "Anzahl
+ * Ladepunkte" bisher NUR aus der OSM-abgeleiteten Verknuepfung (core.
+ * campsite_charge_link), die nicht jeden real existierenden Ladepunkt
+ * erfasst (z. B. ohne eigenen OSM-Node). enrich.campsite_charging.
+ * point_count (und has_charging/max_power_kw) ueberschreiben das jetzt,
+ * siehe core.campsite_search Migration 20260919000000 und
+ * src/app/campingplaetze/[id]/page.tsx (numberOfChargingPoints).
+ *
+ * campsite_key ist der externe Schluessel (core.campsite.external_key),
+ * NICHT die UUID -- enrich.campsite_charging ist absichtlich von core.*
+ * entkoppelt (eigenes Recherche-Schema, siehe docs/architecture.md). */
+export async function overrideCampsiteCharging(campsiteId: string, campsiteKey: string, formData: FormData) {
+  await requireAdmin();
+  const supabase = createServiceClient();
+
+  const { error } = await supabase.schema("enrich").from("campsite_charging").upsert(
+    {
+      campsite_key: campsiteKey,
+      has_charging: formData.get("has_charging") === "1",
+      charging_type: (formData.get("charging_type") as string) || null,
+      max_power_kw: formData.get("max_power_kw") ? Number(formData.get("max_power_kw")) : null,
+      point_count: formData.get("point_count") ? Number(formData.get("point_count")) : null,
+      pitch_charging: formData.get("pitch_charging") === "1",
+      origin: "admin_override",
+      checked_at: new Date().toISOString(),
+      verified_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "campsite_key" }
+  );
+
+  if (error) throw new Error(error.message);
+
+  // core.campsite_search ist eine MATERIALIZED VIEW -- ohne Refresh wirkt
+  // sich die Korrektur nicht sofort in der Haupt-App aus (siehe
+  // setCampsiteActive unten).
+  const { error: refreshError } = await supabase.schema("core").rpc("refresh_campsite_search");
+  if (refreshError) throw new Error(refreshError.message);
+
+  revalidatePath(`/campingplaetze/${campsiteId}`);
+}
+
 /** EIN Formular fuer alle Merkmal-Checkboxen statt eines pro Merkmal --
  * `amenityKeys` sind die auf der Seite tatsaechlich angezeigten Checkboxen
  * (nur value_type="bool"), jede wird auf den aktuellen Haekchen-Zustand
