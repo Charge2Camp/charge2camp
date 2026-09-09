@@ -54,12 +54,14 @@ function clamp01(value: number): number {
   return Math.max(0, Math.min(1, value));
 }
 
+// Deckt sich bewusst mit FAST_CHARGER_RADIUS_KM (campingplaetze/[id]/
+// page.tsx) -- ein Schnelllader innerhalb von 15 km ist mit dem Auto
+// bequem erreichbar und zaehlt voll, weiter weg gibt es keine Punkte.
+const FAST_CHARGER_FULL_RADIUS_KM = 15;
+
 function fastChargerProximityFactor(km: number | null): number {
   if (km === null) return 0;
-  if (km <= 3) return 1;
-  if (km <= 10) return 0.6;
-  if (km <= 25) return 0.25;
-  return 0;
+  return km <= FAST_CHARGER_FULL_RADIUS_KM ? 1 : 0;
 }
 
 function dataFreshnessFactor(lastVerifiedAt: string | null): number {
@@ -67,6 +69,18 @@ function dataFreshnessFactor(lastVerifiedAt: string | null): number {
   const ageDays = (Date.now() - new Date(lastVerifiedAt).getTime()) / (1000 * 60 * 60 * 24);
   if (ageDays <= 30) return 1;
   if (ageDays <= 180) return 0.5;
+  return 0;
+}
+
+// Stufen statt linearer Skalierung: ab 4,5 Sternen gibt es die volle
+// Punktzahl, zwischen 3,5 und 4,5 (exklusiv) die Haelfte, darunter keine --
+// ein einzelner mittelmaessiger Wert soll den Faktor nicht mehr fein
+// proportional verwaessern, sondern klar zwischen "gut", "ok" und
+// "schwach" unterscheiden.
+function communityRatingFactor(ratingAvg: number | null): number {
+  if (ratingAvg === null) return 0;
+  if (ratingAvg >= 4.5) return 1;
+  if (ratingAvg > 3.5) return 0.5;
   return 0;
 }
 
@@ -102,8 +116,7 @@ export function calculateEvCampingScore(
   const fastChargerProximity =
     fastChargerProximityFactor(nearestFastChargerKm) * EV_SCORE_WEIGHTS.fastChargerProximity;
 
-  const communityRating =
-    clamp01((campsite.rating_avg ?? 0) / 5) * EV_SCORE_WEIGHTS.communityRating;
+  const communityRating = communityRatingFactor(campsite.rating_avg) * EV_SCORE_WEIGHTS.communityRating;
 
   const dataFreshness =
     dataFreshnessFactor(campsite.last_verified_at) * EV_SCORE_WEIGHTS.dataFreshness;
