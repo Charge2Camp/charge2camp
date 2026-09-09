@@ -20,7 +20,7 @@ export default async function BewertungenPage() {
   const [{ data: campsiteReviews }, { data: chargingReviews }] = await Promise.all([
     supabase
       .from("campsite_reviews")
-      .select("*, campsites(id, name)")
+      .select("*")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false }),
     supabase
@@ -30,12 +30,23 @@ export default async function BewertungenPage() {
       .order("created_at", { ascending: false }),
   ]);
 
+  const campsiteReviewRows = (campsiteReviews as CampsiteReviewWithCampsite[] | null) ?? [];
+  const campsiteIds = [...new Set(campsiteReviewRows.map((r) => r.campsite_id))];
+  const { data: campsites } = campsiteIds.length
+    ? await supabase.schema("core").from("campsite").select("id, name").in("id", campsiteIds)
+    : { data: [] as { id: string; name: string }[] };
+  const campsiteById = new Map((campsites ?? []).map((c) => [c.id, c]));
+  const campsiteReviewsWithCampsite = campsiteReviewRows.map((r) => ({
+    ...r,
+    campsites: campsiteById.get(r.campsite_id) ?? null,
+  }));
+
   return (
     <div className="flex flex-col gap-12">
       <section>
         <h2 className="text-lg font-semibold">Meine Campingplatz-Bewertungen</h2>
         <div className="mt-4">
-          <CampsiteReviewList reviews={(campsiteReviews as CampsiteReviewWithCampsite[]) ?? []} />
+          <CampsiteReviewList reviews={campsiteReviewsWithCampsite} />
         </div>
       </section>
 

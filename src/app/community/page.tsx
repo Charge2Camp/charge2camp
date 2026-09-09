@@ -9,7 +9,7 @@ export default async function CommunityPage() {
   const [{ data: campsiteReviews }, { data: chargingReviews }] = await Promise.all([
     supabase
       .from("campsite_reviews")
-      .select("id, rating, comment, created_at, campsites(id, name)")
+      .select("id, campsite_id, rating, comment, created_at")
       .order("created_at", { ascending: false })
       .limit(20),
     supabase
@@ -21,10 +21,10 @@ export default async function CommunityPage() {
 
   type CampsiteReviewRow = {
     id: string;
+    campsite_id: string;
     rating: number;
     comment: string | null;
     created_at: string;
-    campsites: { id: string; name: string } | null;
   };
   type ChargingReviewRow = {
     id: string;
@@ -34,23 +34,33 @@ export default async function CommunityPage() {
     charging_stations: { id: string; name: string | null; provider: string } | null;
   };
 
+  const campsiteReviewList = (campsiteReviews as CampsiteReviewRow[] | null) ?? [];
+  const campsiteIds = [...new Set(campsiteReviewList.map((r) => r.campsite_id))];
+  const { data: campsites } = campsiteIds.length
+    ? await supabase.schema("core").from("campsite").select("id, name").in("id", campsiteIds)
+    : { data: [] as { id: string; name: string }[] };
+  const campsiteById = new Map((campsites ?? []).map((c) => [c.id, c]));
+
   const activity = [
-    ...((campsiteReviews as unknown as CampsiteReviewRow[] | null) ?? []).map((r) => ({
-      id: `campsite-${r.id}`,
-      createdAt: r.created_at,
-      node: (
-        <>
-          <Link
-            href={r.campsites ? `/campingplaetze/${r.campsites.id}` : "#"}
-            className="font-medium text-route hover:underline"
-          >
-            {r.campsites?.name ?? "Campingplatz"}
-          </Link>{" "}
-          bewertet: ★ {r.rating}/5
-          {r.comment && <span className="text-black/70 dark:text-white/70"> — „{r.comment}“</span>}
-        </>
-      ),
-    })),
+    ...campsiteReviewList.map((r) => {
+      const campsite = campsiteById.get(r.campsite_id);
+      return {
+        id: `campsite-${r.id}`,
+        createdAt: r.created_at,
+        node: (
+          <>
+            <Link
+              href={campsite ? `/campingplaetze/${campsite.id}` : "#"}
+              className="font-medium text-route hover:underline"
+            >
+              {campsite?.name ?? "Campingplatz"}
+            </Link>{" "}
+            bewertet: ★ {r.rating}/5
+            {r.comment && <span className="text-black/70 dark:text-white/70"> — „{r.comment}“</span>}
+          </>
+        ),
+      };
+    }),
     ...((chargingReviews as unknown as ChargingReviewRow[] | null) ?? []).map((r) => ({
       id: `charging-${r.id}`,
       createdAt: r.created_at,
