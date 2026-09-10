@@ -3,13 +3,117 @@
 import { createClient } from "@/lib/supabase/server";
 import { geocodeAddress } from "@/lib/providers/geocoding/nominatim";
 import { osrmProvider } from "@/lib/providers/routing/osrm";
-import type { RouteResult } from "@/lib/providers/routing/types";
-import { DEFAULT_CONSUMPTION_KWH_PER_100KM, distanceAlongRouteKm, planTrip, type TripPlan } from "@/lib/route-planning";
+import type { LatLng, RouteResult } from "@/lib/providers/routing/types";
+import {
+  DEFAULT_CONSUMPTION_KWH_PER_100KM,
+  DEFAULT_DETOUR_TOLERANCE_KM,
+  distanceAlongRouteKm,
+  planTrip,
+  type RouteChargingStation,
+  type TripPlan,
+} from "@/lib/route-planning";
 import { assessPersonalCompatibility, summarizeCommunitySuitability } from "@/lib/scoring/trailer-compatibility";
+import { getTrailerPinState } from "@/lib/trailer-verdict";
+import { distanceKm } from "@/lib/geo";
 import type { ManualWaypoint, ManualWaypointWithDistance } from "@/lib/route-timeline";
-import type { Caravan, ChargingReview, ChargingStation, SavedRoute, Vehicle } from "@/types/database";
+import type { Caravan, ChargingReview, SavedRoute, TrailerVerdict, Vehicle } from "@/types/database";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
+
+// Abstand (km) zwischen Stichprobenpunkten entlang der Route fuer die
+// Ladepunkt-Umkreissuche (siehe fetchCorridorChargingStations) -- geklemmt
+// zwischen einem Minimum (sonst bei langen Routen zu viele parallele
+// Anfragen) und einem Maximum (sonst Luecken zwischen den Umkreisen, wenn
+// die Umweg-Toleranz klein ist).
+const CORRIDOR_SAMPLE_MIN_SPACING_KM = 10;
+const CORRIDOR_SAMPLE_MAX_SPACING_KM = 40;
+
+/** Waehlt Punkte entlang der Routengeometrie im Abstand `spacingKm`
+ * (kumulierte Streckendistanz, nicht Luftlinie) -- Start und Ziel sind
+ * immer dabei. Grundlage fuer die Ladepunkt-Umkreissuche an mehreren
+ * Stellen der Route statt nur an einem Punkt. */
+function sampleRoutePoints(geometry: LatLng[], spacingKm: number): LatLng[] {
+  if (geometry.length === 0) return [];
+  const samples: LatLng[] = [geometry[0]];
+  let distanceSinceLastSample = 0;
+
+  for (let i = 1; i < geometry.length; i++) {
+    distanceSinceLastSample += distanceKm(geometry[i - 1], geometry[i]);
+    if (distanceSinceLastSample >= spacingKm) {
+      samples.push(geometry[i]);
+      distanceSinceLastSample = 0;
+    }
+  }
+
+  const last = geometry[geometry.length - 1];
+  if (samples[samples.length - 1] !== last) samples.push(last);
+  return samples;
+}
+
+/**
+ * Ladepunkt-Kandidaten fuer die Ladeplanung: echte Ladepunkte entlang der
+ * Route (core.charge_point, per PostGIS-Umkreissuche core.
+ * charge_points_within_radius an mehreren entlang der Strecke verteilten
+ * Stichprobenpunkten, siehe sampleRoutePoints) statt der fruehen Demo-
+ * Tabelle public.charging_stations (siehe Git-History -- bewusste
+ * Zwischenloesung, jetzt abgeloest). Eine einzelne Umkreisabfrage gegen die
+ * GESAMTE Routenlinie (erster Versuch, core.charge_points_within_corridor)
+ * fuehrte bei laengeren Routen zu Datenbank-Timeouts -- mehrere schnelle
+ * Punktabfragen parallel sind der bewaehrte, performante Weg (dieselbe RPC
+ * wie campsite-charging-links.ts fetchNearbyChargePoints). `radiusKm` =
+ * Umweg-Toleranz: dieselbe Grenze, die planTrip danach ohnehin je Kandidat
+ * exakt per corridorDistanceKm prueft -- die DB-seitige Vorfilterung spart
+ * nur das Laden tausender offensichtlich zu weit entfernter Ladepunkte. */
+async function fetchCorridorChargingStations(
+  supabase: SupabaseServerClient,
+  routeGeometry: LatLng[],
+  detourToleranceKm: number
+): Promise<RouteChargingStation[]> {
+  const spacingKm = Math.min(
+    CORRIDOR_SAMPLE_MAX_SPACING_KM,
+    Math.max(CORRIDOR_SAMPLE_MIN_SPACING_KM, detourToleranceKm)
+  );
+  const samplePoints = sampleRoutePoints(routeGeometry, spacingKm);
+  const radiusM = Math.max(detourToleranceKm, 1) * 1000;
+
+  const results = await Promise.all(
+    samplePoints.map((point) =>
+      supabase.schema("core").rpc("charge_points_within_radius", {
+        p_lat: point.latitude,
+        p_lon: point.longitude,
+        p_radius_m: radiusM,
+      })
+    )
+  );
+
+  const stationsById = new Map<string, RouteChargingStation>();
+  for (const { data, error } of results) {
+    if (error) throw new Error(error.message);
+    const rows = (data ?? []) as {
+      id: string;
+      name: string | null;
+      operator: string | null;
+      max_power_kw: number | null;
+      lat: number;
+      lon: number;
+      verdict: TrailerVerdict | null;
+      drive_through: boolean | null;
+    }[];
+    for (const row of rows) {
+      if (stationsById.has(row.id)) continue;
+      stationsById.set(row.id, {
+        id: row.id,
+        name: row.name,
+        provider: row.operator ?? "",
+        latitude: row.lat,
+        longitude: row.lon,
+        power_kw: row.max_power_kw,
+        trailerPinState: getTrailerPinState({ verdict: row.verdict ?? "unknown", drive_through: row.drive_through }),
+      });
+    }
+  }
+  return Array.from(stationsById.values());
+}
 
 interface GeoPoint {
   latitude: number;
@@ -225,12 +329,16 @@ async function buildRoutePlanResult({
     waypoints: manualWaypoints.map((w) => ({ latitude: w.latitude, longitude: w.longitude })),
   });
 
-  const { data: chargingStations } = await supabase.from("charging_stations").select("*");
+  const chargingStations = await fetchCorridorChargingStations(
+    supabase,
+    route.geometry,
+    settings.detourToleranceKm ?? DEFAULT_DETOUR_TOLERANCE_KM
+  );
 
   const plan = planTrip({
     route,
     vehicle,
-    chargingStations: (chargingStations as ChargingStation[]) ?? [],
+    chargingStations,
     preferTrailerSuitable: settings.preferTrailerSuitable,
     minPowerKw: settings.minPowerKw,
     preferredProvider: settings.preferredProvider,
@@ -453,12 +561,16 @@ export async function replanChargingStop(input: {
   const vehicle = await requireVehicle(supabase, input.vehicleId, user.id);
   const caravan = await loadCaravan(supabase, input.caravanId, user.id);
 
-  const { data: chargingStations } = await supabase.from("charging_stations").select("*");
+  const chargingStations = await fetchCorridorChargingStations(
+    supabase,
+    input.route.geometry,
+    input.detourToleranceKm
+  );
 
   const plan = planTrip({
     route: input.route,
     vehicle,
-    chargingStations: (chargingStations as ChargingStation[]) ?? [],
+    chargingStations,
     preferTrailerSuitable: input.preferTrailerSuitable,
     minPowerKw: input.minPowerKw,
     preferredProvider: input.preferredProvider,

@@ -1,6 +1,25 @@
 import { distanceKm } from "@/lib/geo";
 import type { LatLng, RouteResult } from "@/lib/providers/routing/types";
-import type { ChargingStation, Vehicle } from "@/types/database";
+import type { Vehicle } from "@/types/database";
+import type { TrailerPinState } from "@/lib/trailer-verdict";
+
+/** Ladepunkt-Kandidat fuer die Routenplanung -- gebaut aus echten
+ * Ladepunkten (core.charge_point, ueber die PostGIS-Korridorsuche
+ * core.charge_points_within_corridor, siehe routenplaner/actions.ts)
+ * statt der fruehe verwendeten Demo-Tabelle public.charging_stations.
+ * `trailerPinState` uebernimmt bewusst die App-weite 5-stufige Skala aus
+ * src/lib/trailer-verdict.ts (dieselbe wie auf den Ladepunkt-Kartenpins),
+ * statt der alten, nur fuer die Demo-Daten gueltigen 4-stufigen
+ * TrailerSuitability. */
+export interface RouteChargingStation {
+  id: string;
+  name: string | null;
+  provider: string;
+  latitude: number;
+  longitude: number;
+  power_kw: number | null;
+  trailerPinState: TrailerPinState;
+}
 
 /**
  * Regelbasierte Mehrstopp-Ladeplanung (§21, §26), angelehnt an gängige
@@ -47,7 +66,7 @@ const MAX_CHARGING_STOPS = 8;
 const MAX_ALTERNATIVES = 5;
 
 export interface ChargingStopCandidate {
-  station: ChargingStation;
+  station: RouteChargingStation;
   distanceFromStartKm: number;
   /** Naeherungsweise Distanz der Ladesaeule von der Route (Umweg-Proxy). */
   corridorDistanceKm: number;
@@ -140,7 +159,7 @@ export function planTrip({
 }: {
   route: RouteResult;
   vehicle: Pick<Vehicle, "battery_capacity_kwh">;
-  chargingStations: ChargingStation[];
+  chargingStations: RouteChargingStation[];
   preferTrailerSuitable?: boolean;
   minPowerKw?: number;
   /** Nur Ladepunkte dieses Anbieters (z. B. "IONITY") als Kandidaten zulassen, sofern gesetzt. */
@@ -222,22 +241,26 @@ export function planTrip({
       .filter((c) => !minPowerKw || (c.station.power_kw ?? 0) >= minPowerKw)
       .filter((c) => !preferredProvider || c.station.provider === preferredProvider)
       // Anhängertauglichkeit hat Priorität vor einem kürzeren Umweg (§26/§27):
-      // "unsuitable" wird hart ausgeschlossen, nicht nur nachrangig behandelt.
-      .filter((c) => c.station.trailer_suitable !== "unsuitable");
+      // "nicht_tauglich" wird hart ausgeschlossen, nicht nur nachrangig
+      // behandelt.
+      .filter((c) => c.station.trailerPinState !== "nicht_tauglich");
 
     candidates.sort((a, b) => {
       if (preferTrailerSuitable) {
-        // Reihenfolge folgt NICHT der Buchstaben-/Konfidenz-Anmutung von
-        // "confirmed" vs. "likely", sondern der Gespann-Freundlichkeit der
-        // Kartenpins, auf die trailer-suitability.ts (TRAILER_SUITABILITY_
-        // ICON_SRC) diese vier Rohzustaende abbildet: "likely" steht dort
-        // fuer den Drive-Through-Pin (durchfahren, kein Rangieren noetig --
-        // der beste Fall laut docs/design/brand-guide.md Abschnitt 7),
-        // "confirmed" fuer den Pin "ohne Abkoppeln" (Stellplatz vorhanden,
-        // muss aber rangiert werden) -- Drive-Through steht deshalb hier
-        // bewusst vor "confirmed".
-        const rank = { likely: 0, confirmed: 1, unknown: 2, unsuitable: 3 } as const;
-        const diff = rank[a.station.trailer_suitable] - rank[b.station.trailer_suitable];
+        // Reihenfolge folgt der Gespann-Freundlichkeit der Kartenpins
+        // (docs/design/brand-guide.md Abschnitt 7, src/lib/trailer-verdict.ts
+        // TrailerPinState): Drive-Through (durchfahren, kein Rangieren
+        // noetig) vor "ohne Abkoppeln" (Stellplatz vorhanden, muss aber
+        // rangiert werden) vor "bedingt tauglich" (nur abgekoppelt
+        // erreichbar) vor "ungeprueft".
+        const rank: Record<TrailerPinState, number> = {
+          drive_through: 0,
+          ohne_abkoppeln: 1,
+          bedingt_tauglich: 2,
+          ungeprueft: 3,
+          nicht_tauglich: 4,
+        };
+        const diff = rank[a.station.trailerPinState] - rank[b.station.trailerPinState];
         if (diff !== 0) return diff;
       }
       // Reichweite moeglichst ausnutzen: unter gleich geeigneten Kandidaten
@@ -295,7 +318,7 @@ export function planTrip({
       ? Math.max(0, (energyChargedKwh / chosen.station.power_kw) * 60)
       : null;
 
-    if (!warning && chosen.station.trailer_suitable === "unknown") {
+    if (!warning && chosen.station.trailerPinState === "ungeprueft") {
       warning =
         "Die Anhängertauglichkeit mindestens eines vorgeschlagenen Ladepunkts ist noch nicht von der Community bestätigt -- bitte Details prüfen.";
     }

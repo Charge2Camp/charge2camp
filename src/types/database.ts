@@ -243,10 +243,12 @@ export interface Favorite {
 // ============================================================================
 // Echte Daten (raw/core/enrich-Schema, siehe CLAUDE_CODE_AUFTRAG.md und
 // supabase/migrations/20260913000000_data_layer_schema.sql). Bewusst
-// GETRENNT von den obigen Campsite/ChargingStation-Typen: der Routenplaner
-// (Trip-Planung mit dem kuratierten Muenchen-Meran-Demo-Korridor) nutzt
-// weiterhin public.campsites/public.charging_stations unveraendert. Nur
-// /campingplaetze und /ladepunkte (Browsing/Entdecken) lesen aus core.*.
+// GETRENNT von den obigen Campsite/ChargingStation-Typen (weiterhin
+// public.campsites/public.charging_stations). /campingplaetze, /ladepunkte
+// und die Ladeplanung im Routenplaner (siehe fetchCorridorChargingStations
+// in routenplaner/actions.ts) lesen aus core.*; public.charging_stations
+// wird nur noch von der "Naechster Schnelllader"-Angabe auf der
+// Campingplatz-Detailseite genutzt (src/lib/nearby-charging.ts).
 // ============================================================================
 
 export interface CoreCampsite {

@@ -29,7 +29,7 @@ import {
 } from "@/lib/route-planning";
 import { buildRouteTimeline } from "@/lib/route-timeline";
 import { buildRouteSegments } from "@/lib/route-navigation";
-import { TRAILER_SUITABILITY_COLORS, TRAILER_SUITABILITY_ICON_SRC, TRAILER_SUITABILITY_LABELS } from "@/lib/trailer-suitability";
+import { TRAILER_PIN_COLORS, TRAILER_PIN_ICON_SRC, TRAILER_PIN_LABELS } from "@/lib/trailer-verdict";
 import type { CampsiteDestinationOption } from "@/lib/campsites";
 import type { FavoriteDestinationOption } from "@/lib/favorites";
 import type { Caravan, Vehicle } from "@/types/database";
@@ -101,8 +101,8 @@ function escapeHtml(value: string): string {
 // um zu sehen, worum es bei einem angetippten Pin geht.
 function buildChargingStopPopupHtml(stop: RoutePlanResult["plan"]["chargingStops"][number], index: number): string {
   const name = escapeHtml(stop.station.name ?? stop.station.provider ?? "Ladepunkt");
-  const badgeColor = TRAILER_SUITABILITY_COLORS[stop.station.trailer_suitable];
-  const badgeLabel = escapeHtml(TRAILER_SUITABILITY_LABELS[stop.station.trailer_suitable]);
+  const badgeColor = TRAILER_PIN_COLORS[stop.station.trailerPinState];
+  const badgeLabel = escapeHtml(TRAILER_PIN_LABELS[stop.station.trailerPinState]);
   const confirmedLine = stop.lastConfirmedAt
     ? `Zuletzt von der Community bestätigt am ${new Date(stop.lastConfirmedAt).toLocaleDateString("de-DE")}`
     : "Noch nicht von der Community bestätigt";
@@ -902,7 +902,7 @@ export function RoutePlannerForm({
                   latitude: stop.station.latitude,
                   longitude: stop.station.longitude,
                   label: `${index + 1}. Ladestopp: ${stop.station.name ?? stop.station.provider}`,
-                  iconSrc: TRAILER_SUITABILITY_ICON_SRC[stop.station.trailer_suitable],
+                  iconSrc: TRAILER_PIN_ICON_SRC[stop.station.trailerPinState],
                   popupHtml: buildChargingStopPopupHtml(stop, index),
                 })),
                 ...result.manualWaypoints.map((waypoint, index) => ({

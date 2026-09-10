@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { ChargingStopCandidate, TripPlan } from "@/lib/route-planning";
 import { buildRouteTimeline, type ManualWaypointWithDistance } from "@/lib/route-timeline";
-import { TRAILER_SUITABILITY_COLORS, TRAILER_SUITABILITY_LABELS } from "@/lib/trailer-suitability";
+import { TRAILER_PIN_COLORS, TRAILER_PIN_LABELS } from "@/lib/trailer-verdict";
 import { PERSONAL_COMPATIBILITY_LABELS } from "@/lib/scoring/trailer-compatibility";
 
 function formatDuration(minutes: number): string {
@@ -17,9 +17,9 @@ function SuitabilityBadges({ candidate }: { candidate: Pick<ChargingStopCandidat
     <div className="flex flex-wrap items-center gap-1.5">
       <span
         className="rounded-full px-2 py-0.5 text-xs text-white"
-        style={{ backgroundColor: TRAILER_SUITABILITY_COLORS[candidate.station.trailer_suitable] }}
+        style={{ backgroundColor: TRAILER_PIN_COLORS[candidate.station.trailerPinState] }}
       >
-        {TRAILER_SUITABILITY_LABELS[candidate.station.trailer_suitable]}
+        {TRAILER_PIN_LABELS[candidate.station.trailerPinState]}
       </span>
       {candidate.personalCompatibility && candidate.personalCompatibility !== "keine_daten" && (
         <span className="rounded-full border border-black/15 px-2 py-0.5 text-xs text-black/70 dark:border-white/20 dark:text-white/70">

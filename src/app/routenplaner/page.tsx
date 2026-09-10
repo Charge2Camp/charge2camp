@@ -49,7 +49,10 @@ export default async function RoutePlannerPage({
       .select("*")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false }),
-    supabase.from("charging_stations").select("provider"),
+    // Anbieter-Vorschlaege fuer den optionalen "Bevorzugter Anbieter"-Filter
+    // -- aus den echten Ladepunkten (core.charge_point), nicht mehr aus der
+    // alten Demo-Tabelle (siehe fetchCorridorChargingStations in actions.ts).
+    supabase.schema("core").from("charge_point").select("operator").eq("is_active", true).limit(5000),
     fetchCampsiteDestinationOptions(),
     destinationStationId
       ? supabase
@@ -116,7 +119,9 @@ export default async function RoutePlannerPage({
       ? { name: profile.home_address, latitude: profile.home_latitude, longitude: profile.home_longitude }
       : null;
 
-  const providers = Array.from(new Set((providerRows ?? []).map((r) => r.provider as string))).sort();
+  const providers = Array.from(
+    new Set((providerRows ?? []).map((r) => r.operator as string | null).filter((p): p is string => Boolean(p)))
+  ).sort();
 
   // Vom "Route hierher planen"-Button auf der Campingplatz- bzw.
   // Ladepunkt-Detailseite (§ campingplaetze/[id]/page.tsx,
