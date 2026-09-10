@@ -96,6 +96,27 @@ export async function addCaravan(formData: FormData) {
   revalidatePath("/profil/gespann");
 }
 
+/** Setzt das Standard-Gespann im Profil (Box "Mein Gespann" oben auf
+ * profil/gespann, Nutzerwunsch) -- der Routenplaner belegt Elektroauto-/
+ * Wohnwagen-Auswahl damit vor, statt wie zuvor nur ueber die zuletzt
+ * gespeicherte Route zu raten. Leerer String setzt das jeweilige Feld
+ * zurueck (kein Fahrzeug/Wohnwagen als Standard). */
+export async function setDefaultGespann(vehicleId: string, caravanId: string) {
+  const { supabase, userId } = await requireUserId();
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({
+      default_vehicle_id: vehicleId || null,
+      default_caravan_id: caravanId || null,
+    })
+    .eq("id", userId);
+
+  if (error) throw new Error(error.message);
+  revalidatePath("/profil/gespann");
+  revalidatePath("/routenplaner");
+}
+
 export async function deleteCaravan(formData: FormData) {
   const { supabase, userId } = await requireUserId();
   const id = requireString(formData.get("id"));

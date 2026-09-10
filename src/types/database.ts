@@ -21,6 +21,8 @@ export interface Profile {
   home_address: string | null;
   home_latitude: number | null;
   home_longitude: number | null;
+  default_vehicle_id: string | null;
+  default_caravan_id: string | null;
   created_at: string;
 }
 

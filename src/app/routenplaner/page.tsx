@@ -58,15 +58,18 @@ export default async function RoutePlannerPage({
           .maybeSingle()
       : Promise.resolve({ data: null }),
     fetchFavoriteDestinations(user.id),
-    supabase.from("profiles").select("home_address, home_latitude, home_longitude").eq("id", user.id).maybeSingle(),
+    supabase
+      .from("profiles")
+      .select("home_address, home_latitude, home_longitude, default_vehicle_id, default_caravan_id")
+      .eq("id", user.id)
+      .maybeSingle(),
     // Nur die schlanken Anzeige-Felder (kein Ladeplan, siehe saved_routes-
     // Kommentar in actions.ts) -- fuer den "Gespeicherte Route öffnen"-Picker
     // in route-planner-form.tsx, bevor eine Route berechnet wurde.
-    // vehicle_id/caravan_id zusaetzlich fuer die Gespann-Vorbelegung unten
-    // (es gibt keine eigene "zuletzt verwendet"-Markierung auf vehicles/
-    // caravans -- die zuletzt gespeicherte Route ist der naechstbeste
-    // Hinweis darauf, welches Gespann der Nutzer zuletzt tatsaechlich
-    // geplant hat).
+    // vehicle_id/caravan_id zusaetzlich als Rueckfallebene fuer die
+    // Gespann-Vorbelegung unten, falls kein explizites Standard-Gespann
+    // gesetzt ist (profiles.default_vehicle_id/default_caravan_id, siehe
+    // profil/gespann).
     supabase
       .from("saved_routes")
       .select("id, name, start_display_name, end_display_name, created_at, vehicle_id, caravan_id")
@@ -82,19 +85,29 @@ export default async function RoutePlannerPage({
     createdAt: r.created_at,
   }));
 
-  // Vorbelegung "zuletzt ausgewähltes Gespann" (Nutzerwunsch): das Fahrzeug/
-  // der Wohnwagen aus der zuletzt gespeicherten Route, falls es dieses
-  // Fahrzeug/diesen Wohnwagen im Profil noch gibt -- sonst das zuletzt im
-  // Profil angelegte (Listen sind bereits nach created_at absteigend
-  // sortiert). Ohne jede Route/jedes Fahrzeug bleibt die Auswahl leer.
+  // Vorbelegung Gespann-Auswahl: zuerst das explizite Standard-Gespann aus
+  // dem Profil (profiles.default_vehicle_id/default_caravan_id, oben auf
+  // profil/gespann gesetzt) -- sonst als Rueckfallebene das Fahrzeug/der
+  // Wohnwagen aus der zuletzt gespeicherten Route, falls es dieses noch im
+  // Profil gibt -- sonst das zuletzt im Profil angelegte (Listen bereits
+  // nach created_at absteigend sortiert). Ohne jede Angabe bleibt die
+  // Auswahl leer.
   const vehicleIds = new Set((vehicles ?? []).map((v) => v.id));
   const caravanIds = new Set((caravans ?? []).map((c) => c.id));
+  const defaultVehicleId = profile?.default_vehicle_id;
+  const defaultCaravanId = profile?.default_caravan_id;
   const lastRouteVehicleId = savedRouteRows?.[0]?.vehicle_id;
   const lastRouteCaravanId = savedRouteRows?.[0]?.caravan_id;
   const initialVehicleId =
-    (lastRouteVehicleId && vehicleIds.has(lastRouteVehicleId) ? lastRouteVehicleId : null) ?? vehicles?.[0]?.id ?? "";
+    (defaultVehicleId && vehicleIds.has(defaultVehicleId) ? defaultVehicleId : null) ??
+    (lastRouteVehicleId && vehicleIds.has(lastRouteVehicleId) ? lastRouteVehicleId : null) ??
+    vehicles?.[0]?.id ??
+    "";
   const initialCaravanId =
-    (lastRouteCaravanId && caravanIds.has(lastRouteCaravanId) ? lastRouteCaravanId : null) ?? caravans?.[0]?.id ?? "";
+    (defaultCaravanId && caravanIds.has(defaultCaravanId) ? defaultCaravanId : null) ??
+    (lastRouteCaravanId && caravanIds.has(lastRouteCaravanId) ? lastRouteCaravanId : null) ??
+    caravans?.[0]?.id ??
+    "";
 
   const homeAddress =
     profile?.home_address && profile.home_latitude != null && profile.home_longitude != null

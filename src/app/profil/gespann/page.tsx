@@ -6,6 +6,7 @@ import { VehicleList } from "@/components/profile/vehicle-list";
 import { CaravanForm } from "@/components/profile/caravan-form";
 import { CaravanList } from "@/components/profile/caravan-list";
 import { CollapsibleFormSection } from "@/components/collapsible-form-section";
+import { DefaultGespannPicker } from "@/components/profile/default-gespann-picker";
 
 export default async function GespannPage() {
   const supabase = await createClient();
@@ -15,7 +16,7 @@ export default async function GespannPage() {
 
   if (!user) redirect("/login");
 
-  const [{ data: vehicles }, { data: caravans }, { data: vehicleModels }, { data: caravanModels }] =
+  const [{ data: vehicles }, { data: caravans }, { data: vehicleModels }, { data: caravanModels }, { data: profile }] =
     await Promise.all([
       supabase
         .from("vehicles")
@@ -39,6 +40,7 @@ export default async function GespannPage() {
         .order("manufacturer")
         .order("model")
         .order("series"),
+      supabase.from("profiles").select("default_vehicle_id, default_caravan_id").eq("id", user.id).maybeSingle(),
     ]);
 
   const vehicleList = (vehicles as Vehicle[]) ?? [];
@@ -46,6 +48,13 @@ export default async function GespannPage() {
 
   return (
     <div className="flex flex-col gap-12">
+      <DefaultGespannPicker
+        vehicles={vehicleList}
+        caravans={caravanList}
+        initialVehicleId={profile?.default_vehicle_id ?? ""}
+        initialCaravanId={profile?.default_caravan_id ?? ""}
+      />
+
       <section>
         <h2 className="text-lg font-semibold">Elektroauto</h2>
         <div className="mt-4">

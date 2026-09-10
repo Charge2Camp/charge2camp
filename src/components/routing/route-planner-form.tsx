@@ -16,7 +16,7 @@ import { FavoritesPickerDialog } from "@/components/routing/favorites-picker-dia
 import { HomeAddressPickerDialog } from "@/components/routing/home-address-picker-dialog";
 import { SavedRoutePickerDialog, type SavedRouteOption } from "@/components/routing/saved-route-picker-dialog";
 import { NavigationLink } from "@/components/profile/navigation-link";
-import { IconAuto, IconAnhaenger } from "@/components/icons/brand-icons";
+import { GespannPanel } from "@/components/gespann-panel";
 import {
   DEFAULT_CONSUMPTION_KWH_PER_100KM,
   DEFAULT_DEPARTURE_SOC_PERCENT,
@@ -584,61 +584,19 @@ export function RoutePlannerForm({
 
           {/* Gespann-Auswahl (Nutzerwunsch: uebersichtlicher, eigener
               Block statt zweier gleichrangiger Felder mitten im Formular)
-              -- Ueberschrift + Auto- und Anhaenger-Icon nebeneinander
-              symbolisieren das Gespann, direkt darunter die beiden
-              Auswahlleisten im gleichen Nebeneinander -- bewusst auch auf
-              schmalen Bildschirmen nebeneinander (statt gestapelt), auch
-              wenn der Wohnwagen-Name dadurch abgeschnitten werden kann
-              (Nutzerwunsch). Getoente Flaeche (--c-tint-trailer, siehe
-              brand-guide.md Abschnitt 3 "Hinweisflaechen zu
-              Gespann-Themen") hebt den Block optisch von den uebrigen
-              Feldern ab. */}
-          <div className="flex flex-col gap-3 rounded-lg bg-tint-trailer/50 p-4 sm:col-span-2 dark:bg-tint-trailer/10">
-            <p className="text-center text-sm font-semibold text-base-deep dark:text-white">Mein Gespann</p>
-            <div className="flex items-center justify-center gap-5">
-              <IconAuto className="h-14 w-14 text-base-deep dark:text-white" />
-              <span className="text-2xl text-black/30 dark:text-white/30" aria-hidden>
-                +
-              </span>
-              <IconAnhaenger className="h-14 w-14 text-base-deep dark:text-white" />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <label className="flex min-w-0 flex-col gap-1 text-sm">
-                Elektroauto *
-                <select
-                  name="vehicle_id"
-                  required
-                  value={vehicleId}
-                  onChange={(e) => handleVehicleSelect(e.target.value)}
-                  className="w-full min-w-0 rounded-md border border-black/15 bg-card px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
-                >
-                  <option value="">Bitte wählen…</option>
-                  {vehicles.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.manufacturer} {v.model}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="flex min-w-0 flex-col gap-1 text-sm">
-                Wohnwagen (optional)
-                <select
-                  name="caravan_id"
-                  value={caravanId}
-                  onChange={(e) => setCaravanId(e.target.value)}
-                  className="w-full min-w-0 rounded-md border border-black/15 bg-card px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
-                >
-                  <option value="">Kein Wohnwagen</option>
-                  {caravans.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.manufacturer} {c.model}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
+              -- gleiche Box wie oben auf profil/gespann, siehe
+              gespann-panel.tsx. Hier steuert die Auswahl direkt die
+              Routenplanung (kein persistentes Speichern). */}
+          <div className="sm:col-span-2">
+            <GespannPanel
+              vehicles={vehicles}
+              caravans={caravans}
+              vehicleId={vehicleId}
+              caravanId={caravanId}
+              onVehicleChange={handleVehicleSelect}
+              onCaravanChange={setCaravanId}
+              vehicleRequired
+            />
           </div>
 
           <label className="flex flex-col gap-1 text-sm">
