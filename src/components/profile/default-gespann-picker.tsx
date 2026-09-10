@@ -38,6 +38,7 @@ export function DefaultGespannPicker({
 
   return (
     <div className="flex flex-col gap-1.5">
+      <p className="text-lg font-semibold text-base-deep dark:text-white">Mein Gespann</p>
       <GespannPanel
         vehicles={vehicles}
         caravans={caravans}

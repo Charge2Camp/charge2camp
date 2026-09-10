@@ -12,7 +12,10 @@ import type { Caravan, Vehicle } from "@/types/database";
  * Routenplanung) und oben auf profil/gespann (Auswahl setzt das
  * persistente Standard-Gespann, siehe profil/actions.ts setDefaultGespann).
  * Getoente Flaeche (--c-tint-trailer, siehe brand-guide.md Abschnitt 3
- * "Hinweisflaechen zu Gespann-Themen") hebt den Block optisch ab. */
+ * "Hinweisflaechen zu Gespann-Themen") hebt den Block optisch ab. Die
+ * Ueberschrift "Mein Gespann" liegt bewusst AUSSERHALB dieser Box (siehe
+ * Aufrufer) -- je nach Seite in unterschiedlicher Schriftart (Feld-Titel
+ * im Routenplaner vs. Section-Ueberschrift auf profil/gespann). */
 export function GespannPanel({
   vehicles,
   caravans,
@@ -32,7 +35,6 @@ export function GespannPanel({
 }) {
   return (
     <div className="flex flex-col gap-3 rounded-lg bg-tint-trailer/50 p-4 dark:bg-tint-trailer/10">
-      <p className="text-lg font-semibold text-base-deep dark:text-white">Mein Gespann</p>
       <div className="flex items-center justify-center gap-5">
         <IconAuto className="h-14 w-14 text-base-deep dark:text-white" />
         <span className="text-2xl text-black/30 dark:text-white/30" aria-hidden>

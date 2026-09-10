@@ -586,8 +586,11 @@ export function RoutePlannerForm({
               Block statt zweier gleichrangiger Felder mitten im Formular)
               -- gleiche Box wie oben auf profil/gespann, siehe
               gespann-panel.tsx. Hier steuert die Auswahl direkt die
-              Routenplanung (kein persistentes Speichern). */}
-          <div className="sm:col-span-2">
+              Routenplanung (kein persistentes Speichern). Ueberschrift
+              AUSSERHALB der Box, in der gleichen Schriftart wie die
+              anderen Feld-Titel (Start, Ziel, Verbrauch, ...). */}
+          <div className="flex flex-col gap-1 sm:col-span-2">
+            <p className="text-sm">Mein Gespann</p>
             <GespannPanel
               vehicles={vehicles}
               caravans={caravans}
