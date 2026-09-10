@@ -728,18 +728,18 @@ export function RoutePlannerForm({
                 </p>
               </div>
             </div>
-          </div>
 
-          <label className="flex items-center gap-2 self-end text-sm">
-            <input
-              type="checkbox"
-              name="prefer_trailer_suitable"
-              value="1"
-              checked={preferTrailerSuitable}
-              onChange={(e) => setPreferTrailerSuitable(e.target.checked)}
-            />
-            Anhängertaugliche Ladepunkte bevorzugen
-          </label>
+            <label className="mt-4 flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                name="prefer_trailer_suitable"
+                value="1"
+                checked={preferTrailerSuitable}
+                onChange={(e) => setPreferTrailerSuitable(e.target.checked)}
+              />
+              Anhängertaugliche Ladepunkte bevorzugen
+            </label>
+          </div>
 
           {vehicles.length === 0 && (
             <p className="text-sm text-amber-700 dark:text-amber-400 sm:col-span-2">
