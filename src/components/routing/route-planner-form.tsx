@@ -16,6 +16,7 @@ import { FavoritesPickerDialog } from "@/components/routing/favorites-picker-dia
 import { HomeAddressPickerDialog } from "@/components/routing/home-address-picker-dialog";
 import { SavedRoutePickerDialog, type SavedRouteOption } from "@/components/routing/saved-route-picker-dialog";
 import { NavigationLink } from "@/components/profile/navigation-link";
+import { IconAuto, IconAnhaenger } from "@/components/icons/brand-icons";
 import {
   DEFAULT_CONSUMPTION_KWH_PER_100KM,
   DEFAULT_DEPARTURE_SOC_PERCENT,
@@ -131,6 +132,8 @@ export function RoutePlannerForm({
   favorites,
   homeAddress,
   savedRoutes,
+  initialVehicleId,
+  initialCaravanId,
   initialDestination,
   initialSavedRouteId,
 }: {
@@ -146,6 +149,9 @@ export function RoutePlannerForm({
   homeAddress: { name: string; latitude: number; longitude: number } | null;
   /** Eigene gespeicherte Routen ("Meine Routen" im Profil), fuer den "Gespeicherte Route öffnen"-Picker, bevor eine Route berechnet wurde. */
   savedRoutes: SavedRouteOption[];
+  /** Vorbelegung fuer die Gespann-Auswahl (zuletzt in einer gespeicherten Route verwendetes bzw. zuletzt im Profil angelegtes Fahrzeug/Wohnwagen, siehe routenplaner/page.tsx) -- leerer String, wenn nichts vorhanden ist. */
+  initialVehicleId: string;
+  initialCaravanId: string;
   /** Vom "Route hierher planen"-Button auf einer Campingplatz- oder Ladepunkt-Detailseite (?destination_campsite_id=...  /  ?destination_station_id=...) -- befuellt "Ziel" bereits beim ersten Rendern. */
   initialDestination?: { name: string; latitude: number; longitude: number };
   /** Aus dem URL-Query-Parameter `?savedRouteId=...` (Link "Öffnen" im Profil) -- laedt die gespeicherte Route beim ersten Rendern. */
@@ -193,9 +199,14 @@ export function RoutePlannerForm({
     if (homeAddress) map.set(homeAddress.name, { latitude: homeAddress.latitude, longitude: homeAddress.longitude });
     return map;
   }, [campsiteSuggestions, favorites, homeAddress]);
-  const [vehicleId, setVehicleId] = useState("");
-  const [caravanId, setCaravanId] = useState("");
-  const [consumption, setConsumption] = useState("");
+  const [vehicleId, setVehicleId] = useState(initialVehicleId);
+  const [caravanId, setCaravanId] = useState(initialCaravanId);
+  // Verbrauch aus dem Fahrzeugprofil vorbelegen, wenn die Gespann-Auswahl
+  // selbst schon vorbelegt ist (initialVehicleId) -- gleiche Ableitung wie
+  // handleVehicleSelect beim manuellen Wechsel des Fahrzeugs.
+  const [consumption, setConsumption] = useState(
+    vehicles.find((v) => v.id === initialVehicleId)?.consumption_kwh_per_100km?.toString() ?? ""
+  );
   const [minPowerKw, setMinPowerKw] = useState("");
   const [preferTrailerSuitable, setPreferTrailerSuitable] = useState(true);
   const [departureSoc, setDepartureSoc] = useState(DEFAULT_DEPARTURE_SOC_PERCENT);
@@ -571,40 +582,60 @@ export function RoutePlannerForm({
             )}
           </label>
 
-          <label className="flex flex-col gap-1 text-sm">
-            Elektroauto *
-            <select
-              name="vehicle_id"
-              required
-              value={vehicleId}
-              onChange={(e) => handleVehicleSelect(e.target.value)}
-              className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
-            >
-              <option value="">Bitte wählen…</option>
-              {vehicles.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.manufacturer} {v.model}
-                </option>
-              ))}
-            </select>
-          </label>
+          {/* Gespann-Auswahl (Nutzerwunsch: uebersichtlicher, eigener
+              Block statt zweier gleichrangiger Felder mitten im Formular)
+              -- Auto- und Anhaenger-Icon nebeneinander symbolisieren das
+              Gespann, direkt darunter die beiden Auswahlleisten im
+              gleichen Nebeneinander. Getoente Flaeche (--c-tint-trailer,
+              siehe brand-guide.md Abschnitt 3 "Hinweisflaechen zu
+              Gespann-Themen") hebt den Block optisch von den uebrigen
+              Feldern ab. */}
+          <div className="flex flex-col gap-3 rounded-lg bg-tint-trailer/50 p-4 sm:col-span-2 dark:bg-tint-trailer/10">
+            <div className="flex items-center justify-center gap-4">
+              <IconAuto className="h-9 w-9 text-base-deep dark:text-white" />
+              <span className="text-xl text-black/30 dark:text-white/30" aria-hidden>
+                +
+              </span>
+              <IconAnhaenger className="h-9 w-9 text-base-deep dark:text-white" />
+            </div>
 
-          <label className="flex flex-col gap-1 text-sm">
-            Wohnwagen (optional)
-            <select
-              name="caravan_id"
-              value={caravanId}
-              onChange={(e) => setCaravanId(e.target.value)}
-              className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
-            >
-              <option value="">Kein Wohnwagen</option>
-              {caravans.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.manufacturer} {c.model}
-                </option>
-              ))}
-            </select>
-          </label>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <label className="flex flex-col gap-1 text-sm">
+                Elektroauto *
+                <select
+                  name="vehicle_id"
+                  required
+                  value={vehicleId}
+                  onChange={(e) => handleVehicleSelect(e.target.value)}
+                  className="rounded-md border border-black/15 bg-card px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+                >
+                  <option value="">Bitte wählen…</option>
+                  {vehicles.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.manufacturer} {v.model}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="flex flex-col gap-1 text-sm">
+                Wohnwagen (optional)
+                <select
+                  name="caravan_id"
+                  value={caravanId}
+                  onChange={(e) => setCaravanId(e.target.value)}
+                  className="rounded-md border border-black/15 bg-card px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+                >
+                  <option value="">Kein Wohnwagen</option>
+                  {caravans.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.manufacturer} {c.model}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          </div>
 
           <label className="flex flex-col gap-1 text-sm">
             Verbrauch mit Gespann (kWh/100km)

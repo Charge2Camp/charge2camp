@@ -62,9 +62,14 @@ export default async function RoutePlannerPage({
     // Nur die schlanken Anzeige-Felder (kein Ladeplan, siehe saved_routes-
     // Kommentar in actions.ts) -- fuer den "Gespeicherte Route öffnen"-Picker
     // in route-planner-form.tsx, bevor eine Route berechnet wurde.
+    // vehicle_id/caravan_id zusaetzlich fuer die Gespann-Vorbelegung unten
+    // (es gibt keine eigene "zuletzt verwendet"-Markierung auf vehicles/
+    // caravans -- die zuletzt gespeicherte Route ist der naechstbeste
+    // Hinweis darauf, welches Gespann der Nutzer zuletzt tatsaechlich
+    // geplant hat).
     supabase
       .from("saved_routes")
-      .select("id, name, start_display_name, end_display_name, created_at")
+      .select("id, name, start_display_name, end_display_name, created_at, vehicle_id, caravan_id")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false }),
   ]);
@@ -76,6 +81,20 @@ export default async function RoutePlannerPage({
     endDisplayName: r.end_display_name,
     createdAt: r.created_at,
   }));
+
+  // Vorbelegung "zuletzt ausgewähltes Gespann" (Nutzerwunsch): das Fahrzeug/
+  // der Wohnwagen aus der zuletzt gespeicherten Route, falls es dieses
+  // Fahrzeug/diesen Wohnwagen im Profil noch gibt -- sonst das zuletzt im
+  // Profil angelegte (Listen sind bereits nach created_at absteigend
+  // sortiert). Ohne jede Route/jedes Fahrzeug bleibt die Auswahl leer.
+  const vehicleIds = new Set((vehicles ?? []).map((v) => v.id));
+  const caravanIds = new Set((caravans ?? []).map((c) => c.id));
+  const lastRouteVehicleId = savedRouteRows?.[0]?.vehicle_id;
+  const lastRouteCaravanId = savedRouteRows?.[0]?.caravan_id;
+  const initialVehicleId =
+    (lastRouteVehicleId && vehicleIds.has(lastRouteVehicleId) ? lastRouteVehicleId : null) ?? vehicles?.[0]?.id ?? "";
+  const initialCaravanId =
+    (lastRouteCaravanId && caravanIds.has(lastRouteCaravanId) ? lastRouteCaravanId : null) ?? caravans?.[0]?.id ?? "";
 
   const homeAddress =
     profile?.home_address && profile.home_latitude != null && profile.home_longitude != null
@@ -119,6 +138,8 @@ export default async function RoutePlannerPage({
           favorites={favorites}
           homeAddress={homeAddress}
           savedRoutes={savedRoutes}
+          initialVehicleId={initialVehicleId}
+          initialCaravanId={initialCaravanId}
           initialDestination={initialDestination}
           initialSavedRouteId={savedRouteId}
         />
