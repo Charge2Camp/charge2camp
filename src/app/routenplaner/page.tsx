@@ -12,6 +12,7 @@ export default async function RoutePlannerPage({
     savedRouteId?: string;
     destination_campsite_id?: string;
     destination_station_id?: string;
+    resumeDraft?: string;
   }>;
 }) {
   const supabase = await createClient();
@@ -25,6 +26,7 @@ export default async function RoutePlannerPage({
     savedRouteId,
     destination_campsite_id: destinationCampsiteId,
     destination_station_id: destinationStationId,
+    resumeDraft,
   } = await searchParams;
 
   const [
@@ -155,6 +157,7 @@ export default async function RoutePlannerPage({
           initialCaravanId={initialCaravanId}
           initialDestination={initialDestination}
           initialSavedRouteId={savedRouteId}
+          resumeDraft={resumeDraft === "1"}
         />
       </div>
     </div>

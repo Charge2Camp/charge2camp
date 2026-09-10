@@ -31,10 +31,17 @@ const CRITERION_LABELS: Record<
 
 export default async function ChargingStationDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ returnTo?: string }>;
 }) {
   const { id } = await params;
+  // Vom "Details ansehen"-Link bei einem Ladestopp/einer Alternative in
+  // Tab 2 des Routenplaners (Nutzerwunsch): zeigt den "Zurück"-Link unten,
+  // der den zwischengespeicherten Planungsstand wiederherstellt statt neu
+  // zu beginnen -- siehe route-planner-form.tsx handleViewStationDetails.
+  const { returnTo } = await searchParams;
   const supabase = await createClient();
 
   const {
@@ -113,6 +120,15 @@ export default async function ChargingStationDetailPage({
         </span>
         <ReviewStateBadge origin={trailer?.origin} className="px-3 py-1 text-sm" />
       </div>
+
+      {returnTo === "routenplaner" && (
+        <Link
+          href="/routenplaner?resumeDraft=1"
+          className="mt-4 inline-flex min-h-11 items-center text-sm font-medium text-route hover:underline"
+        >
+          ← Zurück zur Routenplanung
+        </Link>
+      )}
 
       <div className="mt-4 flex items-center gap-2">
         <Link

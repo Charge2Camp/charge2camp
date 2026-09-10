@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   loadSavedRoute,
   planRoute,
@@ -124,6 +125,38 @@ function buildChargingStopPopupHtml(stop: RoutePlanResult["plan"]["chargingStops
 
 type WizardStep = 1 | 2 | 3;
 
+// Zwischenspeicher fuer "Details ansehen" bei einem Ladestopp/einer
+// Alternative in Tab 2 (Nutzerwunsch): das volle Ergebnis (inkl. bereits
+// berechnetem Ladeplan) landet vor dem Verlassen der Seite in
+// sessionStorage, damit der "Zurück zur Routenplanung"-Link auf der
+// Ladepunkt-Detailseite (ladepunkte/[id]/page.tsx, ?returnTo=routenplaner)
+// die Planung ohne Neuberechnung fortsetzen kann, statt bei Tab 1 neu
+// anzufangen. sessionStorage statt der Datenbank, damit dabei NICHT
+// versehentlich eine Route unter "Meine Routen" gespeichert wird.
+const DRAFT_STORAGE_KEY = "routenplaner:draft";
+
+interface RouteDraftState {
+  start: string;
+  end: string;
+  startCoords: { latitude: number; longitude: number } | null;
+  endCoords: { latitude: number; longitude: number } | null;
+  manualStopQueries: string[];
+  vehicleId: string;
+  caravanId: string;
+  consumption: string;
+  minPowerKw: string;
+  preferTrailerSuitable: boolean;
+  preferredProvider: string;
+  departureSoc: number;
+  minSocAtStop: number;
+  minSocAtDestination: number;
+  targetSocAfterCharging: number;
+  detourTolerance: number;
+  excludedStationIds: string[];
+  forcedStationIdByIndex: Record<number, string>;
+  result: RoutePlanResult;
+}
+
 export function RoutePlannerForm({
   vehicles,
   caravans,
@@ -136,6 +169,7 @@ export function RoutePlannerForm({
   initialCaravanId,
   initialDestination,
   initialSavedRouteId,
+  resumeDraft,
 }: {
   vehicles: Vehicle[];
   caravans: Caravan[];
@@ -156,6 +190,11 @@ export function RoutePlannerForm({
   initialDestination?: { name: string; latitude: number; longitude: number };
   /** Aus dem URL-Query-Parameter `?savedRouteId=...` (Link "Öffnen" im Profil) -- laedt die gespeicherte Route beim ersten Rendern. */
   initialSavedRouteId?: string;
+  /** Aus `?resumeDraft=1` -- gesetzt vom "Zurück zur Routenplanung"-Link auf
+   * einer Ladepunkt-Detailseite (siehe handleViewStationDetails unten).
+   * Stellt den Planungsstand aus sessionStorage wieder her und springt zu
+   * Tab 2, statt neu zu beginnen. */
+  resumeDraft?: boolean;
 }) {
   // Drei-Schritte-Assistent statt einer langen, durchgescrollten Seite
   // (Nutzerwunsch: uebersichtlicher auf dem Handy). Alle Formular-/
@@ -163,6 +202,7 @@ export function RoutePlannerForm({
   // State -- ein Tab-Wechsel ist nur ein Render-Wechsel (siehe
   // route-wizard-tabs.tsx), kein Verlust irgendeiner Eingabe.
   const [activeStep, setActiveStep] = useState<WizardStep>(1);
+  const router = useRouter();
 
   const [loading, setLoading] = useState(false);
   const showLoadingIndicator = useDelayedLoading(loading);
@@ -313,6 +353,85 @@ export function RoutePlannerForm({
     void Promise.resolve().then(() => loadAndApplySavedRoute(initialSavedRouteId));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialSavedRouteId]);
+
+  // Planungsstand nach "Details ansehen" (?resumeDraft=1) wiederherstellen,
+  // siehe DRAFT_STORAGE_KEY oben und handleViewStationDetails unten. Fehlt
+  // der Entwurf (z. B. anderer Browser-Tab, Speicher geleert), bleibt es
+  // bei der normalen leeren Tab-1-Ansicht -- kein Fehler noetig.
+  function applyDraft(draft: RouteDraftState) {
+    setStart(draft.start);
+    setEnd(draft.end);
+    setStartCoords(draft.startCoords);
+    setEndCoords(draft.endCoords);
+    setManualStopQueries(draft.manualStopQueries);
+    setVehicleId(draft.vehicleId);
+    setCaravanId(draft.caravanId);
+    setConsumption(draft.consumption);
+    setMinPowerKw(draft.minPowerKw);
+    setPreferTrailerSuitable(draft.preferTrailerSuitable);
+    setPreferredProvider(draft.preferredProvider);
+    setDepartureSoc(draft.departureSoc);
+    setMinSocAtStop(draft.minSocAtStop);
+    setMinSocAtDestination(draft.minSocAtDestination);
+    setTargetSocAfterCharging(draft.targetSocAfterCharging);
+    setDetourTolerance(draft.detourTolerance);
+    setExcludedStationIds(draft.excludedStationIds);
+    setForcedStationIdByIndex(draft.forcedStationIdByIndex);
+    setResult(draft.result);
+    setActiveStep(2);
+  }
+
+  useEffect(() => {
+    if (!resumeDraft) return;
+    try {
+      const raw = sessionStorage.getItem(DRAFT_STORAGE_KEY);
+      if (!raw) return;
+      const draft = JSON.parse(raw) as RouteDraftState;
+      sessionStorage.removeItem(DRAFT_STORAGE_KEY);
+      void Promise.resolve().then(() => applyDraft(draft));
+    } catch {
+      // Beschaedigter/veralteter Entwurf -- einfach ignorieren.
+    }
+  }, [resumeDraft]);
+
+  // Speichert den aktuellen Planungsstand in sessionStorage und oeffnet die
+  // Ladepunkt-Detailseite eines Ladestopps/einer Alternative in Tab 2
+  // (Nutzerwunsch: bei jeder Lade-Option alle Infos einsehen koennen, mit
+  // "Zurück"-Moeglichkeit, um die Planung fortzusetzen -- siehe
+  // ladepunkte/[id]/page.tsx "Zurück zur Routenplanung" bei
+  // ?returnTo=routenplaner).
+  function handleViewStationDetails(stationId: string) {
+    if (result) {
+      const draft: RouteDraftState = {
+        start,
+        end,
+        startCoords,
+        endCoords,
+        manualStopQueries,
+        vehicleId,
+        caravanId,
+        consumption,
+        minPowerKw,
+        preferTrailerSuitable,
+        preferredProvider,
+        departureSoc,
+        minSocAtStop,
+        minSocAtDestination,
+        targetSocAfterCharging,
+        detourTolerance,
+        excludedStationIds,
+        forcedStationIdByIndex,
+        result,
+      };
+      try {
+        sessionStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+      } catch {
+        // Speicher voll/nicht verfuegbar -- Detailseite oeffnet trotzdem,
+        // nur ohne funktionierenden "Zurück"-Link.
+      }
+    }
+    router.push(`/ladepunkte/${stationId}?returnTo=routenplaner`);
+  }
 
   function handleVehicleSelect(id: string) {
     setVehicleId(id);
@@ -851,6 +970,7 @@ export function RoutePlannerForm({
               busy={replanBusy}
               onDeleteStop={handleDeleteStop}
               onSelectAlternative={handleSelectAlternative}
+              onViewDetails={handleViewStationDetails}
             />
           )}
 

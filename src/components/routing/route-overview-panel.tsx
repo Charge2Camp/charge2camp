@@ -40,10 +40,12 @@ function AlternativeRow({
   alternative,
   disabled,
   onSelect,
+  onViewDetails,
 }: {
   alternative: ChargingStopCandidate;
   disabled: boolean;
   onSelect: () => void;
+  onViewDetails: () => void;
 }) {
   return (
     <li className="flex flex-col gap-2 rounded-md border border-black/10 p-3 text-sm dark:border-white/10 sm:flex-row sm:items-center sm:justify-between">
@@ -56,14 +58,23 @@ function AlternativeRow({
         </span>
         <span className="text-xs text-black/50 dark:text-white/50">{lastConfirmedLabel(alternative.lastConfirmedAt)}</span>
       </div>
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={onSelect}
-        className="min-h-11 whitespace-nowrap rounded-md border border-route px-3 py-2 text-sm font-medium text-route hover:bg-route/10 disabled:opacity-50 "
-      >
-        Diesen Ladepunkt wählen
-      </button>
+      <div className="flex flex-col gap-2 sm:items-end">
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={onSelect}
+          className="min-h-11 whitespace-nowrap rounded-md border border-route px-3 py-2 text-sm font-medium text-route hover:bg-route/10 disabled:opacity-50 "
+        >
+          Diesen Ladepunkt wählen
+        </button>
+        <button
+          type="button"
+          onClick={onViewDetails}
+          className="min-h-11 whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium text-black/60 hover:underline dark:text-white/60"
+        >
+          Details ansehen
+        </button>
+      </div>
     </li>
   );
 }
@@ -85,6 +96,7 @@ export function RouteOverviewPanel({
   busy,
   onDeleteStop,
   onSelectAlternative,
+  onViewDetails,
 }: {
   start: { displayName: string; latitude: number; longitude: number };
   end: { displayName: string; latitude: number; longitude: number };
@@ -93,6 +105,11 @@ export function RouteOverviewPanel({
   busy: boolean;
   onDeleteStop: (stopIndex: number, stationId: string) => void;
   onSelectAlternative: (stopIndex: number, stationId: string) => void;
+  /** Speichert den aktuellen Planungsstand und oeffnet die Ladepunkt-
+   * Detailseite (Nutzerwunsch: bei jeder Lade-Option die vollen Infos
+   * abrufen koennen) -- mit "Zurück"-Moeglichkeit von dort, siehe
+   * route-planner-form.tsx handleViewStationDetails. */
+  onViewDetails: (stationId: string) => void;
 }) {
   const [expandedStopIndex, setExpandedStopIndex] = useState<number | null>(null);
 
@@ -174,14 +191,23 @@ export function RouteOverviewPanel({
                     <li>{lastConfirmedLabel(stop.lastConfirmedAt)}</li>
                   </ul>
                 </div>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => onDeleteStop(index, stop.station.id)}
-                  className="min-h-11 whitespace-nowrap rounded-md border border-red-600/50 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-600/10 disabled:opacity-50 dark:text-red-400"
-                >
-                  Löschen
-                </button>
+                <div className="flex flex-col items-end gap-2">
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => onDeleteStop(index, stop.station.id)}
+                    className="min-h-11 whitespace-nowrap rounded-md border border-red-600/50 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-600/10 disabled:opacity-50 dark:text-red-400"
+                  >
+                    Löschen
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onViewDetails(stop.station.id)}
+                    className="min-h-11 whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium text-black/60 hover:underline dark:text-white/60"
+                  >
+                    Details ansehen
+                  </button>
+                </div>
               </div>
 
               {stop.alternatives.length > 0 && (
@@ -201,6 +227,7 @@ export function RouteOverviewPanel({
                           alternative={alt}
                           disabled={busy}
                           onSelect={() => onSelectAlternative(index, alt.station.id)}
+                          onViewDetails={() => onViewDetails(alt.station.id)}
                         />
                       ))}
                     </ul>
