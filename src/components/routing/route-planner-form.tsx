@@ -14,6 +14,7 @@ import { RouteOverviewPanel } from "@/components/routing/route-overview-panel";
 import { RouteWizardTabs } from "@/components/routing/route-wizard-tabs";
 import { FavoritesPickerDialog } from "@/components/routing/favorites-picker-dialog";
 import { HomeAddressPickerDialog } from "@/components/routing/home-address-picker-dialog";
+import { SavedRoutePickerDialog, type SavedRouteOption } from "@/components/routing/saved-route-picker-dialog";
 import { NavigationLink } from "@/components/profile/navigation-link";
 import {
   DEFAULT_CONSUMPTION_KWH_PER_100KM,
@@ -129,6 +130,7 @@ export function RoutePlannerForm({
   campsiteDestinations,
   favorites,
   homeAddress,
+  savedRoutes,
   initialDestination,
   initialSavedRouteId,
 }: {
@@ -142,6 +144,8 @@ export function RoutePlannerForm({
   favorites: FavoriteDestinationOption[];
   /** Im Profil ("Meine Daten") hinterlegte Zuhause-Adresse, fuer den "Zuhause verwenden"-Button (Start/Ziel). */
   homeAddress: { name: string; latitude: number; longitude: number } | null;
+  /** Eigene gespeicherte Routen ("Meine Routen" im Profil), fuer den "Gespeicherte Route öffnen"-Picker, bevor eine Route berechnet wurde. */
+  savedRoutes: SavedRouteOption[];
   /** Vom "Route hierher planen"-Button auf einer Campingplatz- oder Ladepunkt-Detailseite (?destination_campsite_id=...  /  ?destination_station_id=...) -- befuellt "Ziel" bereits beim ersten Rendern. */
   initialDestination?: { name: string; latitude: number; longitude: number };
   /** Aus dem URL-Query-Parameter `?savedRouteId=...` (Link "Öffnen" im Profil) -- laedt die gespeicherte Route beim ersten Rendern. */
@@ -211,6 +215,7 @@ export function RoutePlannerForm({
   const [replanError, setReplanError] = useState<string | null>(null);
   const [loadingSavedRoute, setLoadingSavedRoute] = useState(Boolean(initialSavedRouteId));
   const showSavedRouteLoadingIndicator = useDelayedLoading(loadingSavedRoute);
+  const [savedRouteDialogOpen, setSavedRouteDialogOpen] = useState(false);
   const [saveRouteName, setSaveRouteName] = useState("");
   const [savingRoute, setSavingRoute] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -240,55 +245,61 @@ export function RoutePlannerForm({
     [result]
   );
 
+  // Laedt eine gespeicherte Route und belegt alle Formularfelder + das
+  // Ergebnis damit vor -- gemeinsam genutzt vom Mount-Effect unten
+  // (?savedRouteId=... aus dem Link "Öffnen" im Profil) und vom
+  // "Gespeicherte Route öffnen"-Picker (siehe savedRouteDialogOpen), bevor
+  // eine eigene Route berechnet wurde.
+  async function loadAndApplySavedRoute(id: string) {
+    setLoadingSavedRoute(true);
+    setError(null);
+    try {
+      const saved = await loadSavedRoute(id);
+      setStart(saved.startQuery);
+      setEnd(saved.endQuery);
+      // Falls Start/Ziel damals ueber einen unserer Campingplatz-
+      // Vorschlaege oder die Favoriten-Auswahl gewaehlt wurden, deren
+      // Koordinaten wiederherstellen -- sonst wuerde ein spaeteres "neu
+      // berechnen" versuchen, den (bei Demo-Namen nicht auffindbaren) Text
+      // per Nominatim zu geocodieren, siehe actions.ts.
+      setStartCoords(knownPlaceByName.get(saved.startQuery) ?? null);
+      setEndCoords(knownPlaceByName.get(saved.endQuery) ?? null);
+      setManualStopQueries(saved.manualStopQueries);
+      setVehicleId(saved.vehicleId);
+      setCaravanId(saved.caravanId ?? "");
+      setConsumption(saved.manualConsumptionKwhPer100km?.toString() ?? "");
+      setMinPowerKw(saved.minPowerKw?.toString() ?? "");
+      setPreferTrailerSuitable(saved.preferTrailerSuitable);
+      setPreferredProvider(saved.preferredProvider ?? "");
+      setDepartureSoc(saved.departureSocPercent);
+      setMinSocAtStop(saved.minSocAtStopPercent);
+      setMinSocAtDestination(saved.minSocAtDestinationPercent);
+      setTargetSocAfterCharging(saved.targetSocAfterChargingPercent);
+      setDetourTolerance(saved.detourToleranceKm);
+      setExcludedStationIds(saved.excludedStationIds);
+      setForcedStationIdByIndex(saved.forcedStationIdByIndex);
+      setSaveRouteName(saved.name);
+      setSaveError(null);
+      setSaveSuccess(false);
+      setResult(saved.result);
+      setActiveStep(2);
+      setSavedRouteDialogOpen(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gespeicherte Route konnte nicht geladen werden.");
+    } finally {
+      setLoadingSavedRoute(false);
+    }
+  }
+
   // Gespeicherte Route ueber ?savedRouteId=... (Link "Öffnen" im Profil)
-  // beim ersten Rendern laden und alle Formularfelder + das Ergebnis damit
-  // vorbelegen.
+  // beim ersten Rendern laden. void Promise.resolve().then(...) statt eines
+  // direkten Aufrufs: loadAndApplySavedRoute setzt synchron als ersten
+  // Schritt State (setLoadingSavedRoute), was ein Lint-Verbot fuer
+  // synchrones setState direkt im Effect-Body ausloest (React rief sonst
+  // kaskadierend erneut denselben Render an).
   useEffect(() => {
     if (!initialSavedRouteId) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const saved = await loadSavedRoute(initialSavedRouteId);
-        if (cancelled) return;
-        setStart(saved.startQuery);
-        setEnd(saved.endQuery);
-        // Falls Start/Ziel damals ueber einen unserer Campingplatz-
-        // Vorschlaege oder die Favoriten-Auswahl gewaehlt wurden, deren
-        // Koordinaten wiederherstellen -- sonst wuerde ein spaeteres "neu
-        // berechnen" versuchen, den (bei Demo-Namen nicht auffindbaren) Text
-        // per Nominatim zu geocodieren, siehe actions.ts.
-        setStartCoords(knownPlaceByName.get(saved.startQuery) ?? null);
-        setEndCoords(knownPlaceByName.get(saved.endQuery) ?? null);
-        setManualStopQueries(saved.manualStopQueries);
-        setVehicleId(saved.vehicleId);
-        setCaravanId(saved.caravanId ?? "");
-        setConsumption(saved.manualConsumptionKwhPer100km?.toString() ?? "");
-        setMinPowerKw(saved.minPowerKw?.toString() ?? "");
-        setPreferTrailerSuitable(saved.preferTrailerSuitable);
-        setPreferredProvider(saved.preferredProvider ?? "");
-        setDepartureSoc(saved.departureSocPercent);
-        setMinSocAtStop(saved.minSocAtStopPercent);
-        setMinSocAtDestination(saved.minSocAtDestinationPercent);
-        setTargetSocAfterCharging(saved.targetSocAfterChargingPercent);
-        setDetourTolerance(saved.detourToleranceKm);
-        setExcludedStationIds(saved.excludedStationIds);
-        setForcedStationIdByIndex(saved.forcedStationIdByIndex);
-        setSaveRouteName(saved.name);
-        setSaveError(null);
-        setSaveSuccess(false);
-        setResult(saved.result);
-        setActiveStep(2);
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Gespeicherte Route konnte nicht geladen werden.");
-        }
-      } finally {
-        if (!cancelled) setLoadingSavedRoute(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+    void Promise.resolve().then(() => loadAndApplySavedRoute(initialSavedRouteId));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialSavedRouteId]);
 
@@ -440,6 +451,30 @@ export function RoutePlannerForm({
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Ganz oben, auf allen drei Tabs sichtbar (Nutzerwunsch): vor der
+          ersten Berechnung ein Einstieg ueber eine bereits gespeicherte
+          Route statt neu anzufangen; sobald eine Route berechnet ist,
+          stattdessen "Neue Routenplanung" (verwirft die aktuelle Route
+          komplett -- fuer Anpassungen an der bestehenden Route gibt es
+          stattdessen "← Daten anpassen" in Tab 2). */}
+      {result ? (
+        <button
+          type="button"
+          onClick={handleNewPlanning}
+          className="min-h-11 w-fit rounded-md border border-black/15 px-4 py-2 text-sm font-medium hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/5"
+        >
+          Neue Routenplanung
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setSavedRouteDialogOpen(true)}
+          className="min-h-11 w-fit rounded-md border border-black/15 px-4 py-2 text-sm font-medium hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/5"
+        >
+          Gespeicherte Route öffnen
+        </button>
+      )}
+
       <RouteWizardTabs activeStep={activeStep} reachable={Boolean(result)} onSelectStep={setActiveStep} />
 
       {showSavedRouteLoadingIndicator && <LoadingIndicator text="Gespeicherte Route wird geladen…" />}
@@ -732,15 +767,6 @@ export function RoutePlannerForm({
                   ? "Route mit angepassten Einstellungen neu berechnen"
                   : "Route berechnen"}
             </button>
-            {result && (
-              <button
-                type="button"
-                onClick={handleNewPlanning}
-                className="min-h-12 rounded-md border border-black/15 px-5 py-3 font-medium hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/5"
-              >
-                Neue Routenplanung
-              </button>
-            )}
           </div>
 
           {showLoadingIndicator && <LoadingIndicator text="Route wird berechnet…" />}
@@ -832,13 +858,22 @@ export function RoutePlannerForm({
             />
           )}
 
-          <button
-            type="button"
-            onClick={() => setActiveStep(3)}
-            className="min-h-12 self-stretch rounded-md bg-action px-5 py-3 font-medium text-base hover:bg-action-hover sm:self-start"
-          >
-            Route finalisieren →
-          </button>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <button
+              type="button"
+              onClick={() => setActiveStep(1)}
+              className="min-h-12 rounded-md border border-black/15 px-5 py-3 font-medium hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/5"
+            >
+              ← Daten anpassen
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveStep(3)}
+              className="min-h-12 flex-1 rounded-md bg-action px-5 py-3 font-medium text-base hover:bg-action-hover sm:flex-none"
+            >
+              Route finalisieren →
+            </button>
+          </div>
         </div>
       )}
 
@@ -984,6 +1019,14 @@ export function RoutePlannerForm({
           }
           setHomeDialogOpen(false);
         }}
+      />
+
+      <SavedRoutePickerDialog
+        open={savedRouteDialogOpen}
+        savedRoutes={savedRoutes}
+        busy={loadingSavedRoute}
+        onClose={() => setSavedRouteDialogOpen(false)}
+        onPick={loadAndApplySavedRoute}
       />
     </div>
   );

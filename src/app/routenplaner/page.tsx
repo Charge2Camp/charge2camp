@@ -35,6 +35,7 @@ export default async function RoutePlannerPage({
     stationResult,
     favorites,
     { data: profile },
+    { data: savedRouteRows },
   ] = await Promise.all([
     supabase
       .from("vehicles")
@@ -58,7 +59,23 @@ export default async function RoutePlannerPage({
       : Promise.resolve({ data: null }),
     fetchFavoriteDestinations(user.id),
     supabase.from("profiles").select("home_address, home_latitude, home_longitude").eq("id", user.id).maybeSingle(),
+    // Nur die schlanken Anzeige-Felder (kein Ladeplan, siehe saved_routes-
+    // Kommentar in actions.ts) -- fuer den "Gespeicherte Route öffnen"-Picker
+    // in route-planner-form.tsx, bevor eine Route berechnet wurde.
+    supabase
+      .from("saved_routes")
+      .select("id, name, start_display_name, end_display_name, created_at")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false }),
   ]);
+
+  const savedRoutes = (savedRouteRows ?? []).map((r) => ({
+    id: r.id,
+    name: r.name,
+    startDisplayName: r.start_display_name,
+    endDisplayName: r.end_display_name,
+    createdAt: r.created_at,
+  }));
 
   const homeAddress =
     profile?.home_address && profile.home_latitude != null && profile.home_longitude != null
@@ -101,6 +118,7 @@ export default async function RoutePlannerPage({
           campsiteDestinations={campsiteDestinations}
           favorites={favorites}
           homeAddress={homeAddress}
+          savedRoutes={savedRoutes}
           initialDestination={initialDestination}
           initialSavedRouteId={savedRouteId}
         />
