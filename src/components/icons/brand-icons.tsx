@@ -70,10 +70,10 @@ export function IconCommunity(props: IconProps) {
 export function IconAuto(props: IconProps) {
   return (
     <svg {...base} aria-label="Auto" role="img" {...props}>
-      <path d="M3.5 15.3v-2.6c0-.5.3-.9.7-1.1l2.3-1.1c.2-.1.4-.2.7-.2h6.8c.4 0 .8.2 1.1.4l2.6 2.3c.2.2.4.5.4.8v1.5" />
-      <path d="M3.5 15.3h1.9M14.9 15.3h5.6" />
-      <circle cx="8" cy="15.4" r="2.1" />
-      <circle cx="16" cy="15.4" r="2.1" />
+      <path d="M19 17h2v-6.5a1 1 0 0 0-.5-.87l-5.6-3.24A1 1 0 0 0 14.4 6H9.6a1 1 0 0 0-.5.39L3.5 9.63a1 1 0 0 0-.5.87V17h2" />
+      <path d="M9 17h6" />
+      <circle cx="7" cy="17" r="2.1" />
+      <circle cx="17" cy="17" r="2.1" />
     </svg>
   );
 }

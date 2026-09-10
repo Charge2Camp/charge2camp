@@ -584,30 +584,34 @@ export function RoutePlannerForm({
 
           {/* Gespann-Auswahl (Nutzerwunsch: uebersichtlicher, eigener
               Block statt zweier gleichrangiger Felder mitten im Formular)
-              -- Auto- und Anhaenger-Icon nebeneinander symbolisieren das
-              Gespann, direkt darunter die beiden Auswahlleisten im
-              gleichen Nebeneinander. Getoente Flaeche (--c-tint-trailer,
-              siehe brand-guide.md Abschnitt 3 "Hinweisflaechen zu
+              -- Ueberschrift + Auto- und Anhaenger-Icon nebeneinander
+              symbolisieren das Gespann, direkt darunter die beiden
+              Auswahlleisten im gleichen Nebeneinander -- bewusst auch auf
+              schmalen Bildschirmen nebeneinander (statt gestapelt), auch
+              wenn der Wohnwagen-Name dadurch abgeschnitten werden kann
+              (Nutzerwunsch). Getoente Flaeche (--c-tint-trailer, siehe
+              brand-guide.md Abschnitt 3 "Hinweisflaechen zu
               Gespann-Themen") hebt den Block optisch von den uebrigen
               Feldern ab. */}
           <div className="flex flex-col gap-3 rounded-lg bg-tint-trailer/50 p-4 sm:col-span-2 dark:bg-tint-trailer/10">
-            <div className="flex items-center justify-center gap-4">
-              <IconAuto className="h-9 w-9 text-base-deep dark:text-white" />
-              <span className="text-xl text-black/30 dark:text-white/30" aria-hidden>
+            <p className="text-center text-sm font-semibold text-base-deep dark:text-white">Mein Gespann</p>
+            <div className="flex items-center justify-center gap-5">
+              <IconAuto className="h-14 w-14 text-base-deep dark:text-white" />
+              <span className="text-2xl text-black/30 dark:text-white/30" aria-hidden>
                 +
               </span>
-              <IconAnhaenger className="h-9 w-9 text-base-deep dark:text-white" />
+              <IconAnhaenger className="h-14 w-14 text-base-deep dark:text-white" />
             </div>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <label className="flex flex-col gap-1 text-sm">
+            <div className="grid grid-cols-2 gap-3">
+              <label className="flex min-w-0 flex-col gap-1 text-sm">
                 Elektroauto *
                 <select
                   name="vehicle_id"
                   required
                   value={vehicleId}
                   onChange={(e) => handleVehicleSelect(e.target.value)}
-                  className="rounded-md border border-black/15 bg-card px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+                  className="w-full min-w-0 rounded-md border border-black/15 bg-card px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
                 >
                   <option value="">Bitte wählen…</option>
                   {vehicles.map((v) => (
@@ -618,13 +622,13 @@ export function RoutePlannerForm({
                 </select>
               </label>
 
-              <label className="flex flex-col gap-1 text-sm">
+              <label className="flex min-w-0 flex-col gap-1 text-sm">
                 Wohnwagen (optional)
                 <select
                   name="caravan_id"
                   value={caravanId}
                   onChange={(e) => setCaravanId(e.target.value)}
-                  className="rounded-md border border-black/15 bg-card px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+                  className="w-full min-w-0 rounded-md border border-black/15 bg-card px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
                 >
                   <option value="">Kein Wohnwagen</option>
                   {caravans.map((c) => (
