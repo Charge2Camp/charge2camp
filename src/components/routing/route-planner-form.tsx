@@ -34,7 +34,7 @@ import type { CampsiteDestinationOption } from "@/lib/campsites";
 import type { FavoriteDestinationOption } from "@/lib/favorites";
 import type { Caravan, Vehicle } from "@/types/database";
 import { useDelayedLoading } from "@/lib/use-delayed-loading";
-import { LoadingIndicator } from "@/components/loading-indicator";
+import { FullscreenLoader } from "@/components/fullscreen-loader";
 
 function SocSlider({
   name,
@@ -607,7 +607,7 @@ export function RoutePlannerForm({
         </button>
       )}
 
-      {showSavedRouteLoadingIndicator && <LoadingIndicator text="Gespeicherte Route wird geladen…" />}
+      {showSavedRouteLoadingIndicator && <FullscreenLoader text="Gespeicherte Route wird geladen…" />}
 
       {/* ---------- Tab 1: Angaben ---------- */}
       {activeStep === 1 && (
@@ -884,7 +884,7 @@ export function RoutePlannerForm({
             </button>
           </div>
 
-          {showLoadingIndicator && <LoadingIndicator text="Route wird berechnet…" />}
+          {showLoadingIndicator && <FullscreenLoader text="Route wird berechnet…" />}
           {error && <p className="text-sm text-red-600">{error}</p>}
         </form>
       )}
