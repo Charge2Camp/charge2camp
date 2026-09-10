@@ -451,12 +451,14 @@ export function RoutePlannerForm({
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Ganz oben, auf allen drei Tabs sichtbar (Nutzerwunsch): vor der
-          ersten Berechnung ein Einstieg ueber eine bereits gespeicherte
-          Route statt neu anzufangen; sobald eine Route berechnet ist,
-          stattdessen "Neue Routenplanung" (verwirft die aktuelle Route
-          komplett -- fuer Anpassungen an der bestehenden Route gibt es
-          stattdessen "← Daten anpassen" in Tab 2). */}
+      <RouteWizardTabs activeStep={activeStep} reachable={Boolean(result)} onSelectStep={setActiveStep} />
+
+      {/* Direkt unter der Tab-Leiste, auf allen drei Tabs sichtbar
+          (Nutzerwunsch): vor der ersten Berechnung ein Einstieg ueber eine
+          bereits gespeicherte Route statt neu anzufangen; sobald eine Route
+          berechnet ist, stattdessen "Neue Routenplanung" (verwirft die
+          aktuelle Route komplett -- fuer Anpassungen an der bestehenden
+          Route gibt es stattdessen "← Daten anpassen" in Tab 2). */}
       {result ? (
         <button
           type="button"
@@ -474,8 +476,6 @@ export function RoutePlannerForm({
           Gespeicherte Route öffnen
         </button>
       )}
-
-      <RouteWizardTabs activeStep={activeStep} reachable={Boolean(result)} onSelectStep={setActiveStep} />
 
       {showSavedRouteLoadingIndicator && <LoadingIndicator text="Gespeicherte Route wird geladen…" />}
 
