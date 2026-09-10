@@ -10,9 +10,11 @@ import {
 } from "@/app/routenplaner/actions";
 import { AddressAutocomplete } from "@/components/address-autocomplete";
 import { MapView } from "@/components/map/map-view";
-import { RouteOverviewDialog } from "@/components/routing/route-overview-dialog";
+import { RouteOverviewPanel } from "@/components/routing/route-overview-panel";
+import { RouteWizardTabs } from "@/components/routing/route-wizard-tabs";
 import { FavoritesPickerDialog } from "@/components/routing/favorites-picker-dialog";
 import { HomeAddressPickerDialog } from "@/components/routing/home-address-picker-dialog";
+import { NavigationLink } from "@/components/profile/navigation-link";
 import {
   DEFAULT_CONSUMPTION_KWH_PER_100KM,
   DEFAULT_DEPARTURE_SOC_PERCENT,
@@ -21,10 +23,9 @@ import {
   DEFAULT_MIN_SOC_AT_STOP_PERCENT,
   DEFAULT_TARGET_SOC_AFTER_CHARGING_PERCENT,
   MAX_DETOUR_TOLERANCE_KM,
-  type TripPlan,
 } from "@/lib/route-planning";
-import { googleMapsNavigationProvider } from "@/lib/providers/navigation";
 import { buildRouteTimeline } from "@/lib/route-timeline";
+import { buildRouteSegments } from "@/lib/route-navigation";
 import { TRAILER_SUITABILITY_COLORS, TRAILER_SUITABILITY_ICON_SRC, TRAILER_SUITABILITY_LABELS } from "@/lib/trailer-suitability";
 import type { CampsiteDestinationOption } from "@/lib/campsites";
 import type { FavoriteDestinationOption } from "@/lib/favorites";
@@ -92,9 +93,9 @@ function escapeHtml(value: string): string {
 }
 
 // Popup-Inhalt fuer den Ladestopp-Marker auf der Routenkarte (MapView,
-// popupHtml) -- dieselben Angaben wie die Ladestopp-Karten unten im
-// Ergebnis, damit man sie nicht erst suchen/scrollen muss, um zu sehen,
-// worum es bei einem angetippten Pin geht.
+// popupHtml) -- dieselben Angaben wie die Ladestopp-Karten in der
+// Routenuebersicht (Tab 2), damit man sie nicht erst suchen/scrollen muss,
+// um zu sehen, worum es bei einem angetippten Pin geht.
 function buildChargingStopPopupHtml(stop: RoutePlanResult["plan"]["chargingStops"][number], index: number): string {
   const name = escapeHtml(stop.station.name ?? stop.station.provider ?? "Ladepunkt");
   const badgeColor = TRAILER_SUITABILITY_COLORS[stop.station.trailer_suitable];
@@ -118,6 +119,8 @@ function buildChargingStopPopupHtml(stop: RoutePlanResult["plan"]["chargingStops
     </div>
   `;
 }
+
+type WizardStep = 1 | 2 | 3;
 
 export function RoutePlannerForm({
   vehicles,
@@ -144,6 +147,13 @@ export function RoutePlannerForm({
   /** Aus dem URL-Query-Parameter `?savedRouteId=...` (Link "Öffnen" im Profil) -- laedt die gespeicherte Route beim ersten Rendern. */
   initialSavedRouteId?: string;
 }) {
+  // Drei-Schritte-Assistent statt einer langen, durchgescrollten Seite
+  // (Nutzerwunsch: uebersichtlicher auf dem Handy). Alle Formular-/
+  // Ergebnisdaten bleiben unveraendert in diesem einen Client-Component-
+  // State -- ein Tab-Wechsel ist nur ein Render-Wechsel (siehe
+  // route-wizard-tabs.tsx), kein Verlust irgendeiner Eingabe.
+  const [activeStep, setActiveStep] = useState<WizardStep>(1);
+
   const [loading, setLoading] = useState(false);
   const showLoadingIndicator = useDelayedLoading(loading);
   const [error, setError] = useState<string | null>(null);
@@ -197,19 +207,8 @@ export function RoutePlannerForm({
   const [manualStopQueries, setManualStopQueries] = useState<string[]>([]);
   const [excludedStationIds, setExcludedStationIds] = useState<string[]>([]);
   const [forcedStationIdByIndex, setForcedStationIdByIndex] = useState<Record<number, string>>({});
-  const [overviewOpen, setOverviewOpen] = useState(false);
   const [replanBusy, setReplanBusy] = useState(false);
   const [replanError, setReplanError] = useState<string | null>(null);
-  // Entwurfsstand waehrend die Routenuebersicht geoeffnet ist: Loeschen/
-  // Alternativen-Auswahl wirkt sich zunaechst NUR hier aus. Karte und
-  // Zusammenfassung ausserhalb des Popups zeigen weiterhin den zuletzt
-  // bestaetigten Stand, bis der Nutzer beim Schliessen explizit "Übernehmen"
-  // oder "Verwerfen" waehlt.
-  const [draftPlan, setDraftPlan] = useState<TripPlan | null>(null);
-  const [draftExcludedStationIds, setDraftExcludedStationIds] = useState<string[]>([]);
-  const [draftForcedStationIdByIndex, setDraftForcedStationIdByIndex] = useState<Record<number, string>>({});
-  const [overviewDirty, setOverviewDirty] = useState(false);
-  const [confirmingOverviewClose, setConfirmingOverviewClose] = useState(false);
   const [loadingSavedRoute, setLoadingSavedRoute] = useState(Boolean(initialSavedRouteId));
   const showSavedRouteLoadingIndicator = useDelayedLoading(loadingSavedRoute);
   const [saveRouteName, setSaveRouteName] = useState("");
@@ -226,6 +225,20 @@ export function RoutePlannerForm({
   const defaultSaveRouteName = result
     ? `${result.start.displayName.split(",")[0]} → ${result.end.displayName.split(",")[0]}`
     : "";
+
+  const timeline = useMemo(
+    () =>
+      result
+        ? buildRouteTimeline({
+            start: result.start,
+            end: result.end,
+            distanceKm: result.plan.distanceKm,
+            chargingStops: result.plan.chargingStops,
+            manualWaypoints: result.manualWaypoints,
+          })
+        : [],
+    [result]
+  );
 
   // Gespeicherte Route ueber ?savedRouteId=... (Link "Öffnen" im Profil)
   // beim ersten Rendern laden und alle Formularfelder + das Ergebnis damit
@@ -264,6 +277,7 @@ export function RoutePlannerForm({
         setSaveError(null);
         setSaveSuccess(false);
         setResult(saved.result);
+        setActiveStep(2);
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : "Gespeicherte Route konnte nicht geladen werden.");
@@ -310,33 +324,29 @@ export function RoutePlannerForm({
     setDetourTolerance(DEFAULT_DETOUR_TOLERANCE_KM);
     setExcludedStationIds([]);
     setForcedStationIdByIndex({});
-    setOverviewOpen(false);
-    setDraftPlan(null);
-    setOverviewDirty(false);
-    setConfirmingOverviewClose(false);
     setReplanError(null);
     setSaveRouteName("");
     setSaveError(null);
     setSaveSuccess(false);
+    setActiveStep(1);
   }
 
-  function handleOpenOverview() {
-    if (!result) return;
-    setDraftPlan(result.plan);
-    setDraftExcludedStationIds(excludedStationIds);
-    setDraftForcedStationIdByIndex(forcedStationIdByIndex);
-    setOverviewDirty(false);
-    setConfirmingOverviewClose(false);
-    setReplanError(null);
-    setOverviewOpen(true);
+  // Erzwungene Alternativen-Wahlen ab (ausschliesslich) diesem Stopp-Index
+  // verwerfen -- sie haengen von der Position des geaenderten Stopps ab und
+  // werden nach der Aenderung frei neu bestimmt.
+  function clearForcedFrom(stopIndex: number): Record<number, string> {
+    const next: Record<number, string> = {};
+    for (const [key, value] of Object.entries(forcedStationIdByIndex)) {
+      if (Number(key) < stopIndex) next[Number(key)] = value;
+    }
+    return next;
   }
 
   // Ruft die Ladeplanung neu ab, ohne Start/Ziel neu zu geocodieren oder die
   // Route neu zu berechnen (Streckengeometrie bleibt gleich) -- genutzt zum
   // Loeschen eines vorgeschlagenen Ladestopps oder Waehlen einer Alternative
-  // aus der Routenuebersicht. Aendert bewusst nur den ENTWURFS-Stand, nicht
-  // den bestaetigten `result`/`excludedStationIds`/`forcedStationIdByIndex`
-  // -- die Uebernahme passiert erst explizit beim Schliessen des Popups.
+  // in der Routenuebersicht (Tab 2). Wirkt bewusst SOFORT auf `result`, ohne
+  // Entwurfs-/Uebernehmen-Schritt (siehe route-overview-panel.tsx).
   async function handleReplan(overrides: {
     excludedStationIds?: string[];
     forcedStationIdByIndex?: Record<number, string>;
@@ -345,8 +355,8 @@ export function RoutePlannerForm({
     setReplanBusy(true);
     setReplanError(null);
     try {
-      const nextExcluded = overrides.excludedStationIds ?? draftExcludedStationIds;
-      const nextForced = overrides.forcedStationIdByIndex ?? draftForcedStationIdByIndex;
+      const nextExcluded = overrides.excludedStationIds ?? excludedStationIds;
+      const nextForced = overrides.forcedStationIdByIndex ?? forcedStationIdByIndex;
       const newPlan = await replanChargingStop({
         vehicleId,
         caravanId: caravanId || undefined,
@@ -363,10 +373,9 @@ export function RoutePlannerForm({
         excludedStationIds: nextExcluded,
         forcedStationIdByIndex: nextForced,
       });
-      setDraftPlan(newPlan);
-      setDraftExcludedStationIds(nextExcluded);
-      setDraftForcedStationIdByIndex(nextForced);
-      setOverviewDirty(true);
+      setResult({ ...result, plan: newPlan });
+      setExcludedStationIds(nextExcluded);
+      setForcedStationIdByIndex(nextForced);
     } catch (err) {
       setReplanError(err instanceof Error ? err.message : "Ladestopp konnte nicht neu geplant werden.");
     } finally {
@@ -374,20 +383,9 @@ export function RoutePlannerForm({
     }
   }
 
-  // Erzwungene Alternativen-Wahlen ab (ausschliesslich) diesem Stopp-Index
-  // verwerfen -- sie haengen von der Position des geaenderten Stopps ab und
-  // werden nach der Aenderung frei neu bestimmt.
-  function clearForcedFrom(stopIndex: number): Record<number, string> {
-    const next: Record<number, string> = {};
-    for (const [key, value] of Object.entries(draftForcedStationIdByIndex)) {
-      if (Number(key) < stopIndex) next[Number(key)] = value;
-    }
-    return next;
-  }
-
   function handleDeleteStop(stopIndex: number, stationId: string) {
     handleReplan({
-      excludedStationIds: [...draftExcludedStationIds, stationId],
+      excludedStationIds: [...excludedStationIds, stationId],
       forcedStationIdByIndex: clearForcedFrom(stopIndex),
     });
   }
@@ -396,32 +394,6 @@ export function RoutePlannerForm({
     handleReplan({
       forcedStationIdByIndex: { ...clearForcedFrom(stopIndex), [stopIndex]: stationId },
     });
-  }
-
-  // Schliessen angefordert (X-Button im Popup): bei ungespeicherten
-  // Aenderungen erst explizit nachfragen, statt sie stillschweigend zu
-  // uebernehmen oder zu verwerfen.
-  function handleRequestCloseOverview() {
-    if (overviewDirty) {
-      setConfirmingOverviewClose(true);
-    } else {
-      setOverviewOpen(false);
-    }
-  }
-
-  function handleApplyOverviewChanges() {
-    if (result && draftPlan) {
-      setResult({ ...result, plan: draftPlan });
-      setExcludedStationIds(draftExcludedStationIds);
-      setForcedStationIdByIndex(draftForcedStationIdByIndex);
-    }
-    setOverviewOpen(false);
-    setConfirmingOverviewClose(false);
-  }
-
-  function handleDiscardOverviewChanges() {
-    setOverviewOpen(false);
-    setConfirmingOverviewClose(false);
   }
 
   async function handleSaveRoute() {
@@ -458,391 +430,328 @@ export function RoutePlannerForm({
     }
   }
 
-  // Baut nur die Google-Maps-URL (reiner Adapter-Aufruf, siehe
-  // src/lib/providers/navigation) und oeffnet sie -- das Oeffnen selbst
-  // (window.open) ist bewusst der einzige web-spezifische Teil, damit eine
-  // spaetere native App dieselbe buildUrl()-Logik mit Linking.openURL
-  // wiederverwenden kann.
-  function handleStartNavigation() {
-    if (!result) return;
-    const timeline = buildRouteTimeline({
-      start: result.start,
-      end: result.end,
-      distanceKm: result.plan.distanceKm,
-      chargingStops: result.plan.chargingStops,
-      manualWaypoints: result.manualWaypoints,
-    });
-    const url = googleMapsNavigationProvider.buildUrl({
-      origin: result.start,
-      destination: result.end,
-      stops: timeline
-        .filter((p) => p.kind === "charging" || p.kind === "manual")
-        .map((p) => ({ latitude: p.latitude, longitude: p.longitude })),
-    });
-    // Eindeutiger Fenstername statt "_blank": sonst wuerde ein zweiter Klick
-    // (z. B. nach Aenderung der Route) denselben bereits offenen Tab nur
-    // stillschweigend im Hintergrund umleiten, statt zuverlaessig einen
-    // (neuen) Tab zu oeffnen -- die Charge2Camp-App bleibt so immer im
-    // urspruenglichen Tab geoeffnet.
-    window.open(url, `charge2camp-navigation-${Date.now()}`, "noopener,noreferrer");
-  }
+  // Google-Maps-URLs (Gesamtroute + pro Etappe) -- gleiche Logik wie "Meine
+  // Routen" (siehe src/lib/route-navigation.ts), damit beide Stellen exakt
+  // dieselben Links bauen. window.open passiert im wiederverwendbaren
+  // NavigationLink (src/components/profile/navigation-link.tsx); eine
+  // spaetere native App wuerde dort Linking.openURL() einsetzen, die
+  // buildUrl()-Logik bliebe unveraendert.
+  const routeSegments = useMemo(() => (result ? buildRouteSegments(result) : null), [result]);
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-6">
+      <RouteWizardTabs activeStep={activeStep} reachable={Boolean(result)} onSelectStep={setActiveStep} />
+
       {showSavedRouteLoadingIndicator && <LoadingIndicator text="Gespeicherte Route wird geladen…" />}
 
-      <form
-        onSubmit={async (e) => {
-          e.preventDefault();
-          // Bewusst ein normaler onSubmit-Handler statt der React-
-          // action-Prop: React setzt Formulare nach einer erfolgreichen
-          // action automatisch zurueck, wodurch Start/Ziel/Fahrzeug bei
-          // erneuter Berechnung (z. B. nach Anpassen der Ladeeinstellungen)
-          // verschwinden wuerden. Der bisherige Ergebnis-Stand bleibt
-          // zudem sichtbar, bis die neue Route eintrifft.
-          const formData = new FormData(e.currentTarget);
-          setLoading(true);
-          setError(null);
-          try {
-            const planResult = await planRoute(formData);
-            setResult(planResult);
-            setExcludedStationIds([]);
-            setForcedStationIdByIndex({});
-            setSaveRouteName("");
-            setSaveError(null);
-            setSaveSuccess(false);
-          } catch (err) {
-            setError(err instanceof Error ? err.message : "Route konnte nicht berechnet werden.");
-          } finally {
-            setLoading(false);
-          }
-        }}
-        className="grid grid-cols-1 gap-4 sm:grid-cols-2"
-      >
-        <div className="flex flex-wrap gap-2 sm:col-span-2">
-          <button
-            type="button"
-            onClick={() => setFavoritesDialogOpen(true)}
-            className="min-h-11 rounded-md border border-black/15 px-4 py-2 text-sm hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/5"
-          >
-            ♥ Aus Favoriten wählen
-          </button>
-          {homeAddress && (
+      {/* ---------- Tab 1: Angaben ---------- */}
+      {activeStep === 1 && (
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            // Bewusst ein normaler onSubmit-Handler statt der React-
+            // action-Prop: React setzt Formulare nach einer erfolgreichen
+            // action automatisch zurueck, wodurch Start/Ziel/Fahrzeug bei
+            // erneuter Berechnung (z. B. nach Anpassen der Ladeeinstellungen)
+            // verschwinden wuerden. Der bisherige Ergebnis-Stand bleibt
+            // zudem sichtbar, bis die neue Route eintrifft.
+            const formData = new FormData(e.currentTarget);
+            setLoading(true);
+            setError(null);
+            try {
+              const planResult = await planRoute(formData);
+              setResult(planResult);
+              setExcludedStationIds([]);
+              setForcedStationIdByIndex({});
+              setSaveRouteName("");
+              setSaveError(null);
+              setSaveSuccess(false);
+              // Nutzerwunsch: nach dem Berechnen direkt zur Routenuebersicht
+              // springen, statt auf derselben Seite nach unten scrollen zu
+              // muessen.
+              setActiveStep(2);
+            } catch (err) {
+              setError(err instanceof Error ? err.message : "Route konnte nicht berechnet werden.");
+            } finally {
+              setLoading(false);
+            }
+          }}
+          className="grid grid-cols-1 gap-4 sm:grid-cols-2"
+        >
+          <div className="flex flex-wrap gap-2 sm:col-span-2">
             <button
               type="button"
-              onClick={() => setHomeDialogOpen(true)}
+              onClick={() => setFavoritesDialogOpen(true)}
               className="min-h-11 rounded-md border border-black/15 px-4 py-2 text-sm hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/5"
             >
-              🏠 Zuhause verwenden
+              ♥ Aus Favoriten wählen
             </button>
-          )}
-        </div>
-
-        <label className="flex flex-col gap-1 text-sm">
-          Start *
-          <AddressAutocomplete
-            name="start"
-            required
-            value={start}
-            onChange={setStart}
-            onSelectCoordinates={setStartCoords}
-            placeholder="z. B. München"
-            className="w-full rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
-          />
-          {startCoords && (
-            <>
-              <input type="hidden" name="start_latitude" value={startCoords.latitude} />
-              <input type="hidden" name="start_longitude" value={startCoords.longitude} />
-            </>
-          )}
-        </label>
-
-        <label className="flex flex-col gap-1 text-sm">
-          Ziel *
-          <AddressAutocomplete
-            name="end"
-            required
-            value={end}
-            onChange={setEnd}
-            placeholder="z. B. Porec, Kroatien"
-            className="w-full rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
-            localSuggestions={campsiteSuggestions}
-            onSelectCoordinates={setEndCoords}
-          />
-          {endCoords && (
-            <>
-              <input type="hidden" name="end_latitude" value={endCoords.latitude} />
-              <input type="hidden" name="end_longitude" value={endCoords.longitude} />
-            </>
-          )}
-        </label>
-
-        <label className="flex flex-col gap-1 text-sm">
-          Elektroauto *
-          <select
-            name="vehicle_id"
-            required
-            value={vehicleId}
-            onChange={(e) => handleVehicleSelect(e.target.value)}
-            className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
-          >
-            <option value="">Bitte wählen…</option>
-            {vehicles.map((v) => (
-              <option key={v.id} value={v.id}>
-                {v.manufacturer} {v.model}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="flex flex-col gap-1 text-sm">
-          Wohnwagen (optional)
-          <select
-            name="caravan_id"
-            value={caravanId}
-            onChange={(e) => setCaravanId(e.target.value)}
-            className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
-          >
-            <option value="">Kein Wohnwagen</option>
-            {caravans.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.manufacturer} {c.model}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="flex flex-col gap-1 text-sm">
-          Verbrauch mit Gespann (kWh/100km)
-          <input
-            name="consumption_kwh_per_100km"
-            type="number"
-            step="0.1"
-            min="0"
-            value={consumption}
-            onChange={(e) => setConsumption(e.target.value)}
-            placeholder={`z. B. ${DEFAULT_CONSUMPTION_KWH_PER_100KM} (Standard, falls kein Wert bekannt)`}
-            className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
-          />
-        </label>
-
-        <label className="flex flex-col gap-1 text-sm">
-          Mindest-Ladeleistung (kW, optional)
-          <input
-            name="min_power_kw"
-            type="number"
-            step="1"
-            min="0"
-            value={minPowerKw}
-            onChange={(e) => setMinPowerKw(e.target.value)}
-            className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
-          />
-        </label>
-
-        <label className="flex flex-col gap-1 text-sm">
-          Bevorzugter Anbieter (optional)
-          <select
-            name="preferred_provider"
-            value={preferredProvider}
-            onChange={(e) => setPreferredProvider(e.target.value)}
-            className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
-          >
-            <option value="">Alle Anbieter</option>
-            {providers.map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <div className="flex flex-col gap-2 sm:col-span-2">
-          <p className="text-sm font-medium">Manuelle Zwischenstopps (optional)</p>
-          <p className="-mt-1 text-xs text-black/40 dark:text-white/40">
-            Orte, die die Route zwingend durchfahren soll (z. B. ein Campingplatz oder eine
-            Sehenswürdigkeit) -- unabhängig davon, ob dort geladen werden muss.
-          </p>
-          {manualStopQueries.map((query, index) => (
-            <div key={index} className="flex gap-2">
-              <div className="flex-1">
-                <AddressAutocomplete
-                  name="manual_stop"
-                  value={query}
-                  onChange={(nextValue) => {
-                    const next = [...manualStopQueries];
-                    next[index] = nextValue;
-                    setManualStopQueries(next);
-                  }}
-                  placeholder="z. B. Camping Seeblick, Prien am Chiemsee"
-                  className="w-full rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
-                />
-              </div>
+            {homeAddress && (
               <button
                 type="button"
-                onClick={() => setManualStopQueries(manualStopQueries.filter((_, i) => i !== index))}
-                aria-label="Zwischenstopp entfernen"
-                className="flex min-h-11 min-w-11 items-center justify-center rounded-md border border-black/15 text-base hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/5"
+                onClick={() => setHomeDialogOpen(true)}
+                className="min-h-11 rounded-md border border-black/15 px-4 py-2 text-sm hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/5"
               >
-                ✕
+                🏠 Zuhause verwenden
               </button>
-            </div>
-          ))}
-          <button
-            type="button"
-            onClick={() => setManualStopQueries([...manualStopQueries, ""])}
-            className="w-fit min-h-11 rounded-md border border-black/15 px-4 py-2 text-sm hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/5"
-          >
-            + Zwischenstopp hinzufügen
-          </button>
-        </div>
-
-        <div className="rounded-lg border border-black/10 p-4 dark:border-white/10 sm:col-span-2">
-          <p className="mb-3 text-sm font-medium">Ladeeinstellungen</p>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <SocSlider
-              name="departure_soc_percent"
-              label="Ladestand bei Abfahrt"
-              value={departureSoc}
-              onChange={setDepartureSoc}
-            />
-            <SocSlider
-              name="min_soc_at_stop_percent"
-              label="Mindest-Restakku bei Zwischenladung"
-              value={minSocAtStop}
-              onChange={setMinSocAtStop}
-            />
-            <SocSlider
-              name="min_soc_at_destination_percent"
-              label="Mindest-Restakku am Ziel"
-              value={minSocAtDestination}
-              onChange={setMinSocAtDestination}
-            />
-            <SocSlider
-              name="target_soc_after_charging_percent"
-              label="Ladeziel an Zwischenstopps"
-              value={targetSocAfterCharging}
-              onChange={setTargetSocAfterCharging}
-            />
-            <div className="sm:col-span-2">
-              <SocSlider
-                name="detour_tolerance_km"
-                label="Umweg-Toleranz für anhängertauglichere Ladepunkte"
-                value={detourTolerance}
-                onChange={setDetourTolerance}
-                unit=" km"
-                max={MAX_DETOUR_TOLERANCE_KM}
-              />
-              <p className="mt-1 text-xs text-black/40 dark:text-white/40">
-                Wie viele km Umweg bist du bereit zu fahren, um statt des nächstgelegenen einen
-                anhängertauglicheren Ladepunkt anzusteuern?
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <label className="flex items-center gap-2 self-end text-sm">
-          <input
-            type="checkbox"
-            name="prefer_trailer_suitable"
-            value="1"
-            checked={preferTrailerSuitable}
-            onChange={(e) => setPreferTrailerSuitable(e.target.checked)}
-          />
-          Anhängertaugliche Ladepunkte bevorzugen
-        </label>
-
-        {vehicles.length === 0 && (
-          <p className="text-sm text-amber-700 dark:text-amber-400 sm:col-span-2">
-            Du hast noch kein Elektroauto im Profil hinterlegt. Bitte zuerst unter{" "}
-            <a href="/profil/gespann" className="underline">
-              Mein Gespann
-            </a>{" "}
-            ergänzen.
-          </p>
-        )}
-
-        <div className="flex flex-col gap-3 sm:col-span-2 sm:flex-row sm:flex-wrap">
-          <button
-            type="submit"
-            disabled={loading || vehicles.length === 0}
-            className="min-h-12 rounded-md bg-action px-5 py-3 font-medium text-base hover:bg-action-hover disabled:opacity-50"
-          >
-            {loading
-              ? "Route wird berechnet…"
-              : result
-                ? "Route mit angepassten Einstellungen neu berechnen"
-                : "Route berechnen"}
-          </button>
-          {result && (
-            <button
-              type="button"
-              onClick={handleNewPlanning}
-              className="min-h-12 rounded-md border border-black/15 px-5 py-3 font-medium hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/5"
-            >
-              Neue Routenplanung
-            </button>
-          )}
-        </div>
-
-        {showLoadingIndicator && <LoadingIndicator text="Route wird berechnet…" />}
-      </form>
-
-      {error && <p className="text-sm text-red-600">{error}</p>}
-
-      {result && (
-        <div className="flex flex-col gap-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-            <button
-              type="button"
-              onClick={handleOpenOverview}
-              className="min-h-12 rounded-md border border-route px-4 py-3 text-sm font-medium text-route hover:bg-route/10 "
-            >
-              Routenübersicht anzeigen
-            </button>
-            <button
-              type="button"
-              onClick={handleStartNavigation}
-              className="min-h-12 rounded-md bg-action px-4 py-3 text-sm font-medium text-base hover:bg-action-hover"
-            >
-              Navigation starten (Google Maps)
-            </button>
-          </div>
-
-          <div className="flex flex-col gap-3 rounded-lg border border-black/10 p-4 dark:border-white/10 sm:flex-row sm:flex-wrap sm:items-end">
-            <label className="flex flex-1 flex-col gap-1 text-sm">
-              Name für &quot;Meine Routen&quot; im Profil
-              <input
-                value={saveRouteName || defaultSaveRouteName}
-                onChange={(e) => {
-                  setSaveRouteName(e.target.value);
-                  setSaveSuccess(false);
-                }}
-                className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
-              />
-            </label>
-            <button
-              type="button"
-              onClick={handleSaveRoute}
-              disabled={savingRoute}
-              className="min-h-12 rounded-md border border-black/15 px-4 py-3 text-sm font-medium hover:bg-black/5 disabled:opacity-50 dark:border-white/15 dark:hover:bg-white/5"
-            >
-              {savingRoute ? "Wird gespeichert…" : "Im Profil speichern"}
-            </button>
-            {saveSuccess && (
-              <p className="w-full text-sm text-route">
-                Gespeichert — zu finden unter{" "}
-                <a href="/profil/routen" className="underline">
-                  Mein Profil → Meine Routen
-                </a>
-                .
-              </p>
             )}
-            {saveError && <p className="w-full text-sm text-red-600">{saveError}</p>}
           </div>
 
-          {replanError && <p className="text-sm text-red-600">{replanError}</p>}
+          <label className="flex flex-col gap-1 text-sm">
+            Start *
+            <AddressAutocomplete
+              name="start"
+              required
+              value={start}
+              onChange={setStart}
+              onSelectCoordinates={setStartCoords}
+              placeholder="z. B. München"
+              className="w-full rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+            />
+            {startCoords && (
+              <>
+                <input type="hidden" name="start_latitude" value={startCoords.latitude} />
+                <input type="hidden" name="start_longitude" value={startCoords.longitude} />
+              </>
+            )}
+          </label>
 
-          <div className="h-[400px] overflow-hidden rounded-lg border border-black/10 dark:border-white/10">
+          <label className="flex flex-col gap-1 text-sm">
+            Ziel *
+            <AddressAutocomplete
+              name="end"
+              required
+              value={end}
+              onChange={setEnd}
+              placeholder="z. B. Porec, Kroatien"
+              className="w-full rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+              localSuggestions={campsiteSuggestions}
+              onSelectCoordinates={setEndCoords}
+            />
+            {endCoords && (
+              <>
+                <input type="hidden" name="end_latitude" value={endCoords.latitude} />
+                <input type="hidden" name="end_longitude" value={endCoords.longitude} />
+              </>
+            )}
+          </label>
+
+          <label className="flex flex-col gap-1 text-sm">
+            Elektroauto *
+            <select
+              name="vehicle_id"
+              required
+              value={vehicleId}
+              onChange={(e) => handleVehicleSelect(e.target.value)}
+              className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+            >
+              <option value="">Bitte wählen…</option>
+              {vehicles.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.manufacturer} {v.model}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="flex flex-col gap-1 text-sm">
+            Wohnwagen (optional)
+            <select
+              name="caravan_id"
+              value={caravanId}
+              onChange={(e) => setCaravanId(e.target.value)}
+              className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+            >
+              <option value="">Kein Wohnwagen</option>
+              {caravans.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.manufacturer} {c.model}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="flex flex-col gap-1 text-sm">
+            Verbrauch mit Gespann (kWh/100km)
+            <input
+              name="consumption_kwh_per_100km"
+              type="number"
+              step="0.1"
+              min="0"
+              value={consumption}
+              onChange={(e) => setConsumption(e.target.value)}
+              placeholder={`z. B. ${DEFAULT_CONSUMPTION_KWH_PER_100KM} (Standard, falls kein Wert bekannt)`}
+              className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+            />
+          </label>
+
+          <label className="flex flex-col gap-1 text-sm">
+            Mindest-Ladeleistung (kW, optional)
+            <input
+              name="min_power_kw"
+              type="number"
+              step="1"
+              min="0"
+              value={minPowerKw}
+              onChange={(e) => setMinPowerKw(e.target.value)}
+              className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+            />
+          </label>
+
+          <label className="flex flex-col gap-1 text-sm">
+            Bevorzugter Anbieter (optional)
+            <select
+              name="preferred_provider"
+              value={preferredProvider}
+              onChange={(e) => setPreferredProvider(e.target.value)}
+              className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+            >
+              <option value="">Alle Anbieter</option>
+              {providers.map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <div className="flex flex-col gap-2 sm:col-span-2">
+            <p className="text-sm font-medium">Manuelle Zwischenstopps (optional)</p>
+            <p className="-mt-1 text-xs text-black/40 dark:text-white/40">
+              Orte, die die Route zwingend durchfahren soll (z. B. ein Campingplatz oder eine
+              Sehenswürdigkeit) -- unabhängig davon, ob dort geladen werden muss.
+            </p>
+            {manualStopQueries.map((query, index) => (
+              <div key={index} className="flex gap-2">
+                <div className="flex-1">
+                  <AddressAutocomplete
+                    name="manual_stop"
+                    value={query}
+                    onChange={(nextValue) => {
+                      const next = [...manualStopQueries];
+                      next[index] = nextValue;
+                      setManualStopQueries(next);
+                    }}
+                    placeholder="z. B. Camping Seeblick, Prien am Chiemsee"
+                    className="w-full rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setManualStopQueries(manualStopQueries.filter((_, i) => i !== index))}
+                  aria-label="Zwischenstopp entfernen"
+                  className="flex min-h-11 min-w-11 items-center justify-center rounded-md border border-black/15 text-base hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/5"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() => setManualStopQueries([...manualStopQueries, ""])}
+              className="w-fit min-h-11 rounded-md border border-black/15 px-4 py-2 text-sm hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/5"
+            >
+              + Zwischenstopp hinzufügen
+            </button>
+          </div>
+
+          <div className="rounded-lg border border-black/10 p-4 dark:border-white/10 sm:col-span-2">
+            <p className="mb-3 text-sm font-medium">Ladeeinstellungen</p>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <SocSlider
+                name="departure_soc_percent"
+                label="Ladestand bei Abfahrt"
+                value={departureSoc}
+                onChange={setDepartureSoc}
+              />
+              <SocSlider
+                name="min_soc_at_stop_percent"
+                label="Mindest-Restakku bei Zwischenladung"
+                value={minSocAtStop}
+                onChange={setMinSocAtStop}
+              />
+              <SocSlider
+                name="min_soc_at_destination_percent"
+                label="Mindest-Restakku am Ziel"
+                value={minSocAtDestination}
+                onChange={setMinSocAtDestination}
+              />
+              <SocSlider
+                name="target_soc_after_charging_percent"
+                label="Ladeziel an Zwischenstopps"
+                value={targetSocAfterCharging}
+                onChange={setTargetSocAfterCharging}
+              />
+              <div className="sm:col-span-2">
+                <SocSlider
+                  name="detour_tolerance_km"
+                  label="Umweg-Toleranz für anhängertauglichere Ladepunkte"
+                  value={detourTolerance}
+                  onChange={setDetourTolerance}
+                  unit=" km"
+                  max={MAX_DETOUR_TOLERANCE_KM}
+                />
+                <p className="mt-1 text-xs text-black/40 dark:text-white/40">
+                  Wie viele km Umweg bist du bereit zu fahren, um statt des nächstgelegenen einen
+                  anhängertauglicheren Ladepunkt anzusteuern?
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <label className="flex items-center gap-2 self-end text-sm">
+            <input
+              type="checkbox"
+              name="prefer_trailer_suitable"
+              value="1"
+              checked={preferTrailerSuitable}
+              onChange={(e) => setPreferTrailerSuitable(e.target.checked)}
+            />
+            Anhängertaugliche Ladepunkte bevorzugen
+          </label>
+
+          {vehicles.length === 0 && (
+            <p className="text-sm text-amber-700 dark:text-amber-400 sm:col-span-2">
+              Du hast noch kein Elektroauto im Profil hinterlegt. Bitte zuerst unter{" "}
+              <a href="/profil/gespann" className="underline">
+                Mein Gespann
+              </a>{" "}
+              ergänzen.
+            </p>
+          )}
+
+          <div className="flex flex-col gap-3 sm:col-span-2 sm:flex-row sm:flex-wrap">
+            <button
+              type="submit"
+              disabled={loading || vehicles.length === 0}
+              className="min-h-12 rounded-md bg-action px-5 py-3 font-medium text-base hover:bg-action-hover disabled:opacity-50"
+            >
+              {loading
+                ? "Route wird berechnet…"
+                : result
+                  ? "Route mit angepassten Einstellungen neu berechnen"
+                  : "Route berechnen"}
+            </button>
+            {result && (
+              <button
+                type="button"
+                onClick={handleNewPlanning}
+                className="min-h-12 rounded-md border border-black/15 px-5 py-3 font-medium hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/5"
+              >
+                Neue Routenplanung
+              </button>
+            )}
+          </div>
+
+          {showLoadingIndicator && <LoadingIndicator text="Route wird berechnet…" />}
+          {error && <p className="text-sm text-red-600">{error}</p>}
+        </form>
+      )}
+
+      {/* ---------- Tab 2: Routenübersicht ---------- */}
+      {activeStep === 2 && result && (
+        <div className="flex flex-col gap-6">
+          <div className="h-[350px] overflow-hidden rounded-lg border border-black/10 dark:border-white/10">
             <MapView
               markers={[
                 { id: "start", latitude: result.start.latitude, longitude: result.start.longitude, label: "Start" },
@@ -888,19 +797,6 @@ export function RoutePlannerForm({
             </div>
           </div>
 
-          {result.manualWaypoints.length > 0 && (
-            <div className="flex flex-col gap-2">
-              <p className="text-sm font-medium">Manuelle Zwischenstopps</p>
-              <ul className="text-sm text-black/70 dark:text-white/70">
-                {result.manualWaypoints.map((waypoint) => (
-                  <li key={waypoint.query}>
-                    {waypoint.displayName} (nach {waypoint.distanceFromStartKm.toFixed(0)} km)
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
           <p className="text-sm text-black/60 dark:text-white/60">
             {result.vehicle.manufacturer} {result.vehicle.model}
             {result.caravan && ` + ${result.caravan.manufacturer} ${result.caravan.model}`} ·{" "}
@@ -916,80 +812,145 @@ export function RoutePlannerForm({
             </p>
           )}
 
-          {!result.plan.chargingStopsRequired ? (
+          {replanError && <p className="text-sm text-red-600">{replanError}</p>}
+
+          {!result.plan.chargingStopsRequired && result.manualWaypoints.length === 0 ? (
             <p className="rounded-md border border-route/30 bg-route/5 p-3 text-sm text-route">
               Kein Ladestopp nötig — die Strecke liegt innerhalb der Reichweite deines Gespanns.
               {result.plan.arrivalSocPercent !== null &&
                 ` Voraussichtlicher Ankunfts-Ladestand: ${result.plan.arrivalSocPercent.toFixed(0)}%.`}
             </p>
           ) : (
-            result.plan.chargingStops.length > 0 && (
-              <div className="flex flex-col gap-3">
-                <p className="text-sm font-medium">
-                  Geplante Ladestopps ({result.plan.chargingStops.length}) — Details und Alternativen in der{" "}
-                  <button
-                    type="button"
-                    onClick={handleOpenOverview}
-                    className="underline hover:no-underline"
-                  >
-                    Routenübersicht
-                  </button>
-                </p>
-                {result.plan.chargingStops.map((stop, index) => (
-                  <div key={stop.station.id} className="rounded-lg border border-black/10 p-4 dark:border-white/10">
-                    <p className="font-medium">{index + 1}. Ladestopp</p>
-                    <div className="mt-2 flex items-center gap-2">
-                      <span
-                        className="rounded-full px-2 py-0.5 text-xs text-white"
-                        style={{ backgroundColor: TRAILER_SUITABILITY_COLORS[stop.station.trailer_suitable] }}
-                      >
-                        {TRAILER_SUITABILITY_LABELS[stop.station.trailer_suitable]}
-                      </span>
-                      <span className="text-sm">{stop.station.name ?? stop.station.provider}</span>
-                    </div>
-                    <ul className="mt-3 space-y-1 text-sm text-black/70 dark:text-white/70">
-                      <li>Nach {stop.distanceFromStartKm.toFixed(0)} km ab Start</li>
-                      <li>Umweg von der Route: ca. {stop.corridorDistanceKm.toFixed(0)} km</li>
-                      <li>Ladestand bei Ankunft: {stop.socOnArrivalPercent.toFixed(0)}%</li>
-                      {stop.chargingTimeMin !== null && (
-                        <li>Voraussichtliche Ladezeit: {formatDuration(stop.chargingTimeMin)}</li>
-                      )}
-                      <li>
-                        {stop.lastConfirmedAt
-                          ? `Zuletzt von der Community bestätigt am ${new Date(stop.lastConfirmedAt).toLocaleDateString("de-DE")}`
-                          : "Noch nicht von der Community bestätigt"}
-                      </li>
-                    </ul>
-                  </div>
-                ))}
-                {result.plan.arrivalSocPercent !== null && (
-                  <p className="text-sm text-black/70 dark:text-white/70">
-                    Ladestand am Ziel: {result.plan.arrivalSocPercent.toFixed(0)}%
-                  </p>
-                )}
-              </div>
-            )
+            <RouteOverviewPanel
+              start={result.start}
+              end={result.end}
+              manualWaypoints={result.manualWaypoints}
+              plan={result.plan}
+              busy={replanBusy}
+              onDeleteStop={handleDeleteStop}
+              onSelectAlternative={handleSelectAlternative}
+            />
           )}
+
+          <button
+            type="button"
+            onClick={() => setActiveStep(3)}
+            className="min-h-12 self-stretch rounded-md bg-action px-5 py-3 font-medium text-base hover:bg-action-hover sm:self-start"
+          >
+            Route finalisieren →
+          </button>
         </div>
       )}
 
-      {result && draftPlan && (
-        <RouteOverviewDialog
-          open={overviewOpen}
-          start={result.start}
-          end={result.end}
-          manualWaypoints={result.manualWaypoints}
-          plan={draftPlan}
-          busy={replanBusy}
-          dirty={overviewDirty}
-          confirmingClose={confirmingOverviewClose}
-          onRequestClose={handleRequestCloseOverview}
-          onApplyChanges={handleApplyOverviewChanges}
-          onDiscardChanges={handleDiscardOverviewChanges}
-          onCancelClose={() => setConfirmingOverviewClose(false)}
-          onDeleteStop={(stopIndex, stationId) => handleDeleteStop(stopIndex, stationId)}
-          onSelectAlternative={(stopIndex, stationId) => handleSelectAlternative(stopIndex, stationId)}
-        />
+      {/* ---------- Tab 3: Fertig ---------- */}
+      {activeStep === 3 && result && (
+        <div className="flex flex-col gap-6">
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <p className="text-black/50 dark:text-white/50">Strecke</p>
+              <p className="text-lg font-semibold">{result.plan.distanceKm.toFixed(0)} km</p>
+            </div>
+            <div>
+              <p className="text-black/50 dark:text-white/50">Fahrzeit</p>
+              <p className="text-lg font-semibold">{formatDuration(result.plan.durationMin)}</p>
+            </div>
+          </div>
+
+          <ol className="flex flex-col gap-1.5">
+            {timeline.map((point, i) => (
+              <li key={`${point.kind}-${point.distanceFromStartKm}-${i}`}>
+                {i > 0 && (
+                  <p className="pl-1 text-xs text-black/40 dark:text-white/40">
+                    ↓ {(point.distanceFromStartKm - timeline[i - 1].distanceFromStartKm).toFixed(0)} km
+                  </p>
+                )}
+                <div
+                  className={`mt-1 rounded-md border px-3 py-2 text-sm ${
+                    point.kind === "start" || point.kind === "end"
+                      ? "border-route/30 bg-route/5"
+                      : point.kind === "manual"
+                        ? "border-blue-500/30 bg-blue-500/5"
+                        : "border-black/10 dark:border-white/10"
+                  }`}
+                >
+                  <p className="font-medium">
+                    {point.kind === "start" && `Start: ${result.start.displayName}`}
+                    {point.kind === "end" && `Ziel: ${result.end.displayName}`}
+                    {point.kind === "manual" && `Zwischenstopp: ${point.label}`}
+                    {point.kind === "charging" &&
+                      `${point.label}: ${point.chargingStop?.station.name ?? point.chargingStop?.station.provider}`}
+                  </p>
+                  {point.kind === "charging" && point.chargingStop && (
+                    <p className="text-xs text-black/50 dark:text-white/50">
+                      {point.chargingStop.station.power_kw ? `${point.chargingStop.station.power_kw} kW` : "Leistung unbekannt"}
+                      {point.chargingStop.chargingTimeMin !== null &&
+                        ` · ca. ${formatDuration(point.chargingStop.chargingTimeMin)} laden`}
+                    </p>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ol>
+
+          <div className="flex flex-col gap-3 rounded-lg border border-black/10 p-4 dark:border-white/10 sm:flex-row sm:flex-wrap sm:items-end">
+            <label className="flex flex-1 flex-col gap-1 text-sm">
+              Name für &quot;Meine Routen&quot; im Profil
+              <input
+                value={saveRouteName || defaultSaveRouteName}
+                onChange={(e) => {
+                  setSaveRouteName(e.target.value);
+                  setSaveSuccess(false);
+                }}
+                className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+              />
+            </label>
+            <button
+              type="button"
+              onClick={handleSaveRoute}
+              disabled={savingRoute}
+              className="min-h-12 rounded-md border border-black/15 px-4 py-3 text-sm font-medium hover:bg-black/5 disabled:opacity-50 dark:border-white/15 dark:hover:bg-white/5"
+            >
+              {savingRoute ? "Wird gespeichert…" : "Im Profil speichern"}
+            </button>
+            {saveSuccess && (
+              <p className="w-full text-sm text-route">
+                Gespeichert — zu finden unter{" "}
+                <a href="/profil/routen" className="underline">
+                  Mein Profil → Meine Routen
+                </a>
+                .
+              </p>
+            )}
+            {saveError && <p className="w-full text-sm text-red-600">{saveError}</p>}
+          </div>
+
+          {routeSegments && (
+            <div className="flex flex-col gap-2">
+              <NavigationLink
+                href={routeSegments.fullRouteUrl}
+                className="min-h-12 w-fit rounded-md bg-action px-5 py-3 text-sm font-medium text-base hover:bg-action-hover"
+              >
+                Gesamte Route navigieren (Google Maps)
+              </NavigationLink>
+              {routeSegments.segments.length > 1 && (
+                <div>
+                  <p className="text-xs text-black/50 dark:text-white/50">Oder nur eine einzelne Etappe navigieren:</p>
+                  <div className="mt-1 flex flex-wrap gap-2">
+                    {routeSegments.segments.map((segment) => (
+                      <NavigationLink
+                        key={segment.label}
+                        href={segment.url}
+                        className="min-h-11 rounded-md border border-black/15 px-3 py-2.5 text-sm hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/5"
+                      >
+                        {segment.label}
+                      </NavigationLink>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       )}
 
       <FavoritesPickerDialog

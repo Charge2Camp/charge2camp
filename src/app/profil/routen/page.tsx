@@ -1,52 +1,13 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { deleteSavedRoute } from "@/app/profil/actions";
-import { loadSavedRoute, type RoutePlanResult } from "@/app/routenplaner/actions";
-import { googleMapsNavigationProvider } from "@/lib/providers/navigation";
-import { buildRouteTimeline } from "@/lib/route-timeline";
+import { loadSavedRoute } from "@/app/routenplaner/actions";
+import { buildRouteSegments } from "@/lib/route-navigation";
 import { NavigationLink } from "@/components/profile/navigation-link";
 import type { SavedRoute } from "@/types/database";
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("de-DE", { year: "numeric", month: "long", day: "numeric" });
-}
-
-interface RouteSegment {
-  label: string;
-  url: string;
-}
-
-/** Ein Navigations-Link pro Etappe (Start -> 1. Ladestopp -> ... -> Ziel),
- * damit z. B. nur der Teil zwischen zwei Ladestopps in Google Maps
- * nachnavigiert werden kann -- zusaetzlich zur Navigation der Gesamtroute.
- * Beruecksichtigt auch manuell hinzugefuegte Zwischenstopps (§ ABRP-Vorbild
- * "Add Stop") in der korrekten Streckenposition. */
-function buildSegments(result: RoutePlanResult): { segments: RouteSegment[]; fullRouteUrl: string } {
-  const timeline = buildRouteTimeline({
-    start: result.start,
-    end: result.end,
-    distanceKm: result.plan.distanceKm,
-    chargingStops: result.plan.chargingStops,
-    manualWaypoints: result.manualWaypoints,
-  });
-
-  const segments: RouteSegment[] = [];
-  for (let i = 0; i < timeline.length - 1; i++) {
-    segments.push({
-      label: `${timeline[i].label} → ${timeline[i + 1].label}`,
-      url: googleMapsNavigationProvider.buildUrl({ origin: timeline[i], destination: timeline[i + 1], stops: [] }),
-    });
-  }
-
-  const fullRouteUrl = googleMapsNavigationProvider.buildUrl({
-    origin: result.start,
-    destination: result.end,
-    stops: timeline
-      .slice(1, -1)
-      .map((p) => ({ latitude: p.latitude, longitude: p.longitude })),
-  });
-
-  return { segments, fullRouteUrl };
 }
 
 export default async function SavedRoutesPage() {
@@ -150,7 +111,7 @@ export default async function SavedRoutesPage() {
                     </p>
 
                     {(() => {
-                      const { segments, fullRouteUrl } = buildSegments(result);
+                      const { segments, fullRouteUrl } = buildRouteSegments(result);
                       return (
                         <div className="mt-2 flex flex-col gap-2">
                           <NavigationLink
