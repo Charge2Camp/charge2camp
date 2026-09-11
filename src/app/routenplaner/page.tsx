@@ -32,7 +32,6 @@ export default async function RoutePlannerPage({
   const [
     { data: vehicles },
     { data: caravans },
-    { data: providerRows },
     campsiteDestinations,
     stationResult,
     favorites,
@@ -49,10 +48,6 @@ export default async function RoutePlannerPage({
       .select("*")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false }),
-    // Anbieter-Vorschlaege fuer den optionalen "Bevorzugter Anbieter"-Filter
-    // -- aus den echten Ladepunkten (core.charge_point), nicht mehr aus der
-    // alten Demo-Tabelle (siehe fetchCorridorChargingStations in actions.ts).
-    supabase.schema("core").from("charge_point").select("operator").eq("is_active", true).limit(5000),
     fetchCampsiteDestinationOptions(),
     destinationStationId
       ? supabase
@@ -65,7 +60,9 @@ export default async function RoutePlannerPage({
     fetchFavoriteDestinations(user.id),
     supabase
       .from("profiles")
-      .select("home_address, home_latitude, home_longitude, default_vehicle_id, default_caravan_id")
+      .select(
+        "home_address, home_latitude, home_longitude, default_vehicle_id, default_caravan_id, preferred_charging_providers"
+      )
       .eq("id", user.id)
       .maybeSingle(),
     // Nur die schlanken Anzeige-Felder (kein Ladeplan, siehe saved_routes-
@@ -119,10 +116,6 @@ export default async function RoutePlannerPage({
       ? { name: profile.home_address, latitude: profile.home_latitude, longitude: profile.home_longitude }
       : null;
 
-  const providers = Array.from(
-    new Set((providerRows ?? []).map((r) => r.operator as string | null).filter((p): p is string => Boolean(p)))
-  ).sort();
-
   // Vom "Route hierher planen"-Button auf der Campingplatz- bzw.
   // Ladepunkt-Detailseite (§ campingplaetze/[id]/page.tsx,
   // ladepunkte/[id]/page.tsx) -- Ziel wird damit schon beim ersten Rendern
@@ -153,7 +146,7 @@ export default async function RoutePlannerPage({
         <RoutePlannerForm
           vehicles={(vehicles as Vehicle[]) ?? []}
           caravans={(caravans as Caravan[]) ?? []}
-          providers={providers}
+          initialPreferredProviders={profile?.preferred_charging_providers ?? []}
           campsiteDestinations={campsiteDestinations}
           favorites={favorites}
           homeAddress={homeAddress}

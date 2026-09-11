@@ -21,6 +21,7 @@ export interface Profile {
   home_longitude: number | null;
   default_vehicle_id: string | null;
   default_caravan_id: string | null;
+  preferred_charging_providers: string[];
   created_at: string;
 }
 
@@ -188,7 +189,7 @@ export interface SavedRoute {
   manual_consumption_kwh_per_100km: number | null;
   min_power_kw: number | null;
   prefer_trailer_suitable: boolean;
-  preferred_provider: string | null;
+  preferred_providers: string[];
 
   departure_soc_percent: number;
   min_soc_at_stop_percent: number;

@@ -30,6 +30,7 @@ import {
 import { buildRouteTimeline } from "@/lib/route-timeline";
 import { buildRouteSegments } from "@/lib/route-navigation";
 import { TRAILER_PIN_COLORS, TRAILER_PIN_ICON_SRC, TRAILER_PIN_LABELS } from "@/lib/trailer-verdict";
+import { CHARGING_PROVIDERS } from "@/lib/charging-providers";
 import type { CampsiteDestinationOption } from "@/lib/campsites";
 import type { FavoriteDestinationOption } from "@/lib/favorites";
 import type { Caravan, Vehicle } from "@/types/database";
@@ -146,7 +147,7 @@ interface RouteDraftState {
   consumption: string;
   minPowerKw: string;
   preferTrailerSuitable: boolean;
-  preferredProvider: string;
+  preferredProviders: string[];
   departureSoc: number;
   minSocAtStop: number;
   minSocAtDestination: number;
@@ -160,7 +161,7 @@ interface RouteDraftState {
 export function RoutePlannerForm({
   vehicles,
   caravans,
-  providers,
+  initialPreferredProviders,
   campsiteDestinations,
   favorites,
   homeAddress,
@@ -173,8 +174,11 @@ export function RoutePlannerForm({
 }: {
   vehicles: Vehicle[];
   caravans: Caravan[];
-  /** Bekannte Anbieter aus charging_stations, fuer den optionalen Anbieter-Filter. */
-  providers: string[];
+  /** Im Profil ("Mein Gespann") hinterlegte bevorzugte Lade-Anbieter
+   * (Schluessel aus charging-providers.ts) -- Vorbelegung fuer den
+   * Anbieter-Filter unten, per Nutzerwunsch bereits standardmaessig
+   * ausgewaehlt. */
+  initialPreferredProviders: string[];
   /** Eigene Campingplaetze (Name + Koordinaten), als zusaetzliche, erkennbare Vorschlaege im Ziel-Feld. */
   campsiteDestinations: CampsiteDestinationOption[];
   /** Vom Nutzer gemerkte Campingplaetze/Ladepunkte, fuer die Favoriten-Auswahl (Start/Ziel). */
@@ -258,7 +262,10 @@ export function RoutePlannerForm({
     DEFAULT_TARGET_SOC_AFTER_CHARGING_PERCENT
   );
   const [detourTolerance, setDetourTolerance] = useState(DEFAULT_DETOUR_TOLERANCE_KM);
-  const [preferredProvider, setPreferredProvider] = useState("");
+  const [preferredProviders, setPreferredProviders] = useState<string[]>(initialPreferredProviders);
+  // Aufklappbar (Nutzerwunsch) -- offen, sobald bereits Anbieter ausgewaehlt
+  // sind (z. B. per Profil-Vorbelegung), sonst eingeklappt.
+  const [providersOpen, setProvidersOpen] = useState(initialPreferredProviders.length > 0);
   const [manualStopQueries, setManualStopQueries] = useState<string[]>([]);
   const [excludedStationIds, setExcludedStationIds] = useState<string[]>([]);
   const [forcedStationIdByIndex, setForcedStationIdByIndex] = useState<Record<number, string>>({});
@@ -321,7 +328,8 @@ export function RoutePlannerForm({
       setConsumption(saved.manualConsumptionKwhPer100km?.toString() ?? "");
       setMinPowerKw(saved.minPowerKw?.toString() ?? "");
       setPreferTrailerSuitable(saved.preferTrailerSuitable);
-      setPreferredProvider(saved.preferredProvider ?? "");
+      setPreferredProviders(saved.preferredProviders);
+      setProvidersOpen(saved.preferredProviders.length > 0);
       setDepartureSoc(saved.departureSocPercent);
       setMinSocAtStop(saved.minSocAtStopPercent);
       setMinSocAtDestination(saved.minSocAtDestinationPercent);
@@ -369,7 +377,8 @@ export function RoutePlannerForm({
     setConsumption(draft.consumption);
     setMinPowerKw(draft.minPowerKw);
     setPreferTrailerSuitable(draft.preferTrailerSuitable);
-    setPreferredProvider(draft.preferredProvider);
+    setPreferredProviders(draft.preferredProviders);
+    setProvidersOpen(draft.preferredProviders.length > 0);
     setDepartureSoc(draft.departureSoc);
     setMinSocAtStop(draft.minSocAtStop);
     setMinSocAtDestination(draft.minSocAtDestination);
@@ -413,7 +422,7 @@ export function RoutePlannerForm({
         consumption,
         minPowerKw,
         preferTrailerSuitable,
-        preferredProvider,
+        preferredProviders,
         departureSoc,
         minSocAtStop,
         minSocAtDestination,
@@ -457,7 +466,8 @@ export function RoutePlannerForm({
     setConsumption("");
     setMinPowerKw("");
     setPreferTrailerSuitable(true);
-    setPreferredProvider("");
+    setPreferredProviders(initialPreferredProviders);
+    setProvidersOpen(initialPreferredProviders.length > 0);
     setDepartureSoc(DEFAULT_DEPARTURE_SOC_PERCENT);
     setMinSocAtStop(DEFAULT_MIN_SOC_AT_STOP_PERCENT);
     setMinSocAtDestination(DEFAULT_MIN_SOC_AT_DESTINATION_PERCENT);
@@ -505,7 +515,7 @@ export function RoutePlannerForm({
         consumptionKwhPer100km: result.plan.effectiveConsumptionKwhPer100km,
         preferTrailerSuitable,
         minPowerKw: minPowerKw ? Number(minPowerKw) : undefined,
-        preferredProvider: preferredProvider || undefined,
+        preferredProviders,
         departureSocPercent: departureSoc,
         minSocAtStopPercent: minSocAtStop,
         minSocAtDestinationPercent: minSocAtDestination,
@@ -554,7 +564,7 @@ export function RoutePlannerForm({
         manualConsumptionKwhPer100km: consumption.trim() ? Number(consumption) : null,
         minPowerKw: minPowerKw.trim() ? Number(minPowerKw) : null,
         preferTrailerSuitable,
-        preferredProvider: preferredProvider || null,
+        preferredProviders,
         departureSocPercent: departureSoc,
         minSocAtStopPercent: minSocAtStop,
         minSocAtDestinationPercent: minSocAtDestination,
@@ -748,22 +758,48 @@ export function RoutePlannerForm({
             />
           </label>
 
-          <label className="flex flex-col gap-1 text-sm">
-            Bevorzugter Anbieter (optional)
-            <select
-              name="preferred_provider"
-              value={preferredProvider}
-              onChange={(e) => setPreferredProvider(e.target.value)}
-              className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+          <div className="text-sm sm:col-span-2">
+            <button
+              type="button"
+              onClick={() => setProvidersOpen((o) => !o)}
+              className="flex min-h-11 w-full items-center justify-between rounded-md border border-black/15 px-3 py-2 text-left font-medium dark:border-white/15"
             >
-              <option value="">Alle Anbieter</option>
-              {providers.map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
-              ))}
-            </select>
-          </label>
+              <span>
+                Bevorzugte Lade-Anbieter (optional)
+                {preferredProviders.length > 0 && ` -- ${preferredProviders.length} ausgewählt`}
+              </span>
+              <span aria-hidden="true">{providersOpen ? "▲" : "▼"}</span>
+            </button>
+
+            {providersOpen && (
+              <div className="mt-2 rounded-md border border-black/15 p-3 dark:border-white/15">
+                {initialPreferredProviders.length > 0 && (
+                  <p className="mb-2 text-xs text-black/50 dark:text-white/50">
+                    Vorausgewählt sind deine bevorzugten Anbieter aus dem Profil (&quot;Mein Gespann&quot;) -- du
+                    kannst die Auswahl hier für diese Route anpassen.
+                  </p>
+                )}
+                <div className="grid grid-cols-1 gap-x-4 gap-y-1.5 sm:grid-cols-2">
+                  {CHARGING_PROVIDERS.map((p) => (
+                    <label key={p.key} className="flex min-h-11 items-center gap-2">
+                      <input
+                        type="checkbox"
+                        name="preferred_providers"
+                        value={p.key}
+                        checked={preferredProviders.includes(p.key)}
+                        onChange={() =>
+                          setPreferredProviders((prev) =>
+                            prev.includes(p.key) ? prev.filter((k) => k !== p.key) : [...prev, p.key]
+                          )
+                        }
+                      />
+                      {p.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
 
           <div className="flex flex-col gap-2 sm:col-span-2">
             <p className="text-sm font-medium">Manuelle Zwischenstopps (optional)</p>

@@ -7,6 +7,7 @@ import { CaravanForm } from "@/components/profile/caravan-form";
 import { CaravanList } from "@/components/profile/caravan-list";
 import { CollapsibleFormSection } from "@/components/collapsible-form-section";
 import { DefaultGespannPicker } from "@/components/profile/default-gespann-picker";
+import { PreferredProvidersForm } from "@/components/profile/preferred-providers-form";
 
 export default async function GespannPage() {
   const supabase = await createClient();
@@ -40,7 +41,11 @@ export default async function GespannPage() {
         .order("manufacturer")
         .order("model")
         .order("series"),
-      supabase.from("profiles").select("default_vehicle_id, default_caravan_id").eq("id", user.id).maybeSingle(),
+      supabase
+        .from("profiles")
+        .select("default_vehicle_id, default_caravan_id, preferred_charging_providers")
+        .eq("id", user.id)
+        .maybeSingle(),
     ]);
 
   const vehicleList = (vehicles as Vehicle[]) ?? [];
@@ -76,6 +81,16 @@ export default async function GespannPage() {
           <CollapsibleFormSection addLabel="Wohnwagen hinzufügen" defaultOpen={caravanList.length === 0}>
             <CaravanForm models={(caravanModels as CaravanModel[]) ?? []} />
           </CollapsibleFormSection>
+        </section>
+
+        <section>
+          <h3 className="font-semibold">Bevorzugte Lade-Anbieter</h3>
+          <p className="-mt-1 text-sm text-black/60 dark:text-white/60">
+            Wird im Routenplaner als Standardauswahl für den Anbieter-Filter verwendet.
+          </p>
+          <div className="mt-4">
+            <PreferredProvidersForm initialSelected={profile?.preferred_charging_providers ?? []} />
+          </div>
         </section>
       </div>
     </div>

@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { geocodeAddress } from "@/lib/providers/geocoding/nominatim";
 import { deriveCampsiteRating } from "@/lib/scoring/ev-camping-score";
+import { sanitizeProviderKeys } from "@/lib/charging-providers";
 
 function parseOptionalNumber(value: FormDataEntryValue | null): number | null {
   if (!value || typeof value !== "string" || value.trim() === "") return null;
@@ -379,4 +380,24 @@ export async function changePassword(
 
   revalidatePath("/profil/daten");
   return { success: true };
+}
+
+/** Speichert die bevorzugten Lade-Anbieter im Profil (Nutzerwunsch, "Mein
+ * Gespann" ganz unten) -- feste Auswahl aus den zehn groessten/
+ * verbreitetsten Anbietern (siehe charging-providers.ts), per Checkbox.
+ * Dient dem Routenplaner als Standardauswahl fuer den dortigen
+ * Anbieter-Filter (route-planner-form.tsx). */
+export async function setPreferredChargingProviders(formData: FormData) {
+  const { supabase, userId } = await requireUserId();
+  const providers = sanitizeProviderKeys(
+    formData.getAll("preferred_providers").filter((v): v is string => typeof v === "string")
+  );
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ preferred_charging_providers: providers })
+    .eq("id", userId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/profil/gespann");
+  revalidatePath("/routenplaner");
 }

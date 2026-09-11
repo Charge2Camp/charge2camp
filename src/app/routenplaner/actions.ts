@@ -14,6 +14,7 @@ import {
 } from "@/lib/route-planning";
 import { assessPersonalCompatibility, summarizeCommunitySuitability } from "@/lib/scoring/trailer-compatibility";
 import { getTrailerPinState } from "@/lib/trailer-verdict";
+import { sanitizeProviderKeys } from "@/lib/charging-providers";
 import { distanceKm } from "@/lib/geo";
 import type { ManualWaypoint, ManualWaypointWithDistance } from "@/lib/route-timeline";
 import type { Caravan, ChargingReview, SavedRoute, TrailerVerdict, Vehicle } from "@/types/database";
@@ -153,7 +154,7 @@ export interface RoutePlanResult {
 interface PlanningSettings {
   preferTrailerSuitable: boolean;
   minPowerKw?: number;
-  preferredProvider?: string;
+  preferredProviders?: string[];
   departureSocPercent?: number;
   minSocAtStopPercent?: number;
   minSocAtDestinationPercent?: number;
@@ -341,7 +342,7 @@ async function buildRoutePlanResult({
     chargingStations,
     preferTrailerSuitable: settings.preferTrailerSuitable,
     minPowerKw: settings.minPowerKw,
-    preferredProvider: settings.preferredProvider,
+    preferredProviders: settings.preferredProviders,
     consumptionKwhPer100km,
     ...(settings.departureSocPercent !== undefined && { departureSocPercent: settings.departureSocPercent }),
     ...(settings.minSocAtStopPercent !== undefined && { minSocAtStopPercent: settings.minSocAtStopPercent }),
@@ -422,7 +423,9 @@ export async function planRoute(formData: FormData): Promise<RoutePlanResult> {
   const vehicleId = requireString(formData.get("vehicle_id"), "Fahrzeug");
   const caravanId = formData.get("caravan_id");
   const minPowerKwRaw = formData.get("min_power_kw");
-  const preferredProviderRaw = formData.get("preferred_provider");
+  const preferredProviders = sanitizeProviderKeys(
+    formData.getAll("preferred_providers").filter((v): v is string => typeof v === "string")
+  );
   const preferTrailerSuitable = formData.get("prefer_trailer_suitable") === "1";
   const manualStopQueries = formData
     .getAll("manual_stop")
@@ -520,7 +523,7 @@ export async function planRoute(formData: FormData): Promise<RoutePlanResult> {
     settings: {
       preferTrailerSuitable,
       minPowerKw: minPowerKwRaw ? Number(minPowerKwRaw) : undefined,
-      preferredProvider: typeof preferredProviderRaw === "string" && preferredProviderRaw ? preferredProviderRaw : undefined,
+      preferredProviders,
       ...(departureSocPercent !== null && { departureSocPercent }),
       ...(minSocAtStopPercent !== null && { minSocAtStopPercent }),
       ...(minSocAtDestinationPercent !== null && { minSocAtDestinationPercent }),
@@ -543,7 +546,7 @@ export async function replanChargingStop(input: {
   consumptionKwhPer100km: number;
   preferTrailerSuitable: boolean;
   minPowerKw?: number;
-  preferredProvider?: string;
+  preferredProviders?: string[];
   departureSocPercent: number;
   minSocAtStopPercent: number;
   minSocAtDestinationPercent: number;
@@ -573,7 +576,7 @@ export async function replanChargingStop(input: {
     chargingStations,
     preferTrailerSuitable: input.preferTrailerSuitable,
     minPowerKw: input.minPowerKw,
-    preferredProvider: input.preferredProvider,
+    preferredProviders: input.preferredProviders,
     consumptionKwhPer100km: input.consumptionKwhPer100km,
     departureSocPercent: input.departureSocPercent,
     minSocAtStopPercent: input.minSocAtStopPercent,
@@ -601,7 +604,7 @@ export interface SaveRouteInput {
   manualConsumptionKwhPer100km: number | null;
   minPowerKw: number | null;
   preferTrailerSuitable: boolean;
-  preferredProvider: string | null;
+  preferredProviders: string[];
   departureSocPercent: number;
   minSocAtStopPercent: number;
   minSocAtDestinationPercent: number;
@@ -646,7 +649,7 @@ export async function saveRoute(input: SaveRouteInput): Promise<{ id: string }> 
       manual_consumption_kwh_per_100km: input.manualConsumptionKwhPer100km,
       min_power_kw: input.minPowerKw,
       prefer_trailer_suitable: input.preferTrailerSuitable,
-      preferred_provider: input.preferredProvider,
+      preferred_providers: input.preferredProviders,
       departure_soc_percent: input.departureSocPercent,
       min_soc_at_stop_percent: input.minSocAtStopPercent,
       min_soc_at_destination_percent: input.minSocAtDestinationPercent,
@@ -672,7 +675,7 @@ export interface SavedRouteDetail {
   manualConsumptionKwhPer100km: number | null;
   minPowerKw: number | null;
   preferTrailerSuitable: boolean;
-  preferredProvider: string | null;
+  preferredProviders: string[];
   departureSocPercent: number;
   minSocAtStopPercent: number;
   minSocAtDestinationPercent: number;
@@ -748,7 +751,7 @@ export async function loadSavedRoute(savedRouteId: string): Promise<SavedRouteDe
     settings: {
       preferTrailerSuitable: savedRoute.prefer_trailer_suitable,
       minPowerKw: savedRoute.min_power_kw ?? undefined,
-      preferredProvider: savedRoute.preferred_provider ?? undefined,
+      preferredProviders: savedRoute.preferred_providers,
       departureSocPercent: savedRoute.departure_soc_percent,
       minSocAtStopPercent: savedRoute.min_soc_at_stop_percent,
       minSocAtDestinationPercent: savedRoute.min_soc_at_destination_percent,
@@ -769,7 +772,7 @@ export async function loadSavedRoute(savedRouteId: string): Promise<SavedRouteDe
     manualConsumptionKwhPer100km: savedRoute.manual_consumption_kwh_per_100km,
     minPowerKw: savedRoute.min_power_kw,
     preferTrailerSuitable: savedRoute.prefer_trailer_suitable,
-    preferredProvider: savedRoute.preferred_provider,
+    preferredProviders: savedRoute.preferred_providers,
     departureSocPercent: savedRoute.departure_soc_percent,
     minSocAtStopPercent: savedRoute.min_soc_at_stop_percent,
     minSocAtDestinationPercent: savedRoute.min_soc_at_destination_percent,

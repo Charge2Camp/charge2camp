@@ -2,6 +2,7 @@ import { distanceKm } from "@/lib/geo";
 import type { LatLng, RouteResult } from "@/lib/providers/routing/types";
 import type { Vehicle } from "@/types/database";
 import type { TrailerPinState } from "@/lib/trailer-verdict";
+import { operatorMatchesAnyProvider } from "@/lib/charging-providers";
 
 /** Ladepunkt-Kandidat fuer die Routenplanung -- gebaut aus echten
  * Ladepunkten (core.charge_point, ueber die PostGIS-Korridorsuche
@@ -153,7 +154,7 @@ export function planTrip({
   minSocAtDestinationPercent = DEFAULT_MIN_SOC_AT_DESTINATION_PERCENT,
   targetSocAfterChargingPercent = DEFAULT_TARGET_SOC_AFTER_CHARGING_PERCENT,
   detourToleranceKm = DEFAULT_DETOUR_TOLERANCE_KM,
-  preferredProvider,
+  preferredProviders = [],
   excludedStationIds = [],
   forcedStationIdByIndex = {},
 }: {
@@ -162,8 +163,9 @@ export function planTrip({
   chargingStations: RouteChargingStation[];
   preferTrailerSuitable?: boolean;
   minPowerKw?: number;
-  /** Nur Ladepunkte dieses Anbieters (z. B. "IONITY") als Kandidaten zulassen, sofern gesetzt. */
-  preferredProvider?: string;
+  /** Nur Ladepunkte dieser Anbieter (Schluessel aus charging-providers.ts,
+   * z. B. "ionity") als Kandidaten zulassen -- leeres Array = kein Filter. */
+  preferredProviders?: string[];
   /** Bereits aufgeloester Verbrauch (manuell > Profil > Standard), siehe Modul-Kommentar. */
   consumptionKwhPer100km: number;
   /** Ladestand bei Abfahrt in %. */
@@ -239,7 +241,7 @@ export function planTrip({
       .filter((c) => c.distanceFromStartKm > currentDistanceKm)
       .filter((c) => c.distanceFromStartKm - currentDistanceKm <= rangeToStopKm)
       .filter((c) => !minPowerKw || (c.station.power_kw ?? 0) >= minPowerKw)
-      .filter((c) => !preferredProvider || c.station.provider === preferredProvider)
+      .filter((c) => preferredProviders.length === 0 || operatorMatchesAnyProvider(c.station.provider, preferredProviders))
       // Anhängertauglichkeit hat Priorität vor einem kürzeren Umweg (§26/§27):
       // "nicht_tauglich" wird hart ausgeschlossen, nicht nur nachrangig
       // behandelt.
