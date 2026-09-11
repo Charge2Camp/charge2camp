@@ -222,6 +222,42 @@ Nach jedem `build_links.py`-Lauf (neue Verknüpfungen) oder Import mit
 geänderten Merkmalen/Ladeinfos: `index_meilisearch.py` erneut ausführen,
 sonst zeigt die Suche veraltete Facetten/Distanzen.
 
+## Ladesäulen-Bilder (Wikimedia Commons + Mapillary)
+
+Befüllt `core.charge_point_image` (Migration
+`supabase/migrations/20260925000000_charge_point_images.sql`), angezeigt in
+der `ChargePointGallery` auf jeder Ladepunkt-Detailseite. Details siehe
+Docstring in [fetch_charge_point_images.py](fetch_charge_point_images.py).
+
+**Abweichung vom Auftragsdokument** (`CLAUDE_CODE_AUFTRAG_LADESAEULEN_BILDER.md`):
+Quelle A ("Wikimedia Commons über OSM-Tags") geht dort von einem lokal
+gespeicherten `raw.osm_*` für Ladesäulen aus -- das gibt es in diesem
+Projekt nicht (Ladesäulen kommen ausschließlich von Open Charge Map, siehe
+Auftrag A oben; `raw.osm_*` existiert nur für Campingplätze). Die
+`image=`/`wikimedia_commons=`-Tags werden deshalb live per Overpass-API im
+~30 m-Umkreis jeder Ladesäule abgefragt statt aus einer Tabelle gelesen --
+Lizenzprüfung/Ergebnis über die Commons-API bleiben unverändert wie im
+Auftrag beschrieben.
+
+```bash
+# Testlauf, nur Commons (kein Mapillary-Token nötig), ohne DB-Schreibzugriff:
+.venv/Scripts/python.exe fetch_charge_point_images.py \
+  --bbox 10.5,46.3,12.5,47.2 --source commons --dry-run
+
+# Echter Lauf (Commons + Mapillary, braucht MAPILLARY_ACCESS_TOKEN):
+export MAPILLARY_ACCESS_TOKEN=...   # nie ins Repo committen
+.venv/Scripts/python.exe fetch_charge_point_images.py \
+  --bbox 10.5,46.3,12.5,47.2 --source all
+```
+
+Tests:
+
+```bash
+.venv/Scripts/python.exe test_charge_point_image_bearing.py
+.venv/Scripts/python.exe test_charge_point_image_idempotency.py --bbox 10.5,46.3,12.5,47.2
+.venv/Scripts/python.exe test_charge_point_image_override_immutability.py
+```
+
 ## Auftrag F — Datenqualität und der wichtigste Test des Projekts
 
 ```bash
