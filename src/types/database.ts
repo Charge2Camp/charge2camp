@@ -8,8 +8,6 @@ export type VerificationStatus =
   | "community_verified"
   | "official";
 
-export type TrailerSuitability = "confirmed" | "likely" | "unsuitable" | "unknown";
-
 export type TrailerSuitableAnswer = "yes" | "no" | "limited";
 
 export type FavoriteEntityType = "campsite" | "charging_station";
@@ -133,34 +131,6 @@ export interface Campsite {
   updated_at: string;
 }
 
-export interface ChargingStation {
-  id: string;
-  provider: string;
-  name: string | null;
-  address: string | null;
-  latitude: number;
-  longitude: number;
-  power_kw: number | null;
-  connector_type: string | null;
-  connector_count: number | null;
-  status: string;
-  price: number | null;
-  currency: string | null;
-  opening_hours: string | null;
-
-  trailer_suitable: TrailerSuitability;
-  trailer_suitable_score: number | null;
-  trailer_notes: string | null;
-  verified_by_community: boolean;
-
-  source: string;
-  verification_status: VerificationStatus;
-  last_verified_at: string | null;
-  last_updated: string;
-
-  created_at: string;
-}
-
 export interface CampsiteReview {
   id: string;
   user_id: string;
@@ -244,11 +214,8 @@ export interface Favorite {
 // Echte Daten (raw/core/enrich-Schema, siehe CLAUDE_CODE_AUFTRAG.md und
 // supabase/migrations/20260913000000_data_layer_schema.sql). Bewusst
 // GETRENNT von den obigen Campsite/ChargingStation-Typen (weiterhin
-// public.campsites/public.charging_stations). /campingplaetze, /ladepunkte
-// und die Ladeplanung im Routenplaner (siehe fetchCorridorChargingStations
-// in routenplaner/actions.ts) lesen aus core.*; public.charging_stations
-// wird nur noch von der "Naechster Schnelllader"-Angabe auf der
-// Campingplatz-Detailseite genutzt (src/lib/nearby-charging.ts).
+// public.campsites/public.charging_stations, mittlerweile ungenutzt --
+// alle Seiten/Funktionen lesen aus core.*).
 // ============================================================================
 
 export interface CoreCampsite {
