@@ -133,14 +133,25 @@ export default async function ChargingStationDetailPage({
         </Link>
       )}
 
-      <div className="mt-4 flex items-center gap-2">
+      <div className="mt-4 flex flex-wrap items-center gap-3">
         <Link
           href={`/routenplaner?destination_station_id=${s.id}`}
           className="inline-flex min-h-11 items-center rounded-md bg-action px-4 py-2 text-sm font-medium text-base hover:bg-action-hover"
         >
           Route hierher planen
         </Link>
-        {user && <ChargingStationFavoriteButton stationId={s.id} initialIsFavorite={isFavorite} />}
+        {user && (
+          <div className="flex items-center gap-2">
+            <ChargingStationFavoriteButton stationId={s.id} initialIsFavorite={isFavorite} />
+            {/* Persoenliche Gespann-Einschaetzung direkt oben neben dem
+                Favoriten-Icon sichtbar (Nutzerwunsch), zusaetzlich zur
+                ausfuehrlicheren Erklaerung weiter unten im Abschnitt
+                "Gespann-Kompatibilitaet". */}
+            <span className="text-sm font-medium text-route">
+              {PERSONAL_COMPATIBILITY_LABELS[personalCompatibility]}
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="mt-6 h-[320px] overflow-hidden rounded-lg border border-black/10 dark:border-white/10">
