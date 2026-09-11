@@ -43,7 +43,7 @@ export default async function GespannPage() {
         .order("series"),
       supabase
         .from("profiles")
-        .select("default_vehicle_id, default_caravan_id, preferred_charging_providers")
+        .select("default_vehicle_id, default_caravan_id, preferred_charging_providers, avoided_charging_providers")
         .eq("id", user.id)
         .maybeSingle(),
     ]);
@@ -84,12 +84,16 @@ export default async function GespannPage() {
         </section>
 
         <section>
-          <h3 className="font-semibold">Bevorzugte Lade-Anbieter</h3>
+          <h3 className="font-semibold">Anbieter priorisieren oder ausschließen</h3>
           <p className="-mt-1 text-sm text-black/60 dark:text-white/60">
-            Wird im Routenplaner als Standardauswahl für den Anbieter-Filter verwendet.
+            Wird im Routenplaner als Standardauswahl für den Anbieter-Filter verwendet. Bevorzugte
+            Anbieter werden vorgezogen, vermiedene Anbieter werden nie als Ladestopp vorgeschlagen.
           </p>
           <div className="mt-4">
-            <PreferredProvidersForm initialSelected={profile?.preferred_charging_providers ?? []} />
+            <PreferredProvidersForm
+              initialPreferred={profile?.preferred_charging_providers ?? []}
+              initialAvoided={profile?.avoided_charging_providers ?? []}
+            />
           </div>
         </section>
       </div>

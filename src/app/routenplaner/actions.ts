@@ -15,6 +15,7 @@ import {
 import { assessPersonalCompatibility, summarizeCommunitySuitability } from "@/lib/scoring/trailer-compatibility";
 import { getTrailerPinState } from "@/lib/trailer-verdict";
 import { sanitizeProviderKeys } from "@/lib/charging-providers";
+import { fetchBlockedStationIds } from "@/lib/blocked-stations";
 import { distanceKm } from "@/lib/geo";
 import type { ManualWaypoint, ManualWaypointWithDistance } from "@/lib/route-timeline";
 import type { Caravan, ChargingReview, SavedRoute, TrailerVerdict, Vehicle } from "@/types/database";
@@ -155,6 +156,7 @@ interface PlanningSettings {
   preferTrailerSuitable: boolean;
   minPowerKw?: number;
   preferredProviders?: string[];
+  avoidedProviders?: string[];
   departureSocPercent?: number;
   minSocAtStopPercent?: number;
   minSocAtDestinationPercent?: number;
@@ -343,6 +345,7 @@ async function buildRoutePlanResult({
     preferTrailerSuitable: settings.preferTrailerSuitable,
     minPowerKw: settings.minPowerKw,
     preferredProviders: settings.preferredProviders,
+    avoidedProviders: settings.avoidedProviders,
     consumptionKwhPer100km,
     ...(settings.departureSocPercent !== undefined && { departureSocPercent: settings.departureSocPercent }),
     ...(settings.minSocAtStopPercent !== undefined && { minSocAtStopPercent: settings.minSocAtStopPercent }),
@@ -425,6 +428,9 @@ export async function planRoute(formData: FormData): Promise<RoutePlanResult> {
   const minPowerKwRaw = formData.get("min_power_kw");
   const preferredProviders = sanitizeProviderKeys(
     formData.getAll("preferred_providers").filter((v): v is string => typeof v === "string")
+  );
+  const avoidedProviders = sanitizeProviderKeys(
+    formData.getAll("avoided_providers").filter((v): v is string => typeof v === "string")
   );
   const preferTrailerSuitable = formData.get("prefer_trailer_suitable") === "1";
   const manualStopQueries = formData
@@ -511,6 +517,11 @@ export async function planRoute(formData: FormData): Promise<RoutePlanResult> {
   );
   const detourToleranceKm = parseOptionalNonNegativeNumber(formData.get("detour_tolerance_km"));
 
+  // Dauerhaft blockierte Ladepunkte (Nutzerwunsch "Blacklist", siehe
+  // block-button.tsx) werden bei JEDER Routenplanung ausgeschlossen -- unabhaengig
+  // von den nur pro Route geloeschten Stopps (excludedStationIds).
+  const blockedStationIds = await fetchBlockedStationIds(supabase, user.id);
+
   return buildRoutePlanResult({
     supabase,
     start,
@@ -524,6 +535,8 @@ export async function planRoute(formData: FormData): Promise<RoutePlanResult> {
       preferTrailerSuitable,
       minPowerKw: minPowerKwRaw ? Number(minPowerKwRaw) : undefined,
       preferredProviders,
+      avoidedProviders,
+      excludedStationIds: blockedStationIds,
       ...(departureSocPercent !== null && { departureSocPercent }),
       ...(minSocAtStopPercent !== null && { minSocAtStopPercent }),
       ...(minSocAtDestinationPercent !== null && { minSocAtDestinationPercent }),
@@ -547,6 +560,7 @@ export async function replanChargingStop(input: {
   preferTrailerSuitable: boolean;
   minPowerKw?: number;
   preferredProviders?: string[];
+  avoidedProviders?: string[];
   departureSocPercent: number;
   minSocAtStopPercent: number;
   minSocAtDestinationPercent: number;
@@ -570,6 +584,11 @@ export async function replanChargingStop(input: {
     input.detourToleranceKm
   );
 
+  // Dauerhaft blockierte Ladepunkte auch hier ausschliessen (frisch geladene
+  // Kandidaten, siehe fetchCorridorChargingStations oben -- kennen die
+  // Blockierliste sonst nicht, siehe Kommentar in planRoute).
+  const blockedStationIds = await fetchBlockedStationIds(supabase, user.id);
+
   const plan = planTrip({
     route: input.route,
     vehicle,
@@ -577,13 +596,14 @@ export async function replanChargingStop(input: {
     preferTrailerSuitable: input.preferTrailerSuitable,
     minPowerKw: input.minPowerKw,
     preferredProviders: input.preferredProviders,
+    avoidedProviders: input.avoidedProviders,
     consumptionKwhPer100km: input.consumptionKwhPer100km,
     departureSocPercent: input.departureSocPercent,
     minSocAtStopPercent: input.minSocAtStopPercent,
     minSocAtDestinationPercent: input.minSocAtDestinationPercent,
     targetSocAfterChargingPercent: input.targetSocAfterChargingPercent,
     detourToleranceKm: input.detourToleranceKm,
-    excludedStationIds: input.excludedStationIds,
+    excludedStationIds: [...input.excludedStationIds, ...blockedStationIds],
     forcedStationIdByIndex: input.forcedStationIdByIndex,
   });
 
@@ -605,6 +625,7 @@ export interface SaveRouteInput {
   minPowerKw: number | null;
   preferTrailerSuitable: boolean;
   preferredProviders: string[];
+  avoidedProviders: string[];
   departureSocPercent: number;
   minSocAtStopPercent: number;
   minSocAtDestinationPercent: number;
@@ -650,6 +671,7 @@ export async function saveRoute(input: SaveRouteInput): Promise<{ id: string }> 
       min_power_kw: input.minPowerKw,
       prefer_trailer_suitable: input.preferTrailerSuitable,
       preferred_providers: input.preferredProviders,
+      avoided_providers: input.avoidedProviders,
       departure_soc_percent: input.departureSocPercent,
       min_soc_at_stop_percent: input.minSocAtStopPercent,
       min_soc_at_destination_percent: input.minSocAtDestinationPercent,
@@ -676,6 +698,7 @@ export interface SavedRouteDetail {
   minPowerKw: number | null;
   preferTrailerSuitable: boolean;
   preferredProviders: string[];
+  avoidedProviders: string[];
   departureSocPercent: number;
   minSocAtStopPercent: number;
   minSocAtDestinationPercent: number;
@@ -739,6 +762,11 @@ export async function loadSavedRoute(savedRouteId: string): Promise<SavedRouteDe
     longitude: w.longitude,
   }));
 
+  // Dauerhaft blockierte Ladepunkte kommen zu den beim Speichern kuratierten
+  // excluded_station_ids dazu -- der Nutzer koennte einen Ladepunkt erst
+  // NACH dem Speichern dieser Route blockiert haben.
+  const blockedStationIds = await fetchBlockedStationIds(supabase, user.id);
+
   const result = await buildRoutePlanResult({
     supabase,
     start,
@@ -752,12 +780,13 @@ export async function loadSavedRoute(savedRouteId: string): Promise<SavedRouteDe
       preferTrailerSuitable: savedRoute.prefer_trailer_suitable,
       minPowerKw: savedRoute.min_power_kw ?? undefined,
       preferredProviders: savedRoute.preferred_providers,
+      avoidedProviders: savedRoute.avoided_providers,
       departureSocPercent: savedRoute.departure_soc_percent,
       minSocAtStopPercent: savedRoute.min_soc_at_stop_percent,
       minSocAtDestinationPercent: savedRoute.min_soc_at_destination_percent,
       targetSocAfterChargingPercent: savedRoute.target_soc_after_charging_percent,
       detourToleranceKm: savedRoute.detour_tolerance_km,
-      excludedStationIds: savedRoute.excluded_station_ids,
+      excludedStationIds: [...savedRoute.excluded_station_ids, ...blockedStationIds],
       forcedStationIdByIndex: savedRoute.forced_station_id_by_index,
     },
   });
@@ -773,6 +802,7 @@ export async function loadSavedRoute(savedRouteId: string): Promise<SavedRouteDe
     minPowerKw: savedRoute.min_power_kw,
     preferTrailerSuitable: savedRoute.prefer_trailer_suitable,
     preferredProviders: savedRoute.preferred_providers,
+    avoidedProviders: savedRoute.avoided_providers,
     departureSocPercent: savedRoute.departure_soc_percent,
     minSocAtStopPercent: savedRoute.min_soc_at_stop_percent,
     minSocAtDestinationPercent: savedRoute.min_soc_at_destination_percent,

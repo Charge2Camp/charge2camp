@@ -139,6 +139,37 @@ export async function toggleChargingStationFavorite(stationId: string, isFavorit
   revalidatePath("/profil/favoriten");
 }
 
+/** Setzt/entfernt einen Ladepunkt auf der Blockierliste des angemeldeten
+ * Nutzers (`blocked_charging_stations`-Tabelle, RLS beschraenkt bereits auf
+ * den eigenen Nutzer) -- analog zu toggleChargingStationFavorite. Ein
+ * blockierter Ladepunkt wird bei JEDER kuenftigen Routenplanung dieses
+ * Nutzers als Ladestopp-Kandidat ausgeschlossen (siehe fetchBlockedStationIds
+ * in routenplaner/actions.ts), bleibt aber in Suche/Karte normal sichtbar --
+ * Nutzerwunsch betraf ausdruecklich nur die Routenplanung. */
+export async function toggleChargingStationBlocked(stationId: string, isBlocked: boolean) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nicht angemeldet.");
+
+  if (isBlocked) {
+    const { error } = await supabase
+      .from("blocked_charging_stations")
+      .insert({ user_id: user.id, charging_station_id: stationId });
+    if (error) throw new Error(error.message);
+  } else {
+    const { error } = await supabase
+      .from("blocked_charging_stations")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("charging_station_id", stationId);
+    if (error) throw new Error(error.message);
+  }
+
+  revalidatePath(`/ladepunkte/${stationId}`);
+}
+
 /** Tap-Event fuer den "Fotos ansehen"/"Auf Google Maps öffnen"-Button
  * (Auftrag "Bilder Rückbau und Button", Teil C5: nach vier Wochen soll
  * ausgewertet werden koennen, wie oft der Button genutzt wird und welche

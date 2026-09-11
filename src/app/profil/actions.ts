@@ -382,20 +382,27 @@ export async function changePassword(
   return { success: true };
 }
 
-/** Speichert die bevorzugten Lade-Anbieter im Profil (Nutzerwunsch, "Mein
- * Gespann" ganz unten) -- feste Auswahl aus den zehn groessten/
- * verbreitetsten Anbietern (siehe charging-providers.ts), per Checkbox.
- * Dient dem Routenplaner als Standardauswahl fuer den dortigen
- * Anbieter-Filter (route-planner-form.tsx). */
+/** Speichert die bevorzugten UND die vermiedenen Lade-Anbieter im Profil
+ * (Nutzerwunsch, "Mein Gespann" ganz unten) -- feste Auswahl aus den zehn
+ * groessten/verbreitetsten Anbietern (siehe charging-providers.ts), je
+ * Anbieter zwei Checkboxen ("Bevorzugen"/"Vermeiden"). Dient dem
+ * Routenplaner als Standardauswahl fuer den dortigen Anbieter-Filter
+ * (route-planner-form.tsx). Ein Anbieter kann nicht gleichzeitig bevorzugt
+ * UND vermieden sein -- charging-provider-preferences-form.tsx sorgt dafuer,
+ * dass sich die beiden Checkboxen je Anbieter gegenseitig ausschliessen;
+ * hier zur Sicherheit nochmal serverseitig erzwungen. */
 export async function setPreferredChargingProviders(formData: FormData) {
   const { supabase, userId } = await requireUserId();
-  const providers = sanitizeProviderKeys(
+  const preferred = sanitizeProviderKeys(
     formData.getAll("preferred_providers").filter((v): v is string => typeof v === "string")
   );
+  const avoided = sanitizeProviderKeys(
+    formData.getAll("avoided_providers").filter((v): v is string => typeof v === "string")
+  ).filter((key) => !preferred.includes(key));
 
   const { error } = await supabase
     .from("profiles")
-    .update({ preferred_charging_providers: providers })
+    .update({ preferred_charging_providers: preferred, avoided_charging_providers: avoided })
     .eq("id", userId);
   if (error) throw new Error(error.message);
   revalidatePath("/profil/gespann");

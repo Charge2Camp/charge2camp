@@ -148,6 +148,7 @@ interface RouteDraftState {
   minPowerKw: string;
   preferTrailerSuitable: boolean;
   preferredProviders: string[];
+  avoidedProviders: string[];
   departureSoc: number;
   minSocAtStop: number;
   minSocAtDestination: number;
@@ -162,6 +163,7 @@ export function RoutePlannerForm({
   vehicles,
   caravans,
   initialPreferredProviders,
+  initialAvoidedProviders,
   campsiteDestinations,
   favorites,
   homeAddress,
@@ -179,6 +181,10 @@ export function RoutePlannerForm({
    * Anbieter-Filter unten, per Nutzerwunsch bereits standardmaessig
    * ausgewaehlt. */
   initialPreferredProviders: string[];
+  /** Im Profil hinterlegte vermiedene Lade-Anbieter (Schluessel aus
+   * charging-providers.ts) -- Vorbelegung fuer den Anbieter-Filter unten,
+   * analog zu initialPreferredProviders. */
+  initialAvoidedProviders: string[];
   /** Eigene Campingplaetze (Name + Koordinaten), als zusaetzliche, erkennbare Vorschlaege im Ziel-Feld. */
   campsiteDestinations: CampsiteDestinationOption[];
   /** Vom Nutzer gemerkte Campingplaetze/Ladepunkte, fuer die Favoriten-Auswahl (Start/Ziel). */
@@ -263,9 +269,12 @@ export function RoutePlannerForm({
   );
   const [detourTolerance, setDetourTolerance] = useState(DEFAULT_DETOUR_TOLERANCE_KM);
   const [preferredProviders, setPreferredProviders] = useState<string[]>(initialPreferredProviders);
+  const [avoidedProviders, setAvoidedProviders] = useState<string[]>(initialAvoidedProviders);
   // Aufklappbar (Nutzerwunsch) -- offen, sobald bereits Anbieter ausgewaehlt
   // sind (z. B. per Profil-Vorbelegung), sonst eingeklappt.
-  const [providersOpen, setProvidersOpen] = useState(initialPreferredProviders.length > 0);
+  const [providersOpen, setProvidersOpen] = useState(
+    initialPreferredProviders.length > 0 || initialAvoidedProviders.length > 0
+  );
   const [manualStopQueries, setManualStopQueries] = useState<string[]>([]);
   const [excludedStationIds, setExcludedStationIds] = useState<string[]>([]);
   const [forcedStationIdByIndex, setForcedStationIdByIndex] = useState<Record<number, string>>({});
@@ -329,7 +338,8 @@ export function RoutePlannerForm({
       setMinPowerKw(saved.minPowerKw?.toString() ?? "");
       setPreferTrailerSuitable(saved.preferTrailerSuitable);
       setPreferredProviders(saved.preferredProviders);
-      setProvidersOpen(saved.preferredProviders.length > 0);
+      setAvoidedProviders(saved.avoidedProviders);
+      setProvidersOpen(saved.preferredProviders.length > 0 || saved.avoidedProviders.length > 0);
       setDepartureSoc(saved.departureSocPercent);
       setMinSocAtStop(saved.minSocAtStopPercent);
       setMinSocAtDestination(saved.minSocAtDestinationPercent);
@@ -378,7 +388,8 @@ export function RoutePlannerForm({
     setMinPowerKw(draft.minPowerKw);
     setPreferTrailerSuitable(draft.preferTrailerSuitable);
     setPreferredProviders(draft.preferredProviders);
-    setProvidersOpen(draft.preferredProviders.length > 0);
+    setAvoidedProviders(draft.avoidedProviders);
+    setProvidersOpen(draft.preferredProviders.length > 0 || draft.avoidedProviders.length > 0);
     setDepartureSoc(draft.departureSoc);
     setMinSocAtStop(draft.minSocAtStop);
     setMinSocAtDestination(draft.minSocAtDestination);
@@ -423,6 +434,7 @@ export function RoutePlannerForm({
         minPowerKw,
         preferTrailerSuitable,
         preferredProviders,
+        avoidedProviders,
         departureSoc,
         minSocAtStop,
         minSocAtDestination,
@@ -467,7 +479,8 @@ export function RoutePlannerForm({
     setMinPowerKw("");
     setPreferTrailerSuitable(true);
     setPreferredProviders(initialPreferredProviders);
-    setProvidersOpen(initialPreferredProviders.length > 0);
+    setAvoidedProviders(initialAvoidedProviders);
+    setProvidersOpen(initialPreferredProviders.length > 0 || initialAvoidedProviders.length > 0);
     setDepartureSoc(DEFAULT_DEPARTURE_SOC_PERCENT);
     setMinSocAtStop(DEFAULT_MIN_SOC_AT_STOP_PERCENT);
     setMinSocAtDestination(DEFAULT_MIN_SOC_AT_DESTINATION_PERCENT);
@@ -516,6 +529,7 @@ export function RoutePlannerForm({
         preferTrailerSuitable,
         minPowerKw: minPowerKw ? Number(minPowerKw) : undefined,
         preferredProviders,
+        avoidedProviders,
         departureSocPercent: departureSoc,
         minSocAtStopPercent: minSocAtStop,
         minSocAtDestinationPercent: minSocAtDestination,
@@ -565,6 +579,7 @@ export function RoutePlannerForm({
         minPowerKw: minPowerKw.trim() ? Number(minPowerKw) : null,
         preferTrailerSuitable,
         preferredProviders,
+        avoidedProviders,
         departureSocPercent: departureSoc,
         minSocAtStopPercent: minSocAtStop,
         minSocAtDestinationPercent: minSocAtDestination,
@@ -765,36 +780,58 @@ export function RoutePlannerForm({
               className="flex min-h-11 w-full items-center justify-between rounded-md border border-black/15 px-3 py-2 text-left font-medium dark:border-white/15"
             >
               <span>
-                Bevorzugte Lade-Anbieter (optional)
-                {preferredProviders.length > 0 && ` -- ${preferredProviders.length} ausgewählt`}
+                Anbieter priorisieren oder ausschließen (optional)
+                {preferredProviders.length > 0 && ` -- ${preferredProviders.length}× bevorzugt`}
+                {avoidedProviders.length > 0 && ` -- ${avoidedProviders.length}× vermieden`}
               </span>
               <span aria-hidden="true">{providersOpen ? "▲" : "▼"}</span>
             </button>
 
             {providersOpen && (
               <div className="mt-2 rounded-md border border-black/15 p-3 dark:border-white/15">
-                {initialPreferredProviders.length > 0 && (
+                {(initialPreferredProviders.length > 0 || initialAvoidedProviders.length > 0) && (
                   <p className="mb-2 text-xs text-black/50 dark:text-white/50">
-                    Vorausgewählt sind deine bevorzugten Anbieter aus dem Profil (&quot;Mein Gespann&quot;) -- du
-                    kannst die Auswahl hier für diese Route anpassen.
+                    Vorausgewählt aus deinem Profil (&quot;Mein Gespann&quot;) -- du kannst die Auswahl hier für
+                    diese Route anpassen. Vermiedene Anbieter werden nie als Ladestopp vorgeschlagen.
                   </p>
                 )}
-                <div className="grid grid-cols-1 gap-x-4 gap-y-1.5 sm:grid-cols-2">
+                <div className="flex flex-col divide-y divide-black/10 dark:divide-white/10">
                   {CHARGING_PROVIDERS.map((p) => (
-                    <label key={p.key} className="flex min-h-11 items-center gap-2">
-                      <input
-                        type="checkbox"
-                        name="preferred_providers"
-                        value={p.key}
-                        checked={preferredProviders.includes(p.key)}
-                        onChange={() =>
-                          setPreferredProviders((prev) =>
-                            prev.includes(p.key) ? prev.filter((k) => k !== p.key) : [...prev, p.key]
-                          )
-                        }
-                      />
-                      {p.label}
-                    </label>
+                    <div key={p.key} className="flex items-center justify-between gap-3 py-1.5">
+                      <span className="text-sm">{p.label}</span>
+                      <div className="flex shrink-0 gap-3">
+                        <label className="flex min-h-11 items-center gap-1.5 text-sm text-route">
+                          <input
+                            type="checkbox"
+                            name="preferred_providers"
+                            value={p.key}
+                            checked={preferredProviders.includes(p.key)}
+                            onChange={() => {
+                              setPreferredProviders((prev) =>
+                                prev.includes(p.key) ? prev.filter((k) => k !== p.key) : [...prev, p.key]
+                              );
+                              setAvoidedProviders((prev) => prev.filter((k) => k !== p.key));
+                            }}
+                          />
+                          Bevorzugen
+                        </label>
+                        <label className="flex min-h-11 items-center gap-1.5 text-sm text-red-600">
+                          <input
+                            type="checkbox"
+                            name="avoided_providers"
+                            value={p.key}
+                            checked={avoidedProviders.includes(p.key)}
+                            onChange={() => {
+                              setAvoidedProviders((prev) =>
+                                prev.includes(p.key) ? prev.filter((k) => k !== p.key) : [...prev, p.key]
+                              );
+                              setPreferredProviders((prev) => prev.filter((k) => k !== p.key));
+                            }}
+                          />
+                          Vermeiden
+                        </label>
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>

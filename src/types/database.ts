@@ -22,6 +22,7 @@ export interface Profile {
   default_vehicle_id: string | null;
   default_caravan_id: string | null;
   preferred_charging_providers: string[];
+  avoided_charging_providers: string[];
   created_at: string;
 }
 
@@ -190,6 +191,7 @@ export interface SavedRoute {
   min_power_kw: number | null;
   prefer_trailer_suitable: boolean;
   preferred_providers: string[];
+  avoided_providers: string[];
 
   departure_soc_percent: number;
   min_soc_at_stop_percent: number;
@@ -208,6 +210,12 @@ export interface Favorite {
   user_id: string;
   entity_type: FavoriteEntityType;
   entity_id: string;
+  created_at: string;
+}
+
+export interface BlockedChargingStation {
+  user_id: string;
+  charging_station_id: string;
   created_at: string;
 }
 

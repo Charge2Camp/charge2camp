@@ -4,18 +4,35 @@ import { useState } from "react";
 import { setPreferredChargingProviders } from "@/app/profil/actions";
 import { CHARGING_PROVIDERS } from "@/lib/charging-providers";
 
-/** Bevorzugte Lade-Anbieter (Nutzerwunsch, ganz unten auf "Mein Gespann"):
- * feste Checkbox-Auswahl aus den zehn groessten/verbreitetsten Anbietern
- * (charging-providers.ts). Dient dem Routenplaner als Standardauswahl fuer
- * den dortigen Anbieter-Filter (route-planner-form.tsx). */
-export function PreferredProvidersForm({ initialSelected }: { initialSelected: string[] }) {
-  const [selected, setSelected] = useState<string[]>(initialSelected);
+/** Anbieter-Praeferenzen fuer die Ladeplanung (Nutzerwunsch, ganz unten auf
+ * "Mein Gespann"): feste Auswahl aus den zehn groessten/verbreitetsten
+ * Anbietern (charging-providers.ts), je Anbieter zwei Checkboxen --
+ * "Bevorzugen" (wird im Routenplaner vorgezogen) und "Vermeiden" (wird NIE
+ * als Ladestopp vorgeschlagen, z. B. "nie Tesla einplanen"). Beide schliessen
+ * sich pro Anbieter gegenseitig aus. Dient dem Routenplaner als
+ * Standardauswahl fuer den dortigen Anbieter-Filter (route-planner-form.tsx). */
+export function PreferredProvidersForm({
+  initialPreferred,
+  initialAvoided,
+}: {
+  initialPreferred: string[];
+  initialAvoided: string[];
+}) {
+  const [preferred, setPreferred] = useState<string[]>(initialPreferred);
+  const [avoided, setAvoided] = useState<string[]>(initialAvoided);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  function toggle(key: string) {
+  function togglePreferred(key: string) {
     setSaved(false);
-    setSelected((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
+    setPreferred((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
+    setAvoided((prev) => prev.filter((k) => k !== key));
+  }
+
+  function toggleAvoided(key: string) {
+    setSaved(false);
+    setAvoided((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
+    setPreferred((prev) => prev.filter((k) => k !== key));
   }
 
   return (
@@ -31,18 +48,33 @@ export function PreferredProvidersForm({ initialSelected }: { initialSelected: s
       }}
       className="flex flex-col gap-3"
     >
-      <div className="grid grid-cols-1 gap-x-4 gap-y-1.5 text-sm sm:grid-cols-2">
+      <div className="flex flex-col divide-y divide-black/10 rounded-md border border-black/15 dark:divide-white/10 dark:border-white/15">
         {CHARGING_PROVIDERS.map((p) => (
-          <label key={p.key} className="flex min-h-11 items-center gap-2">
-            <input
-              type="checkbox"
-              name="preferred_providers"
-              value={p.key}
-              checked={selected.includes(p.key)}
-              onChange={() => toggle(p.key)}
-            />
-            {p.label}
-          </label>
+          <div key={p.key} className="flex items-center justify-between gap-3 px-3 py-1.5">
+            <span className="text-sm">{p.label}</span>
+            <div className="flex shrink-0 gap-3">
+              <label className="flex min-h-11 items-center gap-1.5 text-sm text-route">
+                <input
+                  type="checkbox"
+                  name="preferred_providers"
+                  value={p.key}
+                  checked={preferred.includes(p.key)}
+                  onChange={() => togglePreferred(p.key)}
+                />
+                Bevorzugen
+              </label>
+              <label className="flex min-h-11 items-center gap-1.5 text-sm text-red-600">
+                <input
+                  type="checkbox"
+                  name="avoided_providers"
+                  value={p.key}
+                  checked={avoided.includes(p.key)}
+                  onChange={() => toggleAvoided(p.key)}
+                />
+                Vermeiden
+              </label>
+            </div>
+          </div>
         ))}
       </div>
       <div className="flex items-center gap-3">

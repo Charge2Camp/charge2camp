@@ -61,7 +61,7 @@ export default async function RoutePlannerPage({
     supabase
       .from("profiles")
       .select(
-        "home_address, home_latitude, home_longitude, default_vehicle_id, default_caravan_id, preferred_charging_providers"
+        "home_address, home_latitude, home_longitude, default_vehicle_id, default_caravan_id, preferred_charging_providers, avoided_charging_providers"
       )
       .eq("id", user.id)
       .maybeSingle(),
@@ -147,6 +147,7 @@ export default async function RoutePlannerPage({
           vehicles={(vehicles as Vehicle[]) ?? []}
           caravans={(caravans as Caravan[]) ?? []}
           initialPreferredProviders={profile?.preferred_charging_providers ?? []}
+          initialAvoidedProviders={profile?.avoided_charging_providers ?? []}
           campsiteDestinations={campsiteDestinations}
           favorites={favorites}
           homeAddress={homeAddress}

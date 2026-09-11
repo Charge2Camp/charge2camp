@@ -5,6 +5,7 @@ import type { Caravan, ChargingReview, CoreChargePointGeo, CoreConnector, Traile
 import { MapView } from "@/components/map/map-view";
 import { ChargingReviewForm } from "@/components/charging-stations/review-form";
 import { ChargingStationFavoriteButton } from "@/components/charging-stations/favorite-button";
+import { ChargingStationBlockButton } from "@/components/charging-stations/block-button";
 import { RigLengthDistributionChart } from "@/components/charging-stations/rig-length-distribution";
 import { TRAILER_PIN_COLORS, TRAILER_PIN_ICON_SRC, TRAILER_PIN_LABELS, getTrailerPinState } from "@/lib/trailer-verdict";
 import { ReviewStateBadge } from "@/components/charging-stations/review-state-badge";
@@ -51,7 +52,7 @@ export default async function ChargingStationDetailPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [{ data: station }, { data: connectors }, { data: reviews }, favoriteResult] = await Promise.all([
+  const [{ data: station }, { data: connectors }, { data: reviews }, favoriteResult, blockedResult] = await Promise.all([
     supabase.schema("core").from("charge_point_geo").select("*").eq("id", id).maybeSingle(),
     supabase.schema("core").from("connector").select("*").eq("charge_point_id", id),
     supabase.from("charging_reviews").select("*").eq("charging_station_id", id).order("created_at", { ascending: false }),
@@ -64,6 +65,14 @@ export default async function ChargingStationDetailPage({
           .eq("entity_id", id)
           .maybeSingle()
       : Promise.resolve({ data: null }),
+    user
+      ? supabase
+          .from("blocked_charging_stations")
+          .select("charging_station_id")
+          .eq("user_id", user.id)
+          .eq("charging_station_id", id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
   ]);
 
   if (!station) notFound();
@@ -71,6 +80,7 @@ export default async function ChargingStationDetailPage({
   const stationConnectors = (connectors as CoreConnector[]) ?? [];
   const allReviews = (reviews as ChargingReview[]) ?? [];
   const isFavorite = Boolean(favoriteResult.data);
+  const isBlocked = Boolean(blockedResult.data);
 
   const { data: trailerRow } = await supabase
     .schema("enrich")
@@ -146,6 +156,7 @@ export default async function ChargingStationDetailPage({
       {user && (
         <div className="mt-4 flex items-center gap-2">
           <ChargingStationFavoriteButton stationId={s.id} initialIsFavorite={isFavorite} />
+          <ChargingStationBlockButton stationId={s.id} initialIsBlocked={isBlocked} />
           {/* Persoenliche Gespann-Einschaetzung direkt oben neben dem
               Favoriten-Icon sichtbar (Nutzerwunsch), zusaetzlich zur
               ausfuehrlicheren Erklaerung weiter unten im Abschnitt

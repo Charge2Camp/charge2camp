@@ -155,6 +155,7 @@ export function planTrip({
   targetSocAfterChargingPercent = DEFAULT_TARGET_SOC_AFTER_CHARGING_PERCENT,
   detourToleranceKm = DEFAULT_DETOUR_TOLERANCE_KM,
   preferredProviders = [],
+  avoidedProviders = [],
   excludedStationIds = [],
   forcedStationIdByIndex = {},
 }: {
@@ -166,6 +167,10 @@ export function planTrip({
   /** Nur Ladepunkte dieser Anbieter (Schluessel aus charging-providers.ts,
    * z. B. "ionity") als Kandidaten zulassen -- leeres Array = kein Filter. */
   preferredProviders?: string[];
+  /** Anbieter (Schluessel aus charging-providers.ts), die NIE als Kandidat
+   * infrage kommen sollen (z. B. "nie Tesla einplanen") -- hartes Ausschluss-
+   * kriterium, unabhaengig von preferredProviders. */
+  avoidedProviders?: string[];
   /** Bereits aufgeloester Verbrauch (manuell > Profil > Standard), siehe Modul-Kommentar. */
   consumptionKwhPer100km: number;
   /** Ladestand bei Abfahrt in %. */
@@ -242,6 +247,7 @@ export function planTrip({
       .filter((c) => c.distanceFromStartKm - currentDistanceKm <= rangeToStopKm)
       .filter((c) => !minPowerKw || (c.station.power_kw ?? 0) >= minPowerKw)
       .filter((c) => preferredProviders.length === 0 || operatorMatchesAnyProvider(c.station.provider, preferredProviders))
+      .filter((c) => avoidedProviders.length === 0 || !operatorMatchesAnyProvider(c.station.provider, avoidedProviders))
       // Anhängertauglichkeit hat Priorität vor einem kürzeren Umweg (§26/§27):
       // "nicht_tauglich" wird hart ausgeschlossen, nicht nur nachrangig
       // behandelt.
