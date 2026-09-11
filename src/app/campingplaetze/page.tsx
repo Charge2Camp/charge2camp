@@ -38,11 +38,27 @@ export default async function CampsitesPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [campsites, countries, nameOptions] = await Promise.all([
+  const [campsites, countries, nameOptions, { data: profile }] = await Promise.all([
     hasActiveFilters ? fetchCampsites(filters) : user ? fetchFavoriteCampsites(user.id) : Promise.resolve([]),
     fetchCampsiteCountryOptions(),
     fetchCampsiteNameOptions(),
+    user
+      ? supabase.from("profiles").select("home_address, home_latitude, home_longitude").eq("id", user.id).maybeSingle()
+      : Promise.resolve({ data: null }),
   ]);
+
+  // Zuhause-Adresse fuer die initiale Kartenzentrierung, wenn (noch) keine
+  // Marker angezeigt werden (kein Filter aktiv und keine/keine eigenen
+  // Favoriten, siehe CampsiteExplorer) -- statt des generischen
+  // Deutschland-weiten Standard-Ausschnitts (gleiches Prinzip wie auf
+  // /ladepunkte). Sobald Marker vorhanden sind (Favoriten oder gefilterte
+  // Treffer), zentriert sich die Karte weiterhin auf DIESE (fitBounds,
+  // unveraendert) -- die Zuhause-Adresse greift nur als Ausgangspunkt,
+  // wenn es noch nichts anderes zu zentrieren gibt.
+  const homeAddress =
+    profile?.home_address && profile.home_latitude != null && profile.home_longitude != null
+      ? { latitude: profile.home_latitude, longitude: profile.home_longitude }
+      : null;
 
   const evAmenityKeys = new Set(amenityCatalog.filter((a) => a.category === "laden").map((a) => a.key));
   const furtherFilterCount =
@@ -86,6 +102,7 @@ export default async function CampsitesPage({
           campsites={campsites}
           amenityLabels={Object.fromEntries(amenityCatalog.map((a) => [a.key, a.label_de]))}
           emptyMessage={emptyMessage}
+          homeAddress={homeAddress}
         />
       </div>
     </div>

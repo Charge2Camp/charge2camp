@@ -57,6 +57,7 @@ export function CampsiteExplorer({
   campsites,
   amenityLabels,
   emptyMessage = "Keine Campingplätze gefunden. Filter anpassen?",
+  homeAddress,
 }: {
   campsites: CampsiteSearchRow[];
   amenityLabels: Record<string, string>;
@@ -64,6 +65,13 @@ export function CampsiteExplorer({
    * die Favoriten statt echter Filterergebnisse angezeigt werden (siehe
    * campingplaetze/page.tsx). */
   emptyMessage?: string;
+  /** Im Profil ("Meine Daten") hinterlegte Zuhause-Adresse -- Kartenmittel-
+   * punkt, solange es (noch) keine Marker gibt (kein Filter aktiv, keine
+   * Favoriten), statt des generischen Deutschland-weiten Standard-
+   * Ausschnitts (Nutzerwunsch, gleiches Prinzip wie auf /ladepunkte).
+   * Sobald Marker vorhanden sind, zentriert MapView per fitBounds
+   * weiterhin auf DIESE -- unveraendert. */
+  homeAddress?: { latitude: number; longitude: number } | null;
 }) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [mobileTab, setMobileTab] = useState<"list" | "map">("list");
@@ -144,7 +152,13 @@ export function CampsiteExplorer({
           {/* onMarkerClick gibt Touch-Nutzern (kein :hover auf dem Handy/
               Tablet) eine Moeglichkeit, den zugehoerigen Listeneintrag
               hervorzuheben, indem sie auf einen Pin tippen. */}
-          <MapView markers={markers} selectedId={hoveredId ?? undefined} onMarkerClick={setHoveredId} cluster />
+          <MapView
+            markers={markers}
+            selectedId={hoveredId ?? undefined}
+            onMarkerClick={setHoveredId}
+            cluster
+            {...(homeAddress ? { fallbackCenter: homeAddress, fallbackZoom: 10 } : {})}
+          />
         </div>
       </div>
     </div>
