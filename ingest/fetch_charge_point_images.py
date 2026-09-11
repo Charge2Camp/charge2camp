@@ -406,7 +406,11 @@ def fetch_mapillary_candidates(lat: float, lon: float, access_token: str, log) -
         if item.get("captured_at"):
             captured_at = datetime.fromtimestamp(item["captured_at"] / 1000, tz=timezone.utc)
         creator = (item.get("creator") or {}).get("username")
-        attribution = f"© {creator} (Mapillary)" if creator else "© Mapillary contributor"
+        # Kein "©"-Praefix hier -- die Attribution wird im Frontend bereits
+        # als "© {attribution} · {license}" zusammengesetzt (siehe
+        # charge-point-gallery.tsx AttributionLine), ein zusaetzliches "©"
+        # hier fuehrte zu einer doppelten Anzeige.
+        attribution = f"{creator} (Mapillary)" if creator else "Mapillary contributor"
         results.append(
             ImageCandidate(
                 source="mapillary",
