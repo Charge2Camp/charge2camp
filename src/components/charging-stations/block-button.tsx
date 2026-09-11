@@ -37,18 +37,18 @@ export function ChargingStationBlockButton({
       disabled={pending}
       aria-label={
         isBlocked
-          ? "Blockierung aufheben -- wieder für die Routenplanung berücksichtigen"
-          : "Diesen Ladepunkt blockieren -- nie wieder für die Routenplanung vorschlagen"
+          ? "Wieder für die Routenplanung berücksichtigen"
+          : "Diesen Ladepunkt zukünftig nicht mehr für die Routenplanung berücksichtigen"
       }
       aria-pressed={isBlocked}
-      className={`flex h-11 items-center gap-1.5 rounded-md border px-3 text-sm font-medium disabled:opacity-50 ${
+      className={`flex min-h-11 items-center gap-1.5 rounded-md border px-4 py-2 text-sm font-medium disabled:opacity-50 ${
         isBlocked
           ? "border-red-600 bg-red-600/10 text-red-600"
-          : "border-black/15 text-black/40 dark:border-white/15 dark:text-white/40"
+          : "border-black/15 text-black/60 dark:border-white/15 dark:text-white/60"
       }`}
     >
       <span aria-hidden="true">🚫</span>
-      {isBlocked ? "Blockiert" : "Blockieren"}
+      {isBlocked ? "Wird zukünftig nicht berücksichtigt -- wieder aufnehmen" : "Zukünftig nicht berücksichtigen"}
     </button>
   );
 }

@@ -156,7 +156,6 @@ export default async function ChargingStationDetailPage({
       {user && (
         <div className="mt-4 flex items-center gap-2">
           <ChargingStationFavoriteButton stationId={s.id} initialIsFavorite={isFavorite} />
-          <ChargingStationBlockButton stationId={s.id} initialIsBlocked={isBlocked} />
           {/* Persoenliche Gespann-Einschaetzung direkt oben neben dem
               Favoriten-Icon sichtbar (Nutzerwunsch), zusaetzlich zur
               ausfuehrlicheren Erklaerung weiter unten im Abschnitt
@@ -317,6 +316,25 @@ export default async function ChargingStationDetailPage({
           )}
         </div>
       </section>
+
+      {user && (
+        <section className="mt-8 border-t border-black/10 pt-6 dark:border-white/10">
+          <h2 className="font-semibold">Routenplanung</h2>
+          <p className="mt-1 text-sm text-black/60 dark:text-white/60">
+            Soll dieser Ladepunkt nie mehr als Ladestopp vorgeschlagen werden -- z. B. weil er
+            unzuverlässig oder für dein Gespann ungeeignet ist? Blockierte Ladepunkte bleiben
+            normal auffindbar, werden aber bei der Routenplanung übersprungen. Verwaltung aller
+            blockierten Ladepunkte unter{" "}
+            <Link href="/profil/einstellungen" className="text-route hover:underline">
+              Profil → Einstellungen
+            </Link>
+            .
+          </p>
+          <div className="mt-3">
+            <ChargingStationBlockButton stationId={s.id} initialIsBlocked={isBlocked} />
+          </div>
+        </section>
+      )}
     </div>
   );
 }
