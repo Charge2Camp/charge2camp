@@ -112,21 +112,46 @@ async function enrichStations(
   }));
 }
 
+export interface MapBounds {
+  west: number;
+  south: number;
+  east: number;
+  north: number;
+}
+
 /** trailerVerdict/connectorType filtern erst NACH dem Laden (in JS) statt
  * in der SQL-Abfrage -- fuer den MVP-Datenumfang ausreichend.
  * `limit` bewusst ueberschreibbar: die kartenzentrierte Ladepunkte-Seite
  * laedt ohne aktiven Filter (Karten-Erstueberblick) eine kleinere Menge als
  * bei gezielter Filterung (siehe ladepunkte/page.tsx) -- ueber 18.000 echte
- * Ladepunkte insgesamt waeren ungefiltert sonst spuerbar langsam. */
+ * Ladepunkte insgesamt waeren ungefiltert sonst spuerbar langsam.
+ *
+ * `bbox` grenzt VOR dem `order("name").limit(limit)` geografisch ein (§
+ * charging-station-map-explorer.tsx: die Karte laedt Ladepunkte
+ * kartenausschnitt-basiert nach). Ohne bbox sortiert die vorherige Version
+ * dieser Funktion rein alphabetisch nach Name und schneidet danach ab --
+ * bei ueber 18.000 Ladepunkten blieben dadurch alle Namen ab ungefaehr "S"
+ * bis "Z" fuer das reine Kartenbrowsen unsichtbar, unabhaengig vom
+ * Kartenausschnitt (Nutzerfeedback). Mit bbox ist die Alphabet-Sortierung
+ * dagegen unproblematisch, da `limit` innerhalb eines Kartenausschnitts in
+ * der Praxis so gut wie nie erreicht wird. */
 export async function fetchChargingStations(
   filters: ChargingStationFilters,
-  limit = 5000
+  limit = 5000,
+  bbox?: MapBounds
 ): Promise<ChargingStationView[]> {
   const supabase = await createClient();
   let query = supabase.schema("core").from("charge_point_geo").select("*");
 
   if (filters.q) query = query.ilike("name", `%${filters.q}%`);
   if (filters.fastChargersOnly) query = query.gte("max_power_kw", FAST_CHARGER_MIN_KW);
+  if (bbox) {
+    query = query
+      .gte("lat", bbox.south)
+      .lte("lat", bbox.north)
+      .gte("lon", bbox.west)
+      .lte("lon", bbox.east);
+  }
 
   const { data, error } = await query.order("name").limit(limit);
   if (error) throw new Error(error.message);

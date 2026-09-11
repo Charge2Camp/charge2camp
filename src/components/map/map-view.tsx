@@ -122,6 +122,13 @@ function buildClusterMarkerElement(pointCount: number, onClick: () => void): HTM
   return el;
 }
 
+export interface MapBoundsBox {
+  west: number;
+  south: number;
+  east: number;
+  north: number;
+}
+
 export function MapView({
   markers,
   route,
@@ -132,6 +139,8 @@ export function MapView({
   fallbackZoom = 4.5,
   fitBoundsPoints,
   fitBoundsMaxZoom = 12,
+  fitBoundsOnMarkersChange = true,
+  onBoundsChange,
 }: {
   markers: MapMarker[];
   route?: RoutePoint[];
@@ -156,12 +165,29 @@ export function MapView({
    * Campingplatz+fussläufige-Ladepunkte-Ausschnitt (siehe fitBoundsPoints)
    * aber zu weit rausgezoomt. */
   fitBoundsMaxZoom?: number;
+  /** false fuer kartenausschnitt-getriebene Verbraucher (siehe
+   * charging-station-map-explorer.tsx): dort loesen neue `markers` selbst
+   * aus einem Kartenschwenk aus (Nachladen per onBoundsChange) -- ein
+   * automatisches fitBounds bei jeder neuen Markerliste wuerde die Karte
+   * sofort wieder auf die Marker-Bounds zuruecksetzen und den gerade vom
+   * Nutzer gewaehlten Ausschnitt zerstoeren. Ueberall sonst (Standard true)
+   * unveraendertes bisheriges Verhalten. */
+  fitBoundsOnMarkersChange?: boolean;
+  /** Meldet den aktuellen Kartenausschnitt (einmalig nach dem ersten Laden
+   * und danach bei jedem "moveend") -- Grundlage fuer kartenausschnitt-
+   * basiertes Nachladen. Ohne Zutun sonst unveraendert (kein Overhead fuer
+   * alle anderen MapView-Einsatzstellen). */
+  onBoundsChange?: (bounds: MapBoundsBox) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markersRef = useRef<Map<string, Marker>>(new Map());
   const routeRef = useRef<RoutePoint[] | undefined>(undefined);
+  const onBoundsChangeRef = useRef(onBoundsChange);
+  useEffect(() => {
+    onBoundsChangeRef.current = onBoundsChange;
+  });
   // Supercluster laeuft bewusst im Hauptthread (direkter Aufruf, nicht ueber
   // eine MapLibre-GeoJSON-Source mit cluster:true) -- letzteres wuerde
   // MapLibre's Geodaten-Worker verwenden, der in manchen eingebetteten/
@@ -230,6 +256,19 @@ export function MapView({
     map.on("resize", drawRouteOverlay);
     map.on("render", drawRouteOverlay);
     map.on("load", drawRouteOverlay);
+
+    function reportBounds() {
+      if (!onBoundsChangeRef.current) return;
+      const b = map.getBounds();
+      onBoundsChangeRef.current({
+        west: b.getWest(),
+        south: b.getSouth(),
+        east: b.getEast(),
+        north: b.getNorth(),
+      });
+    }
+    map.on("load", reportBounds);
+    map.on("moveend", reportBounds);
 
     return () => {
       map.remove();
@@ -340,20 +379,22 @@ export function MapView({
         ? routeCoords
         : markers.map((m) => [m.longitude, m.latitude] as [number, number]);
 
-    if (boundsPoints.length > 1) {
-      const bounds = boundsPoints.reduce(
-        (b, p) => b.extend(p),
-        new LngLatBounds(boundsPoints[0], boundsPoints[0])
-      );
-      map.fitBounds(bounds, { padding: 60, maxZoom: fitBoundsMaxZoom });
-    } else if (boundsPoints.length === 1) {
-      map.flyTo({ center: boundsPoints[0], zoom: 10 });
+    if (fitBoundsOnMarkersChange) {
+      if (boundsPoints.length > 1) {
+        const bounds = boundsPoints.reduce(
+          (b, p) => b.extend(p),
+          new LngLatBounds(boundsPoints[0], boundsPoints[0])
+        );
+        map.fitBounds(bounds, { padding: 60, maxZoom: fitBoundsMaxZoom });
+      } else if (boundsPoints.length === 1) {
+        map.flyTo({ center: boundsPoints[0], zoom: 10 });
+      }
     }
 
     return () => {
       if (cluster) map.off("moveend", renderFn);
     };
-  }, [markers, route, selectedId, onMarkerClick, cluster, fitBoundsPoints, fitBoundsMaxZoom]);
+  }, [markers, route, selectedId, onMarkerClick, cluster, fitBoundsPoints, fitBoundsMaxZoom, fitBoundsOnMarkersChange]);
 
   return (
     <div ref={containerRef} className="relative h-full w-full">

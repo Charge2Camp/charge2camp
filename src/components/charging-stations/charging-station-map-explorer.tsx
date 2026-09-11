@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { MapView } from "@/components/map/map-view";
+import { MapView, type MapBoundsBox } from "@/components/map/map-view";
 import {
   TRAILER_PIN_COLORS,
   TRAILER_PIN_ICON_SRC,
@@ -15,7 +15,23 @@ import {
 import { ReviewStateBadge } from "@/components/charging-stations/review-state-badge";
 import { formatConnectorStandard } from "@/lib/connector-standard";
 import { distanceKm } from "@/lib/geo";
-import type { ChargingStationView } from "@/lib/charging-stations";
+import type { ChargingStationFilters, ChargingStationView } from "@/lib/charging-stations";
+
+const VIEWPORT_FETCH_DEBOUNCE_MS = 500;
+
+/** Baut die Query-Parameter fuer /api/charge-points/viewport aus denselben
+ * Filtern, die auch der initiale Seitenaufruf verwendet (siehe
+ * parseChargingStationFilters) -- Karte und Server-Erstansicht liefern so
+ * bei gleichen Filtern immer dieselben Ergebnisse. */
+function buildViewportQuery(filters: ChargingStationFilters, bounds: MapBoundsBox): string {
+  const params = new URLSearchParams();
+  params.set("bbox", `${bounds.west},${bounds.south},${bounds.east},${bounds.north}`);
+  if (filters.q) params.set("q", filters.q);
+  if (filters.fastChargersOnly) params.set("fast", "1");
+  if (filters.connectorType) params.set("connector", filters.connectorType);
+  for (const v of filters.trailerVerdict) params.set(`trailer_${v}`, "1");
+  return params.toString();
+}
 
 const PAGE_SIZE = 30;
 
@@ -145,18 +161,23 @@ function ChargingStationCard({
  * Bottom-Sheet auf Mobile), das ueber der Karte eingeblendet wird, ohne sie
  * zu verdraengen. */
 export function ChargingStationMapExplorer({
-  stations,
-  stationCountLabel,
+  initialStations,
+  filters,
   emptyMessage,
   filterPanel,
   activeFilterCount,
 }: {
-  stations: ChargingStationView[];
-  /** Anzeige-Text fuer die Trefferzahl (z. B. "1500+", wenn das serverseitige
-   * Limit erreicht wurde) -- vorformatiert vom Aufrufer, da der nur das
-   * jeweils gueltige Limit kennt (unterschiedlich je nachdem, ob gefiltert
-   * wird, siehe ladepunkte/page.tsx). */
-  stationCountLabel: string;
+  /** Serverseitig geladene Erstansicht -- fuer den ersten Render, bevor die
+   * Karte ihren tatsaechlichen Kartenausschnitt kennt (siehe
+   * onBoundsChange unten). Bei aktivem "Nur Favoriten"-Filter bleibt das
+   * dauerhaft die einzige Datenquelle (kein Nachladen per Kartenausschnitt
+   * -- die Favoritenliste ist ohnehin schon vollstaendig und meist klein). */
+  initialStations: ChargingStationView[];
+  /** Dieselben Filter, mit denen `initialStations` serverseitig geladen
+   * wurde -- Grundlage fuer die Kartenausschnitt-Nachladung
+   * (/api/charge-points/viewport), damit Karte und Erstansicht bei
+   * gleichen Filtern immer dieselben Treffer liefern. */
+  filters: ChargingStationFilters;
   /** Text, wenn `stations` leer ist. */
   emptyMessage: string;
   /** Formularfelder (Quick-Filter + "weitere Filter"), inkl. Submit/Reset --
@@ -177,6 +198,57 @@ export function ChargingStationMapExplorer({
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [locationLoading, setLocationLoading] = useState(false);
+
+  // Kartenausschnitt-basiertes Nachladen (Nutzerfeedback: ohne Filter
+  // schnitt die Erstansicht rein alphabetisch nach Name bei den ersten
+  // 1500 von ueber 18.000 Ladepunkten ab -- Namen ab ungefaehr "S" waren
+  // beim reinen Kartenbrowsen dadurch NIE sichtbar, unabhaengig vom
+  // Kartenausschnitt, z. B. "SHELL FAST BRENNERSTRASSE 245"). `stations`
+  // ersetzt `initialStations` sobald der erste Kartenausschnitt bekannt
+  // ist (kurz nach dem Laden der Karte) und danach bei jedem Schwenken/
+  // Zoomen -- ausser im "Nur Favoriten"-Filter, der bewusst unveraendert
+  // bleibt (siehe oben).
+  const [stations, setStations] = useState<ChargingStationView[]>(initialStations);
+  const [isFetchingViewport, setIsFetchingViewport] = useState(false);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fetchSeqRef = useRef(0);
+
+  useEffect(() => {
+    void Promise.resolve().then(() => setStations(initialStations));
+  }, [initialStations]);
+
+  useEffect(
+    () => () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    },
+    []
+  );
+
+  function handleBoundsChange(bounds: MapBoundsBox) {
+    if (filters.favoritesOnly) return;
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    debounceTimerRef.current = setTimeout(async () => {
+      const seq = ++fetchSeqRef.current;
+      setIsFetchingViewport(true);
+      try {
+        const qs = buildViewportQuery(filters, bounds);
+        const res = await fetch(`/api/charge-points/viewport?${qs}`);
+        if (!res.ok) return;
+        const data = (await res.json()) as { stations?: ChargingStationView[] };
+        // Veraltete Antwort (z. B. wenn der Nutzer waehrend des Requests
+        // weitergeschwenkt hat) verwerfen, sonst ueberschreibt eine
+        // langsame, alte Antwort ein bereits aktuelleres Ergebnis.
+        if (seq !== fetchSeqRef.current) return;
+        setStations(data.stations ?? []);
+      } catch {
+        // Netzwerkfehler: Karte behaelt die zuletzt bekannten Marker statt abzustuerzen.
+      } finally {
+        if (seq === fetchSeqRef.current) setIsFetchingViewport(false);
+      }
+    }, VIEWPORT_FETCH_DEBOUNCE_MS);
+  }
+
+  const stationCountLabel = stations.length >= 5000 ? `${stations.length}+` : `${stations.length}`;
 
   function handleSortChange(next: SortOption) {
     setSortOption(next);
@@ -272,11 +344,16 @@ export function ChargingStationMapExplorer({
               bei jedem Antippen eines Pins sofort das gerade geoeffnete
               Pop-up zerstoeren und die Karte auf die Gesamtansicht
               zuruecksetzen, noch bevor das Pop-up sichtbar wird. */}
-          <MapView markers={markers} cluster />
+          <MapView
+            markers={markers}
+            cluster
+            onBoundsChange={handleBoundsChange}
+            fitBoundsOnMarkersChange={filters.favoritesOnly}
+          />
 
           <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-2 p-3">
             <span className="pointer-events-auto rounded-full bg-white/95 px-3 py-1.5 text-sm font-medium shadow-md dark:bg-neutral-900/95">
-              {stationCountLabel} Ladepunkte
+              {isFetchingViewport ? "Lädt…" : `${stationCountLabel} Ladepunkte`}
             </span>
             <div className="pointer-events-auto flex gap-2">
               {FilterButton}

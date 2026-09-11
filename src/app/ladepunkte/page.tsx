@@ -27,11 +27,18 @@ export default async function ChargingStationsPage({
   // der Campingplaetze-Karte bereits erprobt) fuer den Ueberblick beim
   // Reiseplanen -- anders als vorher gibt es keinen "nur Favoriten"-
   // Startzustand mehr, Favoriten sind stattdessen ein expliziter Quick-
-  // Filter (siehe favoritesOnly). Ohne jeden Filter bewusst auf 1500 statt
-  // 5000 begrenzt (siehe fetchChargingStations) -- bei ueber 18.000 echten
-  // Ladepunkten insgesamt waere der ungefilterte Erstueberblick sonst
-  // spuerbar langsam; sobald gezielt gefiltert wird, gilt wieder das volle
-  // Limit.
+  // Filter (siehe favoritesOnly).
+  //
+  // `stations` hier ist nur die serverseitige ERSTANSICHT fuer den allerersten
+  // Render (bevor die Karte im Browser ihren tatsaechlichen Kartenausschnitt
+  // kennt) -- ChargingStationMapExplorer ersetzt sie kurz danach und bei
+  // jedem Schwenken/Zoomen durch kartenausschnitt-basiert nachgeladene Daten
+  // (/api/charge-points/viewport). Deshalb bewusst klein/ungefaehr belassen
+  // (1500 ohne, 5000 mit Filter) statt hier schon alle 18.000+ Ladepunkte zu
+  // laden -- das serverseitige Limit bestimmt NICHT mehr, welche Ladepunkte
+  // langfristig sichtbar sind (das tat es fruehrer faelschlich: eine rein
+  // alphabetische Sortierung nach Name blendete beim reinen Kartenbrowsen
+  // saemtliche Namen ab ungefaehr "S" dauerhaft aus, siehe fetchChargingStations).
   const hasActiveFilters = Boolean(
     filters.q || filters.connectorType || filters.fastChargersOnly || filters.trailerVerdict.length > 0
   );
@@ -68,8 +75,8 @@ export default async function ChargingStationsPage({
 
       <form action="/ladepunkte">
         <ChargingStationMapExplorer
-          stations={stations}
-          stationCountLabel={stations.length >= stationLimit ? `${stations.length}+` : `${stations.length}`}
+          initialStations={stations}
+          filters={filters}
           emptyMessage={emptyMessage}
           activeFilterCount={activeFilterCount}
           filterPanel={
