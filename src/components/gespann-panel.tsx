@@ -33,6 +33,16 @@ export function GespannPanel({
   onCaravanChange: (id: string) => void;
   vehicleRequired?: boolean;
 }) {
+  // Gesamt-Gespannlaenge (Nutzerwunsch): nur anzeigen, wenn fuer das
+  // ausgewaehlte Auto UND den ausgewaehlten Wohnwagen eine Laenge
+  // hinterlegt ist -- sonst waere die Summe irrefuehrend unvollstaendig.
+  const selectedVehicle = vehicles.find((v) => v.id === vehicleId);
+  const selectedCaravan = caravans.find((c) => c.id === caravanId);
+  const totalLengthM =
+    selectedVehicle?.length_m != null && selectedCaravan?.length_m != null
+      ? selectedVehicle.length_m + selectedCaravan.length_m
+      : null;
+
   return (
     <div className="flex flex-col gap-3 rounded-lg bg-tint-trailer/50 p-4 dark:bg-tint-trailer/10">
       <div className="flex items-center justify-center gap-5">
@@ -42,6 +52,19 @@ export function GespannPanel({
         </span>
         <IconAnhaenger className="h-14 w-14 text-base-deep dark:text-white" />
       </div>
+
+      {totalLengthM !== null && (
+        <div className="flex flex-col items-center gap-1">
+          <div className="flex w-full items-center gap-1 text-base-deep dark:text-white" aria-hidden>
+            <span className="text-xs leading-none">←</span>
+            <span className="h-px flex-1 bg-current" />
+            <span className="text-xs leading-none">→</span>
+          </div>
+          <p className="text-xs text-black/60 dark:text-white/60">
+            Gesamt-Gespannlänge: {totalLengthM.toLocaleString("de-DE", { maximumFractionDigits: 2 })} m
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-3">
         <label className="flex min-w-0 flex-col gap-1 text-sm">
