@@ -9,7 +9,8 @@ import { RigLengthDistributionChart } from "@/components/charging-stations/rig-l
 import { TRAILER_PIN_COLORS, TRAILER_PIN_ICON_SRC, TRAILER_PIN_LABELS, getTrailerPinState } from "@/lib/trailer-verdict";
 import { ReviewStateBadge } from "@/components/charging-stations/review-state-badge";
 import { ListNavigation } from "@/components/list-navigation";
-import { ChargePointGallery, type ChargePointImage } from "@/components/charging-stations/charge-point-gallery";
+import { PhotoLinkButton } from "@/components/charging-stations/photo-link-button";
+import { buildGoogleMapsPhotoLink } from "@/lib/google-maps-link";
 import { formatConnectorStandard } from "@/lib/connector-standard";
 import { formatAccessType } from "@/lib/access-type";
 import {
@@ -71,20 +72,22 @@ export default async function ChargingStationDetailPage({
   const allReviews = (reviews as ChargingReview[]) ?? [];
   const isFavorite = Boolean(favoriteResult.data);
 
-  const [{ data: trailerRow }, { data: imageRows }] = await Promise.all([
-    supabase.schema("enrich").from("trailer_suitability").select("*").eq("charge_point_key", s.external_key).maybeSingle(),
-    supabase
-      .schema("core")
-      .from("v_charge_point_image")
-      .select(
-        "url_full, url_thumb, width, height, source, license, license_url, attribution, captured_at, distance_m"
-      )
-      .eq("external_key", s.external_key)
-      .order("sort_order", { ascending: true }),
-  ]);
+  const { data: trailerRow } = await supabase
+    .schema("enrich")
+    .from("trailer_suitability")
+    .select("*")
+    .eq("charge_point_key", s.external_key)
+    .maybeSingle();
   const trailer = trailerRow as TrailerSuitabilityRecord | null;
   const pinState = getTrailerPinState(trailer);
-  const images = (imageRows as ChargePointImage[]) ?? [];
+  const photoLink = buildGoogleMapsPhotoLink({
+    name: s.name,
+    address: s.address,
+    postcode: s.postcode,
+    city: s.city,
+    lat: s.lat,
+    lon: s.lon,
+  });
 
   let ownCaravans: Caravan[] = [];
   let ownVehicles: Vehicle[] = [];
@@ -118,9 +121,7 @@ export default async function ChargingStationDetailPage({
     <div className="mx-auto max-w-4xl px-4 py-10">
       <ListNavigation storageKey="ladepunkte:list-nav" detailPathPrefix="/ladepunkte/" currentId={s.id} />
 
-      <ChargePointGallery images={images} />
-
-      <p className="mt-6 text-sm text-black/50 dark:text-white/50">{s.operator}</p>
+      <p className="text-sm text-black/50 dark:text-white/50">{s.operator}</p>
       <h1 className="text-3xl font-bold">{s.name ?? s.operator}</h1>
 
       <div className="mt-2 flex flex-wrap gap-2">
@@ -187,12 +188,20 @@ export default async function ChargingStationDetailPage({
           </ul>
           {/* Nutzerwunsch: der Button war oben (neben Titel/Badges)
               unübersichtlich -- steht jetzt direkt unter der Anschrift. */}
-          <Link
-            href={`/routenplaner?destination_station_id=${s.id}`}
-            className="mt-4 inline-flex min-h-11 items-center rounded-md bg-action px-4 py-2 text-sm font-medium text-base hover:bg-action-hover"
-          >
-            Route hierher planen
-          </Link>
+          <div className="mt-4 flex flex-wrap items-start gap-2">
+            <Link
+              href={`/routenplaner?destination_station_id=${s.id}`}
+              className="inline-flex min-h-11 items-center rounded-md bg-action px-4 py-2 text-sm font-medium text-base hover:bg-action-hover"
+            >
+              Route hierher planen
+            </Link>
+            {/* Ersatz fuer die zurueckgebaute Bildergalerie (Mapillary/
+                Commons zeigten Street-Level-Fotos, die die eigentliche
+                Frage "passt mein Gespann hier durch?" nicht beantworten
+                konnten) -- rein ausgehender Link zu Google Maps, keine
+                Google-Inhalte in der App. */}
+            <PhotoLinkButton link={photoLink} externalKey={s.external_key} />
+          </div>
           {!s.is_operational && (
             <p className="mt-3 text-xs text-amber-700 dark:text-amber-400">
               Laut Quelle aktuell nicht betriebsbereit gemeldet.

@@ -138,3 +138,17 @@ export async function toggleChargingStationFavorite(stationId: string, isFavorit
   revalidatePath(`/ladepunkte/${stationId}`);
   revalidatePath("/profil/favoriten");
 }
+
+/** Tap-Event fuer den "Fotos ansehen"/"Auf Google Maps öffnen"-Button
+ * (Auftrag "Bilder Rückbau und Button", Teil C5: nach vier Wochen soll
+ * ausgewertet werden koennen, wie oft der Button genutzt wird und welche
+ * Query-Stufe dabei ueberwiegt). Bewusst OHNE neue Tabelle (Teil B des
+ * Auftrags verbietet das explizit) -- landet stattdessen als strukturierte
+ * Zeile in den Server-Logs (Vercel-Log-Suche nach "photo_button_click"
+ * reicht fuer die geforderte Auswertung). Nie fatal fuer den Nutzer: der
+ * Link oeffnet unabhaengig vom Ergebnis dieses Aufrufs. */
+export async function logPhotoButtonClick(stationExternalKey: string, tier: 1 | 2 | 3) {
+  console.log(
+    JSON.stringify({ event: "photo_button_click", external_key: stationExternalKey, tier, at: new Date().toISOString() })
+  );
+}
