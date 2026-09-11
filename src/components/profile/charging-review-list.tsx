@@ -110,7 +110,7 @@ function EditForm({
         <p className="text-sm font-medium">Details zur Durchfahrt</p>
         <CriterionField
           name="enough_space_for_rig"
-          label="Genug Platz für Zugfahrzeug + Wohnwagen (ca. ab 15 m)?"
+          label="Genug Platz für Gespann?"
           value={enoughSpaceForRig}
           onChange={setEnoughSpaceForRig}
         />
@@ -128,7 +128,7 @@ function EditForm({
         />
         <CriterionField
           name="side_mounted_charger"
-          label="Ladesäule seitlich mit ausreichender Kabellänge?"
+          label="Kabel an Säulen in ausreichender Länge?"
           value={sideMountedCharger}
           onChange={setSideMountedCharger}
         />
@@ -223,7 +223,7 @@ export function ChargingReviewList({ reviews }: { reviews: ChargingReviewWithSta
                 >
                   {review.charging_stations?.name ?? review.charging_stations?.operator ?? "Ladepunkt"}
                 </Link>
-                <span>{SUITABLE_LABELS[review.suitable]}</span>
+                <span>Anhängertauglich: {SUITABLE_LABELS[review.suitable]}</span>
               </div>
               <p className="mt-1 text-black/60 dark:text-white/60">
                 {review.trailer_length_m && `${review.trailer_length_m} m`}

@@ -139,7 +139,7 @@ export function ChargingReviewForm({
         </p>
         <CriterionField
           name="enough_space_for_rig"
-          label="Genug Platz für Zugfahrzeug + Wohnwagen (ca. ab 15 m)?"
+          label="Genug Platz für Gespann?"
           value={enoughSpaceForRig}
           onChange={setEnoughSpaceForRig}
         />
@@ -157,7 +157,7 @@ export function ChargingReviewForm({
         />
         <CriterionField
           name="side_mounted_charger"
-          label="Ladesäule seitlich mit ausreichender Kabellänge?"
+          label="Kabel an Säulen in ausreichender Länge?"
           value={sideMountedCharger}
           onChange={setSideMountedCharger}
         />

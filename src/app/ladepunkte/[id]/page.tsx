@@ -150,7 +150,7 @@ export default async function ChargingStationDetailPage({
               Favoriten-Icon sichtbar (Nutzerwunsch), zusaetzlich zur
               ausfuehrlicheren Erklaerung weiter unten im Abschnitt
               "Gespann-Kompatibilitaet". */}
-          <span className="text-sm font-medium text-route">
+          <span className="rounded-lg border border-route/30 bg-route/5 p-3 text-sm font-medium text-route">
             {PERSONAL_COMPATIBILITY_LABELS[personalCompatibility]}
           </span>
         </div>
@@ -207,10 +207,6 @@ export default async function ChargingStationDetailPage({
               Laut Quelle aktuell nicht betriebsbereit gemeldet.
             </p>
           )}
-          <p className="mt-3 text-xs text-black/40 dark:text-white/40">
-            Live-Status (frei/belegt/außer Betrieb) ist für echte Ladepunkte nicht verfügbar --
-            nur der zuletzt von der Quelle gemeldete Betriebsstatus.
-          </p>
         </section>
 
         <section>
@@ -257,7 +253,7 @@ export default async function ChargingStationDetailPage({
                 key={review.id}
                 className="rounded-md border border-black/10 p-3 text-sm dark:border-white/10"
               >
-                <p className="font-medium">{SUITABLE_LABELS[review.suitable]}</p>
+                <p className="font-medium">Anhängertauglich: {SUITABLE_LABELS[review.suitable]}</p>
                 <p className="text-black/60 dark:text-white/60">
                   {review.trailer_length_m && `${review.trailer_length_m} m`}
                   {review.trailer_width_m && ` × ${review.trailer_width_m} m`}

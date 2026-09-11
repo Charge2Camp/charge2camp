@@ -102,7 +102,7 @@ export function getReviewState(origin: string | null | undefined): ReviewState {
 
 export const REVIEW_STATE_LABELS: Record<ReviewState, string> = {
   not_reviewed: "Noch nicht bewertet",
-  community: "Von der Community bewertet",
+  community: "Community geprüft",
   verified: "Geprüft",
 };
 
