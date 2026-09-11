@@ -11,11 +11,9 @@ const EMPTY_FORM = {
   consumption_kwh_per_100km: "",
   charging_power_kw: "",
   range_km: "",
-  max_towing_weight_braked_kg: "",
   length_m: "",
   width_m: "",
   height_m: "",
-  weight_kg: "",
 };
 
 export function VehicleForm({ models }: { models: VehicleModel[] }) {
@@ -56,11 +54,9 @@ export function VehicleForm({ models }: { models: VehicleModel[] }) {
       consumption_kwh_per_100km: m.consumption_kwh_per_100km?.toString() ?? "",
       charging_power_kw: m.charging_power_kw?.toString() ?? "",
       range_km: m.range_km?.toString() ?? "",
-      max_towing_weight_braked_kg: m.max_towing_weight_braked_kg?.toString() ?? "",
       length_m: m.length_m?.toString() ?? "",
       width_m: "",
       height_m: "",
-      weight_kg: "",
     });
   }
 
@@ -191,19 +187,6 @@ export function VehicleForm({ models }: { models: VehicleModel[] }) {
         </label>
 
         <label className="flex flex-col gap-1 text-sm">
-          Max. Anhängelast gebremst (kg)
-          <input
-            name="max_towing_weight_braked_kg"
-            type="number"
-            step="1"
-            min="0"
-            value={form.max_towing_weight_braked_kg}
-            onChange={(e) => updateField("max_towing_weight_braked_kg", e.target.value)}
-            className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
-          />
-        </label>
-
-        <label className="flex flex-col gap-1 text-sm">
           Fahrzeuglänge (m)
           <input
             name="length_m"
@@ -241,24 +224,11 @@ export function VehicleForm({ models }: { models: VehicleModel[] }) {
             className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
           />
         </label>
-
-        <label className="flex flex-col gap-1 text-sm">
-          Fahrzeuggewicht (kg)
-          <input
-            name="weight_kg"
-            type="number"
-            step="1"
-            min="0"
-            value={form.weight_kg}
-            onChange={(e) => updateField("weight_kg", e.target.value)}
-            className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
-          />
-        </label>
       </div>
       <p className="-mt-2 text-xs text-black/40 dark:text-white/40">
-        Breite/Höhe/Gewicht sind optional, ermöglichen aber zusammen mit den
+        Breite/Höhe sind optional, ermöglichen aber zusammen mit den
         Wohnwagen-Maßen eine Warnung vor bekannten Straßenrestriktionen
-        (Höhen-/Breiten-/Gewichtsbeschränkungen) bei der Routenplanung.
+        (Höhen-/Breitenbeschränkungen) bei der Routenplanung.
       </p>
 
       <div>

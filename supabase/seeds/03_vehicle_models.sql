@@ -1,21 +1,28 @@
--- Elektroautos mit werkseitig verfuegbarer Anhaengerkupplung (kuratierte
--- Auswahl, keine vollstaendige Marktabdeckung -- siehe docs/data-sources.md).
--- Quellen: ev-database.org, Herstellerangaben (siehe data-sources.md fuer
--- Details je Modell). Fahrzeuge ohne genehmigte Anhaengelast wurden bewusst
--- ausgeschlossen. length_m = Fahrzeuglaenge (fuer Gespannlaenge-Berechnung).
+-- Elektroautos in Europa (moeglichst breite Marktabdeckung ueber Hersteller,
+-- Modelle und Batterie-/Reichweiten-Varianten hinweg -- Zweck ist die
+-- Reichweitensimulation bei der Gespann-Zusammenstellung, nicht die
+-- Anhaengertauglichkeit). max_towing_weight_braked_kg ist fuer diesen Zweck
+-- irrelevant und wird in der UI nirgends angezeigt, bleibt aber als Feld
+-- erhalten (teils befuellt aus frueheren Recherchen, teils NULL). length_m
+-- = Fahrzeuglaenge (fuer Gespannlaenge-Berechnung). Quellen: ev-database.org,
+-- go-e.com Towing Guide 2026, Herstellerangaben (siehe data-sources.md fuer
+-- Details je Modell). Werte nur uebernommen, wenn sie aus einem live
+-- abgerufenen Datensatz stammen -- sonst bewusst NULL statt geschaetzt
+-- (keine Scheindaten). verification_status bleibt 'unverified', bis eine
+-- manuelle Pruefung stattfindet.
 --
--- Erweiterung 2026-09-11 (Nutzerwunsch: moeglichst vollstaendige Abdeckung
--- der in Europa erhaeltlichen E-Autos mit Anhaengekupplung): Anhaengelast-
--- Werte stammen aus dem go-e.com Towing Guide 2026 (per WebFetch abgerufen),
--- Batterie/Reichweite nur dort ergaenzt, wo exakt derselbe Modell-Trim in
--- einem live abgerufenen ev-database.org-Datensatz vorlag -- sonst bewusst
--- NULL statt geschaetzt (keine Scheindaten). Laengenangaben (length_m)
--- stammen aus allgemein bekannten, oeffentlich dokumentierten Fahrzeug-
--- Aussenmassen der jeweiligen Modellreihe (variiert kaum zwischen
--- Batterie-/Antriebsvarianten desselben Modells). Immer noch keine
--- vollstaendige Marktabdeckung -- u. a. Seat/Opel/Jaguar/Land Rover/Honda/
--- Mazda/Subaru fehlen mangels belastbarer Anhaengelast-Quelle in dieser
--- Recherche.
+-- Erweiterung 2026-09-11 (a): Anhaengelast-fokussierte Recherche (go-e.com
+-- Towing Guide 2026 + ev-database.org).
+-- Erweiterung 2026-09-11 (b): Nutzerkorrektur -- Anhaengelast ist irrelevant,
+-- benoetigt wird eine moeglichst vollstaendige Abdeckung aller Hersteller/
+-- Modelle/Akkugroessen fuer die Reichweitensimulation. Batch aus
+-- ev-database.org (Bulk-Abruf) + gezielte Ergaenzungen (Opel, Peugeot).
+-- Nur aktuell in Europa erhaeltliche Modelle (auslaufende/abgeloeste
+-- Generationen wie BMW i3, VW e-Golf, Kia e-Niro, Mercedes EQC, Audi e-tron
+-- 55 quattro (Vorgaenger-Generation), Hyundai IONIQ Electric, Renault Zoe
+-- bewusst nicht aufgenommen). Weiterhin keine vollstaendige Marktabdeckung
+-- -- u. a. Seat, Jaguar, Land Rover, Honda, Subaru, Smart, DS, Alfa Romeo,
+-- Jeep fehlen noch.
 insert into public.vehicle_models
   (manufacturer, model, variant, battery_capacity_kwh, range_km, max_towing_weight_braked_kg, length_m, source, verification_status, last_verified_at)
 values
@@ -88,5 +95,81 @@ values
   ('Renault', 'Scenic E-Tech', 'EV87 220hp', 87.0, 480, 1100, 4.47, 'ev-database.org / cararac.com', 'unverified', '2026-09-11'),
   ('Toyota', 'bZ4X', 'Touring AWD 74.7 kWh', 71.0, 385, 1500, 4.69, 'ev-database.org / recharged.com', 'unverified', '2026-09-11'),
   ('Nissan', 'Ariya', '63 kWh', 63.0, null, 750, 4.60, 'carvago.com', 'unverified', '2026-09-11'),
-  ('Skoda', 'Elroq', '85', 77.0, 450, 1800, 4.49, 'go-e.com Towing Guide 2026 / ev-database.org', 'unverified', '2026-09-11')
+  ('Skoda', 'Elroq', '85', 77.0, 450, 1800, 4.49, 'go-e.com Towing Guide 2026 / ev-database.org', 'unverified', '2026-09-11'),
+  -- --- Erweiterung 2026-09-11 (b): ev-database.org Bulk-Batch, keine Anhaengelast-Filterung mehr ---
+  ('MG', 'MG4 Electric', '64 kWh', 61.7, 360, null, 4.29, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('Fiat', '500e', 'Hatchback 42 kWh', 37.3, 235, null, 3.63, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('CUPRA', 'Born', '150 kW - 58 kWh', 58.0, 350, null, 4.32, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('CUPRA', 'Born', '170 kW - 77 kWh', 77.0, 450, null, 4.32, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('XPeng', 'P7', 'RWD Long Range', 69.5, 420, null, 4.98, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('Mercedes-Benz', 'GLC', '400 4MATIC', 94.0, 535, null, 4.72, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('Volkswagen', 'ID. Polo', '155 kW - 52 kWh', 51.7, 335, null, 4.05, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('Renault', '5 E-Tech', '52kWh 150hp', 52.0, 335, null, 3.92, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('Mazda', 'CX-6e', '78 kWh', 77.0, 420, null, 4.8, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('BYD', 'ATTO 2', '64.8 kWh', 64.8, 340, null, 4.31, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('Skoda', 'Elroq', '90 (Peaq)', 86.0, 500, null, 4.49, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('BYD', 'SEALION 7', '91.3 kWh AWD Excellence', 91.3, 440, null, 4.83, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('Toyota', 'C-HR+', '77 kWh', 72.0, 430, null, 4.52, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('BMW', 'iX3', '40 (Neue Klasse)', 82.6, 500, null, 4.85, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('Dongfeng', 'Box', '42.3 kWh', 40.0, 255, null, null, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('Volvo', 'EX30', 'Single Motor ER', 65.0, 365, null, 4.23, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('Renault', 'Twingo E-Tech', '27.5 kWh', 27.5, 185, null, 3.79, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('Volkswagen', 'ID.3', 'Neo 170 kW - 79 kWh', 79.0, 490, null, 4.26, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('Mazda', '6e', '78 kWh', 77.0, 470, null, 4.92, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('Leapmotor', 'T03', '36.0 kWh', 36.0, 225, null, 3.62, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('Nissan', 'LEAF', 'Extended Range 75 kWh', 75.1, 455, null, 4.35, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('Kia', 'Niro EV', '64.8 kWh', 64.8, 385, null, 4.42, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('BMW', 'i4', 'eDrive40', 80.7, 515, null, 4.78, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('Jaecoo', '5 EV', '58.9 kWh', 58.9, 325, null, null, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('Hyundai', 'Kona Electric', '65 kWh', 65.4, 390, null, 4.36, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('Dacia', 'Spring Electric', '70', 24.0, 165, null, 3.73, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('Kia', 'EV4', 'Hatchback 81.4 kWh', 78.0, 505, null, 4.43, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('Polestar', '4', 'SUV Rear Motor', 94.0, 490, null, 4.84, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('Hyundai', 'INSTER', 'Long Range', 46.0, 300, null, 3.83, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('Citroën', 'ë-C3', 'Standard Range 44 kWh', 43.8, 255, null, 4.01, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('Mercedes-Benz', 'EQB', '250+', 70.5, 415, null, 4.68, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('Changan', 'Deepal S05', 'RWD', 68.0, 385, null, null, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('Mercedes-Benz', 'GLA', '250+', 85.0, 500, null, 4.55, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('Lucid', 'Air', 'Grand Touring', 117.0, 720, null, 4.97, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('MG', 'MGS5 EV', '64 kWh', 62.1, 365, null, 4.42, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('Mercedes-Benz', 'GLB', '250+', 85.0, 475, null, 4.63, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('BYD', 'DOLPHIN SURF', '43.2 kWh Comfort', 43.2, 265, null, 4.13, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('Hyundai', 'IONIQ 6', '84 kWh RWD', 80.0, 545, null, 4.86, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('Kia', 'EV6', 'Long Range AWD', 80.0, 440, null, 4.68, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('Hyundai', 'STARIA Electric', '84 kWh', 80.0, 310, null, 5.25, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('BYD', 'ATTO 3', 'Evo RWD Design', 74.8, 405, null, 4.46, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('BMW', 'iX1', 'xDrive30', 64.7, 380, null, 4.5, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('Kia', 'EV2', '61 kWh', 58.0, 340, null, null, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('MG', 'MG4', 'Urban Comfort Long Range', 52.8, 320, null, 4.29, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('TOGG', 'T10X', 'Long Range RWD', 85.0, 435, null, null, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('Tesla', 'Model S', 'Plaid', 95.0, 560, null, 4.97, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('KGM', 'Torres EVX', '80.6 kWh', 80.6, 410, null, 4.71, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('Toyota', 'bZ4X', 'Touring AWD 74.7 kWh', 71.0, 385, null, 4.69, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('Changan', 'Deepal S07', 'Standard', 78.0, 410, null, null, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('BMW', 'iX1', 'eDrive20', 65.2, 400, null, 4.5, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('GAC', 'AION UT', '60 kWh', 60.0, 330, null, null, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('BYD', 'TANG', 'Flagship', 108.8, 460, null, 4.87, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('MG', 'ZS EV', 'Long Range', 68.3, 370, null, 4.43, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('CUPRA', 'Raval', '155 kW - 52 kWh', 51.7, 330, null, 4.05, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('Omoda', 'E5', '58.9 kWh', 58.9, 330, null, 4.43, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('BYD', 'ATTO 3', 'MY23-24 60.5 kWh', 60.5, 330, null, 4.46, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('Kia', 'EV5', '81.4 kWh', 78.0, 410, null, 4.62, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('XPeng', 'P7+', 'RWD Long Range', 74.9, 460, null, 4.99, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('Geely', 'E2', '47 kWh', 47.1, 280, null, null, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('Volkswagen', 'ID.4', 'Pro', 77.0, 445, null, 4.58, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('Fiat', 'Grande Panda', 'Elektrisch', 43.8, 260, null, 3.99, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('BYD', 'SEAL', '82.5 kWh AWD Excellence', 82.5, 445, null, 4.8, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('Kia', 'EV2', '42.2 kWh', 41.0, 240, null, null, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('Nissan', 'LEAF', '40 kWh', 39.0, 235, null, 4.49, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('Volkswagen', 'ID. Polo', '85 kW - 37 kWh', 37.5, 245, null, 4.05, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('BYD', 'SEAL U', '87 kWh Design', 87.0, 425, null, 4.79, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('Citroën', 'ë-C3 Aircross', 'Extended Range 54 kWh', 53.5, 290, null, 4.39, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('Mercedes-Benz', 'G 580', 'EQG', 116.0, 395, null, 4.82, 'ev-database.org', 'unverified', '2026-09-11'),
+  ('TOGG', 'T10F', 'Long Range RWD', 85.0, 490, null, null, 'ev-database.org', 'unverified', '2026-09-11'),
+  -- --- Ergaenzung 2026-09-11: Opel/Peugeot (gezielte WebSearch-Recherche) ---
+  ('Opel', 'Astra Electric', '58 kWh', 58.0, 454, null, 4.42, 'emobility.energy', 'unverified', '2026-09-11'),
+  ('Opel', 'Grandland Electric', 'Long Range 98 kWh', 98.0, 694, null, 4.65, 'emobility.energy', 'unverified', '2026-09-11'),
+  ('Peugeot', 'e-208', '50 kWh', 50.0, 400, null, 4.06, 'electriccarscheme.com', 'unverified', '2026-09-11'),
+  ('Peugeot', 'e-3008', 'Long Range 98 kWh', 98.0, 700, null, 4.54, 'media.stellantis.com', 'unverified', '2026-09-11'),
+  ('Peugeot', 'e-5008', 'Long Range 98 kWh', 98.0, 668, null, 4.79, 'media.stellantis.com', 'unverified', '2026-09-11')
 on conflict (manufacturer, model, variant) do nothing;
