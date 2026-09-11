@@ -4,22 +4,32 @@ import { useState } from "react";
 import Link from "next/link";
 import { MapView } from "@/components/map/map-view";
 import { CAMPSITE_PIN_ICON_SRC } from "@/lib/trailer-verdict";
+import { saveListNavigationContext } from "@/components/list-navigation";
 import type { CampsiteSearchRow } from "@/types/database";
+
+const LIST_NAV_STORAGE_KEY = "campingplaetze:list-nav";
 
 function CampsiteCard({
   campsite,
   amenityLabels,
   selected,
   onHover,
+  allIds,
 }: {
   campsite: CampsiteSearchRow;
   amenityLabels: Record<string, string>;
   selected: boolean;
   onHover: (id: string | null) => void;
+  /** Alle IDs der aktuellen Listenansicht in Anzeigereihenfolge --
+   * gespeichert beim Antippen (Nutzerwunsch: von der Detailseite zum
+   * naechsten Ergebnis springen oder zur Liste zurueck koennen, siehe
+   * list-navigation.tsx). */
+  allIds: string[];
 }) {
   return (
     <Link
       href={`/campingplaetze/${campsite.id}`}
+      onClick={() => saveListNavigationContext(LIST_NAV_STORAGE_KEY, allIds)}
       onMouseEnter={() => onHover(campsite.id)}
       onMouseLeave={() => onHover(null)}
       className={`block rounded-lg border p-4 transition-colors ${
@@ -82,6 +92,7 @@ export function CampsiteExplorer({
   // schrittweise.
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const visibleCampsites = campsites.slice(0, visibleCount);
+  const campsiteIds = campsites.map((c) => c.id);
 
   const markers = campsites.map((c) => ({
     id: c.id,
@@ -129,6 +140,7 @@ export function CampsiteExplorer({
                   amenityLabels={amenityLabels}
                   selected={hoveredId === c.id}
                   onHover={setHoveredId}
+                  allIds={campsiteIds}
                 />
               ))}
               {visibleCount < campsites.length && (

@@ -15,8 +15,10 @@ import {
 import { ReviewStateBadge } from "@/components/charging-stations/review-state-badge";
 import { formatConnectorStandard } from "@/lib/connector-standard";
 import { distanceKm } from "@/lib/geo";
+import { saveListNavigationContext } from "@/components/list-navigation";
 import type { ChargingStationFilters, ChargingStationView } from "@/lib/charging-stations";
 
+const LIST_NAV_STORAGE_KEY = "ladepunkte:list-nav";
 const VIEWPORT_FETCH_DEBOUNCE_MS = 500;
 
 // Deutschland-weiter Standard-Ausschnitt fuer die initiale Kartenzentrierung
@@ -106,10 +108,16 @@ function ChargingStationCard({
   station,
   selected,
   onHover,
+  allIds,
 }: {
   station: ChargingStationView;
   selected: boolean;
   onHover: (id: string | null) => void;
+  /** Alle IDs der aktuellen Listenansicht in Anzeigereihenfolge --
+   * gespeichert beim Antippen (Nutzerwunsch: von der Detailseite zum
+   * naechsten Ergebnis springen oder zur Liste zurueck koennen, siehe
+   * list-navigation.tsx). */
+  allIds: string[];
 }) {
   const pinState = getTrailerPinState(station.trailer);
   const connectorSummary = Array.from(new Set(station.connectors.map((c) => formatConnectorStandard(c.standard)))).join(
@@ -119,6 +127,7 @@ function ChargingStationCard({
   return (
     <Link
       href={`/ladepunkte/${station.id}`}
+      onClick={() => saveListNavigationContext(LIST_NAV_STORAGE_KEY, allIds)}
       onMouseEnter={() => onHover(station.id)}
       onMouseLeave={() => onHover(null)}
       className={`block rounded-lg border p-4 transition-colors ${
@@ -312,6 +321,7 @@ export function ChargingStationMapExplorer({
         return list;
     }
   }, [stations, sortOption, userLocation]);
+  const sortedStationIds = useMemo(() => sortedStations.map((s) => s.id), [sortedStations]);
 
   // Memoisiert, sonst entsteht bei jedem Render (z. B. onMarkerClick ->
   // setHoveredId) ein neues Array mit neuen Objektreferenzen -- MapView
@@ -438,7 +448,12 @@ export function ChargingStationMapExplorer({
               <ul className="flex flex-col gap-3">
                 {sortedStations.slice(0, visibleCount).map((s) => (
                   <li key={s.id}>
-                    <ChargingStationCard station={s} selected={hoveredId === s.id} onHover={setHoveredId} />
+                    <ChargingStationCard
+                      station={s}
+                      selected={hoveredId === s.id}
+                      onHover={setHoveredId}
+                      allIds={sortedStationIds}
+                    />
                   </li>
                 ))}
               </ul>

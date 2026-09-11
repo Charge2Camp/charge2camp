@@ -8,6 +8,7 @@ import { ChargingStationFavoriteButton } from "@/components/charging-stations/fa
 import { RigLengthDistributionChart } from "@/components/charging-stations/rig-length-distribution";
 import { TRAILER_PIN_COLORS, TRAILER_PIN_ICON_SRC, TRAILER_PIN_LABELS, getTrailerPinState } from "@/lib/trailer-verdict";
 import { ReviewStateBadge } from "@/components/charging-stations/review-state-badge";
+import { ListNavigation } from "@/components/list-navigation";
 import { formatConnectorStandard } from "@/lib/connector-standard";
 import { formatAccessType } from "@/lib/access-type";
 import {
@@ -108,6 +109,8 @@ export default async function ChargingStationDetailPage({
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
+      <ListNavigation storageKey="ladepunkte:list-nav" detailPathPrefix="/ladepunkte/" currentId={s.id} />
+
       <p className="text-sm text-black/50 dark:text-white/50">{s.operator}</p>
       <h1 className="text-3xl font-bold">{s.name ?? s.operator}</h1>
 

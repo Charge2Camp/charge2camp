@@ -17,6 +17,7 @@ import { EvScoreBadge } from "@/components/campsites/ev-score-badge";
 import { CampsiteReviewForm } from "@/components/campsites/review-form";
 import { CampsiteFavoriteButton } from "@/components/campsites/favorite-button";
 import { NearbyChargePointsList } from "@/components/campsites/nearby-charge-points";
+import { ListNavigation } from "@/components/list-navigation";
 
 const NEARBY_RADIUS_KM = 25;
 // Auch nicht-fussläufige Schnelllader sind erwaehnenswert, wenn sie stark
@@ -165,6 +166,8 @@ export default async function CampsiteDetailPage({
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
+      <ListNavigation storageKey="campingplaetze:list-nav" detailPathPrefix="/campingplaetze/" currentId={site.id} />
+
       <p className="text-sm text-black/50 dark:text-white/50">
         {[site.city, site.country_code].filter(Boolean).join(", ")}
       </p>
