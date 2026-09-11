@@ -35,6 +35,15 @@ export interface CommunitySuitabilitySummary {
  * Fasst alle Bewertungen eines Ladepunkts zu einer verständlichen Aussage
  * zusammen, z. B. "Geeignet für normale Gespanne, eingeschränkt für sehr
  * große Gespanne (> 8,5 m)." (Beispiel aus §19 der Spezifikation).
+ *
+ * Nutzerwunsch: eine "passt"-Bewertung eines großen Gespanns (> 8,5 m)
+ * zaehlt auch als positive Evidenz fuer normale Gespanne -- wer mit einem
+ * 13-m-Gespann bestaetigt durchkommt, kommt mit einem 9-m-Gespann erst
+ * recht durch. Nur "yes" vererbt sich so nach unten (gleiches Prinzip wie
+ * bucketReviewsByRigLength); "nein"/"eingeschränkt" bei einem großen
+ * Gespann sagt nichts über ein normales aus. Umgekehrt profitiert
+ * largeTrailerRatio NICHT von normalReviews -- ein kleines Gespann, das
+ * passt, beweist nichts fuer ein großes.
  */
 export function summarizeCommunitySuitability(
   reviews: ChargingReview[]
@@ -45,9 +54,11 @@ export function summarizeCommunitySuitability(
   const largeReviews = reviews.filter(
     (r) => (r.trailer_length_m ?? 0) > LARGE_TRAILER_THRESHOLD_M
   );
+  const largePositiveReviews = largeReviews.filter((r) => r.suitable === "yes");
+  const normalEvidence = [...normalReviews, ...largePositiveReviews];
 
   const overallPositiveRatio = positiveRatio(reviews);
-  const normalTrailerRatio = positiveRatio(normalReviews);
+  const normalTrailerRatio = positiveRatio(normalEvidence);
   const largeTrailerRatio = positiveRatio(largeReviews);
 
   let summary: string;
@@ -55,7 +66,7 @@ export function summarizeCommunitySuitability(
   if (reviews.length < MIN_REVIEWS_FOR_SUMMARY || overallPositiveRatio === null) {
     summary = "Noch nicht genug Bewertungen für eine verlässliche Einschätzung.";
   } else if (
-    normalReviews.length >= MIN_REVIEWS_PER_BUCKET &&
+    normalEvidence.length >= MIN_REVIEWS_PER_BUCKET &&
     largeReviews.length >= MIN_REVIEWS_PER_BUCKET &&
     normalTrailerRatio !== null &&
     largeTrailerRatio !== null &&
