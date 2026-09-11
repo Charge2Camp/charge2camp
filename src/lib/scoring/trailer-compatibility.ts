@@ -28,6 +28,14 @@ export interface CommunitySuitabilitySummary {
   overallPositiveRatio: number | null;
   normalTrailerRatio: number | null;
   largeTrailerRatio: number | null;
+  /** Anzahl der Bewertungen, die in normalTrailerRatio/largeTrailerRatio
+   * einfliessen (inkl. geerbter "Ja"-Bewertungen groesserer Gespanne bei
+   * normalTrailerRatio) -- Grundlage fuer assessPersonalCompatibility, um
+   * unabhaengig von der GESAMTZAHL aller Bewertungen des Ladepunkts zu
+   * entscheiden, ob genug zur jeweiligen Gespanngroesse passende Evidenz
+   * vorliegt. */
+  normalEvidenceCount: number;
+  largeEvidenceCount: number;
   summary: string;
 }
 
@@ -86,6 +94,8 @@ export function summarizeCommunitySuitability(
     overallPositiveRatio,
     normalTrailerRatio,
     largeTrailerRatio,
+    normalEvidenceCount: normalEvidence.length,
+    largeEvidenceCount: largeReviews.length,
     summary,
   };
 }
@@ -103,22 +113,36 @@ export const PERSONAL_COMPATIBILITY_LABELS: Record<PersonalCompatibility, string
  * Ordnet das konkrete Gespann des Nutzers (Länge in Metern) den
  * Community-Daten zu (§20). Erfordert einen angemeldeten Nutzer mit
  * hinterlegtem Wohnwagen -- ohne Daten wird "keine_daten" zurückgegeben.
+ *
+ * Nutzerwunsch: entscheidend ist, ob genug zur EIGENEN Gespanngroesse
+ * passende Evidenz vorliegt (inkl. geerbter "Ja"-Bewertungen groesserer
+ * Gespanne) -- nicht, wie viele Bewertungen der Ladepunkt INSGESAMT hat.
+ * Zwei 13-m-"Ja"-Bewertungen reichen z. B. fuer eine Einschätzung bei
+ * einem 9-m-Gespann, auch wenn der Ladepunkt sonst keine weiteren
+ * Bewertungen hat. Erst wenn dafuer nicht genug spezifische Evidenz
+ * vorliegt, faellt die Funktion auf den Gesamtwert zurueck -- und
+ * verlangt dafuer weiterhin mindestens MIN_REVIEWS_FOR_SUMMARY
+ * Bewertungen insgesamt (Schutz vor einer einzelnen, moeglicherweise
+ * falschen Bewertung ohne jeden thematischen Bezug).
  */
 export function assessPersonalCompatibility(
   summary: CommunitySuitabilitySummary,
   userTrailerLengthM: number | null
 ): PersonalCompatibility {
   if (userTrailerLengthM === null) return "keine_daten";
-  if (summary.reviewCount < MIN_REVIEWS_FOR_SUMMARY) return "unklar";
 
   const isLargeTrailer = userTrailerLengthM > LARGE_TRAILER_THRESHOLD_M;
   const relevantRatio = isLargeTrailer ? summary.largeTrailerRatio : summary.normalTrailerRatio;
+  const relevantEvidenceCount = isLargeTrailer ? summary.largeEvidenceCount : summary.normalEvidenceCount;
 
-  // Nicht genug spezifische Daten fuer diese Gespanngroesse -> Gesamtwert nutzen
-  const ratio = relevantRatio ?? summary.overallPositiveRatio;
-  if (ratio === null) return "unklar";
+  if (relevantEvidenceCount >= MIN_REVIEWS_PER_BUCKET && relevantRatio !== null) {
+    return relevantRatio >= 0.7 ? "sehr_gut" : "eingeschraenkt";
+  }
 
-  return ratio >= 0.7 ? "sehr_gut" : "eingeschraenkt";
+  if (summary.reviewCount < MIN_REVIEWS_FOR_SUMMARY || summary.overallPositiveRatio === null) {
+    return "unklar";
+  }
+  return summary.overallPositiveRatio >= 0.7 ? "sehr_gut" : "eingeschraenkt";
 }
 
 /**
