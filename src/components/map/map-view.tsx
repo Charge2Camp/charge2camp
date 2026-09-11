@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { LngLatBounds, MapLibreMap, Marker, NavigationControl, Popup } from "maplibre-gl";
+import { GeolocateControl, LngLatBounds, MapLibreMap, Marker, NavigationControl, Popup } from "maplibre-gl";
 import Supercluster, { type PointFeature } from "supercluster";
 import { osmStyle } from "./osm-style";
 
@@ -225,6 +225,17 @@ export function MapView({
       zoom: initialCenter ? initialZoom : first ? 6 : fallbackZoom,
     });
     map.addControl(new NavigationControl(), "top-right");
+    // "Standort suchen" (Nutzerwunsch): eingebautes MapLibre-Control statt
+    // Eigenbau -- zeigt einen Standort-Button, der bei Klick per
+    // navigator.geolocation zentriert (kein automatischer Positions-
+    // Marker/Tracking, da nicht jede MapView-Einsatzstelle das braucht).
+    // Ein "moveend" durchs Zentrieren loest wie jedes andere Schwenken auch
+    // onBoundsChange aus, kartenausschnitt-basierte Verbraucher (z. B.
+    // charging-station-map-explorer.tsx) laden dadurch automatisch neu.
+    map.addControl(
+      new GeolocateControl({ positionOptions: { enableHighAccuracy: true }, trackUserLocation: false, showUserLocation: true }),
+      "top-right"
+    );
     mapRef.current = map;
 
     // Route wird bewusst NICHT als MapLibre-GeoJSON-Source/Layer gezeichnet
