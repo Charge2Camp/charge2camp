@@ -133,26 +133,18 @@ export default async function ChargingStationDetailPage({
         </Link>
       )}
 
-      <div className="mt-4 flex flex-wrap items-center gap-3">
-        <Link
-          href={`/routenplaner?destination_station_id=${s.id}`}
-          className="inline-flex min-h-11 items-center rounded-md bg-action px-4 py-2 text-sm font-medium text-base hover:bg-action-hover"
-        >
-          Route hierher planen
-        </Link>
-        {user && (
-          <div className="flex items-center gap-2">
-            <ChargingStationFavoriteButton stationId={s.id} initialIsFavorite={isFavorite} />
-            {/* Persoenliche Gespann-Einschaetzung direkt oben neben dem
-                Favoriten-Icon sichtbar (Nutzerwunsch), zusaetzlich zur
-                ausfuehrlicheren Erklaerung weiter unten im Abschnitt
-                "Gespann-Kompatibilitaet". */}
-            <span className="text-sm font-medium text-route">
-              {PERSONAL_COMPATIBILITY_LABELS[personalCompatibility]}
-            </span>
-          </div>
-        )}
-      </div>
+      {user && (
+        <div className="mt-4 flex items-center gap-2">
+          <ChargingStationFavoriteButton stationId={s.id} initialIsFavorite={isFavorite} />
+          {/* Persoenliche Gespann-Einschaetzung direkt oben neben dem
+              Favoriten-Icon sichtbar (Nutzerwunsch), zusaetzlich zur
+              ausfuehrlicheren Erklaerung weiter unten im Abschnitt
+              "Gespann-Kompatibilitaet". */}
+          <span className="text-sm font-medium text-route">
+            {PERSONAL_COMPATIBILITY_LABELS[personalCompatibility]}
+          </span>
+        </div>
+      )}
 
       <div className="mt-6 h-[320px] overflow-hidden rounded-lg border border-black/10 dark:border-white/10">
         <MapView
@@ -184,6 +176,14 @@ export default async function ChargingStationDetailPage({
             {s.access_type && <li>Zugang: {formatAccessType(s.access_type)}</li>}
             {s.address && <li>Adresse: {s.address}</li>}
           </ul>
+          {/* Nutzerwunsch: der Button war oben (neben Titel/Badges)
+              unübersichtlich -- steht jetzt direkt unter der Anschrift. */}
+          <Link
+            href={`/routenplaner?destination_station_id=${s.id}`}
+            className="mt-4 inline-flex min-h-11 items-center rounded-md bg-action px-4 py-2 text-sm font-medium text-base hover:bg-action-hover"
+          >
+            Route hierher planen
+          </Link>
           {!s.is_operational && (
             <p className="mt-3 text-xs text-amber-700 dark:text-amber-400">
               Laut Quelle aktuell nicht betriebsbereit gemeldet.

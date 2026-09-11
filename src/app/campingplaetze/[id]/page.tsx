@@ -179,15 +179,11 @@ export default async function CampsiteDetailPage({
         </p>
       )}
 
-      <div className="mt-4 flex items-center gap-2">
-        <Link
-          href={`/routenplaner?destination_campsite_id=${site.id}`}
-          className="inline-flex min-h-11 items-center rounded-md bg-action px-4 py-2 text-sm font-medium text-base hover:bg-action-hover"
-        >
-          Route hierher planen
-        </Link>
-        {user && <CampsiteFavoriteButton campsiteId={site.id} initialIsFavorite={isFavorite} />}
-      </div>
+      {user && (
+        <div className="mt-4">
+          <CampsiteFavoriteButton campsiteId={site.id} initialIsFavorite={isFavorite} />
+        </div>
+      )}
 
       <div className="mt-6">
         <EvScoreBadge
@@ -234,6 +230,15 @@ export default async function CampsiteDetailPage({
           </dl>
         </section>
       )}
+
+      {/* Nutzerwunsch: der Button war oben (neben Titel/Rating)
+          unübersichtlich -- steht jetzt direkt unter der Anschrift. */}
+      <Link
+        href={`/routenplaner?destination_campsite_id=${site.id}`}
+        className="mt-6 inline-flex min-h-11 items-center rounded-md bg-action px-4 py-2 text-sm font-medium text-base hover:bg-action-hover"
+      >
+        Route hierher planen
+      </Link>
 
       {search && (
         <div className="mt-6 h-[400px] overflow-hidden rounded-lg border border-black/10 dark:border-white/10">
