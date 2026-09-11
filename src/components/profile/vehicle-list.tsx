@@ -20,11 +20,8 @@ export function VehicleList({ vehicles }: { vehicles: Vehicle[] }) {
             <p className="text-black/60 dark:text-white/60">
               {vehicle.battery_capacity_kwh} kWh
               {vehicle.consumption_kwh_per_100km ? ` · ${vehicle.consumption_kwh_per_100km} kWh/100km` : ""}
-              {vehicle.charging_power_kw ? ` · ${vehicle.charging_power_kw} kW Ladeleistung` : ""}
               {vehicle.range_km ? ` · ${vehicle.range_km} km Reichweite` : ""}
               {vehicle.length_m ? ` · ${vehicle.length_m} m lang` : ""}
-              {vehicle.width_m ? ` · ${vehicle.width_m} m breit` : ""}
-              {vehicle.height_m ? ` · ${vehicle.height_m} m hoch` : ""}
             </p>
           </div>
           <form action={deleteVehicle}>
