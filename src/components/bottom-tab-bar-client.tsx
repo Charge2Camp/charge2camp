@@ -44,7 +44,7 @@ function TabLink({
  * in der ProfileSidebar (siehe dort). Die 4. Kachel ("Profil") oeffnet
  * keine Seite direkt, sondern die ProfileSidebar mit allen
  * Profil-Unterpunkten; ohne Anmeldung fuehrt sie stattdessen zu /login. */
-export function BottomTabBarClient({ isLoggedIn }: { isLoggedIn: boolean }) {
+export function BottomTabBarClient({ isLoggedIn, isAdmin }: { isLoggedIn: boolean; isAdmin: boolean }) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const profileActive = pathname.startsWith("/profil") || pathname.startsWith("/community");
@@ -82,7 +82,7 @@ export function BottomTabBarClient({ isLoggedIn }: { isLoggedIn: boolean }) {
         </ul>
       </nav>
 
-      {isLoggedIn && <ProfileSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />}
+      {isLoggedIn && <ProfileSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} isAdmin={isAdmin} />}
     </>
   );
 }

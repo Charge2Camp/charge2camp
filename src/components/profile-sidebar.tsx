@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogoutButton } from "@/components/logout-button";
+import { AdminButton } from "@/components/admin-button";
 
 const TABS = [
   { href: "/profil", label: "Übersicht" },
@@ -24,7 +25,15 @@ const TABS = [
  * Enthaelt bewusst auch "Community" (docs/design/brand-guide.md Abschnitt
  * 6: auf schmalen Geraeten liegt Community im Profil statt in der
  * Bottom-Tab-Bar). */
-export function ProfileSidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function ProfileSidebar({
+  open,
+  onClose,
+  isAdmin,
+}: {
+  open: boolean;
+  onClose: () => void;
+  isAdmin: boolean;
+}) {
   const pathname = usePathname();
 
   if (!open) return null;
@@ -70,7 +79,8 @@ export function ProfileSidebar({ open, onClose }: { open: boolean; onClose: () =
           })}
         </nav>
 
-        <div className="border-t border-line p-2">
+        <div className="flex items-center gap-2 border-t border-line p-2">
+          {isAdmin && <AdminButton />}
           <LogoutButton />
         </div>
       </div>

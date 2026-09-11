@@ -7,5 +7,11 @@ export async function BottomTabBar() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  return <BottomTabBarClient isLoggedIn={Boolean(user)} />;
+  let isAdmin = false;
+  if (user) {
+    const { data: profile } = await supabase.from("profiles").select("is_admin").eq("id", user.id).maybeSingle();
+    isAdmin = Boolean(profile?.is_admin);
+  }
+
+  return <BottomTabBarClient isLoggedIn={Boolean(user)} isAdmin={isAdmin} />;
 }

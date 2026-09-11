@@ -59,20 +59,24 @@ export default async function BewertungenPage() {
   }));
 
   return (
-    <div className="flex flex-col gap-12">
-      <section>
-        <h2 className="text-lg font-semibold">Meine Campingplatz-Bewertungen</h2>
-        <div className="mt-4">
-          <CampsiteReviewList reviews={campsiteReviewsWithCampsite} />
-        </div>
-      </section>
+    <div>
+      <h2 className="text-lg font-semibold">Bewertungen</h2>
 
-      <section>
-        <h2 className="text-lg font-semibold">Meine Ladepunkt-Bewertungen</h2>
-        <div className="mt-4">
-          <ChargingReviewList reviews={chargingReviewsWithStation} />
-        </div>
-      </section>
+      <div className="mt-6 flex flex-col gap-12">
+        <section>
+          <h3 className="font-semibold">Meine Campingplatz-Bewertungen</h3>
+          <div className="mt-4">
+            <CampsiteReviewList reviews={campsiteReviewsWithCampsite} />
+          </div>
+        </section>
+
+        <section>
+          <h3 className="font-semibold">Meine Ladepunkt-Bewertungen</h3>
+          <div className="mt-4">
+            <ChargingReviewList reviews={chargingReviewsWithStation} />
+          </div>
+        </section>
+      </div>
     </div>
   );
 }

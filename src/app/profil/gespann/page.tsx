@@ -47,33 +47,37 @@ export default async function GespannPage() {
   const caravanList = (caravans as Caravan[]) ?? [];
 
   return (
-    <div className="flex flex-col gap-12">
-      <DefaultGespannPicker
-        vehicles={vehicleList}
-        caravans={caravanList}
-        initialVehicleId={profile?.default_vehicle_id ?? ""}
-        initialCaravanId={profile?.default_caravan_id ?? ""}
-      />
+    <div>
+      <h2 className="text-lg font-semibold">Mein Gespann</h2>
 
-      <section>
-        <h2 className="text-lg font-semibold">Elektroauto</h2>
-        <div className="mt-4">
-          <VehicleList vehicles={vehicleList} />
-        </div>
-        <CollapsibleFormSection addLabel="Elektroauto hinzufügen" defaultOpen={vehicleList.length === 0}>
-          <VehicleForm models={(vehicleModels as VehicleModel[]) ?? []} />
-        </CollapsibleFormSection>
-      </section>
+      <div className="mt-6 flex flex-col gap-12">
+        <DefaultGespannPicker
+          vehicles={vehicleList}
+          caravans={caravanList}
+          initialVehicleId={profile?.default_vehicle_id ?? ""}
+          initialCaravanId={profile?.default_caravan_id ?? ""}
+        />
 
-      <section>
-        <h2 className="text-lg font-semibold">Wohnwagen</h2>
-        <div className="mt-4">
-          <CaravanList caravans={caravanList} />
-        </div>
-        <CollapsibleFormSection addLabel="Wohnwagen hinzufügen" defaultOpen={caravanList.length === 0}>
-          <CaravanForm models={(caravanModels as CaravanModel[]) ?? []} />
-        </CollapsibleFormSection>
-      </section>
+        <section>
+          <h3 className="font-semibold">Elektroauto</h3>
+          <div className="mt-4">
+            <VehicleList vehicles={vehicleList} />
+          </div>
+          <CollapsibleFormSection addLabel="Elektroauto hinzufügen" defaultOpen={vehicleList.length === 0}>
+            <VehicleForm models={(vehicleModels as VehicleModel[]) ?? []} />
+          </CollapsibleFormSection>
+        </section>
+
+        <section>
+          <h3 className="font-semibold">Wohnwagen</h3>
+          <div className="mt-4">
+            <CaravanList caravans={caravanList} />
+          </div>
+          <CollapsibleFormSection addLabel="Wohnwagen hinzufügen" defaultOpen={caravanList.length === 0}>
+            <CaravanForm models={(caravanModels as CaravanModel[]) ?? []} />
+          </CollapsibleFormSection>
+        </section>
+      </div>
     </div>
   );
 }

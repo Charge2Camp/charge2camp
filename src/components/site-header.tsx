@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { LogoutButton } from "@/components/logout-button";
+import { AdminButton } from "@/components/admin-button";
 
 const NAV_LINKS = [
   { href: "/campingplaetze", label: "Campingplätze" },
@@ -15,6 +16,12 @@ export async function SiteHeader() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  let isAdmin = false;
+  if (user) {
+    const { data: profile } = await supabase.from("profiles").select("is_admin").eq("id", user.id).maybeSingle();
+    isAdmin = Boolean(profile?.is_admin);
+  }
 
   return (
     // Kopfbereich in --c-base (dunkelgruen), siehe docs/design/brand-guide.md
@@ -54,6 +61,7 @@ export async function SiteHeader() {
               >
                 Mein Profil
               </Link>
+              {isAdmin && <AdminButton variant="inverse" />}
               <LogoutButton variant="inverse" />
             </>
           ) : (

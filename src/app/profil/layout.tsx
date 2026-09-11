@@ -1,19 +1,23 @@
 import type { ReactNode } from "react";
+import { createClient } from "@/lib/supabase/server";
 import { ProfileSubNav } from "@/components/profile/profile-sub-nav";
-import { LogoutButton } from "@/components/logout-button";
+import { ProfileHeader } from "@/components/profile/profile-header";
 
-export default function ProfilLayout({ children }: { children: ReactNode }) {
+export default async function ProfilLayout({ children }: { children: ReactNode }) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  let isAdmin = false;
+  if (user) {
+    const { data: profile } = await supabase.from("profiles").select("is_admin").eq("id", user.id).maybeSingle();
+    isAdmin = Boolean(profile?.is_admin);
+  }
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-16">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold">Mein Profil</h1>
-        {/* Bislang nur ueber die Sidebar (Profil-Kachel der Bottom-Tab-Bar)
-            erreichbar -- auf dieser Seite selbst gab es keinen Ausweg zum
-            Abmelden, wenn man z. B. direkt ueber einen Link hierher kam
-            (siehe Design-Review). Jetzt auf jeder /profil/*-Unterseite
-            direkt sichtbar, redundant zur Sidebar, aber nie fehlend. */}
-        <LogoutButton />
-      </div>
+      <ProfileHeader isAdmin={isAdmin} />
       <ProfileSubNav />
       <div className="mt-8">{children}</div>
     </div>
