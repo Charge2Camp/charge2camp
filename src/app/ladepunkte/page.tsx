@@ -22,6 +22,19 @@ export default async function ChargingStationsPage({
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Zuhause-Adresse fuer die initiale Kartenzentrierung (Nutzerwunsch,
+  // statt des vorherigen -- zufällig wirkenden -- alphabetisch ersten
+  // Ladepunkts der Server-Erstansicht, siehe ChargingStationMapExplorer).
+  // Ohne hinterlegte Adresse faellt MapView auf den Deutschland-weiten
+  // Standard-Ausschnitt zurueck.
+  const { data: profile } = user
+    ? await supabase.from("profiles").select("home_address, home_latitude, home_longitude").eq("id", user.id).maybeSingle()
+    : { data: null };
+  const homeAddress =
+    profile?.home_address && profile.home_latitude != null && profile.home_longitude != null
+      ? { latitude: profile.home_latitude, longitude: profile.home_longitude }
+      : null;
+
   // Bewusst kartenzentriert (siehe charging-station-map-explorer.tsx): ohne
   // aktiven Filter zeigt die Karte einen geclusterten Ueberblick (wie auf
   // der Campingplaetze-Karte bereits erprobt) fuer den Ueberblick beim
@@ -77,6 +90,7 @@ export default async function ChargingStationsPage({
         <ChargingStationMapExplorer
           initialStations={stations}
           filters={filters}
+          homeAddress={homeAddress}
           emptyMessage={emptyMessage}
           activeFilterCount={activeFilterCount}
           filterPanel={

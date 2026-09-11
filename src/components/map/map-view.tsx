@@ -141,6 +141,8 @@ export function MapView({
   fitBoundsMaxZoom = 12,
   fitBoundsOnMarkersChange = true,
   onBoundsChange,
+  initialCenter,
+  initialZoom = 10,
 }: {
   markers: MapMarker[];
   route?: RoutePoint[];
@@ -178,6 +180,16 @@ export function MapView({
    * basiertes Nachladen. Ohne Zutun sonst unveraendert (kein Overhead fuer
    * alle anderen MapView-Einsatzstellen). */
   onBoundsChange?: (bounds: MapBoundsBox) => void;
+  /** Ueberschreibt den initialen Kartenmittelpunkt -- Vorrang vor dem
+   * ersten Marker UND `fallbackCenter` (Nutzerwunsch, siehe
+   * charging-station-map-explorer.tsx: die Ladepunkte-Karte soll initial
+   * auf der Zuhause-Adresse starten, nicht auf dem ersten -- zufaellig
+   * wirkenden -- Marker der Erstansicht). Ohne Angabe unveraendertes
+   * bisheriges Verhalten. */
+  initialCenter?: { latitude: number; longitude: number };
+  /** Zoom-Stufe fuer `initialCenter`. Standard 10 (Stadt-Ebene), passend
+   * fuer eine Zuhause-Adresse. */
+  initialZoom?: number;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -200,15 +212,17 @@ export function MapView({
     if (!containerRef.current || mapRef.current) return;
 
     const first = markers[0];
-    const center: [number, number] = first
-      ? [first.longitude, first.latitude]
-      : [fallbackCenter.longitude, fallbackCenter.latitude];
+    const center: [number, number] = initialCenter
+      ? [initialCenter.longitude, initialCenter.latitude]
+      : first
+        ? [first.longitude, first.latitude]
+        : [fallbackCenter.longitude, fallbackCenter.latitude];
 
     const map = new MapLibreMap({
       container: containerRef.current,
       style: osmStyle,
       center,
-      zoom: first ? 6 : fallbackZoom,
+      zoom: initialCenter ? initialZoom : first ? 6 : fallbackZoom,
     });
     map.addControl(new NavigationControl(), "top-right");
     mapRef.current = map;

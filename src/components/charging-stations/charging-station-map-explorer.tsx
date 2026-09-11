@@ -19,6 +19,15 @@ import type { ChargingStationFilters, ChargingStationView } from "@/lib/charging
 
 const VIEWPORT_FETCH_DEBOUNCE_MS = 500;
 
+// Deutschland-weiter Standard-Ausschnitt fuer die initiale Kartenzentrierung
+// ohne hinterlegte Zuhause-Adresse (Nutzerwunsch) -- entspricht MapView's
+// eigenem fallbackCenter/fallbackZoom, hier aber explizit gesetzt, damit
+// NIE der erste (alphabetisch zufaellig wirkende) Marker der Erstansicht
+// als Kartenmittelpunkt herangezogen wird (MapView faellt ohne explizites
+// `initialCenter` sonst auf `markers[0]` zurueck).
+const GERMANY_OVERVIEW_CENTER = { latitude: 51.1657, longitude: 10.4515 };
+const GERMANY_OVERVIEW_ZOOM = 4.5;
+
 /** Baut die Query-Parameter fuer /api/charge-points/viewport aus denselben
  * Filtern, die auch der initiale Seitenaufruf verwendet (siehe
  * parseChargingStationFilters) -- Karte und Server-Erstansicht liefern so
@@ -163,6 +172,7 @@ function ChargingStationCard({
 export function ChargingStationMapExplorer({
   initialStations,
   filters,
+  homeAddress,
   emptyMessage,
   filterPanel,
   activeFilterCount,
@@ -178,6 +188,12 @@ export function ChargingStationMapExplorer({
    * (/api/charge-points/viewport), damit Karte und Erstansicht bei
    * gleichen Filtern immer dieselben Treffer liefern. */
   filters: ChargingStationFilters;
+  /** Im Profil ("Meine Daten") hinterlegte Zuhause-Adresse -- Grundlage
+   * fuer die initiale Kartenzentrierung (Nutzerwunsch), statt des
+   * alphabetisch ersten Ladepunkts der Erstansicht. Ohne hinterlegte
+   * Adresse startet die Karte stattdessen auf dem Deutschland-weiten
+   * Standard-Ausschnitt (siehe MapView fallbackCenter). */
+  homeAddress: { latitude: number; longitude: number } | null;
   /** Text, wenn `stations` leer ist. */
   emptyMessage: string;
   /** Formularfelder (Quick-Filter + "weitere Filter"), inkl. Submit/Reset --
@@ -349,6 +365,8 @@ export function ChargingStationMapExplorer({
             cluster
             onBoundsChange={handleBoundsChange}
             fitBoundsOnMarkersChange={filters.favoritesOnly}
+            initialCenter={homeAddress ?? GERMANY_OVERVIEW_CENTER}
+            initialZoom={homeAddress ? 10 : GERMANY_OVERVIEW_ZOOM}
           />
 
           <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-2 p-3">
