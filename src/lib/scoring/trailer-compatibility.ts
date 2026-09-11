@@ -136,6 +136,10 @@ export interface RigLengthBucketResult extends RigLengthBucket {
   sharePercent: number;
   positiveRatio: number | null;
   reliable: boolean; // genug Bewertungen fuer eine belastbare Aussage
+  /** true, wenn `reliable`/`positiveRatio` ausschliesslich auf vererbten
+   * "passt"-Bewertungen laengerer Gespanne beruht (keine einzige direkte
+   * Bewertung dieser Laengenklasse, siehe bucketReviewsByRigLength). */
+  inferredOnly: boolean;
 }
 
 export interface RigLengthDistribution {
@@ -147,6 +151,17 @@ export interface RigLengthDistribution {
 /**
  * Ordnet alle Bewertungen mit bekannter Gespannlänge (Zugfahrzeug +
  * Wohnwagen, `trailer_length_m`) einer Längen-Klasse zu.
+ *
+ * Nutzerwunsch: Eine "passt"-Bewertung eines längeren Gespanns gilt auch
+ * für alle kürzeren Klassen -- wenn ein 13-m-Gespann bestätigt anhänger-
+ * tauglich ist, passt ein 9-m-Gespann dort erst recht. Nur "yes"
+ * vererbt sich so nach unten; "nein"/"eingeschränkt" bei einem längeren
+ * Gespann sagt nichts darüber aus, ob ein kürzeres Gespann passt (z. B.
+ * kann ein kürzeres Gespann problemlos rangieren, wo ein längeres es
+ * nicht mehr schafft) und bleibt deshalb auf die eigene Klasse beschränkt.
+ * `count`/`sharePercent` bleiben die reale Verteilung der Bewertungen je
+ * Länge -- nur `positiveRatio`/`reliable` beziehen die vererbte Evidenz
+ * mit ein.
  */
 export function bucketReviewsByRigLength(reviews: ChargingReview[]): RigLengthDistribution {
   const withLength = reviews.filter(
@@ -161,12 +176,20 @@ export function bucketReviewsByRigLength(reviews: ChargingReview[]): RigLengthDi
       return r.trailer_length_m > bucket.minM && r.trailer_length_m <= bucket.maxM;
     });
 
+    const inheritedPositive =
+      bucket.maxM === Infinity
+        ? []
+        : withLength.filter((r) => r.trailer_length_m > bucket.maxM && r.suitable === "yes");
+
+    const evidence = [...inBucket, ...inheritedPositive];
+
     return {
       ...bucket,
       count: inBucket.length,
       sharePercent: total > 0 ? Math.round((inBucket.length / total) * 100) : 0,
-      positiveRatio: positiveRatio(inBucket),
-      reliable: inBucket.length >= MIN_REVIEWS_PER_BUCKET,
+      positiveRatio: positiveRatio(evidence),
+      reliable: evidence.length >= MIN_REVIEWS_PER_BUCKET,
+      inferredOnly: inBucket.length === 0 && inheritedPositive.length > 0,
     };
   });
 

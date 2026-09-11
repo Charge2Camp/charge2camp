@@ -40,15 +40,23 @@ export function RigLengthDistributionChart({
                 }}
               />
             )}
+            {/* Keine eigenen Bewertungen dieser Laenge, aber ein laengeres
+                Gespann hat "passt" bestaetigt (Nutzerwunsch, siehe
+                bucketReviewsByRigLength inheritedPositive) -- volle Breite
+                in der Eignungsfarbe statt eines leeren Balkens, da diese
+                Klasse noch nicht in der Laengenverteilung auftaucht. */}
+            {bucket.count === 0 && bucket.inferredOnly && (
+              <div className="h-full w-full rounded-full opacity-40" style={{ backgroundColor: suitabilityColor(bucket.positiveRatio) }} />
+            )}
           </div>
           <span className="w-10 shrink-0 text-right text-black/50 dark:text-white/50">
             {bucket.sharePercent}%
           </span>
-          <span className="w-24 shrink-0 text-right text-xs text-black/50 dark:text-white/50">
-            {bucket.count === 0
+          <span className="w-32 shrink-0 text-right text-xs text-black/50 dark:text-white/50">
+            {bucket.count === 0 && !bucket.inferredOnly
               ? "keine Bewertungen"
               : bucket.reliable && bucket.positiveRatio !== null
-                ? `${Math.round(bucket.positiveRatio * 100)}% positiv`
+                ? `${Math.round(bucket.positiveRatio * 100)}% positiv${bucket.inferredOnly ? " (größere Gespanne)" : ""}`
                 : `${bucket.count} Bewertung${bucket.count === 1 ? "" : "en"}`}
           </span>
         </div>
