@@ -55,6 +55,11 @@ export default async function ProfilePage() {
       description: `${campsiteReviewCount + chargingReviewCount} Bewertung${campsiteReviewCount + chargingReviewCount === 1 ? "" : "en"}`,
     },
     { href: "/profil/einstellungen", title: "Einstellungen", description: "Konto & App" },
+    {
+      href: "/profil/legende",
+      title: "Symbole & Begriffe",
+      description: "Alle Icons, Farben und Fachbegriffe der App erklärt",
+    },
   ];
 
   return (

@@ -12,6 +12,7 @@ const TABS = [
   { href: "/profil/favoriten", label: "Favoriten" },
   { href: "/profil/bewertungen", label: "Bewertungen" },
   { href: "/profil/einstellungen", label: "Einstellungen" },
+  { href: "/profil/legende", label: "Symbole & Begriffe" },
 ];
 
 export function ProfileSubNav() {
