@@ -172,6 +172,32 @@ type WizardStep = 1 | 2 | 3;
 // versehentlich eine Route unter "Meine Routen" gespeichert wird.
 const DRAFT_STORAGE_KEY = "routenplaner:draft";
 
+/** Planungs-Einstellungen, die tatsaechlich zum aktuell angezeigten `result`
+ * gefuehrt haben -- unabhaengig davon, ob der Nutzer seitdem auf Tab 1 an
+ * einem Regler gedreht oder das Gespann gewechselt hat, OHNE auf "Route
+ * (mit angepassten Einstellungen) neu berechnen" zu klicken. handleReplan
+ * (Loeschen/Alternative waehlen in Tab 2) muss mit GENAU diesen "eingefrorenen"
+ * Werten weiterrechnen, sonst kann eine Alternative, die unter den alten
+ * Einstellungen als gueltig angezeigt wurde, unter den neuen (noch gar nicht
+ * angewendeten) Reglerwerten ploetzlich als "nicht erreichbar" abgelehnt
+ * werden (Bugreport: Alternative fuer Stopp 3 wurde direkt nach Auswahl als
+ * unerreichbar gemeldet -- Ursache war ein seit der letzten Berechnung auf
+ * Tab 1 veraendertes Ladeziel-an-Zwischenstopps, das nie per "neu berechnen"
+ * uebernommen wurde). */
+interface AppliedPlanSettings {
+  vehicleId: string;
+  caravanId: string;
+  preferTrailerSuitable: boolean;
+  minPowerKw: string;
+  preferredProviders: string[];
+  avoidedProviders: string[];
+  departureSoc: number;
+  minSocAtStop: number;
+  minSocAtDestination: number;
+  targetSocAfterCharging: number;
+  detourTolerance: number;
+}
+
 interface RouteDraftState {
   start: string;
   end: string;
@@ -325,6 +351,11 @@ export function RoutePlannerForm({
   const [savingRoute, setSavingRoute] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  // Siehe AppliedPlanSettings oben -- immer zusammen mit `result` gesetzt,
+  // nie aus den (jederzeit weiter aenderbaren) Tab-1-Reglern direkt gelesen.
+  // Ref statt State: wird nur in handleReplan GELESEN, eine Aenderung soll
+  // keinen eigenen Render ausloesen.
+  const appliedSettingsRef = useRef<AppliedPlanSettings | null>(null);
 
   const vehicleById = useMemo(() => new Map(vehicles.map((v) => [v.id, v])), [vehicles]);
 
@@ -390,6 +421,19 @@ export function RoutePlannerForm({
       setDetourTolerance(saved.detourToleranceKm);
       setExcludedStationIds(saved.excludedStationIds);
       setForcedStationIdByIndex(saved.forcedStationIdByIndex);
+      appliedSettingsRef.current = {
+        vehicleId: saved.vehicleId,
+        caravanId: saved.caravanId ?? "",
+        preferTrailerSuitable: saved.preferTrailerSuitable,
+        minPowerKw: saved.minPowerKw?.toString() ?? "",
+        preferredProviders: saved.preferredProviders,
+        avoidedProviders: saved.avoidedProviders,
+        departureSoc: saved.departureSocPercent,
+        minSocAtStop: saved.minSocAtStopPercent,
+        minSocAtDestination: saved.minSocAtDestinationPercent,
+        targetSocAfterCharging: saved.targetSocAfterChargingPercent,
+        detourTolerance: saved.detourToleranceKm,
+      };
       setSaveRouteName(saved.name);
       setSaveError(null);
       setSaveSuccess(false);
@@ -440,6 +484,19 @@ export function RoutePlannerForm({
     setDetourTolerance(draft.detourTolerance);
     setExcludedStationIds(draft.excludedStationIds);
     setForcedStationIdByIndex(draft.forcedStationIdByIndex);
+    appliedSettingsRef.current = {
+      vehicleId: draft.vehicleId,
+      caravanId: draft.caravanId,
+      preferTrailerSuitable: draft.preferTrailerSuitable,
+      minPowerKw: draft.minPowerKw,
+      preferredProviders: draft.preferredProviders,
+      avoidedProviders: draft.avoidedProviders,
+      departureSoc: draft.departureSoc,
+      minSocAtStop: draft.minSocAtStop,
+      minSocAtDestination: draft.minSocAtDestination,
+      targetSocAfterCharging: draft.targetSocAfterCharging,
+      detourTolerance: draft.detourTolerance,
+    };
     setResult(draft.result);
     setActiveStep(2);
   }
@@ -559,28 +616,35 @@ export function RoutePlannerForm({
     forcedStationIdByIndex?: Record<number, string>;
   }) {
     if (!result) return;
+    // Immer mit den Einstellungen weiterrechnen, die tatsaechlich zu `result`
+    // gefuehrt haben (siehe AppliedPlanSettings) -- NICHT mit den moeglicherweise
+    // seitdem auf Tab 1 veraenderten, aber nie per "neu berechnen" angewendeten
+    // Reglerwerten, sonst kann eine gerade erst als gueltig angezeigte
+    // Alternative sofort als "nicht erreichbar" abgelehnt werden.
+    const applied = appliedSettingsRef.current;
+    if (!applied) return;
     setReplanBusy(true);
     setReplanError(null);
     try {
       const nextExcluded = overrides.excludedStationIds ?? excludedStationIds;
       const nextForced = overrides.forcedStationIdByIndex ?? forcedStationIdByIndex;
       const planResult = await replanChargingStop({
-        vehicleId,
-        caravanId: caravanId || undefined,
+        vehicleId: applied.vehicleId,
+        caravanId: applied.caravanId || undefined,
         start: result.start,
         end: result.end,
         manualWaypoints: result.manualWaypoints,
         route: { distanceKm: result.plan.distanceKm, durationMin: result.plan.durationMin, geometry: result.geometry },
         consumptionKwhPer100km: result.plan.effectiveConsumptionKwhPer100km,
-        preferTrailerSuitable,
-        minPowerKw: minPowerKw ? Number(minPowerKw) : undefined,
-        preferredProviders,
-        avoidedProviders,
-        departureSocPercent: departureSoc,
-        minSocAtStopPercent: minSocAtStop,
-        minSocAtDestinationPercent: minSocAtDestination,
-        targetSocAfterChargingPercent: targetSocAfterCharging,
-        detourToleranceKm: detourTolerance,
+        preferTrailerSuitable: applied.preferTrailerSuitable,
+        minPowerKw: applied.minPowerKw ? Number(applied.minPowerKw) : undefined,
+        preferredProviders: applied.preferredProviders,
+        avoidedProviders: applied.avoidedProviders,
+        departureSocPercent: applied.departureSoc,
+        minSocAtStopPercent: applied.minSocAtStop,
+        minSocAtDestinationPercent: applied.minSocAtDestination,
+        targetSocAfterChargingPercent: applied.targetSocAfterCharging,
+        detourToleranceKm: applied.detourTolerance,
         excludedStationIds: nextExcluded,
         forcedStationIdByIndex: nextForced,
       });
@@ -711,6 +775,19 @@ export function RoutePlannerForm({
               setResult(planResult.data);
               setExcludedStationIds([]);
               setForcedStationIdByIndex({});
+              appliedSettingsRef.current = {
+                vehicleId,
+                caravanId,
+                preferTrailerSuitable,
+                minPowerKw,
+                preferredProviders,
+                avoidedProviders,
+                departureSoc,
+                minSocAtStop,
+                minSocAtDestination,
+                targetSocAfterCharging,
+                detourTolerance,
+              };
               setSaveRouteName("");
               setSaveError(null);
               setSaveSuccess(false);
