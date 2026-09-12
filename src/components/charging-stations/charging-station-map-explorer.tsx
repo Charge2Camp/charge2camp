@@ -16,43 +16,12 @@ import { ReviewStateBadge } from "@/components/charging-stations/review-state-ba
 import { formatConnectorStandard } from "@/lib/connector-standard";
 import { distanceKm } from "@/lib/geo";
 import { saveListNavigationContext } from "@/components/list-navigation";
+import { loadSavedMapViewport, saveMapViewport, type MapViewport } from "@/lib/map-viewport-storage";
 import type { ChargingStationFilters, ChargingStationView } from "@/lib/charging-stations";
 
 const LIST_NAV_STORAGE_KEY = "ladepunkte:list-nav";
 const MAP_VIEWPORT_STORAGE_KEY = "ladepunkte:map-viewport";
 const VIEWPORT_FETCH_DEBOUNCE_MS = 500;
-
-interface MapViewport {
-  latitude: number;
-  longitude: number;
-  zoom: number;
-}
-
-/** Zuletzt gezeigter Kartenausschnitt (Mittelpunkt + Zoom) -- wird bei jedem
- * Schwenken/Zoomen ueberschrieben (siehe handleViewportChange) und beim
- * naechsten Mount dieser Komponente gelesen (z. B. nach "Zurueck" von einer
- * Ladepunkt-Detailseite oder beim Wechsel von der Liste zurueck zur Karte).
- * Nutzerwunsch: nach dem Zurueckkehren soll exakt derselbe Ausschnitt
- * wieder da sein, nicht die Zuhause-Adresse/Deutschland-Uebersicht. */
-function loadSavedViewport(): MapViewport | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = sessionStorage.getItem(MAP_VIEWPORT_STORAGE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw) as MapViewport;
-  } catch {
-    return null;
-  }
-}
-
-function saveViewport(viewport: MapViewport) {
-  try {
-    sessionStorage.setItem(MAP_VIEWPORT_STORAGE_KEY, JSON.stringify(viewport));
-  } catch {
-    // sessionStorage nicht verfuegbar -- Ausschnitt wird dann beim naechsten
-    // Mount einfach nicht wiederhergestellt, kein Fehler noetig.
-  }
-}
 
 // Deutschland-weiter Standard-Ausschnitt fuer die initiale Kartenzentrierung
 // ohne hinterlegte Zuhause-Adresse (Nutzerwunsch) -- entspricht MapView's
@@ -246,7 +215,7 @@ export function ChargingStationMapExplorer({
   const [viewMode, setViewMode] = useState<"map" | "list">("map");
 
   function handleViewportChange(viewport: MapViewport) {
-    saveViewport(viewport);
+    saveMapViewport(MAP_VIEWPORT_STORAGE_KEY, viewport);
   }
   const [filterOpen, setFilterOpen] = useState(false);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -385,7 +354,7 @@ export function ChargingStationMapExplorer({
   // zwischenzeitlich (waehrend der Listenansicht) veraenderter Ausschnitt
   // beim naechsten Kartenmount beruecksichtigt wird; nach dem Mount selbst
   // ignoriert MapView Aenderungen an initialCenter/initialZoom ohnehin.
-  const savedViewport = loadSavedViewport();
+  const savedViewport = loadSavedMapViewport(MAP_VIEWPORT_STORAGE_KEY);
 
   const FilterButton = (
     <button

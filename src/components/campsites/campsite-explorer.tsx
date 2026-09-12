@@ -5,9 +5,11 @@ import Link from "next/link";
 import { MapView } from "@/components/map/map-view";
 import { CAMPSITE_PIN_ICON_SRC } from "@/lib/trailer-verdict";
 import { saveListNavigationContext } from "@/components/list-navigation";
+import { loadSavedMapViewport, saveMapViewport, type MapViewport } from "@/lib/map-viewport-storage";
 import type { CampsiteSearchRow } from "@/types/database";
 
 const LIST_NAV_STORAGE_KEY = "campingplaetze:list-nav";
+const MAP_VIEWPORT_STORAGE_KEY = "campingplaetze:map-viewport";
 
 function CampsiteCard({
   campsite,
@@ -94,6 +96,20 @@ export function CampsiteExplorer({
   const visibleCampsites = campsites.slice(0, visibleCount);
   const campsiteIds = campsites.map((c) => c.id);
 
+  function handleViewportChange(viewport: MapViewport) {
+    saveMapViewport(MAP_VIEWPORT_STORAGE_KEY, viewport);
+  }
+
+  // Wird beim (Wieder-)Mounten von MapView ausgewertet (z. B. Rueckkehr von
+  // der Campingplatz-Detailseite) -- kein useMemo, absichtlich bei jedem
+  // Render frisch aus sessionStorage gelesen (siehe gleiches Muster in
+  // charging-station-map-explorer.tsx). Ist ein Ausschnitt gespeichert,
+  // soll GENAU der wiederhergestellt werden (Nutzerwunsch) -- das
+  // automatische fitBounds auf alle Treffer beim Mounten wird dafuer
+  // uebersprungen (siehe fitBoundsOnMarkersChange unten), sonst wuerde es
+  // den wiederhergestellten Ausschnitt sofort wieder ueberschreiben.
+  const savedViewport = loadSavedMapViewport(MAP_VIEWPORT_STORAGE_KEY);
+
   const markers = campsites.map((c) => ({
     id: c.id,
     latitude: c.lat,
@@ -168,8 +184,14 @@ export function CampsiteExplorer({
             markers={markers}
             selectedId={hoveredId ?? undefined}
             onMarkerClick={setHoveredId}
+            onViewportChange={handleViewportChange}
             cluster
-            {...(homeAddress ? { fallbackCenter: homeAddress, fallbackZoom: 10 } : {})}
+            fitBoundsOnMarkersChange={!savedViewport}
+            {...(savedViewport
+              ? { initialCenter: savedViewport, initialZoom: savedViewport.zoom }
+              : homeAddress
+                ? { fallbackCenter: homeAddress, fallbackZoom: 10 }
+                : {})}
           />
         </div>
       </div>
