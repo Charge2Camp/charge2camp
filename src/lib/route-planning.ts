@@ -45,6 +45,11 @@ export interface RouteChargingStation {
 // Hersteller-WLTP-Angaben, siehe ADAC-Praxistests mit Wohnwagen).
 export const DEFAULT_CONSUMPTION_KWH_PER_100KM = 38;
 
+// Standard-Mindestladeleistung im Routenplaner-Formular (Nutzerwunsch) --
+// deckt die meisten heutigen Schnelllader-Standorte ab, ohne bei Bedarf
+// (z. B. abgelegenere Ziele) zu restriktiv zu sein; ueberschreibbar.
+export const DEFAULT_MIN_POWER_KW = 100;
+
 // Standardwerte fuer die SOC-Eingaben (Nutzer kann jeden Wert im
 // Routenplaner-Formular ueberschreiben).
 export const DEFAULT_DEPARTURE_SOC_PERCENT = 100;

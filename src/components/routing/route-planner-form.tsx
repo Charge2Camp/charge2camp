@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   loadSavedRoute,
@@ -22,6 +22,7 @@ import {
   DEFAULT_CONSUMPTION_KWH_PER_100KM,
   DEFAULT_DEPARTURE_SOC_PERCENT,
   DEFAULT_DETOUR_TOLERANCE_KM,
+  DEFAULT_MIN_POWER_KW,
   DEFAULT_MIN_SOC_AT_DESTINATION_PERCENT,
   DEFAULT_MIN_SOC_AT_STOP_PERCENT,
   DEFAULT_TARGET_SOC_AFTER_CHARGING_PERCENT,
@@ -85,6 +86,41 @@ function formatDuration(minutes: number): string {
   const h = Math.floor(minutes / 60);
   const m = Math.round(minutes % 60);
   return h > 0 ? `${h} Std. ${m} Min.` : `${m} Min.`;
+}
+
+// Wert eines Zahlenfelds per Mausrad erhoehen/verringern (Nutzerwunsch, fuer
+// Verbrauch mit Gespann und Mindest-Ladeleistung) -- nur wenn das Feld
+// tatsaechlich fokussiert ist, sonst scrollt ein zufaellig darueber
+// bewegtes Mausrad weiterhin ganz normal die Seite. React registriert
+// onWheel/onScroll standardmaessig als PASSIVEN Listener -- ein
+// preventDefault() darin wird von Chrome/Firefox stillschweigend
+// ignoriert, das native (viel groebere, feste 1er-)Scroll-Increment des
+// <input type="number"> feuert dann trotzdem. Deshalb hier ein echter,
+// nicht-passiver DOM-Listener per ref/useEffect statt eines React-
+// onWheel-Props.
+function useNumberFieldWheel(
+  setValue: React.Dispatch<React.SetStateAction<string>>,
+  step: number,
+  min: number
+) {
+  const ref = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    function onWheel(e: WheelEvent) {
+      if (document.activeElement !== el) return;
+      e.preventDefault();
+      setValue((prev) => {
+        const current = Number(prev);
+        const base = Number.isFinite(current) ? current : min;
+        const next = Math.max(min, base + (e.deltaY < 0 ? step : -step));
+        return String(Math.round(next * 10) / 10);
+      });
+    }
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [setValue, step, min]);
+  return ref;
 }
 
 function escapeHtml(value: string): string {
@@ -255,9 +291,12 @@ export function RoutePlannerForm({
   // selbst schon vorbelegt ist (initialVehicleId) -- gleiche Ableitung wie
   // handleVehicleSelect beim manuellen Wechsel des Fahrzeugs.
   const [consumption, setConsumption] = useState(
-    vehicles.find((v) => v.id === initialVehicleId)?.consumption_kwh_per_100km?.toString() ?? ""
+    vehicles.find((v) => v.id === initialVehicleId)?.consumption_kwh_per_100km?.toString() ??
+      DEFAULT_CONSUMPTION_KWH_PER_100KM.toString()
   );
-  const [minPowerKw, setMinPowerKw] = useState("");
+  const [minPowerKw, setMinPowerKw] = useState(DEFAULT_MIN_POWER_KW.toString());
+  const consumptionInputRef = useNumberFieldWheel(setConsumption, 1, 0);
+  const minPowerInputRef = useNumberFieldWheel(setMinPowerKw, 10, 0);
   const [preferTrailerSuitable, setPreferTrailerSuitable] = useState(true);
   const [departureSoc, setDepartureSoc] = useState(DEFAULT_DEPARTURE_SOC_PERCENT);
   const [minSocAtStop, setMinSocAtStop] = useState(DEFAULT_MIN_SOC_AT_STOP_PERCENT);
@@ -270,11 +309,10 @@ export function RoutePlannerForm({
   const [detourTolerance, setDetourTolerance] = useState(DEFAULT_DETOUR_TOLERANCE_KM);
   const [preferredProviders, setPreferredProviders] = useState<string[]>(initialPreferredProviders);
   const [avoidedProviders, setAvoidedProviders] = useState<string[]>(initialAvoidedProviders);
-  // Aufklappbar (Nutzerwunsch) -- offen, sobald bereits Anbieter ausgewaehlt
-  // sind (z. B. per Profil-Vorbelegung), sonst eingeklappt.
-  const [providersOpen, setProvidersOpen] = useState(
-    initialPreferredProviders.length > 0 || initialAvoidedProviders.length > 0
-  );
+  // Aufklappbar, per Default IMMER eingeklappt (Nutzerwunsch) -- auch wenn
+  // bereits Anbieter vorbelegt sind (z. B. aus dem Profil), das zeigt die
+  // eingeklappte Zusammenfassung im Feld selbst schon an (siehe unten).
+  const [providersOpen, setProvidersOpen] = useState(false);
   const [manualStopQueries, setManualStopQueries] = useState<string[]>([]);
   const [excludedStationIds, setExcludedStationIds] = useState<string[]>([]);
   const [forcedStationIdByIndex, setForcedStationIdByIndex] = useState<Record<number, string>>({});
@@ -462,7 +500,7 @@ export function RoutePlannerForm({
   function handleVehicleSelect(id: string) {
     setVehicleId(id);
     const v = vehicleById.get(id);
-    setConsumption(v?.consumption_kwh_per_100km?.toString() ?? "");
+    setConsumption(v?.consumption_kwh_per_100km?.toString() ?? DEFAULT_CONSUMPTION_KWH_PER_100KM.toString());
   }
 
   // Setzt nur die Formulareingaben zurueck, nicht die berechnete Route --
@@ -763,43 +801,60 @@ export function RoutePlannerForm({
             />
           </div>
 
-          <label className="flex flex-col gap-1 text-sm">
-            Verbrauch mit Gespann (kWh/100km)
-            <input
-              name="consumption_kwh_per_100km"
-              type="number"
-              step="0.1"
-              min="0"
-              value={consumption}
-              onChange={(e) => setConsumption(e.target.value)}
-              placeholder={`z. B. ${DEFAULT_CONSUMPTION_KWH_PER_100KM} (Standard, falls kein Wert bekannt)`}
-              className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
-            />
-          </label>
+          {/* Nebeneinander mit bewusst schmalen Feldern (Nutzerwunsch: Seite
+              kompakter) statt je einer vollen Grid-Spalte -- beide Werte
+              sind vorbelegt (38 kWh/100km bzw. 100 kW) und lassen sich per
+              Mausrad in der jeweiligen Feld-Schrittweite anpassen, siehe
+              useNumberFieldWheel. */}
+          <div className="flex gap-4 sm:col-span-2">
+            <label className="flex flex-col gap-1 text-sm">
+              Verbrauch mit Gespann (kWh/100km)
+              <input
+                ref={consumptionInputRef}
+                name="consumption_kwh_per_100km"
+                type="number"
+                step="0.1"
+                min="0"
+                value={consumption}
+                onChange={(e) => setConsumption(e.target.value)}
+                className="w-24 rounded-md border border-black/15 px-2 py-2 text-base dark:border-white/15 dark:bg-transparent"
+              />
+            </label>
 
-          <label className="flex flex-col gap-1 text-sm">
-            Mindest-Ladeleistung (kW, optional)
-            <input
-              name="min_power_kw"
-              type="number"
-              step="1"
-              min="0"
-              value={minPowerKw}
-              onChange={(e) => setMinPowerKw(e.target.value)}
-              className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
-            />
-          </label>
+            <label className="flex flex-col gap-1 text-sm">
+              Mindest-Ladeleistung (kW, optional)
+              <input
+                ref={minPowerInputRef}
+                name="min_power_kw"
+                type="number"
+                step="10"
+                min="0"
+                value={minPowerKw}
+                onChange={(e) => setMinPowerKw(e.target.value)}
+                className="w-24 rounded-md border border-black/15 px-2 py-2 text-base dark:border-white/15 dark:bg-transparent"
+              />
+            </label>
+          </div>
 
           <div className="text-sm sm:col-span-2">
+            {/* Ueberschrift AUSSERHALB der Box (Nutzerwunsch), gleiches
+                Muster wie "Mein Gespann" oben -- die Box selbst zeigt nur
+                noch die Zusammenfassung der aktuellen Auswahl. */}
+            <p className="text-sm">Anbieter priorisieren oder ausschließen (optional)</p>
             <button
               type="button"
               onClick={() => setProvidersOpen((o) => !o)}
-              className="flex min-h-11 w-full items-center justify-between rounded-md border border-black/15 px-3 py-2 text-left font-medium dark:border-white/15"
+              className="mt-1 flex min-h-11 w-full items-center justify-between rounded-md border border-black/15 px-3 py-2 text-left font-medium dark:border-white/15"
             >
               <span>
-                Anbieter priorisieren oder ausschließen (optional)
-                {preferredProviders.length > 0 && ` -- ${preferredProviders.length}× bevorzugt`}
-                {avoidedProviders.length > 0 && ` -- ${avoidedProviders.length}× vermieden`}
+                {preferredProviders.length === 0 && avoidedProviders.length === 0
+                  ? "Keine Auswahl"
+                  : [
+                      preferredProviders.length > 0 ? `${preferredProviders.length}× bevorzugt` : null,
+                      avoidedProviders.length > 0 ? `${avoidedProviders.length}× vermieden` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
               </span>
               <span aria-hidden="true">{providersOpen ? "▲" : "▼"}</span>
             </button>
