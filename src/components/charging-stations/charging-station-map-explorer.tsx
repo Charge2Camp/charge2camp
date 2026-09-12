@@ -19,7 +19,40 @@ import { saveListNavigationContext } from "@/components/list-navigation";
 import type { ChargingStationFilters, ChargingStationView } from "@/lib/charging-stations";
 
 const LIST_NAV_STORAGE_KEY = "ladepunkte:list-nav";
+const MAP_VIEWPORT_STORAGE_KEY = "ladepunkte:map-viewport";
 const VIEWPORT_FETCH_DEBOUNCE_MS = 500;
+
+interface MapViewport {
+  latitude: number;
+  longitude: number;
+  zoom: number;
+}
+
+/** Zuletzt gezeigter Kartenausschnitt (Mittelpunkt + Zoom) -- wird bei jedem
+ * Schwenken/Zoomen ueberschrieben (siehe handleViewportChange) und beim
+ * naechsten Mount dieser Komponente gelesen (z. B. nach "Zurueck" von einer
+ * Ladepunkt-Detailseite oder beim Wechsel von der Liste zurueck zur Karte).
+ * Nutzerwunsch: nach dem Zurueckkehren soll exakt derselbe Ausschnitt
+ * wieder da sein, nicht die Zuhause-Adresse/Deutschland-Uebersicht. */
+function loadSavedViewport(): MapViewport | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(MAP_VIEWPORT_STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as MapViewport;
+  } catch {
+    return null;
+  }
+}
+
+function saveViewport(viewport: MapViewport) {
+  try {
+    sessionStorage.setItem(MAP_VIEWPORT_STORAGE_KEY, JSON.stringify(viewport));
+  } catch {
+    // sessionStorage nicht verfuegbar -- Ausschnitt wird dann beim naechsten
+    // Mount einfach nicht wiederhergestellt, kein Fehler noetig.
+  }
+}
 
 // Deutschland-weiter Standard-Ausschnitt fuer die initiale Kartenzentrierung
 // ohne hinterlegte Zuhause-Adresse (Nutzerwunsch) -- entspricht MapView's
@@ -211,6 +244,10 @@ export function ChargingStationMapExplorer({
   activeFilterCount: number;
 }) {
   const [viewMode, setViewMode] = useState<"map" | "list">("map");
+
+  function handleViewportChange(viewport: MapViewport) {
+    saveViewport(viewport);
+  }
   const [filterOpen, setFilterOpen] = useState(false);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   // Ohne Filter kann die Liste 1000+ Eintraege umfassen (siehe ladepunkte/
@@ -342,6 +379,14 @@ export function ChargingStationMapExplorer({
     [stations]
   );
 
+  // Wird beim (Wieder-)Mounten von MapView ausgewertet (Kartenansicht
+  // aktivieren/Rueckkehr von der Detailseite) -- kein useMemo, da absichtlich
+  // bei jedem Render frisch aus sessionStorage gelesen wird, damit ein
+  // zwischenzeitlich (waehrend der Listenansicht) veraenderter Ausschnitt
+  // beim naechsten Kartenmount beruecksichtigt wird; nach dem Mount selbst
+  // ignoriert MapView Aenderungen an initialCenter/initialZoom ohnehin.
+  const savedViewport = loadSavedViewport();
+
   const FilterButton = (
     <button
       type="button"
@@ -374,9 +419,10 @@ export function ChargingStationMapExplorer({
             markers={markers}
             cluster
             onBoundsChange={handleBoundsChange}
+            onViewportChange={handleViewportChange}
             fitBoundsOnMarkersChange={filters.favoritesOnly}
-            initialCenter={homeAddress ?? GERMANY_OVERVIEW_CENTER}
-            initialZoom={homeAddress ? 10 : GERMANY_OVERVIEW_ZOOM}
+            initialCenter={savedViewport ?? homeAddress ?? GERMANY_OVERVIEW_CENTER}
+            initialZoom={savedViewport?.zoom ?? (homeAddress ? 10 : GERMANY_OVERVIEW_ZOOM)}
           />
 
           <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-2 p-3">

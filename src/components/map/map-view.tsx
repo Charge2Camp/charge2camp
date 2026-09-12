@@ -141,6 +141,7 @@ export function MapView({
   fitBoundsMaxZoom = 12,
   fitBoundsOnMarkersChange = true,
   onBoundsChange,
+  onViewportChange,
   initialCenter,
   initialZoom = 10,
 }: {
@@ -180,6 +181,13 @@ export function MapView({
    * basiertes Nachladen. Ohne Zutun sonst unveraendert (kein Overhead fuer
    * alle anderen MapView-Einsatzstellen). */
   onBoundsChange?: (bounds: MapBoundsBox) => void;
+  /** Meldet Kartenmittelpunkt + Zoom (einmalig nach dem ersten Laden und
+   * danach bei jedem "moveend") -- Grundlage dafuer, den zuletzt gezeigten
+   * Kartenausschnitt zwischenzuspeichern und beim Zurueckkommen (z. B. von
+   * einer Detailseite) exakt wiederherzustellen statt auf initialCenter/
+   * initialZoom zurueckzufallen (Nutzerwunsch, siehe
+   * charging-station-map-explorer.tsx). Ohne Zutun sonst unveraendert. */
+  onViewportChange?: (viewport: { latitude: number; longitude: number; zoom: number }) => void;
   /** Ueberschreibt den initialen Kartenmittelpunkt -- Vorrang vor dem
    * ersten Marker UND `fallbackCenter` (Nutzerwunsch, siehe
    * charging-station-map-explorer.tsx: die Ladepunkte-Karte soll initial
@@ -199,6 +207,10 @@ export function MapView({
   const onBoundsChangeRef = useRef(onBoundsChange);
   useEffect(() => {
     onBoundsChangeRef.current = onBoundsChange;
+  });
+  const onViewportChangeRef = useRef(onViewportChange);
+  useEffect(() => {
+    onViewportChangeRef.current = onViewportChange;
   });
   // Supercluster laeuft bewusst im Hauptthread (direkter Aufruf, nicht ueber
   // eine MapLibre-GeoJSON-Source mit cluster:true) -- letzteres wuerde
@@ -294,6 +306,14 @@ export function MapView({
     }
     map.on("load", reportBounds);
     map.on("moveend", reportBounds);
+
+    function reportViewport() {
+      if (!onViewportChangeRef.current) return;
+      const c = map.getCenter();
+      onViewportChangeRef.current({ latitude: c.lat, longitude: c.lng, zoom: map.getZoom() });
+    }
+    map.on("load", reportViewport);
+    map.on("moveend", reportViewport);
 
     return () => {
       map.remove();
