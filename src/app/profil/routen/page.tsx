@@ -34,16 +34,10 @@ export default async function SavedRoutesPage() {
   // angezeigt, statt die ganze Seite abzubrechen.
   const rows = await Promise.all(
     routes.map(async (route) => {
-      try {
-        const detail = await loadSavedRoute(route.id);
-        return { route, result: detail.result, error: null as string | null };
-      } catch (err) {
-        return {
-          route,
-          result: null,
-          error: err instanceof Error ? err.message : "Route konnte nicht geladen werden.",
-        };
-      }
+      const detail = await loadSavedRoute(route.id);
+      return detail.ok
+        ? { route, result: detail.data.result, error: null as string | null }
+        : { route, result: null, error: detail.error };
     })
   );
 

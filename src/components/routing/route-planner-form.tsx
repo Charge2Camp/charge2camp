@@ -321,7 +321,12 @@ export function RoutePlannerForm({
     setLoadingSavedRoute(true);
     setError(null);
     try {
-      const saved = await loadSavedRoute(id);
+      const savedResult = await loadSavedRoute(id);
+      if (!savedResult.ok) {
+        setError(savedResult.error);
+        return;
+      }
+      const saved = savedResult.data;
       setStart(saved.startQuery);
       setEnd(saved.endQuery);
       // Falls Start/Ziel damals ueber einen unserer Campingplatz-
@@ -521,7 +526,7 @@ export function RoutePlannerForm({
     try {
       const nextExcluded = overrides.excludedStationIds ?? excludedStationIds;
       const nextForced = overrides.forcedStationIdByIndex ?? forcedStationIdByIndex;
-      const newPlan = await replanChargingStop({
+      const planResult = await replanChargingStop({
         vehicleId,
         caravanId: caravanId || undefined,
         route: { distanceKm: result.plan.distanceKm, durationMin: result.plan.durationMin, geometry: result.geometry },
@@ -538,7 +543,11 @@ export function RoutePlannerForm({
         excludedStationIds: nextExcluded,
         forcedStationIdByIndex: nextForced,
       });
-      setResult({ ...result, plan: newPlan });
+      if (!planResult.ok) {
+        setReplanError(planResult.error);
+        return;
+      }
+      setResult({ ...result, plan: planResult.data });
       setExcludedStationIds(nextExcluded);
       setForcedStationIdByIndex(nextForced);
     } catch (err) {
@@ -566,7 +575,7 @@ export function RoutePlannerForm({
     setSavingRoute(true);
     setSaveError(null);
     try {
-      await saveRoute({
+      const saveResult = await saveRoute({
         name: saveRouteName.trim() || defaultSaveRouteName,
         startQuery: start,
         start: result.start,
@@ -588,6 +597,10 @@ export function RoutePlannerForm({
         excludedStationIds,
         forcedStationIdByIndex,
       });
+      if (!saveResult.ok) {
+        setSaveError(saveResult.error);
+        return;
+      }
       setSaveSuccess(true);
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Route konnte nicht gespeichert werden.");
@@ -650,7 +663,11 @@ export function RoutePlannerForm({
             setError(null);
             try {
               const planResult = await planRoute(formData);
-              setResult(planResult);
+              if (!planResult.ok) {
+                setError(planResult.error);
+                return;
+              }
+              setResult(planResult.data);
               setExcludedStationIds([]);
               setForcedStationIdByIndex({});
               setSaveRouteName("");

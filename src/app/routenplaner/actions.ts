@@ -22,6 +22,23 @@ import type { Caravan, ChargingReview, SavedRoute, TrailerVerdict, Vehicle } fro
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 
+/**
+ * Naechste Server Actions dieser Datei werden vom Client (route-planner-form.tsx)
+ * direkt per Netzwerkaufruf aufgerufen -- anders als ein normaler Funktionsaufruf
+ * innerhalb eines Server Components (z. B. profil/routen/page.tsx ruft
+ * loadSavedRoute direkt auf) redaktiert Next.js dabei JEDE geworfene Error-
+ * Message in der Produktion zu einer generischen, fuer Nutzer nutzlosen
+ * Meldung ("Minified React error #441", siehe Nutzerbericht). Erwartete
+ * Fehler (falsche Adresse, geloeschtes Fahrzeug, Route nicht gefunden, ...)
+ * werden deshalb NICHT geworfen, sondern als Ergebniswert zurueckgegeben --
+ * so bleibt die hilfreiche deutsche Fehlermeldung fuer den Nutzer sichtbar.
+ */
+type ActionResult<T> = { ok: true; data: T } | { ok: false; error: string };
+
+function errorMessage(err: unknown, fallback: string): string {
+  return err instanceof Error ? err.message : fallback;
+}
+
 // Abstand (km) zwischen Stichprobenpunkten entlang der Route fuer die
 // Ladepunkt-Umkreissuche (siehe fetchCorridorChargingStations) -- geklemmt
 // zwischen einem Minimum (sonst bei langen Routen zu viele parallele
@@ -414,7 +431,15 @@ async function loadCaravan(
   return (data as Caravan | null) ?? null;
 }
 
-export async function planRoute(formData: FormData): Promise<RoutePlanResult> {
+export async function planRoute(formData: FormData): Promise<ActionResult<RoutePlanResult>> {
+  try {
+    return { ok: true, data: await planRouteInner(formData) };
+  } catch (err) {
+    return { ok: false, error: errorMessage(err, "Route konnte nicht berechnet werden.") };
+  }
+}
+
+async function planRouteInner(formData: FormData): Promise<RoutePlanResult> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -552,7 +577,17 @@ export async function planRoute(formData: FormData): Promise<RoutePlanResult> {
  * ohne erneutes Geocoding/Routing, da Start/Ziel/Streckengeometrie
  * unveraendert bleiben. Vermeidet unnoetige Nominatim-/OSRM-Anfragen.
  */
-export async function replanChargingStop(input: {
+export async function replanChargingStop(
+  input: Parameters<typeof replanChargingStopInner>[0]
+): Promise<ActionResult<TripPlan>> {
+  try {
+    return { ok: true, data: await replanChargingStopInner(input) };
+  } catch (err) {
+    return { ok: false, error: errorMessage(err, "Ladestopp konnte nicht neu geplant werden.") };
+  }
+}
+
+async function replanChargingStopInner(input: {
   vehicleId: string;
   caravanId?: string;
   route: { distanceKm: number; durationMin: number; geometry: { latitude: number; longitude: number }[] };
@@ -639,7 +674,15 @@ export interface SaveRouteInput {
  * bewusst keine fertige Streckengeometrie/keinen fertigen Ladeplan (siehe
  * Kommentar in der Migration), damit die Route beim erneuten Oeffnen immer
  * mit aktuellen Ladepunkten/Strassendaten neu berechnet wird. */
-export async function saveRoute(input: SaveRouteInput): Promise<{ id: string }> {
+export async function saveRoute(input: SaveRouteInput): Promise<ActionResult<{ id: string }>> {
+  try {
+    return { ok: true, data: await saveRouteInner(input) };
+  } catch (err) {
+    return { ok: false, error: errorMessage(err, "Route konnte nicht gespeichert werden.") };
+  }
+}
+
+async function saveRouteInner(input: SaveRouteInput): Promise<{ id: string }> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -713,7 +756,15 @@ export interface SavedRouteDetail {
  * Koordinaten sind bereits bekannt (kein erneutes Geocoding noetig), Route/
  * Ladeplanung werden mit den gespeicherten Einstellungen frisch neu
  * berechnet. */
-export async function loadSavedRoute(savedRouteId: string): Promise<SavedRouteDetail> {
+export async function loadSavedRoute(savedRouteId: string): Promise<ActionResult<SavedRouteDetail>> {
+  try {
+    return { ok: true, data: await loadSavedRouteInner(savedRouteId) };
+  } catch (err) {
+    return { ok: false, error: errorMessage(err, "Gespeicherte Route konnte nicht geladen werden.") };
+  }
+}
+
+async function loadSavedRouteInner(savedRouteId: string): Promise<SavedRouteDetail> {
   const supabase = await createClient();
   const {
     data: { user },
