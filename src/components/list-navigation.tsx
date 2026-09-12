@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 /** Zwischengespeicherter Kontext einer Listenuebersicht (Ladepunkte/
  * Campingplaetze), gesetzt beim Antippen eines Listeneintrags -- siehe
@@ -34,50 +35,85 @@ export function saveListNavigationContext(storageKey: string, ids: string[]) {
 }
 
 /** "Zurück zur Übersicht" / "Nächstes Ergebnis" ganz oben auf einer
- * Ladepunkt-/Campingplatz-Detailseite (Nutzerwunsch) -- nur sichtbar,
- * wenn die Seite tatsaechlich aus der zugehoerigen Listenuebersicht
- * erreicht wurde (per saveListNavigationContext) UND die aktuelle ID
- * Teil dieser Liste ist; sonst (Direktaufruf, externer Link, andere
- * Liste) bleibt der Block leer. */
+ * Ladepunkt-/Campingplatz-Detailseite (Nutzerwunsch) -- wenn die Seite aus
+ * der zugehoerigen Listenuebersicht erreicht wurde (per
+ * saveListNavigationContext) UND die aktuelle ID Teil dieser Liste ist,
+ * erscheint der volle Uebersicht+Naechstes-Block. In JEDEM anderen Fall
+ * (Kartenpin-Popup, Startseiten-Modal, Direktlink, ...) gibt es trotzdem
+ * IMMER einen expliziten Zurueck-Button -- Nutzerwunsch: von einer
+ * Detailseite muss man sich unabhaengig vom Einstiegspunkt immer zum
+ * vorherigen Screen zurueckbewegen koennen, nicht nur ueber die
+ * (auf mobil/als spaetere native App oft nicht sichtbare) Browser-
+ * Zurueck-Funktion. */
 export function ListNavigation({
   storageKey,
   detailPathPrefix,
   currentId,
 }: {
   storageKey: string;
-  /** z. B. "/ladepunkte/" -- Praefix fuer den Link zum naechsten Ergebnis. */
+  /** z. B. "/ladepunkte/" -- Praefix fuer den Link zum naechsten Ergebnis
+   * bzw. (ohne Listen-Kontext) fuer den Fallback-Link zur Uebersicht. */
   detailPathPrefix: string;
   currentId: string;
 }) {
+  const router = useRouter();
   const [context, setContext] = useState<ListNavigationContext | null>(null);
+  const [canGoBack, setCanGoBack] = useState(false);
 
   useEffect(() => {
     try {
       const raw = sessionStorage.getItem(storageKey);
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as ListNavigationContext;
-      void Promise.resolve().then(() => setContext(parsed));
+      if (raw) {
+        const parsed = JSON.parse(raw) as ListNavigationContext;
+        void Promise.resolve().then(() => setContext(parsed));
+      }
     } catch {
       // Beschaedigter Eintrag -- einfach ignorieren, kein Fehler noetig.
     }
+    // Mehr als ein Eintrag in der History dieses Tabs heisst: es gibt
+    // tatsaechlich eine vorherige Seite, zu der der Browser zurueck kann
+    // (z. B. Kartenpin-Popup oder Startseiten-Modal) -- sonst (Detailseite
+    // direkt per URL/Lesezeichen geoeffnet) faellt der Button stattdessen
+    // auf einen Link zur allgemeinen Uebersicht zurueck.
+    setCanGoBack(window.history.length > 1);
   }, [storageKey, currentId]);
 
-  if (!context) return null;
-  const index = context.ids.indexOf(currentId);
-  if (index === -1) return null;
-  const nextId = index < context.ids.length - 1 ? context.ids[index + 1] : null;
+  const index = context?.ids.indexOf(currentId) ?? -1;
+  if (context && index !== -1) {
+    const nextId = index < context.ids.length - 1 ? context.ids[index + 1] : null;
+    return (
+      <div className="mb-4 flex items-center justify-between gap-3 text-sm">
+        <Link href={context.returnUrl} className="inline-flex min-h-11 items-center font-medium text-route hover:underline">
+          ← Zurück zur Übersicht
+        </Link>
+        {nextId && (
+          <Link
+            href={`${detailPathPrefix}${nextId}`}
+            className="inline-flex min-h-11 items-center font-medium text-route hover:underline"
+          >
+            Nächstes Ergebnis →
+          </Link>
+        )}
+      </div>
+    );
+  }
 
   return (
-    <div className="mb-4 flex items-center justify-between gap-3 text-sm">
-      <Link href={context.returnUrl} className="inline-flex min-h-11 items-center font-medium text-route hover:underline">
-        ← Zurück zur Übersicht
-      </Link>
-      {nextId && (
-        <Link
-          href={`${detailPathPrefix}${nextId}`}
+    <div className="mb-4 text-sm">
+      {canGoBack ? (
+        <button
+          type="button"
+          onClick={() => router.back()}
           className="inline-flex min-h-11 items-center font-medium text-route hover:underline"
         >
-          Nächstes Ergebnis →
+          ← Zurück
+        </button>
+      ) : (
+        <Link
+          href={detailPathPrefix.replace(/\/$/, "")}
+          className="inline-flex min-h-11 items-center font-medium text-route hover:underline"
+        >
+          ← Zur Übersicht
         </Link>
       )}
     </div>
