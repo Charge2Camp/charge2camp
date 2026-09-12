@@ -38,13 +38,19 @@ type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
  * campingplaetze/[id]/actions.ts -- gleiches Problem, gleicher Fix).
  */
 
-// Abstand (km) zwischen Stichprobenpunkten entlang der Route fuer die
-// Ladepunkt-Umkreissuche (siehe fetchCorridorChargingStations) -- geklemmt
-// zwischen einem Minimum (sonst bei langen Routen zu viele parallele
-// Anfragen) und einem Maximum (sonst Luecken zwischen den Umkreisen, wenn
-// die Umweg-Toleranz klein ist).
+// Mindestabstand (km) zwischen Stichprobenpunkten entlang der Route fuer die
+// Ladepunkt-Umkreissuche (siehe fetchCorridorChargingStations) -- verhindert
+// bei kleiner Umweg-Toleranz zu viele parallele Anfragen auf langen Routen.
+// BEWUSST KEIN Maximum (frueher 40 km): der Abstand soll mit der Umweg-
+// Toleranz mitwachsen, da der Suchradius jedes Stichprobenpunkts genau
+// dieser Toleranz entspricht -- ein gedeckeltes Maximum liesse bei grosser
+// Toleranz (bis 100 km, siehe MAX_DETOUR_TOLERANCE_KM) die Umkreise stark
+// ueberlappen, ohne die Anzahl der Punkte zu verringern: jeder Punkt fragt
+// dann einen deutlich groesseren Kreis ab (Flaeche waechst quadratisch mit
+// dem Radius) bei GLEICHBLEIBEND vielen parallelen Anfragen -- das fuehrte
+// bei einer grossen, vom Nutzer gewaehlten Umweg-Toleranz auf einer langen
+// Route zu einem "Gateway Timeout" beim Neuplanen (Bugreport).
 const CORRIDOR_SAMPLE_MIN_SPACING_KM = 10;
-const CORRIDOR_SAMPLE_MAX_SPACING_KM = 40;
 
 /** Waehlt Punkte entlang der Routengeometrie im Abstand `spacingKm`
  * (kumulierte Streckendistanz, nicht Luftlinie) -- Start und Ziel sind
@@ -87,10 +93,7 @@ async function fetchCorridorChargingStations(
   routeGeometry: LatLng[],
   detourToleranceKm: number
 ): Promise<RouteChargingStation[]> {
-  const spacingKm = Math.min(
-    CORRIDOR_SAMPLE_MAX_SPACING_KM,
-    Math.max(CORRIDOR_SAMPLE_MIN_SPACING_KM, detourToleranceKm)
-  );
+  const spacingKm = Math.max(CORRIDOR_SAMPLE_MIN_SPACING_KM, detourToleranceKm);
   const samplePoints = sampleRoutePoints(routeGeometry, spacingKm);
   const radiusM = Math.max(detourToleranceKm, 1) * 1000;
 
