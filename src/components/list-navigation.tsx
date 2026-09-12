@@ -49,12 +49,25 @@ export function ListNavigation({
   storageKey,
   detailPathPrefix,
   currentId,
+  disableFallback = false,
 }: {
   storageKey: string;
   /** z. B. "/ladepunkte/" -- Praefix fuer den Link zum naechsten Ergebnis
    * bzw. (ohne Listen-Kontext) fuer den Fallback-Link zur Uebersicht. */
   detailPathPrefix: string;
   currentId: string;
+  /** Unterdrueckt den generischen Zurueck-Fallback (Browser-History/Link
+   * zur Uebersicht), wenn die aufrufende Seite fuer den aktuellen Aufruf
+   * bereits eine speziellere, bessere Zurueck-Moeglichkeit anzeigt -- z. B.
+   * "Zurück zur Routenplanung" auf der Ladepunkt-Detailseite, das den
+   * kompletten Planungsstand wiederherstellt (?returnTo=routenplaner,
+   * siehe ladepunkte/[id]/page.tsx). Ohne dieses Flag wuerden dort ZWEI
+   * konkurrierende Zurueck-Elemente erscheinen, und ein Klick auf das
+   * generische (reines router.back(), kennt den Planungsstand nicht)
+   * wuerde die eigentliche Wiederherstellung umgehen -- genau das fuehrte
+   * zu leeren Formularfeldern nach "Zurück" (Bugreport). Gilt NUR fuer den
+   * Fallback -- ein passender Listen-Kontext (s. u.) hat weiterhin Vorrang. */
+  disableFallback?: boolean;
 }) {
   const router = useRouter();
   const [context, setContext] = useState<ListNavigationContext | null>(null);
@@ -97,6 +110,8 @@ export function ListNavigation({
       </div>
     );
   }
+
+  if (disableFallback) return null;
 
   return (
     <div className="mb-4 text-sm">
