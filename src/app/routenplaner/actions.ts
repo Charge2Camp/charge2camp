@@ -570,15 +570,28 @@ async function planRouteInner(formData: FormData): Promise<RoutePlanResult> {
   });
 }
 
+export interface ReplanResult {
+  plan: TripPlan;
+  /** Neu berechnete Kartendarstellungs-Route (siehe RoutePlanResult.mapGeometry)
+   * -- ohne diese wuerde die Kartenlinie nach dem Loeschen eines Ladestopps
+   * oder Waehlen einer Alternative weiterhin durch die ALTEN Ladestopps
+   * fuehren (Bugreport: "Route auf der Karte wird nicht angepasst"). */
+  mapGeometry: RouteResult["geometry"];
+}
+
 /**
  * Berechnet nur die Ladeplanung neu (z. B. nachdem der Nutzer den
  * vorgeschlagenen Ladestopp geloescht oder eine Alternative gewaehlt hat) --
- * ohne erneutes Geocoding/Routing, da Start/Ziel/Streckengeometrie
- * unveraendert bleiben. Vermeidet unnoetige Nominatim-/OSRM-Anfragen.
+ * ohne erneutes Geocoding/Routing der DIREKTEN Route, da Start/Ziel/
+ * Streckengeometrie unveraendert bleiben (vermeidet unnoetige Nominatim-/
+ * OSRM-Anfragen dafuer). Die Kartendarstellungs-Route (mapGeometry) haengt
+ * aber von den gewaehlten Ladestopps ab und wird deshalb hier IMMER neu
+ * gebaut (buildMapGeometry, ein zusaetzlicher OSRM-Aufruf mit den neuen
+ * Ladestopps als Wegpunkte).
  */
 export async function replanChargingStop(
   input: Parameters<typeof replanChargingStopInner>[0]
-): Promise<ActionResult<TripPlan>> {
+): Promise<ActionResult<ReplanResult>> {
   try {
     return { ok: true, data: await replanChargingStopInner(input) };
   } catch (err) {
@@ -589,6 +602,9 @@ export async function replanChargingStop(
 async function replanChargingStopInner(input: {
   vehicleId: string;
   caravanId?: string;
+  start: GeoPoint;
+  end: GeoPoint;
+  manualWaypoints: ManualWaypointWithDistance[];
   route: { distanceKm: number; durationMin: number; geometry: { latitude: number; longitude: number }[] };
   consumptionKwhPer100km: number;
   preferTrailerSuitable: boolean;
@@ -602,7 +618,7 @@ async function replanChargingStopInner(input: {
   detourToleranceKm: number;
   excludedStationIds: string[];
   forcedStationIdByIndex?: Record<number, string>;
-}): Promise<TripPlan> {
+}): Promise<ReplanResult> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -643,7 +659,17 @@ async function replanChargingStopInner(input: {
 
   const userTrailerLengthM =
     vehicle.length_m !== null && caravan?.length_m ? vehicle.length_m + caravan.length_m : null;
-  return annotateChargingStops(supabase, plan, userTrailerLengthM);
+  const annotatedPlan = await annotateChargingStops(supabase, plan, userTrailerLengthM);
+
+  const mapGeometry = await buildMapGeometry({
+    start: input.start,
+    end: input.end,
+    manualWaypointsWithDistance: input.manualWaypoints,
+    chargingStops: annotatedPlan.chargingStops,
+    fallback: input.route.geometry,
+  });
+
+  return { plan: annotatedPlan, mapGeometry };
 }
 
 export interface SaveRouteInput {

@@ -567,6 +567,9 @@ export function RoutePlannerForm({
       const planResult = await replanChargingStop({
         vehicleId,
         caravanId: caravanId || undefined,
+        start: result.start,
+        end: result.end,
+        manualWaypoints: result.manualWaypoints,
         route: { distanceKm: result.plan.distanceKm, durationMin: result.plan.durationMin, geometry: result.geometry },
         consumptionKwhPer100km: result.plan.effectiveConsumptionKwhPer100km,
         preferTrailerSuitable,
@@ -585,7 +588,7 @@ export function RoutePlannerForm({
         setReplanError(planResult.error);
         return;
       }
-      setResult({ ...result, plan: planResult.data });
+      setResult({ ...result, plan: planResult.data.plan, mapGeometry: planResult.data.mapGeometry });
       setExcludedStationIds(nextExcluded);
       setForcedStationIdByIndex(nextForced);
     } catch (err) {
