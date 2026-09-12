@@ -75,7 +75,7 @@ export function ListNavigation({
     // (z. B. Kartenpin-Popup oder Startseiten-Modal) -- sonst (Detailseite
     // direkt per URL/Lesezeichen geoeffnet) faellt der Button stattdessen
     // auf einen Link zur allgemeinen Uebersicht zurueck.
-    setCanGoBack(window.history.length > 1);
+    void Promise.resolve().then(() => setCanGoBack(window.history.length > 1));
   }, [storageKey, currentId]);
 
   const index = context?.ids.indexOf(currentId) ?? -1;

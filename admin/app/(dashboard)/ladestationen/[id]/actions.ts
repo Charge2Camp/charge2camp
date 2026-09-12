@@ -45,8 +45,12 @@ export async function overrideTrailerSuitability(chargePointKey: string, formDat
   // referenziert also KEINEN auth.users-Eintrag direkt, sondern setzt
   // voraus, dass vorher ein passender app_user existiert -- sonst schlaegt
   // der Foreign-Key auf trailer_suitability.verified_by fehl.
+  // Bewusst KEINE E-Mail-Adresse (frueher admin.email) -- display_name wird
+  // in der App nirgends angezeigt und war ueber die oeffentlich abfragbare
+  // enrich.app_user-Tabelle ein unnoetiges PII-Leck (siehe
+  // supabase/migrations/20260927000000_security_hardening_admin_rpcs.sql).
   await supabase.schema("enrich").from("app_user").upsert(
-    { id: admin.id, display_name: admin.email, trust_level: 5 },
+    { id: admin.id, display_name: null, trust_level: 5 },
     { onConflict: "id", ignoreDuplicates: true }
   );
 

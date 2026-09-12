@@ -36,7 +36,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const { data, error } = await supabase.schema("enrich").rpc("submit_trailer_report", {
     p_charge_point_key: externalKey,
     p_user_id: user.id,
-    p_display_name: user.email ?? null,
+    // Bewusst KEINE E-Mail-Adresse (frueher user.email) -- enrich.app_user
+    // ist oeffentlich abfragbare Infrastruktur (core/enrich, siehe
+    // 20260915000000_data_layer_api_exposure.sql), display_name wird in der
+    // App nirgends angezeigt und war dadurch ein unnoetiges PII-Leck
+    // (siehe 20260927000000_security_hardening_admin_rpcs.sql).
+    p_display_name: null,
     p_verdict: body.verdict,
     p_drive_through: typeof body.drive_through === "boolean" ? body.drive_through : null,
     p_notes: typeof body.notes === "string" ? body.notes : null,
