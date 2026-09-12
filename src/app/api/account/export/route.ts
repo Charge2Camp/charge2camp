@@ -15,15 +15,21 @@ export async function GET() {
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Nicht angemeldet." }, { status: 401 });
 
-  const [profile, vehicles, caravans, favorites, campsiteReviews, chargingReviews, savedRoutes] = await Promise.all([
-    supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
-    supabase.from("vehicles").select("*").eq("user_id", user.id),
-    supabase.from("caravans").select("*").eq("user_id", user.id),
-    supabase.from("favorites").select("*").eq("user_id", user.id),
-    supabase.from("campsite_reviews").select("*").eq("user_id", user.id),
-    supabase.from("charging_reviews").select("*").eq("user_id", user.id),
-    supabase.from("saved_routes").select("*").eq("user_id", user.id),
-  ]);
+  const [profile, vehicles, caravans, favorites, campsiteReviews, chargingReviews, savedRoutes, blockedStations] =
+    await Promise.all([
+      supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
+      supabase.from("vehicles").select("*").eq("user_id", user.id),
+      supabase.from("caravans").select("*").eq("user_id", user.id),
+      supabase.from("favorites").select("*").eq("user_id", user.id),
+      supabase.from("campsite_reviews").select("*").eq("user_id", user.id),
+      supabase.from("charging_reviews").select("*").eq("user_id", user.id),
+      supabase.from("saved_routes").select("*").eq("user_id", user.id),
+      // Nachtraeglich ergaenzt (war beim Anlegen dieser Route noch nicht
+      // eingefuehrt, siehe blocked_charging_stations-Migration) -- ebenfalls
+      // personenbezogene Daten (welche Ladepunkte dieser Nutzer blockiert
+      // hat), gehoert deshalb in den DSGVO-Export.
+      supabase.from("blocked_charging_stations").select("*").eq("user_id", user.id),
+    ]);
 
   const payload = {
     exported_at: new Date().toISOString(),
@@ -35,6 +41,7 @@ export async function GET() {
     campsite_reviews: campsiteReviews.data ?? [],
     charging_reviews: chargingReviews.data ?? [],
     saved_routes: savedRoutes.data ?? [],
+    blocked_charging_stations: blockedStations.data ?? [],
   };
 
   return new NextResponse(JSON.stringify(payload, null, 2), {

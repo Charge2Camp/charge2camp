@@ -54,11 +54,8 @@ export function ChargingReviewForm({
     <form
       action={async (formData) => {
         setError(null);
-        try {
-          await addChargingReview(formData);
-        } catch (e) {
-          setError(e instanceof Error ? e.message : "Bewertung konnte nicht gespeichert werden.");
-        }
+        const result = await addChargingReview(formData);
+        if (!result.ok) setError(result.error);
       }}
       className="flex flex-col gap-3 rounded-lg border border-black/10 p-4 dark:border-white/10"
     >
@@ -71,7 +68,7 @@ export function ChargingReviewForm({
         <legend className="mb-1 font-medium">
           Ist dieser Ladepunkt mit deinem Gespann nutzbar?
         </legend>
-        <label className="flex items-center gap-2">
+        <label className="flex min-h-11 items-center gap-2">
           <input
             type="radio"
             name="suitable"
@@ -82,7 +79,7 @@ export function ChargingReviewForm({
           />
           Ja
         </label>
-        <label className="flex items-center gap-2">
+        <label className="flex min-h-11 items-center gap-2">
           <input
             type="radio"
             name="suitable"
@@ -92,7 +89,7 @@ export function ChargingReviewForm({
           />
           Mit Einschränkungen
         </label>
-        <label className="flex items-center gap-2">
+        <label className="flex min-h-11 items-center gap-2">
           <input
             type="radio"
             name="suitable"
@@ -110,7 +107,7 @@ export function ChargingReviewForm({
             Kannst du den Wohnwagen abkoppeln und bequem in unmittelbarer Nähe der Ladesäule
             parken, während das Zugfahrzeug lädt?
           </legend>
-          <label className="flex items-center gap-2">
+          <label className="flex min-h-11 items-center gap-2">
             <input
               type="radio"
               name="decoupled_parking_possible"
@@ -120,7 +117,7 @@ export function ChargingReviewForm({
             />
             Ja
           </label>
-          <label className="flex items-center gap-2">
+          <label className="flex min-h-11 items-center gap-2">
             <input
               type="radio"
               name="decoupled_parking_possible"

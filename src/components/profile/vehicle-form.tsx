@@ -17,6 +17,7 @@ export function VehicleForm({ models }: { models: VehicleModel[] }) {
   const [manufacturer, setManufacturer] = useState("");
   const [selectedId, setSelectedId] = useState("");
   const [form, setForm] = useState(EMPTY_FORM);
+  const [error, setError] = useState<string | null>(null);
 
   const manufacturers = useMemo(
     () => Array.from(new Set(models.map((m) => m.manufacturer))).sort(),
@@ -61,7 +62,12 @@ export function VehicleForm({ models }: { models: VehicleModel[] }) {
   return (
     <form
       action={async (formData) => {
-        await addVehicle(formData);
+        setError(null);
+        const result = await addVehicle(formData);
+        if (!result.ok) {
+          setError(result.error);
+          return;
+        }
         setManufacturer("");
         setSelectedId("");
         setForm(EMPTY_FORM);
@@ -180,6 +186,8 @@ export function VehicleForm({ models }: { models: VehicleModel[] }) {
           />
         </label>
       </div>
+
+      {error && <p className="text-sm text-red-600">{error}</p>}
 
       <div>
         <button

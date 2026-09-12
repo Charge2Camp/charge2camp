@@ -22,15 +22,18 @@ export function PreferredProvidersForm({
   const [avoided, setAvoided] = useState<string[]>(initialAvoided);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   function togglePreferred(key: string) {
     setSaved(false);
+    setError(null);
     setPreferred((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
     setAvoided((prev) => prev.filter((k) => k !== key));
   }
 
   function toggleAvoided(key: string) {
     setSaved(false);
+    setError(null);
     setAvoided((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
     setPreferred((prev) => prev.filter((k) => k !== key));
   }
@@ -39,12 +42,14 @@ export function PreferredProvidersForm({
     <form
       action={async (formData) => {
         setSaving(true);
-        try {
-          await setPreferredChargingProviders(formData);
+        setError(null);
+        const result = await setPreferredChargingProviders(formData);
+        if (result.ok) {
           setSaved(true);
-        } finally {
-          setSaving(false);
+        } else {
+          setError(result.error);
         }
+        setSaving(false);
       }}
       className="flex flex-col gap-3"
     >
@@ -86,6 +91,7 @@ export function PreferredProvidersForm({
           Speichern
         </button>
         {saved && <span className="text-sm text-route">Gespeichert.</span>}
+        {error && <span className="text-sm text-red-600">{error}</span>}
       </div>
     </form>
   );

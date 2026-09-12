@@ -66,7 +66,10 @@ export function NameSuggestField({
         onFocus={() => setOpen(suggestions.length > 0)}
         placeholder={placeholder}
         autoComplete="off"
-        className={className}
+        // text-base IMMER zusaetzlich zur aufrufenden className -- ohne
+        // mindestens 16px zoomt iOS Safari beim Fokussieren automatisch
+        // hinein (siehe address-autocomplete.tsx fuer denselben Fix).
+        className={`text-base ${className ?? ""}`}
       />
       {open && suggestions.length > 0 && (
         <ul className="absolute z-20 mt-1 max-h-60 w-full overflow-y-auto rounded-md border border-black/15 bg-white text-sm shadow-lg dark:border-white/15 dark:bg-neutral-900">

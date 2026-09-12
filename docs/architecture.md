@@ -121,8 +121,9 @@ Quantile später).
   `MAX_CHARGING_STOPS` Stopps als Sicherheitsgrenze), statt eine falsche
   Route vorzutäuschen.
 
-**Routenübersicht mit manueller Kontrolle je Ladestopp:** Ein Popup
-([route-overview-dialog.tsx](../src/components/routing/route-overview-dialog.tsx))
+**Routenübersicht mit manueller Kontrolle je Ladestopp:** Ein Panel
+([route-overview-panel.tsx](../src/components/routing/route-overview-panel.tsx),
+eingebettet in Tab 2/3 des Routenplaner-Wizards, kein eigenes Popup mehr)
 zeigt Start (Abfahrts-Ladestand), jeden Ladestopp (Ladeleistung,
 allgemeine sowie persönliche Anhängertauglichkeit für das hinterlegte
 Gespann nach §20, km/Fahrzeit zum nächsten Punkt) und Ziel
@@ -327,11 +328,11 @@ nur fuer den Routenplaner:
   `Linking.openURL`/ein natives Kartenprogramm ersetzen, ohne die
   Adapter-Logik anzufassen.
 - **Vollbild-Sheets statt kleiner zentrierter Dialoge auf schmalen
-  Screens**: z. B. das Routenuebersicht-Popup
-  ([src/components/routing/route-overview-dialog.tsx](../src/components/routing/route-overview-dialog.tsx))
-  ist unterhalb von `sm:` (640px) `inset-0` ohne abgerundete Ecken --
-  bessere Erreichbarkeit mit dem Daumen. Ab `sm:` weiterhin eine
-  zentrierte Karte.
+  Screens**: z. B. die Picker-Dialoge im Routenplaner
+  ([src/components/routing/favorites-picker-dialog.tsx](../src/components/routing/favorites-picker-dialog.tsx),
+  `home-address-picker-dialog.tsx`, `saved-route-picker-dialog.tsx`) sind
+  unterhalb von `sm:` (640px) `inset-0` ohne abgerundete Ecken -- bessere
+  Erreichbarkeit mit dem Daumen. Ab `sm:` weiterhin eine zentrierte Karte.
 - **Aktions-Button-Reihen stapeln sich vertikal** auf schmalen Screens
   (`flex-col sm:flex-row`) statt sich nebeneinander zu quetschen.
 

@@ -41,6 +41,16 @@ function buildNearFilter(near: string, radiusKm: string): string {
   return `_geoRadius(${lat}, ${lon}, ${radius * 1000})`;
 }
 
+// Rohe Nutzereingaben (country/amenities) landen unten direkt in
+// doppelt gequoteten Meilisearch-Filterausdruecken -- ohne Escaping koennte
+// ein eingebettetes `"` aus dem String-Literal ausbrechen und beliebige
+// zusaetzliche Filterklauseln einschleusen (Sicherheits-Review). Meilisearch
+// unterstuetzt Backslash-Escaping innerhalb doppelt gequoteter Werte,
+// genau wie die meisten Filter-/Query-Sprachen.
+function escapeMeiliFilterValue(value: string): string {
+  return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+}
+
 function chargingFilter(value: string): string | null {
   switch (value) {
     case "on_site":
@@ -72,13 +82,13 @@ export async function GET(request: NextRequest) {
 
     const countries = sp.getAll("country");
     if (countries.length > 0) {
-      filters.push(`country_code IN [${countries.map((c) => `"${c}"`).join(", ")}]`);
+      filters.push(`country_code IN [${countries.map((c) => `"${escapeMeiliFilterValue(c)}"`).join(", ")}]`);
     }
 
     const amenities = sp.get("amenities");
     if (amenities) {
       for (const key of amenities.split(",").map((s) => s.trim()).filter(Boolean)) {
-        filters.push(`amenities = "${key}"`);
+        filters.push(`amenities = "${escapeMeiliFilterValue(key)}"`);
       }
     }
 

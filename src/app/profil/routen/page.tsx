@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { deleteSavedRoute } from "@/app/profil/actions";
 import { loadSavedRoute } from "@/app/routenplaner/actions";
 import { buildRouteSegments } from "@/lib/route-navigation";
 import { NavigationLink } from "@/components/profile/navigation-link";
+import { DeleteSavedRouteButton } from "@/components/profile/delete-saved-route-button";
 import type { SavedRoute } from "@/types/database";
 
 function formatDate(iso: string): string {
@@ -71,16 +71,7 @@ export default async function SavedRoutesPage() {
                   >
                     Im Routenplaner öffnen
                   </a>
-                  <form action={deleteSavedRoute}>
-                    <input type="hidden" name="id" value={route.id} />
-                    <button
-                      type="submit"
-                      className="flex min-h-11 items-center px-2 text-red-600 hover:underline"
-                      aria-label={`Route "${route.name}" entfernen`}
-                    >
-                      Entfernen
-                    </button>
-                  </form>
+                  <DeleteSavedRouteButton id={route.id} routeName={route.name} />
                 </div>
               </div>
 

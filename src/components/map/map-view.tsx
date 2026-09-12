@@ -98,27 +98,48 @@ function buildIndividualMarkerElement(m: MapMarker, selected: boolean, onClick: 
   return el;
 }
 
+// Sichtbarer Kreis bleibt gestaffelt klein/mittel/gross (32/40/48px, zeigt
+// die Cluster-Groesse auf einen Blick) -- aber die Tap-Flaeche wird auf
+// mind. 44px (Apple HIG) vergroessert, sonst waere der kleinste Cluster
+// (< 10 Treffer) mit 32px zu klein zum zuverlaessigen Antippen. Gleiches
+// Wrapper-Prinzip wie bei buildIndividualMarkerElement (kleiner sichtbarer
+// Punkt in groesserem unsichtbaren Button), Anker bleibt dadurch weiterhin
+// mittig.
 function buildClusterMarkerElement(pointCount: number, onClick: () => void): HTMLButtonElement {
-  const size = pointCount < 10 ? 32 : pointCount < 100 ? 40 : 48;
+  const visibleSize = pointCount < 10 ? 32 : pointCount < 100 ? 40 : 48;
+  const tapSize = Math.max(visibleSize, 44);
+
   const el = document.createElement("button");
   el.type = "button";
   el.setAttribute("aria-label", `${pointCount} Treffer in diesem Bereich, antippen zum Heranzoomen`);
-  el.style.width = `${size}px`;
-  el.style.height = `${size}px`;
+  el.style.width = `${tapSize}px`;
+  el.style.height = `${tapSize}px`;
   el.style.display = "flex";
   el.style.alignItems = "center";
   el.style.justifyContent = "center";
-  el.style.borderRadius = "50%";
-  el.style.border = "2px solid white";
-  el.style.boxShadow = "0 1px 4px rgba(0,0,0,0.4)";
-  el.style.background = CLUSTER_COLOR;
-  el.style.color = "white";
-  el.style.fontSize = "13px";
-  el.style.fontWeight = "600";
+  el.style.background = "transparent";
+  el.style.border = "none";
+  el.style.padding = "0";
   el.style.cursor = "pointer";
   el.style.zIndex = "20";
-  el.textContent = pointCount > 999 ? "999+" : String(pointCount);
   el.onclick = onClick;
+
+  const circle = document.createElement("span");
+  circle.style.width = `${visibleSize}px`;
+  circle.style.height = `${visibleSize}px`;
+  circle.style.display = "flex";
+  circle.style.alignItems = "center";
+  circle.style.justifyContent = "center";
+  circle.style.borderRadius = "50%";
+  circle.style.border = "2px solid white";
+  circle.style.boxShadow = "0 1px 4px rgba(0,0,0,0.4)";
+  circle.style.background = CLUSTER_COLOR;
+  circle.style.color = "white";
+  circle.style.fontSize = "13px";
+  circle.style.fontWeight = "600";
+  circle.textContent = pointCount > 999 ? "999+" : String(pointCount);
+  el.appendChild(circle);
+
   return el;
 }
 

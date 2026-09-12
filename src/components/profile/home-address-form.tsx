@@ -6,6 +6,7 @@ import { setHomeAddress } from "@/app/profil/actions";
 
 export function HomeAddressForm({ initialAddress }: { initialAddress: string }) {
   const [value, setValue] = useState(initialAddress);
+  const [error, setError] = useState<string | null>(null);
   // Gesetzt, wenn ein Photon-Vorschlag ausgewaehlt wurde -- dann sind
   // Koordinaten UND die praezise (inkl. Hausnummer) formatierte Adresse
   // schon bekannt und werden unveraendert gespeichert. Ohne das wuerde
@@ -16,7 +17,14 @@ export function HomeAddressForm({ initialAddress }: { initialAddress: string }) 
   const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
 
   return (
-    <form action={setHomeAddress} className="mt-2 flex max-w-md flex-col gap-2 sm:flex-row sm:items-end">
+    <form
+      action={async (formData) => {
+        setError(null);
+        const result = await setHomeAddress(formData);
+        if (!result.ok) setError(result.error);
+      }}
+      className="mt-2 flex max-w-md flex-col gap-2 sm:flex-row sm:items-end"
+    >
       <label className="flex flex-1 flex-col gap-1 text-sm">
         Zuhause-Adresse
         <AddressAutocomplete
@@ -33,6 +41,7 @@ export function HomeAddressForm({ initialAddress }: { initialAddress: string }) 
             <input type="hidden" name="home_longitude" value={coords.longitude} />
           </>
         )}
+        {error && <span className="text-sm text-red-600">{error}</span>}
       </label>
       <button
         type="submit"

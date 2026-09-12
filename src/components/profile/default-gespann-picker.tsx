@@ -27,12 +27,8 @@ export function DefaultGespannPicker({
 
   function save(nextVehicleId: string, nextCaravanId: string) {
     startTransition(async () => {
-      try {
-        await setDefaultGespann(nextVehicleId, nextCaravanId);
-        setError(null);
-      } catch {
-        setError("Standard-Gespann konnte nicht gespeichert werden.");
-      }
+      const result = await setDefaultGespann(nextVehicleId, nextCaravanId);
+      setError(result.ok ? null : result.error);
     });
   }
 

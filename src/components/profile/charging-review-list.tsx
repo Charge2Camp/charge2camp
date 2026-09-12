@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
 import { deleteChargingReview, updateChargingReview } from "@/app/profil/actions";
 import { CriterionField } from "@/components/charging-stations/criterion-field";
@@ -32,11 +32,17 @@ function EditForm({
   const [unobstructedAccess, setUnobstructedAccess] = useState(criterionDefault(review.unobstructed_access));
   const [noBarrierOrGarage, setNoBarrierOrGarage] = useState(criterionDefault(review.no_barrier_or_garage));
   const [sideMountedCharger, setSideMountedCharger] = useState(criterionDefault(review.side_mounted_charger));
+  const [error, setError] = useState<string | null>(null);
 
   return (
     <form
       action={async (formData) => {
-        await updateChargingReview(formData);
+        setError(null);
+        const result = await updateChargingReview(formData);
+        if (!result.ok) {
+          setError(result.error);
+          return;
+        }
         onCancel();
       }}
       className="flex flex-col gap-3"
@@ -46,7 +52,7 @@ function EditForm({
 
       <fieldset className="flex flex-col gap-1 text-sm">
         <legend className="mb-1">Gespann nutzbar?</legend>
-        <label className="flex items-center gap-2">
+        <label className="flex min-h-11 items-center gap-2">
           <input
             type="radio"
             name="suitable"
@@ -56,7 +62,7 @@ function EditForm({
           />
           Ja
         </label>
-        <label className="flex items-center gap-2">
+        <label className="flex min-h-11 items-center gap-2">
           <input
             type="radio"
             name="suitable"
@@ -66,7 +72,7 @@ function EditForm({
           />
           Mit Einschränkungen
         </label>
-        <label className="flex items-center gap-2">
+        <label className="flex min-h-11 items-center gap-2">
           <input
             type="radio"
             name="suitable"
@@ -83,7 +89,7 @@ function EditForm({
           <legend className="mb-1">
             Wohnwagen abkoppelbar &amp; bequem in der Nähe parkbar während des Ladens?
           </legend>
-          <label className="flex items-center gap-2">
+          <label className="flex min-h-11 items-center gap-2">
             <input
               type="radio"
               name="decoupled_parking_possible"
@@ -93,7 +99,7 @@ function EditForm({
             />
             Ja
           </label>
-          <label className="flex items-center gap-2">
+          <label className="flex min-h-11 items-center gap-2">
             <input
               type="radio"
               name="decoupled_parking_possible"
@@ -175,7 +181,9 @@ function EditForm({
         className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
       />
 
-      <div className="flex gap-2">
+      {error && <p className="text-sm text-red-600">{error}</p>}
+
+      <div className="flex flex-col gap-2 sm:flex-row">
         <button
           type="submit"
           className="min-h-11 rounded-md bg-action px-4 py-2 text-sm font-medium text-base hover:bg-action-hover"
@@ -196,8 +204,35 @@ function EditForm({
 
 export function ChargingReviewList({ reviews }: { reviews: ChargingReviewWithStation[] }) {
   const [editingId, setEditingId] = useState<string | null>(null);
+  // Siehe Kommentar in campsite-review-list.tsx: sichtbarer Bestand wird
+  // aus dem `reviews`-Prop abgeleitet (minus gerade geloeschter IDs), kein
+  // separater useState-Zwischenspeicher.
+  const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
+  const [deleteErrorById, setDeleteErrorById] = useState<Record<string, string>>({});
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
 
-  if (reviews.length === 0) {
+  const items = reviews.filter((r) => !removedIds.has(r.id));
+
+  function handleDelete(review: ChargingReviewWithStation) {
+    setPendingDeleteId(review.id);
+    setDeleteErrorById((prev) => {
+      const next = { ...prev };
+      delete next[review.id];
+      return next;
+    });
+    startTransition(async () => {
+      const result = await deleteChargingReview(review.id, review.charging_station_id);
+      if (result.ok) {
+        setRemovedIds((prev) => new Set(prev).add(review.id));
+      } else {
+        setDeleteErrorById((prev) => ({ ...prev, [review.id]: result.error }));
+      }
+      setPendingDeleteId(null);
+    });
+  }
+
+  if (items.length === 0) {
     return (
       <p className="text-sm text-black/50 dark:text-white/50">
         Noch keine Ladepunkt-Bewertungen abgegeben.
@@ -207,7 +242,7 @@ export function ChargingReviewList({ reviews }: { reviews: ChargingReviewWithSta
 
   return (
     <ul className="flex flex-col gap-3">
-      {reviews.map((review) => (
+      {items.map((review) => (
         <li
           key={review.id}
           className="rounded-md border border-black/10 p-3 text-sm dark:border-white/10"
@@ -219,7 +254,7 @@ export function ChargingReviewList({ reviews }: { reviews: ChargingReviewWithSta
               <div className="flex items-center justify-between">
                 <Link
                   href={review.charging_stations ? `/ladepunkte/${review.charging_stations.id}` : "#"}
-                  className="font-medium text-route hover:underline"
+                  className="flex min-h-11 items-center font-medium text-route hover:underline"
                 >
                   {review.charging_stations?.name ?? review.charging_stations?.operator ?? "Ladepunkt"}
                 </Link>
@@ -247,18 +282,18 @@ export function ChargingReviewList({ reviews }: { reviews: ChargingReviewWithSta
                 >
                   Bearbeiten
                 </button>
-                <form action={deleteChargingReview}>
-                  <input type="hidden" name="id" value={review.id} />
-                  <input
-                    type="hidden"
-                    name="charging_station_id"
-                    value={review.charging_station_id}
-                  />
-                  <button type="submit" className="flex min-h-11 items-center px-2 -mx-2 text-red-600 hover:underline">
-                    Löschen
-                  </button>
-                </form>
+                <button
+                  type="button"
+                  onClick={() => handleDelete(review)}
+                  disabled={pendingDeleteId === review.id}
+                  className="flex min-h-11 items-center px-2 -mx-2 text-red-600 hover:underline disabled:opacity-50"
+                >
+                  Löschen
+                </button>
               </div>
+              {deleteErrorById[review.id] && (
+                <p className="mt-1 text-xs text-red-600">{deleteErrorById[review.id]}</p>
+              )}
             </>
           )}
         </li>

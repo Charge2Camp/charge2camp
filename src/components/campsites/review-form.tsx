@@ -16,11 +16,8 @@ export function CampsiteReviewForm({ campsiteId }: { campsiteId: string }) {
     <form
       action={async (formData) => {
         setError(null);
-        try {
-          await addCampsiteReview(formData);
-        } catch (e) {
-          setError(e instanceof Error ? e.message : "Bewertung konnte nicht gespeichert werden.");
-        }
+        const result = await addCampsiteReview(formData);
+        if (!result.ok) setError(result.error);
       }}
       className="flex flex-col gap-4 rounded-lg border border-black/10 p-4 dark:border-white/10"
     >

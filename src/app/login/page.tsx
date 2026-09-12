@@ -2,16 +2,20 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
   const router = useRouter();
   const supabase = createClient();
+  const searchParams = useSearchParams();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  // Fehlermeldung von /auth/callback (z. B. abgelaufener Passwort-Reset-
+  // Link) als Startwert -- lokaler Fehler (falsches Passwort etc.)
+  // ueberschreibt sie beim naechsten Login-Versuch ganz normal.
+  const [error, setError] = useState<string | null>(searchParams.get("error"));
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(event: React.FormEvent) {
@@ -61,6 +65,13 @@ export default function LoginPage() {
             className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
           />
         </label>
+
+        <Link
+          href="/passwort-vergessen"
+          className="flex min-h-11 items-center self-end text-sm text-route hover:underline"
+        >
+          Passwort vergessen?
+        </Link>
 
         {error && <p className="text-sm text-red-600">{error}</p>}
 

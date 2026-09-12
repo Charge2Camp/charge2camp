@@ -10,10 +10,27 @@ import { deleteAccount } from "@/app/profil/actions";
  * erst frei. */
 export function DeleteAccountForm({ email }: { email: string }) {
   const [confirmation, setConfirmation] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
   const confirmed = confirmation.trim().toLowerCase() === email.toLowerCase();
 
   return (
-    <form action={deleteAccount} className="mt-3 flex max-w-md flex-col gap-2">
+    <form
+      action={async () => {
+        setError(null);
+        setPending(true);
+        const result = await deleteAccount();
+        // Bei Erfolg navigiert deleteAccount() serverseitig per redirect()
+        // weg -- hierher kommt die Ausfuehrung dann nie zurueck. pending
+        // bleibt in dem Fall bewusst true (kein setPending(false)), damit
+        // der Button bis zur Weiterleitung deaktiviert bleibt.
+        if (!result.ok) {
+          setError(result.error);
+          setPending(false);
+        }
+      }}
+      className="mt-3 flex max-w-md flex-col gap-2"
+    >
       <label className="flex flex-col gap-1 text-sm">
         Zur Bestätigung deine E-Mail-Adresse eingeben ({email}):
         <input
@@ -25,9 +42,10 @@ export function DeleteAccountForm({ email }: { email: string }) {
           autoComplete="off"
         />
       </label>
+      {error && <p className="text-sm text-red-600">{error}</p>}
       <button
         type="submit"
-        disabled={!confirmed}
+        disabled={!confirmed || pending}
         className="min-h-11 rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-40"
       >
         Konto endgültig löschen

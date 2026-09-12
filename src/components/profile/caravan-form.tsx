@@ -19,6 +19,7 @@ export function CaravanForm({ models }: { models: CaravanModel[] }) {
   const [manufacturer, setManufacturer] = useState("");
   const [selectedId, setSelectedId] = useState("");
   const [form, setForm] = useState(EMPTY_FORM);
+  const [error, setError] = useState<string | null>(null);
 
   const manufacturers = useMemo(
     () => Array.from(new Set(models.map((m) => m.manufacturer))).sort(),
@@ -65,7 +66,12 @@ export function CaravanForm({ models }: { models: CaravanModel[] }) {
   return (
     <form
       action={async (formData) => {
-        await addCaravan(formData);
+        setError(null);
+        const result = await addCaravan(formData);
+        if (!result.ok) {
+          setError(result.error);
+          return;
+        }
         setManufacturer("");
         setSelectedId("");
         setForm(EMPTY_FORM);
@@ -213,6 +219,8 @@ export function CaravanForm({ models }: { models: CaravanModel[] }) {
           />
         </label>
       </div>
+
+      {error && <p className="text-sm text-red-600">{error}</p>}
 
       <div>
         <button

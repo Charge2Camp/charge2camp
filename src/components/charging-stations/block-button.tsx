@@ -22,11 +22,8 @@ export function ChargingStationBlockButton({
     const next = !isBlocked;
     setIsBlocked(next);
     startTransition(async () => {
-      try {
-        await toggleChargingStationBlocked(stationId, next);
-      } catch {
-        setIsBlocked(!next);
-      }
+      const result = await toggleChargingStationBlocked(stationId, next);
+      if (!result.ok) setIsBlocked(!next);
     });
   }
 

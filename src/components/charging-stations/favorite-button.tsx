@@ -19,11 +19,8 @@ export function ChargingStationFavoriteButton({
     const next = !isFavorite;
     setIsFavorite(next);
     startTransition(async () => {
-      try {
-        await toggleChargingStationFavorite(stationId, next);
-      } catch {
-        setIsFavorite(!next);
-      }
+      const result = await toggleChargingStationFavorite(stationId, next);
+      if (!result.ok) setIsFavorite(!next);
     });
   }
 

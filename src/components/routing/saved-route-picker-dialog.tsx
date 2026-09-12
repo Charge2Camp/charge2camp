@@ -49,7 +49,7 @@ export function SavedRoutePickerDialog({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
           {savedRoutes.length === 0 ? (
             <p className="text-sm text-black/50 dark:text-white/50">
               Noch keine Route gespeichert -- berechne unten eine Route und speichere sie in Tab 3

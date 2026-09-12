@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
 import { deleteCampsiteReview, updateCampsiteReview } from "@/app/profil/actions";
 import type { CampsiteReview } from "@/types/database";
@@ -12,11 +12,17 @@ export type CampsiteReviewWithCampsite = CampsiteReview & {
 function EditForm({ review, onCancel }: { review: CampsiteReviewWithCampsite; onCancel: () => void }) {
   const [chargingOnSite, setChargingOnSite] = useState(review.charging_on_site);
   const [chargingWalkable, setChargingWalkable] = useState(review.charging_walkable);
+  const [error, setError] = useState<string | null>(null);
 
   return (
     <form
       action={async (formData) => {
-        await updateCampsiteReview(formData);
+        setError(null);
+        const result = await updateCampsiteReview(formData);
+        if (!result.ok) {
+          setError(result.error);
+          return;
+        }
         onCancel();
       }}
       className="flex flex-col gap-3"
@@ -83,7 +89,9 @@ function EditForm({ review, onCancel }: { review: CampsiteReviewWithCampsite; on
         className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
       />
 
-      <div className="flex gap-2">
+      {error && <p className="text-sm text-red-600">{error}</p>}
+
+      <div className="flex flex-col gap-2 sm:flex-row">
         <button
           type="submit"
           className="min-h-11 rounded-md bg-action px-4 py-2 text-sm font-medium text-base hover:bg-action-hover"
@@ -104,8 +112,38 @@ function EditForm({ review, onCancel }: { review: CampsiteReviewWithCampsite; on
 
 export function CampsiteReviewList({ reviews }: { reviews: CampsiteReviewWithCampsite[] }) {
   const [editingId, setEditingId] = useState<string | null>(null);
+  // Sichtbarer Bestand wird aus dem `reviews`-Prop abgeleitet (minus gerade
+  // geloeschter IDs), kein separater useState-Zwischenspeicher -- damit
+  // zeigt z. B. eine erfolgreiche Bearbeitung (updateCampsiteReview loest
+  // per revalidatePath ein Server-Component-Re-Render mit frischem Prop
+  // aus) sofort den neuen Inhalt, statt auf einen veralteten lokalen Stand
+  // "eingefroren" zu bleiben.
+  const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
+  const [deleteErrorById, setDeleteErrorById] = useState<Record<string, string>>({});
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
 
-  if (reviews.length === 0) {
+  const items = reviews.filter((r) => !removedIds.has(r.id));
+
+  function handleDelete(review: CampsiteReviewWithCampsite) {
+    setPendingDeleteId(review.id);
+    setDeleteErrorById((prev) => {
+      const next = { ...prev };
+      delete next[review.id];
+      return next;
+    });
+    startTransition(async () => {
+      const result = await deleteCampsiteReview(review.id, review.campsite_id);
+      if (result.ok) {
+        setRemovedIds((prev) => new Set(prev).add(review.id));
+      } else {
+        setDeleteErrorById((prev) => ({ ...prev, [review.id]: result.error }));
+      }
+      setPendingDeleteId(null);
+    });
+  }
+
+  if (items.length === 0) {
     return (
       <p className="text-sm text-black/50 dark:text-white/50">
         Noch keine Campingplatz-Bewertungen abgegeben.
@@ -115,7 +153,7 @@ export function CampsiteReviewList({ reviews }: { reviews: CampsiteReviewWithCam
 
   return (
     <ul className="flex flex-col gap-3">
-      {reviews.map((review) => (
+      {items.map((review) => (
         <li
           key={review.id}
           className="rounded-md border border-black/10 p-3 text-sm dark:border-white/10"
@@ -127,7 +165,7 @@ export function CampsiteReviewList({ reviews }: { reviews: CampsiteReviewWithCam
               <div className="flex items-center justify-between">
                 <Link
                   href={review.campsites ? `/campingplaetze/${review.campsites.id}` : "#"}
-                  className="font-medium text-route hover:underline"
+                  className="flex min-h-11 items-center font-medium text-route hover:underline"
                 >
                   {review.campsites?.name ?? "Campingplatz"}
                 </Link>
@@ -148,14 +186,18 @@ export function CampsiteReviewList({ reviews }: { reviews: CampsiteReviewWithCam
                 >
                   Bearbeiten
                 </button>
-                <form action={deleteCampsiteReview}>
-                  <input type="hidden" name="id" value={review.id} />
-                  <input type="hidden" name="campsite_id" value={review.campsite_id} />
-                  <button type="submit" className="flex min-h-11 items-center px-2 -mx-2 text-red-600 hover:underline">
-                    Löschen
-                  </button>
-                </form>
+                <button
+                  type="button"
+                  onClick={() => handleDelete(review)}
+                  disabled={pendingDeleteId === review.id}
+                  className="flex min-h-11 items-center px-2 -mx-2 text-red-600 hover:underline disabled:opacity-50"
+                >
+                  Löschen
+                </button>
               </div>
+              {deleteErrorById[review.id] && (
+                <p className="mt-1 text-xs text-red-600">{deleteErrorById[review.id]}</p>
+              )}
             </>
           )}
         </li>

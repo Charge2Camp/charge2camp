@@ -20,11 +20,8 @@ export function CampsiteFavoriteButton({
     const next = !isFavorite;
     setIsFavorite(next);
     startTransition(async () => {
-      try {
-        await toggleCampsiteFavorite(campsiteId, next);
-      } catch {
-        setIsFavorite(!next);
-      }
+      const result = await toggleCampsiteFavorite(campsiteId, next);
+      if (!result.ok) setIsFavorite(!next);
     });
   }
 

@@ -19,6 +19,7 @@ import { fetchBlockedStationIds } from "@/lib/blocked-stations";
 import { distanceKm } from "@/lib/geo";
 import type { ManualWaypoint, ManualWaypointWithDistance } from "@/lib/route-timeline";
 import type { Caravan, ChargingReview, SavedRoute, TrailerVerdict, Vehicle } from "@/types/database";
+import { actionErrorMessage as errorMessage, type ActionResult } from "@/lib/action-result";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 
@@ -32,12 +33,10 @@ type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
  * Fehler (falsche Adresse, geloeschtes Fahrzeug, Route nicht gefunden, ...)
  * werden deshalb NICHT geworfen, sondern als Ergebniswert zurueckgegeben --
  * so bleibt die hilfreiche deutsche Fehlermeldung fuer den Nutzer sichtbar.
+ * ActionResult/errorMessage kommen jetzt aus lib/action-result.ts (geteilt
+ * mit profil/actions.ts, ladepunkte/[id]/actions.ts,
+ * campingplaetze/[id]/actions.ts -- gleiches Problem, gleicher Fix).
  */
-type ActionResult<T> = { ok: true; data: T } | { ok: false; error: string };
-
-function errorMessage(err: unknown, fallback: string): string {
-  return err instanceof Error ? err.message : fallback;
-}
 
 // Abstand (km) zwischen Stichprobenpunkten entlang der Route fuer die
 // Ladepunkt-Umkreissuche (siehe fetchCorridorChargingStations) -- geklemmt

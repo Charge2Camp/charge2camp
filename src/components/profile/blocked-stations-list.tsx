@@ -14,19 +14,31 @@ export interface BlockedStationOption {
  * Nutzerwunsch) mit "Wieder freigeben"-Option je Zeile -- ruft dieselbe
  * Server Action wie der Block-Button auf der Ladepunkt-Detailseite auf. */
 export function BlockedStationsList({ stations }: { stations: BlockedStationOption[] }) {
-  const [items, setItems] = useState(stations);
+  // Siehe Kommentar in vehicle-list.tsx: sichtbarer Bestand wird aus dem
+  // `stations`-Prop abgeleitet (minus gerade freigegebener IDs), kein
+  // separater useState-Zwischenspeicher.
+  const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [errorById, setErrorById] = useState<Record<string, string>>({});
   const [, startTransition] = useTransition();
+
+  const items = stations.filter((s) => !removedIds.has(s.id));
 
   function handleUnblock(id: string) {
     setPendingId(id);
+    setErrorById((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
     startTransition(async () => {
-      try {
-        await toggleChargingStationBlocked(id, false);
-        setItems((prev) => prev.filter((s) => s.id !== id));
-      } finally {
-        setPendingId(null);
+      const result = await toggleChargingStationBlocked(id, false);
+      if (result.ok) {
+        setRemovedIds((prev) => new Set(prev).add(id));
+      } else {
+        setErrorById((prev) => ({ ...prev, [id]: result.error }));
       }
+      setPendingId(null);
     });
   }
 
@@ -43,19 +55,22 @@ export function BlockedStationsList({ stations }: { stations: BlockedStationOpti
       {items.map((station) => (
         <li
           key={station.id}
-          className="flex items-center justify-between gap-4 rounded-md border border-black/10 px-4 py-3 text-sm dark:border-white/10"
+          className="flex flex-col gap-1 rounded-md border border-black/10 px-4 py-3 text-sm dark:border-white/10"
         >
-          <Link href={`/ladepunkte/${station.id}`} className="hover:underline">
-            {station.name ?? station.operator ?? "Ladepunkt"}
-          </Link>
-          <button
-            type="button"
-            onClick={() => handleUnblock(station.id)}
-            disabled={pendingId === station.id}
-            className="flex min-h-11 items-center px-2 -mx-2 text-route hover:underline disabled:opacity-50"
-          >
-            Wieder freigeben
-          </button>
+          <div className="flex items-center justify-between gap-4">
+            <Link href={`/ladepunkte/${station.id}`} className="flex min-h-11 items-center hover:underline">
+              {station.name ?? station.operator ?? "Ladepunkt"}
+            </Link>
+            <button
+              type="button"
+              onClick={() => handleUnblock(station.id)}
+              disabled={pendingId === station.id}
+              className="flex min-h-11 items-center px-2 -mx-2 text-route hover:underline disabled:opacity-50"
+            >
+              Wieder freigeben
+            </button>
+          </div>
+          {errorById[station.id] && <p className="text-xs text-red-600">{errorById[station.id]}</p>}
         </li>
       ))}
     </ul>

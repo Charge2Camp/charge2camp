@@ -71,7 +71,7 @@ export function NearbyChargePointsList({ points }: { points: LinkedChargePoint[]
                 type="button"
                 onClick={() => setSelectedId(null)}
                 aria-label="Schließen"
-                className="flex h-9 w-9 shrink-0 items-center justify-center text-xl leading-none text-black/50 hover:bg-black/5 dark:text-white/50 dark:hover:bg-white/10"
+                className="flex h-11 w-11 shrink-0 items-center justify-center text-xl leading-none text-black/50 hover:bg-black/5 dark:text-white/50 dark:hover:bg-white/10"
               >
                 ×
               </button>

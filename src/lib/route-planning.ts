@@ -138,13 +138,44 @@ function nearestPointOnRoute(
   return best;
 }
 
+// Ladeplanung ruft nearestPointOnRoute einmal PRO Ladepunkt-Kandidat auf
+// (siehe stationsWithPosition in planTrip) -- ohne Begrenzung waere das
+// O(Kandidaten x Geometriepunkte), bei langen Strecken mit tausenden
+// OSRM-Geometriepunkten und hunderten Kandidaten im Korridor spuerbar
+// langsam (Performance-Review). Gleiches Downsampling-Prinzip wird bereits
+// fuer die Overpass-Strassenrestriktions-Abfrage genutzt (dort auf max. 120
+// Punkte, aus Ruecksicht auf den geteilten oeffentlichen Dienst) -- hier
+// grosszuegiger, da rein lokale Berechnung ohne externes Rate-Limit; 2000
+// Punkte sind fuer die ohnehin nur naeherungsweise Positionsbestimmung
+// (gleichmaessige Punktverteilung angenommen, siehe cumulativeDistanceAtIndex)
+// weit mehr als noetig.
+const MAX_POSITIONING_GEOMETRY_POINTS = 2000;
+
+/** Reduziert eine Streckengeometrie gleichmaessig auf hoechstens
+ * `maxPoints` Punkte (Start-/Endpunkt bleiben immer erhalten). Rein
+ * lokale Performance-Optimierung fuer nearestPointOnRoute -- veraendert
+ * NICHT die zurueckgegebene Route/Geometrie selbst (die bleibt
+ * unangetastet, z. B. fuer die Kartendarstellung), nur die interne
+ * Positionsbestimmung der Ladepunkt-Kandidaten nutzt die verkleinerte
+ * Kopie. */
+function downsampleGeometry(geometry: LatLng[], maxPoints: number): LatLng[] {
+  if (geometry.length <= maxPoints) return geometry;
+  const step = (geometry.length - 1) / (maxPoints - 1);
+  const result: LatLng[] = [];
+  for (let i = 0; i < maxPoints; i++) {
+    result.push(geometry[Math.round(i * step)]);
+  }
+  return result;
+}
+
 /** Naeherungsweise Distanz (km) eines beliebigen Punkts entlang der Route
  * ab Streckenanfang -- z. B. fuer manuell hinzugefuegte Zwischenstopps, die
  * (anders als Ladepunkt-Kandidaten) nicht Teil der Ladeplanung sind, aber
  * fuer die Reihenfolge in der Routenuebersicht einsortiert werden muessen. */
 export function distanceAlongRouteKm(point: LatLng, route: Pick<RouteResult, "geometry" | "distanceKm">): number {
-  const nearest = nearestPointOnRoute(point, route.geometry);
-  return cumulativeDistanceAtIndex(nearest.index, route.geometry.length, route.distanceKm);
+  const geometry = downsampleGeometry(route.geometry, MAX_POSITIONING_GEOMETRY_POINTS);
+  const nearest = nearestPointOnRoute(point, geometry);
+  return cumulativeDistanceAtIndex(nearest.index, geometry.length, route.distanceKm);
 }
 
 export function planTrip({
@@ -201,13 +232,16 @@ export function planTrip({
     Math.max(0, startSocPercent - (energyUsedKwh / vehicle.battery_capacity_kwh) * 100);
 
   // Streckenkorridor-Position (Naeherung, s. o.) fuer alle Ladepunkte einmal
-  // vorab berechnen -- wird an jedem Stopp wiederverwendet.
+  // vorab berechnen -- wird an jedem Stopp wiederverwendet. Downsampling
+  // (s. o.) haelt das bei sehr langen Routen mit vielen Kandidaten schnell,
+  // ohne die zurueckgegebene route.geometry selbst zu veraendern.
+  const positioningGeometry = downsampleGeometry(route.geometry, MAX_POSITIONING_GEOMETRY_POINTS);
   const stationsWithPosition = chargingStations.map((station) => {
-    const nearest = nearestPointOnRoute(station, route.geometry);
+    const nearest = nearestPointOnRoute(station, positioningGeometry);
     return {
       station,
       corridorDistanceKm: nearest.distanceKm,
-      distanceFromStartKm: cumulativeDistanceAtIndex(nearest.index, route.geometry.length, route.distanceKm),
+      distanceFromStartKm: cumulativeDistanceAtIndex(nearest.index, positioningGeometry.length, route.distanceKm),
     };
   });
 

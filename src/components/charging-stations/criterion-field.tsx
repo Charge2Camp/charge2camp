@@ -17,15 +17,15 @@ export function CriterionField({
     <fieldset className="flex flex-col gap-1 text-sm">
       <legend className="mb-1">{label}</legend>
       <div className="flex gap-4">
-        <label className="flex items-center gap-1.5">
+        <label className="flex min-h-11 items-center gap-1.5">
           <input type="radio" name={name} value="yes" checked={value === "yes"} onChange={() => onChange("yes")} />
           Ja
         </label>
-        <label className="flex items-center gap-1.5">
+        <label className="flex min-h-11 items-center gap-1.5">
           <input type="radio" name={name} value="no" checked={value === "no"} onChange={() => onChange("no")} />
           Nein
         </label>
-        <label className="flex items-center gap-1.5">
+        <label className="flex min-h-11 items-center gap-1.5">
           <input type="radio" name={name} value="" checked={value === ""} onChange={() => onChange("")} />
           Weiß nicht
         </label>

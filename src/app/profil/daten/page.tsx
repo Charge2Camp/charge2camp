@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { HomeAddressForm } from "@/components/profile/home-address-form";
 import { DeleteAccountForm } from "@/components/profile/delete-account-form";
 import { ChangePasswordForm } from "@/components/profile/change-password-form";
-import { changeEmail } from "@/app/profil/actions";
+import { ChangeEmailForm } from "@/components/profile/change-email-form";
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("de-DE", { year: "numeric", month: "long", day: "numeric" });
@@ -54,24 +54,7 @@ export default async function MeineDatenPage() {
           Je nach Einstellung muss der Wechsel per Bestätigungslink (an die neue, ggf. auch die
           alte Adresse) bestätigt werden, bevor er wirksam wird.
         </p>
-        <form action={changeEmail} className="mt-2 flex max-w-md flex-col gap-2 sm:flex-row sm:items-end">
-          <label className="flex flex-1 flex-col gap-1 text-sm">
-            Neue E-Mail-Adresse
-            <input
-              type="email"
-              name="email"
-              required
-              placeholder="neue@adresse.de"
-              className="w-full rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
-            />
-          </label>
-          <button
-            type="submit"
-            className="min-h-11 rounded-md bg-action px-4 py-2 text-sm font-medium text-base hover:bg-action-hover"
-          >
-            Ändern
-          </button>
-        </form>
+        <ChangeEmailForm />
       </div>
 
       <div className="mt-8">

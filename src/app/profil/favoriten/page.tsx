@@ -55,7 +55,10 @@ export default async function FavoritenPage() {
                     Campingplatz
                   </span>
                   {campsite ? (
-                    <Link href={`/campingplaetze/${campsite.id}`} className="hover:underline">
+                    <Link
+                      href={`/campingplaetze/${campsite.id}`}
+                      className="inline-flex min-h-11 items-center hover:underline"
+                    >
                       {campsite.name}
                     </Link>
                   ) : (
@@ -74,7 +77,10 @@ export default async function FavoritenPage() {
                   Ladepunkt
                 </span>
                 {station ? (
-                  <Link href={`/ladepunkte/${station.id}`} className="hover:underline">
+                  <Link
+                    href={`/ladepunkte/${station.id}`}
+                    className="inline-flex min-h-11 items-center hover:underline"
+                  >
                     {station.name ?? station.operator}
                   </Link>
                 ) : (

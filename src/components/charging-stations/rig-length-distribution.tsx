@@ -28,8 +28,8 @@ export function RigLengthDistributionChart({
       </p>
 
       {distribution.buckets.map((bucket) => (
-        <div key={bucket.label} className="flex items-center gap-3 text-sm">
-          <span className="w-16 shrink-0 text-black/70 dark:text-white/70">{bucket.label}</span>
+        <div key={bucket.label} className="flex items-center gap-2 text-sm sm:gap-3">
+          <span className="w-14 shrink-0 text-black/70 dark:text-white/70 sm:w-16">{bucket.label}</span>
           <div className="h-4 flex-1 overflow-hidden rounded-full bg-black/5 dark:bg-white/10">
             {bucket.count > 0 && (
               <div
@@ -49,10 +49,10 @@ export function RigLengthDistributionChart({
               <div className="h-full w-full rounded-full opacity-40" style={{ backgroundColor: suitabilityColor(bucket.positiveRatio) }} />
             )}
           </div>
-          <span className="w-10 shrink-0 text-right text-black/50 dark:text-white/50">
+          <span className="w-8 shrink-0 text-right text-black/50 dark:text-white/50 sm:w-10">
             {bucket.sharePercent}%
           </span>
-          <span className="w-32 shrink-0 text-right text-xs text-black/50 dark:text-white/50">
+          <span className="w-20 shrink-0 truncate text-right text-xs text-black/50 dark:text-white/50 sm:w-32">
             {bucket.count === 0 && !bucket.inferredOnly
               ? "keine Bewertungen"
               : bucket.reliable && bucket.positiveRatio !== null

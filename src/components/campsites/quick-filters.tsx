@@ -75,7 +75,7 @@ export function CampsiteQuickFilters({
         </fieldset>
       )}
 
-      <div className="flex gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row">
         <button
           type="submit"
           className="min-h-12 rounded-md bg-action px-4 py-3 font-medium text-base hover:bg-action-hover"
@@ -84,7 +84,7 @@ export function CampsiteQuickFilters({
         </button>
         <Link
           href="/campingplaetze"
-          className="flex min-h-12 items-center rounded-md border border-black/10 px-4 hover:bg-black/5 dark:border-white/10 dark:hover:bg-white/10"
+          className="flex min-h-12 items-center justify-center rounded-md border border-black/10 px-4 hover:bg-black/5 dark:border-white/10 dark:hover:bg-white/10"
         >
           Zurücksetzen
         </Link>

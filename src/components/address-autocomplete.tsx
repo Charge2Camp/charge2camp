@@ -175,7 +175,13 @@ export function AddressAutocomplete({
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
         autoComplete="off"
-        className={className}
+        // text-base IMMER zusaetzlich zur aufrufenden className (nicht nur
+        // dort, wo sie gerade dran denkt) -- ohne mindestens 16px zoomt iOS
+        // Safari beim Fokussieren automatisch hinein (siehe CLAUDE.md
+        // Mobile/Touch-Design). Aktuell setzen zwar alle Aufrufer das
+        // selbst, aber dieses Feld soll das nicht stillschweigend
+        // voraussetzen muessen.
+        className={`text-base ${className ?? ""}`}
       />
       {open && hasSuggestions && (
         <ul className="absolute z-20 mt-1 max-h-60 w-full overflow-y-auto rounded-md border border-black/15 bg-white text-sm shadow-lg dark:border-white/15 dark:bg-neutral-900">

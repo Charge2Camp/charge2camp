@@ -57,7 +57,7 @@ export function FavoritesPickerDialog({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
           {selected ? (
             <div className="flex flex-col gap-4">
               <p className="text-sm text-black/70 dark:text-white/70">
