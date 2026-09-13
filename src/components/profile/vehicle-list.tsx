@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import type { Vehicle } from "@/types/database";
-import { deleteVehicle } from "@/app/profil/actions";
+import { useState } from "react";
+import type { Vehicle, VehicleModel } from "@/types/database";
+import { VehicleEditDialog } from "./vehicle-edit-dialog";
 
-export function VehicleList({ vehicles }: { vehicles: Vehicle[] }) {
+export function VehicleList({ vehicles, models }: { vehicles: Vehicle[]; models: VehicleModel[] }) {
   // Kein useState(vehicles)-Zwischenspeicher: der sichtbare Bestand wird bei
   // jedem Render direkt aus dem `vehicles`-Prop abgeleitet, minus gerade
   // erfolgreich geloeschter IDs. So bleibt der Prop (aktualisiert der Server
@@ -13,42 +13,23 @@ export function VehicleList({ vehicles }: { vehicles: Vehicle[] }) {
   // useEffect-Resync-Mechanismus, der leicht veraltet/inkonsistent werden
   // kann (siehe React-Doku "You Might Not Need An Effect").
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
-  const [errorById, setErrorById] = useState<Record<string, string>>({});
-  const [pendingId, setPendingId] = useState<string | null>(null);
-  const [, startTransition] = useTransition();
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const items = vehicles.filter((v) => !removedIds.has(v.id));
-
-  function handleDelete(vehicle: Vehicle) {
-    setPendingId(vehicle.id);
-    setErrorById((prev) => {
-      const next = { ...prev };
-      delete next[vehicle.id];
-      return next;
-    });
-    startTransition(async () => {
-      const result = await deleteVehicle(vehicle.id);
-      if (result.ok) {
-        setRemovedIds((prev) => new Set(prev).add(vehicle.id));
-      } else {
-        setErrorById((prev) => ({ ...prev, [vehicle.id]: result.error }));
-      }
-      setPendingId(null);
-    });
-  }
+  const editingVehicle = items.find((v) => v.id === editingId) ?? null;
 
   if (items.length === 0) {
     return <p className="text-sm text-black/50 dark:text-white/50">Noch kein Elektroauto hinterlegt.</p>;
   }
 
   return (
-    <ul className="flex flex-col gap-3">
-      {items.map((vehicle) => (
-        <li
-          key={vehicle.id}
-          className="flex flex-col gap-2 rounded-md border border-black/10 px-4 py-3 dark:border-white/10"
-        >
-          <div className="flex items-center justify-between gap-4">
+    <>
+      <ul className="flex flex-col gap-3">
+        {items.map((vehicle) => (
+          <li
+            key={vehicle.id}
+            className="flex items-center justify-between gap-4 rounded-md border border-black/10 px-4 py-3 dark:border-white/10"
+          >
             <div className="text-sm">
               <p className="font-medium">
                 {vehicle.manufacturer} {vehicle.model}
@@ -63,17 +44,25 @@ export function VehicleList({ vehicles }: { vehicles: Vehicle[] }) {
             </div>
             <button
               type="button"
-              onClick={() => handleDelete(vehicle)}
-              disabled={pendingId === vehicle.id}
-              className="flex min-h-11 items-center px-2 text-sm text-red-600 hover:underline disabled:opacity-50"
-              aria-label={`${vehicle.manufacturer} ${vehicle.model} entfernen`}
+              onClick={() => setEditingId(vehicle.id)}
+              className="flex min-h-11 items-center px-2 text-sm font-medium text-route hover:underline"
+              aria-label={`${vehicle.manufacturer} ${vehicle.model} bearbeiten`}
             >
-              Entfernen
+              Bearbeiten
             </button>
-          </div>
-          {errorById[vehicle.id] && <p className="text-xs text-red-600">{errorById[vehicle.id]}</p>}
-        </li>
-      ))}
-    </ul>
+          </li>
+        ))}
+      </ul>
+
+      {editingVehicle && (
+        <VehicleEditDialog
+          vehicle={editingVehicle}
+          models={models}
+          open
+          onClose={() => setEditingId(null)}
+          onDeleted={(id) => setRemovedIds((prev) => new Set(prev).add(id))}
+        />
+      )}
+    </>
   );
 }

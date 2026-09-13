@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { addCaravan } from "@/app/profil/actions";
-import type { CaravanModel } from "@/types/database";
+import { addCaravan, updateCaravan } from "@/app/profil/actions";
+import type { Caravan, CaravanModel } from "@/types/database";
 
 const EMPTY_FORM = {
   manufacturer: "",
@@ -15,10 +15,35 @@ const EMPTY_FORM = {
   actual_travel_weight_kg: "",
 };
 
-export function CaravanForm({ models }: { models: CaravanModel[] }) {
-  const [manufacturer, setManufacturer] = useState("");
-  const [selectedId, setSelectedId] = useState("");
-  const [form, setForm] = useState(EMPTY_FORM);
+function caravanToForm(caravan: Caravan): typeof EMPTY_FORM {
+  return {
+    manufacturer: caravan.manufacturer,
+    model: caravan.model,
+    length_m: caravan.length_m.toString(),
+    width_m: caravan.width_m.toString(),
+    height_m: caravan.height_m.toString(),
+    weight_kg: caravan.weight_kg.toString(),
+    gross_vehicle_weight_kg: caravan.gross_vehicle_weight_kg?.toString() ?? "",
+    actual_travel_weight_kg: caravan.actual_travel_weight_kg?.toString() ?? "",
+  };
+}
+
+/** Siehe VehicleForm -- gleiches Prinzip: Neuanlegen (`caravan` weggelassen)
+ * und Bearbeiten (`caravan` gesetzt, siehe caravan-edit-dialog.tsx) teilen
+ * sich dieselbe Feld-Logik. */
+export function CaravanForm({
+  models,
+  caravan,
+  onSaved,
+}: {
+  models: CaravanModel[];
+  caravan?: Caravan;
+  onSaved?: () => void;
+}) {
+  const isEdit = caravan !== undefined;
+  const [manufacturer, setManufacturer] = useState(caravan?.manufacturer ?? "");
+  const [selectedId, setSelectedId] = useState(caravan?.model_reference_id ?? "");
+  const [form, setForm] = useState(caravan ? caravanToForm(caravan) : EMPTY_FORM);
   const [error, setError] = useState<string | null>(null);
 
   const manufacturers = useMemo(
@@ -67,9 +92,13 @@ export function CaravanForm({ models }: { models: CaravanModel[] }) {
     <form
       action={async (formData) => {
         setError(null);
-        const result = await addCaravan(formData);
+        const result = isEdit ? await updateCaravan(caravan.id, formData) : await addCaravan(formData);
         if (!result.ok) {
           setError(result.error);
+          return;
+        }
+        if (isEdit) {
+          onSaved?.();
           return;
         }
         setManufacturer("");
@@ -227,7 +256,7 @@ export function CaravanForm({ models }: { models: CaravanModel[] }) {
           type="submit"
           className="min-h-12 rounded-md bg-action px-4 py-3 font-medium text-base hover:bg-action-hover"
         >
-          Wohnwagen hinzufügen
+          {isEdit ? "Speichern" : "Wohnwagen hinzufügen"}
         </button>
       </div>
     </form>

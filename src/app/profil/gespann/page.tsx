@@ -50,6 +50,8 @@ export default async function GespannPage() {
 
   const vehicleList = (vehicles as Vehicle[]) ?? [];
   const caravanList = (caravans as Caravan[]) ?? [];
+  const vehicleModelList = (vehicleModels as VehicleModel[]) ?? [];
+  const caravanModelList = (caravanModels as CaravanModel[]) ?? [];
 
   return (
     <div>
@@ -66,20 +68,20 @@ export default async function GespannPage() {
         <section>
           <h3 className="font-semibold">Elektroauto</h3>
           <div className="mt-4">
-            <VehicleList vehicles={vehicleList} />
+            <VehicleList vehicles={vehicleList} models={vehicleModelList} />
           </div>
           <CollapsibleFormSection addLabel="Elektroauto hinzufügen" defaultOpen={vehicleList.length === 0}>
-            <VehicleForm models={(vehicleModels as VehicleModel[]) ?? []} />
+            <VehicleForm models={vehicleModelList} />
           </CollapsibleFormSection>
         </section>
 
         <section>
           <h3 className="font-semibold">Wohnwagen</h3>
           <div className="mt-4">
-            <CaravanList caravans={caravanList} />
+            <CaravanList caravans={caravanList} models={caravanModelList} />
           </div>
           <CollapsibleFormSection addLabel="Wohnwagen hinzufügen" defaultOpen={caravanList.length === 0}>
-            <CaravanForm models={(caravanModels as CaravanModel[]) ?? []} />
+            <CaravanForm models={caravanModelList} />
           </CollapsibleFormSection>
         </section>
 

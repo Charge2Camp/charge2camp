@@ -68,6 +68,39 @@ export async function addVehicle(formData: FormData): Promise<ActionResult> {
   }
 }
 
+/** Bearbeitet ein bereits gespeichertes Elektroauto (Nutzerwunsch: statt
+ * nur Loeschen+Neuanlegen sollen alle Felder -- z. B. nachtraeglich die
+ * Ladeleistung -- direkt bearbeitbar sein, siehe vehicle-edit-dialog.tsx).
+ * `.eq("user_id", userId)` verhindert, dass ueber eine fremde ID ein
+ * Fahrzeug eines anderen Nutzers bearbeitet werden koennte. */
+export async function updateVehicle(id: string, formData: FormData): Promise<ActionResult> {
+  try {
+    const { supabase, userId } = await requireUserId();
+
+    const { error } = await supabase
+      .from("vehicles")
+      .update({
+        manufacturer: requireString(formData.get("manufacturer")),
+        model: requireString(formData.get("model")),
+        battery_capacity_kwh: requireNumber(formData.get("battery_capacity_kwh")),
+        consumption_kwh_per_100km: parseOptionalNumber(formData.get("consumption_kwh_per_100km")),
+        charging_power_kw: parseOptionalNumber(formData.get("charging_power_kw")),
+        range_km: parseOptionalNumber(formData.get("range_km")),
+        length_m: parseOptionalNumber(formData.get("length_m")),
+        model_reference_id: formData.get("model_reference_id") || null,
+      })
+      .eq("id", id)
+      .eq("user_id", userId);
+
+    if (error) throw new Error(error.message);
+    revalidatePath("/profil");
+    revalidatePath("/profil/gespann");
+    return { ok: true, data: undefined };
+  } catch (err) {
+    return { ok: false, error: actionErrorMessage(err, "Elektroauto konnte nicht gespeichert werden.") };
+  }
+}
+
 export async function deleteVehicle(id: string): Promise<ActionResult> {
   try {
     const { supabase, userId } = await requireUserId();
@@ -98,6 +131,37 @@ export async function addCaravan(formData: FormData): Promise<ActionResult> {
       actual_travel_weight_kg: parseOptionalNumber(formData.get("actual_travel_weight_kg")),
       model_reference_id: formData.get("model_reference_id") || null,
     });
+
+    if (error) throw new Error(error.message);
+    revalidatePath("/profil");
+    revalidatePath("/profil/gespann");
+    return { ok: true, data: undefined };
+  } catch (err) {
+    return { ok: false, error: actionErrorMessage(err, "Wohnwagen konnte nicht gespeichert werden.") };
+  }
+}
+
+/** Bearbeitet einen bereits gespeicherten Wohnwagen -- siehe updateVehicle
+ * oben, gleiches Prinzip. */
+export async function updateCaravan(id: string, formData: FormData): Promise<ActionResult> {
+  try {
+    const { supabase, userId } = await requireUserId();
+
+    const { error } = await supabase
+      .from("caravans")
+      .update({
+        manufacturer: requireString(formData.get("manufacturer")),
+        model: requireString(formData.get("model")),
+        length_m: requireNumber(formData.get("length_m")),
+        width_m: requireNumber(formData.get("width_m")),
+        height_m: requireNumber(formData.get("height_m")),
+        weight_kg: requireNumber(formData.get("weight_kg")),
+        gross_vehicle_weight_kg: parseOptionalNumber(formData.get("gross_vehicle_weight_kg")),
+        actual_travel_weight_kg: parseOptionalNumber(formData.get("actual_travel_weight_kg")),
+        model_reference_id: formData.get("model_reference_id") || null,
+      })
+      .eq("id", id)
+      .eq("user_id", userId);
 
     if (error) throw new Error(error.message);
     revalidatePath("/profil");

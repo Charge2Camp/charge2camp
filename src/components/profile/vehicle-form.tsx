@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { addVehicle } from "@/app/profil/actions";
-import type { VehicleModel } from "@/types/database";
+import { addVehicle, updateVehicle } from "@/app/profil/actions";
+import type { Vehicle, VehicleModel } from "@/types/database";
 
 const EMPTY_FORM = {
   manufacturer: "",
@@ -14,10 +14,36 @@ const EMPTY_FORM = {
   length_m: "",
 };
 
-export function VehicleForm({ models }: { models: VehicleModel[] }) {
-  const [manufacturer, setManufacturer] = useState("");
-  const [selectedId, setSelectedId] = useState("");
-  const [form, setForm] = useState(EMPTY_FORM);
+function vehicleToForm(vehicle: Vehicle): typeof EMPTY_FORM {
+  return {
+    manufacturer: vehicle.manufacturer,
+    model: vehicle.model,
+    battery_capacity_kwh: vehicle.battery_capacity_kwh.toString(),
+    consumption_kwh_per_100km: vehicle.consumption_kwh_per_100km?.toString() ?? "",
+    charging_power_kw: vehicle.charging_power_kw?.toString() ?? "",
+    range_km: vehicle.range_km?.toString() ?? "",
+    length_m: vehicle.length_m?.toString() ?? "",
+  };
+}
+
+/** Dasselbe Formular fuer Neuanlegen (`vehicle` weggelassen, z. B. im
+ * "Elektroauto hinzufügen"-Bereich) UND Bearbeiten eines bestehenden
+ * Fahrzeugs (`vehicle` gesetzt, siehe vehicle-edit-dialog.tsx) -- vermeidet
+ * doppelte Hersteller/Modell-Auswahl- und Feld-Logik fuer beide Faelle.
+ * `onSaved` wird nur im Bearbeiten-Modus gebraucht (schliesst das Pop-up). */
+export function VehicleForm({
+  models,
+  vehicle,
+  onSaved,
+}: {
+  models: VehicleModel[];
+  vehicle?: Vehicle;
+  onSaved?: () => void;
+}) {
+  const isEdit = vehicle !== undefined;
+  const [manufacturer, setManufacturer] = useState(vehicle?.manufacturer ?? "");
+  const [selectedId, setSelectedId] = useState(vehicle?.model_reference_id ?? "");
+  const [form, setForm] = useState(vehicle ? vehicleToForm(vehicle) : EMPTY_FORM);
   const [error, setError] = useState<string | null>(null);
 
   const manufacturers = useMemo(
@@ -65,9 +91,13 @@ export function VehicleForm({ models }: { models: VehicleModel[] }) {
     <form
       action={async (formData) => {
         setError(null);
-        const result = await addVehicle(formData);
+        const result = isEdit ? await updateVehicle(vehicle.id, formData) : await addVehicle(formData);
         if (!result.ok) {
           setError(result.error);
+          return;
+        }
+        if (isEdit) {
+          onSaved?.();
           return;
         }
         setManufacturer("");
@@ -209,7 +239,7 @@ export function VehicleForm({ models }: { models: VehicleModel[] }) {
           type="submit"
           className="min-h-12 rounded-md bg-action px-4 py-3 font-medium text-base hover:bg-action-hover"
         >
-          Elektroauto hinzufügen
+          {isEdit ? "Speichern" : "Elektroauto hinzufügen"}
         </button>
       </div>
     </form>

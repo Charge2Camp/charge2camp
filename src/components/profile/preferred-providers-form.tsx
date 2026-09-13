@@ -40,9 +40,20 @@ export function PreferredProvidersForm({
 
   return (
     <form
-      action={async (formData) => {
+      // Bewusst onSubmit+preventDefault statt des `action`-Props: React
+      // ruft nach einer Form-Action per `action`-Prop automatisch
+      // form.reset() auf (native Formular-Semantik) -- das setzt die
+      // Checkbox-DOM-Elemente direkt auf ungeprueft zurueck, OHNE dass sich
+      // der React-State (preferred/avoided) aendert. Die Checkboxen bleiben
+      // dadurch trotz `checked={...}` optisch leer, bis irgendein anderer
+      // State-Change ein Re-Render dieser Inputs erzwingt (Bugreport: Haken
+      // verschwindet direkt nach "Speichern", ist aber nach Neuladen wieder
+      // da, weil der Speichervorgang selbst korrekt funktioniert hat).
+      onSubmit={async (e) => {
+        e.preventDefault();
         setSaving(true);
         setError(null);
+        const formData = new FormData(e.currentTarget);
         const result = await setPreferredChargingProviders(formData);
         if (result.ok) {
           setSaved(true);
