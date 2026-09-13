@@ -5,6 +5,7 @@ import type { ChargingStopCandidate, TripPlan } from "@/lib/route-planning";
 import { buildRouteTimeline, type ManualWaypointWithDistance } from "@/lib/route-timeline";
 import { TRAILER_PIN_COLORS, TRAILER_PIN_LABELS } from "@/lib/trailer-verdict";
 import { PERSONAL_COMPATIBILITY_LABELS } from "@/lib/scoring/trailer-compatibility";
+import { operatorMatchesAnyProvider } from "@/lib/charging-providers";
 
 function formatDuration(minutes: number): string {
   const h = Math.floor(minutes / 60);
@@ -94,6 +95,7 @@ export function RouteOverviewPanel({
   manualWaypoints,
   plan,
   busy,
+  preferredProviders,
   onDeleteStop,
   onSelectAlternative,
   onViewDetails,
@@ -103,6 +105,13 @@ export function RouteOverviewPanel({
   manualWaypoints: ManualWaypointWithDistance[];
   plan: TripPlan;
   busy: boolean;
+  /** Bevorzugte Anbieter (Schluessel aus charging-providers.ts) -- rein
+   * informativ fuer den Hinweis "kein bevorzugter Anbieter in der Naehe"
+   * je Ladestopp (Nutzerwunsch). planTrip selbst schliesst Kandidaten
+   * anderer Anbieter NICHT mehr aus (nur vermiedene Anbieter tun das
+   * weiterhin hart) -- bevorzugte Anbieter werden nur bei der Auswahl
+   * vorgezogen, siehe route-planning.ts. */
+  preferredProviders: string[];
   onDeleteStop: (stopIndex: number, stationId: string) => void;
   onSelectAlternative: (stopIndex: number, stationId: string) => void;
   /** Speichert den aktuellen Planungsstand und oeffnet die Ladepunkt-
@@ -164,6 +173,8 @@ export function RouteOverviewPanel({
         const stop = point.chargingStop!;
         const index = point.chargingStopIndex!;
         const showAlternatives = expandedStopIndex === index;
+        const missesPreferredProvider =
+          preferredProviders.length > 0 && !operatorMatchesAnyProvider(stop.station.provider, preferredProviders);
 
         return (
           <div key={stop.station.id} className="contents">
@@ -190,6 +201,12 @@ export function RouteOverviewPanel({
                     )}
                     <li>{lastConfirmedLabel(stop.lastConfirmedAt)}</li>
                   </ul>
+                  {missesPreferredProvider && (
+                    <p className="text-xs text-amber-700 dark:text-amber-400">
+                      Kein Ladepunkt eines bevorzugten Anbieters in der Nähe verfügbar -- diese Station wurde
+                      stattdessen vorgeschlagen.
+                    </p>
+                  )}
                 </div>
                 <div className="flex flex-col items-end gap-2">
                   <button

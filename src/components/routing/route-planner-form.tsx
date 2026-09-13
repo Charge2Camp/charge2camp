@@ -1217,6 +1217,7 @@ export function RoutePlannerForm({
               manualWaypoints={result.manualWaypoints}
               plan={result.plan}
               busy={replanBusy}
+              preferredProviders={preferredProviders}
               onDeleteStop={handleDeleteStop}
               onSelectAlternative={handleSelectAlternative}
               onViewDetails={handleViewStationDetails}

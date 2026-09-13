@@ -71,6 +71,14 @@ const MAX_CHARGING_STOPS = 8;
 /** Maximale Anzahl an Alternativ-Vorschlaegen pro Ladestopp (Uebersichtlichkeit im UI). */
 const MAX_ALTERNATIVES = 5;
 
+/** Positionsfenster (km entlang der Strecke), innerhalb dessen zwei
+ * Kandidaten als "aehnlich gut positioniert" gelten -- erst innerhalb
+ * dieses Fensters entscheidet ein bevorzugter Anbieter ueber die Wahl
+ * (siehe candidates.sort in planTrip). Verhindert, dass ein nahegelegener
+ * bevorzugter Ladepunkt einen deutlich besser positionierten (mehr
+ * Reichweite ausnutzenden) anderen Ladepunkt verdraengt. */
+const PREFERRED_PROVIDER_PROXIMITY_KM = 15;
+
 export interface ChargingStopCandidate {
   station: RouteChargingStation;
   distanceFromStartKm: number;
@@ -285,7 +293,14 @@ export function planTrip({
       .filter((c) => c.distanceFromStartKm > currentDistanceKm)
       .filter((c) => c.distanceFromStartKm - currentDistanceKm <= rangeToStopKm)
       .filter((c) => !minPowerKw || (c.station.power_kw ?? 0) >= minPowerKw)
-      .filter((c) => preferredProviders.length === 0 || operatorMatchesAnyProvider(c.station.provider, preferredProviders))
+      // Vermiedene Anbieter (und dauerhaft blockierte Ladepunkte, siehe
+      // excludedStationIds oben) sind ein hartes Ausschlusskriterium --
+      // bevorzugte Anbieter dagegen NICHT: siehe Sortierung unten. Ein
+      // harter Filter auf preferredProviders wuerde sonst eine Etappe
+      // unloesbar machen, sobald in der Naehe zufaellig kein Ladepunkt
+      // eines bevorzugten Anbieters liegt (Nutzerwunsch: "wenn es keinen
+      // Ladepunkt der bevorzugten Anbieter gibt, soll mit einer
+      // verfuegbaren Option geplant werden").
       .filter((c) => avoidedProviders.length === 0 || !operatorMatchesAnyProvider(c.station.provider, avoidedProviders))
       // Anhängertauglichkeit hat Priorität vor einem kürzeren Umweg (§26/§27):
       // "nicht_tauglich" wird hart ausgeschlossen, nicht nur nachrangig
@@ -310,16 +325,34 @@ export function planTrip({
         const diff = rank[a.station.trailerPinState] - rank[b.station.trailerPinState];
         if (diff !== 0) return diff;
       }
-      // Reichweite moeglichst ausnutzen: unter gleich geeigneten Kandidaten
-      // den am weitesten entfernten (naeher an rangeToStopKm) bevorzugen,
-      // nicht einfach den erstbesten in Streckennaehe. Ohne dieses Kriterium
-      // wurde hier zuvor rein nach corridorDistanceKm sortiert, wodurch ein
-      // Ladepunkt direkt an der Route kurz nach der Abfahrt/dem letzten
-      // Stopp gewaehlt werden konnte, obwohl mit dem aktuellen Ladestand
-      // noch ein Vielfaches der Strecke moeglich gewesen waere -- Stopps
-      // lagen dadurch teils nur ~20 km auseinander statt die Reichweite
-      // auszunutzen (Nutzerfeedback).
+      // Reichweite moeglichst ausnutzen: unter etwa gleich geeigneten
+      // Kandidaten den am weitesten entfernten (naeher an rangeToStopKm)
+      // bevorzugen, nicht einfach den erstbesten in Streckennaehe. Ohne
+      // dieses Kriterium wurde hier zuvor rein nach corridorDistanceKm
+      // sortiert, wodurch ein Ladepunkt direkt an der Route kurz nach der
+      // Abfahrt/dem letzten Stopp gewaehlt werden konnte, obwohl mit dem
+      // aktuellen Ladestand noch ein Vielfaches der Strecke moeglich
+      // gewesen waere -- Stopps lagen dadurch teils nur ~20 km auseinander
+      // statt die Reichweite auszunutzen (Nutzerfeedback). Bewusst VOR der
+      // Anbieter-Vorliebe geprueft (s. u.): ein bevorzugter Anbieter darf
+      // nicht dazu fuehren, dass unnoetig viel Reichweite verschenkt wird
+      // (z. B. ein nahegelegener bevorzugter Ladepunkt statt eines viel
+      // besser positionierten anderen) -- innerhalb eines "aehnlich guten"
+      // Positionsfensters (PREFERRED_PROVIDER_PROXIMITY_KM) entscheidet
+      // dagegen sehr wohl der bevorzugte Anbieter.
       const distanceDiff = b.distanceFromStartKm - a.distanceFromStartKm;
+      if (Math.abs(distanceDiff) > PREFERRED_PROVIDER_PROXIMITY_KM) return distanceDiff;
+
+      // Bevorzugte Anbieter vorziehen (Nutzerwunsch) -- als weiches
+      // Kriterium: bei etwa gleich guter Position gewinnt der bevorzugte
+      // Anbieter, ohne dass ein Kandidat eines anderen Anbieters deswegen
+      // komplett ausgeschlossen wird (siehe Filter oben) oder unnoetig viel
+      // Reichweite verschenkt wird (s. o.).
+      if (preferredProviders.length > 0) {
+        const aPreferred = operatorMatchesAnyProvider(a.station.provider, preferredProviders);
+        const bPreferred = operatorMatchesAnyProvider(b.station.provider, preferredProviders);
+        if (aPreferred !== bPreferred) return aPreferred ? -1 : 1;
+      }
       if (Math.abs(distanceDiff) > 0.001) return distanceDiff;
       return a.corridorDistanceKm - b.corridorDistanceKm;
     });
