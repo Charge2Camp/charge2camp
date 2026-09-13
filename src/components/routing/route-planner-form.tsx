@@ -153,6 +153,7 @@ function buildChargingStopPopupHtml(stop: RoutePlanResult["plan"]["chargingStops
         <li>Nach ${stop.distanceFromStartKm.toFixed(0)} km ab Start</li>
         <li>Umweg von der Route: ca. ${stop.corridorDistanceKm.toFixed(0)} km</li>
         <li>Ladestand bei Ankunft: ${stop.socOnArrivalPercent.toFixed(0)}%</li>
+        <li>Geplant wird bis: ${stop.socAfterChargingPercent.toFixed(0)}%</li>
         ${stop.chargingTimeMin !== null ? `<li>Voraussichtliche Ladezeit: ${formatDuration(stop.chargingTimeMin)}</li>` : ""}
         <li>${confirmedLine}</li>
       </ul>
@@ -1302,7 +1303,7 @@ export function RoutePlannerForm({
                     <p className="text-xs text-black/50 dark:text-white/50">
                       {point.chargingStop.station.power_kw ? `${point.chargingStop.station.power_kw} kW` : "Leistung unbekannt"}
                       {point.chargingStop.chargingTimeMin !== null &&
-                        ` · ca. ${formatDuration(point.chargingStop.chargingTimeMin)} laden`}
+                        ` · ca. ${formatDuration(point.chargingStop.chargingTimeMin)} laden (${point.chargingStop.socOnArrivalPercent.toFixed(0)}% → ${point.chargingStop.socAfterChargingPercent.toFixed(0)}%)`}
                     </p>
                   )}
                 </div>

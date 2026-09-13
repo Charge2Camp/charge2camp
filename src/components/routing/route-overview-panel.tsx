@@ -205,6 +205,7 @@ export function RouteOverviewPanel({
                   </p>
                   <ul className="text-sm text-black/60 dark:text-white/60">
                     <li>Ladestand bei Ankunft: {stop.socOnArrivalPercent.toFixed(0)}%</li>
+                    <li>Geplant wird bis: {stop.socAfterChargingPercent.toFixed(0)}%</li>
                     {stop.chargingTimeMin !== null && (
                       <li>Voraussichtliche Ladezeit: {formatDuration(stop.chargingTimeMin)}</li>
                     )}
@@ -220,14 +221,6 @@ export function RouteOverviewPanel({
                 <div className="flex flex-col items-end gap-2">
                   <button
                     type="button"
-                    disabled={busy}
-                    onClick={() => onDeleteStop(index, stop.station.id)}
-                    className="min-h-11 whitespace-nowrap rounded-md border border-red-600/50 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-600/10 disabled:opacity-50 dark:text-red-400"
-                  >
-                    Löschen
-                  </button>
-                  <button
-                    type="button"
                     onClick={() => onViewDetails(stop.station.id)}
                     className="min-h-11 whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium text-black/60 hover:underline dark:text-white/60"
                   >
@@ -238,6 +231,9 @@ export function RouteOverviewPanel({
 
               {stop.alternatives.length > 0 && (
                 <div className="mt-3">
+                  <p className="text-xs text-black/50 dark:text-white/50">
+                    Passt diese Ladesäule nicht? Wähle stattdessen eine der Alternativen:
+                  </p>
                   <button
                     type="button"
                     onClick={() => setExpandedStopIndex(showAlternatives ? null : index)}
@@ -266,6 +262,21 @@ export function RouteOverviewPanel({
                   )}
                 </div>
               )}
+
+              {/* Nutzerwunsch: kein prominenter "Loeschen"-Button mehr --
+                  stattdessen oben auf die Alternativen hinweisen. Ein
+                  Ausschliessen dieser Saeule (automatische Neusuche, nicht
+                  nur eine der 5 gezeigten Alternativen) bleibt als
+                  zurueckhaltender Text-Link verfuegbar, falls auch keine der
+                  Alternativen passt. */}
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => onDeleteStop(index, stop.station.id)}
+                className="mt-2 text-xs text-black/40 hover:underline disabled:opacity-50 dark:text-white/40"
+              >
+                Keine der Alternativen passend? Diese Ladesäule ausschließen und automatisch neu planen
+              </button>
             </li>
           </div>
         );

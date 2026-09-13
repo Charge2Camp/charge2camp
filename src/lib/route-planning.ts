@@ -102,6 +102,11 @@ export interface ChargingStopCandidate {
 
 export interface ChargingStopPlan extends ChargingStopCandidate {
   socOnArrivalPercent: number;
+  /** Ladestand, bis zu dem an diesem Stopp geladen wird, bevor es weitergeht
+   * -- i. d. R. targetSocAfterChargingPercent, aber nie WENIGER als der
+   * ohnehin schon vorhandene Ladestand bei Ankunft (siehe currentSocPercent-
+   * Berechnung unten: kurze Etappen brauchen dann gar kein/kaum Nachladen). */
+  socAfterChargingPercent: number;
   chargingTimeMin: number | null;
   /** Weitere Kandidaten fuer DIESEN Stopp im Streckenkorridor (gleiche Sortierung: Anhaengertauglichkeit vor Umweg), zur Anzeige als Alternativen. */
   alternatives: ChargingStopCandidate[];
@@ -397,6 +402,11 @@ export function planTrip({
     const chargingTimeMin = chosen.station.power_kw
       ? Math.max(0, (energyChargedKwh / chosen.station.power_kw) * 60)
       : null;
+    // Zielladestand fuer die naechste Etappe: entweder der eingestellte
+    // Zielladestand, oder der tatsaechliche Ladestand bei Ankunft, falls
+    // dieser (z. B. bei kurzer Etappe) bereits darueber liegt -- dann wird
+    // nicht unnoetig "heruntergerechnet" bzw. gar nicht geladen.
+    const socAfterCharging = Math.max(targetSocAfterChargingPercent, socOnArrival);
 
     if (!warning && chosen.station.trailerPinState === "ungeprueft") {
       warning =
@@ -408,17 +418,14 @@ export function planTrip({
       distanceFromStartKm: chosen.distanceFromStartKm,
       corridorDistanceKm: chosen.corridorDistanceKm,
       socOnArrivalPercent: socOnArrival,
+      socAfterChargingPercent: socAfterCharging,
       chargingTimeMin,
       alternatives,
     });
 
     usedStationIds.add(chosen.station.id);
     currentDistanceKm = chosen.distanceFromStartKm;
-    // Startpunkt fuer die naechste Etappe: entweder der Zielladestand nach
-    // dem Stopp, oder der tatsaechliche Ladestand bei Ankunft, falls dieser
-    // (z. B. bei kurzer Etappe) bereits darueber liegt -- dann wird nicht
-    // unnoetig "heruntergerechnet".
-    currentSocPercent = Math.max(targetSocAfterChargingPercent, socOnArrival);
+    currentSocPercent = socAfterCharging;
   }
 
   const remainingDistanceKm = route.distanceKm - currentDistanceKm;
