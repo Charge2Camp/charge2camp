@@ -939,6 +939,30 @@ export function RoutePlannerForm({
               <span aria-hidden="true">{providersOpen ? "▲" : "▼"}</span>
             </button>
 
+            {/* Solange die Auswahl eingeklappt ist (Standard, auch mit aus dem
+                Profil vorbelegten Anbietern -- siehe providersOpen oben),
+                existieren die Checkboxen unten NICHT im DOM. Ohne diese
+                verstecken Felder wuerde "Route berechnen" (normales <form>,
+                sammelt FormData direkt aus den DOM-Elementen) dann OHNE JEDEN
+                Anbieter-Filter planen, obwohl preferredProviders/
+                avoidedProviders im State (und in der eingeklappten
+                Zusammenfassung "5x bevorzugt") bereits Werte haben --
+                waehrend eine spaetere Neuplanung in Tab 2 (handleReplan, liest
+                direkt aus dem State statt aus FormData) den Filter SEHR WOHL
+                anwendet. Eine Alternative, die die erste (ungefilterte)
+                Planung noch zeigte, konnte dadurch bei Auswahl ploetzlich als
+                "nicht erreichbar" gelten (Bugreport). */}
+            {!providersOpen && (
+              <>
+                {preferredProviders.map((key) => (
+                  <input key={`preferred-${key}`} type="hidden" name="preferred_providers" value={key} />
+                ))}
+                {avoidedProviders.map((key) => (
+                  <input key={`avoided-${key}`} type="hidden" name="avoided_providers" value={key} />
+                ))}
+              </>
+            )}
+
             {providersOpen && (
               <div className="mt-2 rounded-md border border-black/15 p-3 dark:border-white/15">
                 {(initialPreferredProviders.length > 0 || initialAvoidedProviders.length > 0) && (
