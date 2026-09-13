@@ -356,6 +356,11 @@ export function RoutePlannerForm({
   // Ref statt State: wird nur in handleReplan GELESEN, eine Aenderung soll
   // keinen eigenen Render ausloesen.
   const appliedSettingsRef = useRef<AppliedPlanSettings | null>(null);
+  // Oberer Rand von Tab 2 (Karte) -- nach Loeschen/Alternative-Wahl dorthin
+  // scrollen (Nutzerwunsch), damit die aktualisierte Karte und die neuen
+  // Streckendaten sofort sichtbar sind, statt dass der Nutzer erst manuell
+  // nach oben scrollen muss.
+  const tab2TopRef = useRef<HTMLDivElement>(null);
 
   const vehicleById = useMemo(() => new Map(vehicles.map((v) => [v.id, v])), [vehicles]);
 
@@ -652,9 +657,19 @@ export function RoutePlannerForm({
         setReplanError(planResult.error);
         return;
       }
-      setResult({ ...result, plan: planResult.data.plan, mapGeometry: planResult.data.mapGeometry });
+      setResult({
+        ...result,
+        plan: planResult.data.plan,
+        mapGeometry: planResult.data.mapGeometry,
+        mapDistanceKm: planResult.data.mapDistanceKm,
+        mapDurationMin: planResult.data.mapDurationMin,
+      });
       setExcludedStationIds(nextExcluded);
       setForcedStationIdByIndex(nextForced);
+      // Nutzerwunsch: nach dem Loeschen/Auswaehlen sofort die aktualisierte
+      // Karte + Streckendaten sehen, statt manuell nach oben scrollen zu
+      // muessen.
+      tab2TopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     } catch (err) {
       setReplanError(err instanceof Error ? err.message : "Ladestopp konnte nicht neu geplant werden.");
     } finally {
@@ -1140,7 +1155,7 @@ export function RoutePlannerForm({
 
       {/* ---------- Tab 2: Routenübersicht ---------- */}
       {activeStep === 2 && result && (
-        <div className="flex flex-col gap-6">
+        <div ref={tab2TopRef} className="flex flex-col gap-6">
           <div className="h-[350px] overflow-hidden rounded-lg border border-black/10 dark:border-white/10">
             <MapView
               markers={[
@@ -1169,11 +1184,11 @@ export function RoutePlannerForm({
           <div className="grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
             <div>
               <p className="text-black/50 dark:text-white/50">Strecke</p>
-              <p className="text-lg font-semibold">{result.plan.distanceKm.toFixed(0)} km</p>
+              <p className="text-lg font-semibold">{result.mapDistanceKm.toFixed(0)} km</p>
             </div>
             <div>
               <p className="text-black/50 dark:text-white/50">Fahrzeit</p>
-              <p className="text-lg font-semibold">{formatDuration(result.plan.durationMin)}</p>
+              <p className="text-lg font-semibold">{formatDuration(result.mapDurationMin)}</p>
             </div>
             <div>
               <p className="text-black/50 dark:text-white/50">Verbrauch</p>
@@ -1249,11 +1264,11 @@ export function RoutePlannerForm({
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <p className="text-black/50 dark:text-white/50">Strecke</p>
-              <p className="text-lg font-semibold">{result.plan.distanceKm.toFixed(0)} km</p>
+              <p className="text-lg font-semibold">{result.mapDistanceKm.toFixed(0)} km</p>
             </div>
             <div>
               <p className="text-black/50 dark:text-white/50">Fahrzeit</p>
-              <p className="text-lg font-semibold">{formatDuration(result.plan.durationMin)}</p>
+              <p className="text-lg font-semibold">{formatDuration(result.mapDurationMin)}</p>
             </div>
           </div>
 

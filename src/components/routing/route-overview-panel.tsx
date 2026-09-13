@@ -243,7 +243,13 @@ export function RouteOverviewPanel({
                           key={alt.station.id}
                           alternative={alt}
                           disabled={busy}
-                          onSelect={() => onSelectAlternative(index, alt.station.id)}
+                          onSelect={() => {
+                            // Nutzerwunsch: Abschnitt nach der Auswahl wieder
+                            // einklappen, statt die (jetzt veraltete)
+                            // Alternativen-Liste weiter offen zu lassen.
+                            setExpandedStopIndex(null);
+                            onSelectAlternative(index, alt.station.id);
+                          }}
                           onViewDetails={() => onViewDetails(alt.station.id)}
                         />
                       ))}

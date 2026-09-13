@@ -159,6 +159,14 @@ export interface RoutePlanResult {
    * Fahrt tatsaechlich dort haelt. Faellt bei OSRM-Fehler auf `geometry`
    * zurueck (siehe buildRoutePlanResult). */
   mapGeometry: { latitude: number; longitude: number }[];
+  /** Tatsaechliche Gesamtstrecke/-fahrzeit DIESER (Umwege-inklusive)
+   * Route, nicht der direkten Basis-Route (siehe `geometry`/`plan.distanceKm`
+   * -- die bleiben bewusst die direkte Strecke, Grundlage der SOC-Berechnung).
+   * Fuer die Anzeige ("Strecke"/"Fahrzeit" in Tab 2) -- muss sich nach
+   * Loeschen/Alternative-Wahl in Tab 2 mit-aendern, sonst zeigt die Karte
+   * eine andere Strecke als die daneben angezeigten km/Minuten (Bugreport). */
+  mapDistanceKm: number;
+  mapDurationMin: number;
   /** Manuell hinzugefuegte, zwingend zu durchfahrende Zwischenstopps (§ ABRP-Vorbild "Add Stop") -- unabhaengig von der Ladeplanung, siehe route-timeline.ts. */
   manualWaypoints: ManualWaypointWithDistance[];
   vehicle: Pick<Vehicle, "manufacturer" | "model">;
@@ -287,8 +295,11 @@ async function buildMapGeometry({
   end: GeoPoint;
   manualWaypointsWithDistance: ManualWaypointWithDistance[];
   chargingStops: TripPlan["chargingStops"];
-  fallback: RouteResult["geometry"];
-}): Promise<RouteResult["geometry"]> {
+  /** Direkte Route als Rueckfallwert bei OSRM-Fehler -- ihre distanceKm/
+   * durationMin sind dann zwar nur die direkte (nicht die Umwege-
+   * inklusive) Strecke, aber besser als gar keine Anzeige. */
+  fallback: RouteResult;
+}): Promise<RouteResult> {
   const detourWaypoints = [
     ...manualWaypointsWithDistance.map((w) => ({
       latitude: w.latitude,
@@ -305,12 +316,11 @@ async function buildMapGeometry({
   if (detourWaypoints.length === 0) return fallback;
 
   try {
-    const detourRoute = await osrmProvider.planRoute({
+    return await osrmProvider.planRoute({
       start,
       end,
       waypoints: detourWaypoints.map(({ latitude, longitude }) => ({ latitude, longitude })),
     });
-    return detourRoute.geometry;
   } catch {
     return fallback;
   }
@@ -388,13 +398,15 @@ async function buildRoutePlanResult({
     distanceFromStartKm: distanceAlongRouteKm(w, route),
   }));
 
-  const mapGeometry = await buildMapGeometry({ start, end, manualWaypointsWithDistance, chargingStops: annotatedPlan.chargingStops, fallback: route.geometry });
+  const mapRoute = await buildMapGeometry({ start, end, manualWaypointsWithDistance, chargingStops: annotatedPlan.chargingStops, fallback: route });
 
   return {
     start: { latitude: start.latitude, longitude: start.longitude, displayName: start.displayName },
     end: { latitude: end.latitude, longitude: end.longitude, displayName: end.displayName },
     geometry: route.geometry,
-    mapGeometry,
+    mapGeometry: mapRoute.geometry,
+    mapDistanceKm: mapRoute.distanceKm,
+    mapDurationMin: mapRoute.durationMin,
     manualWaypoints: manualWaypointsWithDistance,
     vehicle: { manufacturer: vehicle.manufacturer, model: vehicle.model },
     caravan: caravan ? { manufacturer: caravan.manufacturer, model: caravan.model } : null,
@@ -580,6 +592,12 @@ export interface ReplanResult {
    * oder Waehlen einer Alternative weiterhin durch die ALTEN Ladestopps
    * fuehren (Bugreport: "Route auf der Karte wird nicht angepasst"). */
   mapGeometry: RouteResult["geometry"];
+  /** Siehe RoutePlanResult.mapDistanceKm/mapDurationMin -- muss zusammen mit
+   * mapGeometry neu berechnet werden, sonst zeigen "Strecke"/"Fahrzeit" nach
+   * Loeschen/Alternative-Wahl weiterhin die alten Werte, obwohl die Karte
+   * schon die neue Route zeigt (Bugreport). */
+  mapDistanceKm: number;
+  mapDurationMin: number;
 }
 
 /**
@@ -664,15 +682,20 @@ async function replanChargingStopInner(input: {
     vehicle.length_m !== null && caravan?.length_m ? vehicle.length_m + caravan.length_m : null;
   const annotatedPlan = await annotateChargingStops(supabase, plan, userTrailerLengthM);
 
-  const mapGeometry = await buildMapGeometry({
+  const mapRoute = await buildMapGeometry({
     start: input.start,
     end: input.end,
     manualWaypointsWithDistance: input.manualWaypoints,
     chargingStops: annotatedPlan.chargingStops,
-    fallback: input.route.geometry,
+    fallback: input.route,
   });
 
-  return { plan: annotatedPlan, mapGeometry };
+  return {
+    plan: annotatedPlan,
+    mapGeometry: mapRoute.geometry,
+    mapDistanceKm: mapRoute.distanceKm,
+    mapDurationMin: mapRoute.durationMin,
+  };
 }
 
 export interface SaveRouteInput {
