@@ -9,6 +9,7 @@ const EMPTY_FORM = {
   model: "",
   battery_capacity_kwh: "",
   consumption_kwh_per_100km: "",
+  charging_power_kw: "",
   range_km: "",
   length_m: "",
 };
@@ -50,6 +51,7 @@ export function VehicleForm({ models }: { models: VehicleModel[] }) {
       model: m.model,
       battery_capacity_kwh: m.battery_capacity_kwh?.toString() ?? "",
       consumption_kwh_per_100km: m.consumption_kwh_per_100km?.toString() ?? "",
+      charging_power_kw: m.charging_power_kw?.toString() ?? "",
       range_km: m.range_km?.toString() ?? "",
       length_m: m.length_m?.toString() ?? "",
     });
@@ -156,6 +158,19 @@ export function VehicleForm({ models }: { models: VehicleModel[] }) {
             min="0"
             value={form.consumption_kwh_per_100km}
             onChange={(e) => updateField("consumption_kwh_per_100km", e.target.value)}
+            className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+          />
+        </label>
+
+        <label className="flex flex-col gap-1 text-sm">
+          Ladeleistung (kW, optional)
+          <input
+            name="charging_power_kw"
+            type="number"
+            step="1"
+            min="0"
+            value={form.charging_power_kw}
+            onChange={(e) => updateField("charging_power_kw", e.target.value)}
             className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
           />
         </label>

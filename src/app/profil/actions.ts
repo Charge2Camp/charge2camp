@@ -53,6 +53,7 @@ export async function addVehicle(formData: FormData): Promise<ActionResult> {
       model: requireString(formData.get("model")),
       battery_capacity_kwh: requireNumber(formData.get("battery_capacity_kwh")),
       consumption_kwh_per_100km: parseOptionalNumber(formData.get("consumption_kwh_per_100km")),
+      charging_power_kw: parseOptionalNumber(formData.get("charging_power_kw")),
       range_km: parseOptionalNumber(formData.get("range_km")),
       length_m: parseOptionalNumber(formData.get("length_m")),
       model_reference_id: formData.get("model_reference_id") || null,

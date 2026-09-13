@@ -45,6 +45,19 @@ export interface RouteChargingStation {
 // Hersteller-WLTP-Angaben, siehe ADAC-Praxistests mit Wohnwagen).
 export const DEFAULT_CONSUMPTION_KWH_PER_100KM = 38;
 
+// Realistische Standard-Ladeleistung (Fahrzeug-seitig), wenn im
+// Fahrzeugprofil keine eigene Ladeleistung hinterlegt ist (Feld ist
+// optional, siehe VehicleForm) -- OHNE diesen Fallback wuerde die
+// Ladezeit-Berechnung sonst mit der oft viel hoeheren Saeulen-Nennleistung
+// rechnen (z. B. 300 kW an einer Ultra-Schnelllade-Saeule), obwohl kaum ein
+// Fahrzeug diese Leistung tatsaechlich abrufen kann -- das war die
+// Hauptursache fuer die vom Nutzer gemeldeten unrealistisch kurzen
+// Ladezeiten. 120 kW ist ein bewusst mittlerer, eher vorsichtiger
+// Richtwert (viele verbreitete Modelle laden mit 80-150 kW; wer schneller
+// laden kann, sollte die eigene Ladeleistung im Fahrzeugprofil eintragen
+// fuer eine praezisere Berechnung).
+export const DEFAULT_CHARGING_POWER_KW = 120;
+
 // Standard-Mindestladeleistung im Routenplaner-Formular (Nutzerwunsch) --
 // deckt die meisten heutigen Schnelllader-Standorte ab, ohne bei Bedarf
 // (z. B. abgelegenere Ziele) zu restriktiv zu sein; ueberschreibbar.
@@ -132,6 +145,70 @@ function rangeBetweenSoc(effectiveRangeKm: number, fromSocPercent: number, toSoc
   return Math.max(0, effectiveRangeKm * ((fromSocPercent - toSocPercent) / 100));
 }
 
+/**
+ * Vereinfachte Ladekurve: Anteil der SPITZEN-Ladeleistung, der bei einem
+ * gegebenen Ladestand tatsaechlich noch anliegt. Reale Akkus laden NICHT
+ * mit konstanter Leistung bis zum Zielladestand -- die Leistung bleibt nur
+ * bis ca. 40 % SoC nahe dem Maximum, sinkt danach zunehmend und faellt ab
+ * ca. 85 % deutlich ab (Nutzerbericht/Praxis-Richtwert: 10-80 % dauert bei
+ * vielen Autos aehnlich lang wie danach nur noch 80-100 %, obwohl das nur
+ * 20 statt 70 Prozentpunkte Akku sind). Die vorherige Berechnung nahm
+ * durchgehend die volle Saeulen-Nennleistung an und war dadurch (besonders
+ * nahe des Zielladestands) unrealistisch optimistisch. Grober Richtwert
+ * ohne fahrzeugspezifische Ladekurven-Daten, aber deutlich naeher an der
+ * Realitaet als eine konstante Leistung.
+ */
+const CHARGING_CURVE_BREAKPOINTS: [socPercent: number, powerFraction: number][] = [
+  [0, 1.0],
+  [40, 1.0],
+  [70, 0.55],
+  [85, 0.25],
+  [100, 0.1],
+];
+
+function chargingPowerFraction(socPercent: number): number {
+  for (let i = 1; i < CHARGING_CURVE_BREAKPOINTS.length; i++) {
+    const [socA, fracA] = CHARGING_CURVE_BREAKPOINTS[i - 1];
+    const [socB, fracB] = CHARGING_CURVE_BREAKPOINTS[i];
+    if (socPercent <= socB) {
+      const t = (socPercent - socA) / (socB - socA);
+      return fracA + t * (fracB - fracA);
+    }
+  }
+  return CHARGING_CURVE_BREAKPOINTS[CHARGING_CURVE_BREAKPOINTS.length - 1][1];
+}
+
+// Schrittweite (Prozentpunkte SoC) fuer die numerische Integration der
+// Ladekurve -- fein genug fuer eine glatte Naeherung, grob genug um pro
+// Ladestopp nur eine Handvoll Iterationen zu brauchen (keine Performance-
+// Sorge, rein lokale Berechnung ohne I/O).
+const CHARGING_CURVE_STEP_PERCENT = 2;
+
+/** Ladezeit (Minuten) von `fromSocPercent` bis `toSocPercent`, bei der
+ * kleineren aus Fahrzeug- und Saeulen-Ladeleistung als Spitzenwert --
+ * integriert die vereinfachte Ladekurve (chargingPowerFraction) statt
+ * durchgehend mit der Spitzenleistung zu rechnen. */
+function estimateChargingTimeMin(
+  fromSocPercent: number,
+  toSocPercent: number,
+  batteryCapacityKwh: number,
+  peakPowerKw: number
+): number {
+  if (toSocPercent <= fromSocPercent || peakPowerKw <= 0) return 0;
+
+  let totalMin = 0;
+  let soc = fromSocPercent;
+  while (soc < toSocPercent) {
+    const stepEnd = Math.min(soc + CHARGING_CURVE_STEP_PERCENT, toSocPercent);
+    const midSoc = (soc + stepEnd) / 2;
+    const powerKw = peakPowerKw * chargingPowerFraction(midSoc);
+    const energyKwh = ((stepEnd - soc) / 100) * batteryCapacityKwh;
+    totalMin += (energyKwh / powerKw) * 60;
+    soc = stepEnd;
+  }
+  return totalMin;
+}
+
 /** Naeherungsweise kumulierte Distanz (km) vom Streckenanfang bis zu einem
  * gegebenen Geometrie-Index, angenommen gleichmaessige Punktverteilung. */
 function cumulativeDistanceAtIndex(index: number, geometryLength: number, totalDistanceKm: number) {
@@ -209,7 +286,7 @@ export function planTrip({
   forcedStationIdByIndex = {},
 }: {
   route: RouteResult;
-  vehicle: Pick<Vehicle, "battery_capacity_kwh">;
+  vehicle: Pick<Vehicle, "battery_capacity_kwh" | "charging_power_kw">;
   chargingStations: RouteChargingStation[];
   preferTrailerSuitable?: boolean;
   minPowerKw?: number;
@@ -396,17 +473,25 @@ export function planTrip({
     const distanceTraveledKm = chosen.distanceFromStartKm - currentDistanceKm;
     const socOnArrival = socPercentAfter(currentSocPercent, energyForDistance(distanceTraveledKm));
 
-    const energyAtTarget = (targetSocAfterChargingPercent / 100) * vehicle.battery_capacity_kwh;
-    const energyOnArrival = (socOnArrival / 100) * vehicle.battery_capacity_kwh;
-    const energyChargedKwh = Math.max(0, energyAtTarget - energyOnArrival);
-    const chargingTimeMin = chosen.station.power_kw
-      ? Math.max(0, (energyChargedKwh / chosen.station.power_kw) * 60)
-      : null;
     // Zielladestand fuer die naechste Etappe: entweder der eingestellte
     // Zielladestand, oder der tatsaechliche Ladestand bei Ankunft, falls
     // dieser (z. B. bei kurzer Etappe) bereits darueber liegt -- dann wird
     // nicht unnoetig "heruntergerechnet" bzw. gar nicht geladen.
     const socAfterCharging = Math.max(targetSocAfterChargingPercent, socOnArrival);
+
+    // Spitzenladeleistung = die kleinere aus Saeulen- und Fahrzeug-
+    // Ladeleistung (mit realistischem Standardwert, falls das Fahrzeugprofil
+    // keine eigene Ladeleistung angibt) -- vorher wurde nur die
+    // Saeulenleistung verwendet, was z. B. an einer 300-kW-Saeule die
+    // Ladezeit massiv unterschaetzte, weil kaum ein Fahrzeug diese Leistung
+    // tatsaechlich abrufen kann (Bugreport).
+    const peakChargingPowerKw = Math.min(
+      chosen.station.power_kw ?? Infinity,
+      vehicle.charging_power_kw ?? DEFAULT_CHARGING_POWER_KW
+    );
+    const chargingTimeMin = Number.isFinite(peakChargingPowerKw)
+      ? estimateChargingTimeMin(socOnArrival, socAfterCharging, vehicle.battery_capacity_kwh, peakChargingPowerKw)
+      : null;
 
     if (!warning && chosen.station.trailerPinState === "ungeprueft") {
       warning =
