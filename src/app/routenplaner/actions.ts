@@ -17,6 +17,7 @@ import { getTrailerPinState } from "@/lib/trailer-verdict";
 import { sanitizeProviderKeys } from "@/lib/charging-providers";
 import { fetchBlockedStationIds } from "@/lib/blocked-stations";
 import { distanceKm } from "@/lib/geo";
+import { estimateTravelTimeMin } from "@/lib/travel-time";
 import type { ManualWaypoint, ManualWaypointWithDistance } from "@/lib/route-timeline";
 import type { Caravan, ChargingReview, SavedRoute, TrailerVerdict, Vehicle } from "@/types/database";
 import { actionErrorMessage as errorMessage, type ActionResult } from "@/lib/action-result";
@@ -167,6 +168,11 @@ export interface RoutePlanResult {
    * eine andere Strecke als die daneben angezeigten km/Minuten (Bugreport). */
   mapDistanceKm: number;
   mapDurationMin: number;
+  /** Reisezeit dieser Route unter Annahme des landesabhaengigen Anhaenger-
+   * Tempolimits abzueglich Sicherheitsabschlag (siehe lib/travel-time.ts) --
+   * fuer die Anzeige ("Reisezeit" in Tab 2/3) statt mapDurationMin, das nur
+   * die (zu optimistische) PKW-ohne-Anhaenger-Fahrzeit von OSRM ist. */
+  travelTimeMin: number;
   /** Manuell hinzugefuegte, zwingend zu durchfahrende Zwischenstopps (§ ABRP-Vorbild "Add Stop") -- unabhaengig von der Ladeplanung, siehe route-timeline.ts. */
   manualWaypoints: ManualWaypointWithDistance[];
   vehicle: Pick<Vehicle, "manufacturer" | "model">;
@@ -407,6 +413,7 @@ async function buildRoutePlanResult({
     mapGeometry: mapRoute.geometry,
     mapDistanceKm: mapRoute.distanceKm,
     mapDurationMin: mapRoute.durationMin,
+    travelTimeMin: estimateTravelTimeMin(mapRoute.geometry),
     manualWaypoints: manualWaypointsWithDistance,
     vehicle: { manufacturer: vehicle.manufacturer, model: vehicle.model },
     caravan: caravan ? { manufacturer: caravan.manufacturer, model: caravan.model } : null,
@@ -598,6 +605,9 @@ export interface ReplanResult {
    * schon die neue Route zeigt (Bugreport). */
   mapDistanceKm: number;
   mapDurationMin: number;
+  /** Siehe RoutePlanResult.travelTimeMin -- muss zusammen mit mapGeometry neu
+   * berechnet werden. */
+  travelTimeMin: number;
 }
 
 /**
@@ -695,6 +705,7 @@ async function replanChargingStopInner(input: {
     mapGeometry: mapRoute.geometry,
     mapDistanceKm: mapRoute.distanceKm,
     mapDurationMin: mapRoute.durationMin,
+    travelTimeMin: estimateTravelTimeMin(mapRoute.geometry),
   };
 }
 

@@ -94,6 +94,7 @@ export function RouteOverviewPanel({
   end,
   manualWaypoints,
   plan,
+  travelTimeMin,
   busy,
   preferredProviders,
   onDeleteStop,
@@ -104,6 +105,11 @@ export function RouteOverviewPanel({
   end: { displayName: string; latitude: number; longitude: number };
   manualWaypoints: ManualWaypointWithDistance[];
   plan: TripPlan;
+  /** Gesamte Reisezeit (Minuten, laenderabhaengiges Anhaenger-Tempolimit --
+   * siehe lib/travel-time.ts) der aktuell angezeigten (Umwege-inklusiven)
+   * Route -- Grundlage fuer die je Etappe anteilig geschaetzte Fahrzeit
+   * unten, damit deren Summe zur oben angezeigten Reisezeit passt. */
+  travelTimeMin: number;
   busy: boolean;
   /** Bevorzugte Anbieter (Schluessel aus charging-providers.ts) -- rein
    * informativ fuer den Hinweis "kein bevorzugter Anbieter in der Naehe"
@@ -135,9 +141,12 @@ export function RouteOverviewPanel({
   });
   const middlePoints = timeline.slice(1, -1);
 
-  // Etappen-km/Fahrzeit werden proportional zur Gesamtfahrzeit geschaetzt
-  // (OSRM liefert keine Zwischenzeiten fuer beliebige Streckenpunkte) --
-  // gleiche Naeherung wie die Korridor-Distanz der Ladepunkte selbst.
+  // Etappen-km/Reisezeit werden proportional zur gesamten Reisezeit
+  // geschaetzt (kein Anbieter liefert Zwischenzeiten fuer beliebige
+  // Streckenpunkte beim laenderabhaengigen Tempolimit) -- gleiche Naeherung
+  // wie die Korridor-Distanz der Ladepunkte selbst. travelTimeMin statt
+  // plan.durationMin, damit die Summe der Etappen zur oben angezeigten
+  // Gesamt-Reisezeit passt.
   const legStartKm = [0, ...middlePoints.map((p) => p.distanceFromStartKm)];
   const legEndKm = [...middlePoints.map((p) => p.distanceFromStartKm), plan.distanceKm];
 
@@ -150,7 +159,7 @@ export function RouteOverviewPanel({
 
       {middlePoints.map((point, i) => {
         const legDistanceKm = legEndKm[i] - legStartKm[i];
-        const legDurationMin = (legDistanceKm / plan.distanceKm) * plan.durationMin;
+        const legDurationMin = (legDistanceKm / plan.distanceKm) * travelTimeMin;
 
         if (point.kind === "manual") {
           return (
@@ -265,7 +274,7 @@ export function RouteOverviewPanel({
       {(() => {
         const lastIndex = legEndKm.length - 1;
         const legDistanceKm = legEndKm[lastIndex] - legStartKm[lastIndex];
-        const legDurationMin = (legDistanceKm / plan.distanceKm) * plan.durationMin;
+        const legDurationMin = (legDistanceKm / plan.distanceKm) * travelTimeMin;
         return (
           <li className="flex items-center gap-2 pl-2 text-xs text-black/50 dark:text-white/50">
             <span>↓ {legDistanceKm.toFixed(0)} km</span>

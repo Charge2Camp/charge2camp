@@ -663,6 +663,7 @@ export function RoutePlannerForm({
         mapGeometry: planResult.data.mapGeometry,
         mapDistanceKm: planResult.data.mapDistanceKm,
         mapDurationMin: planResult.data.mapDurationMin,
+        travelTimeMin: planResult.data.travelTimeMin,
       });
       setExcludedStationIds(nextExcluded);
       setForcedStationIdByIndex(nextForced);
@@ -1187,8 +1188,8 @@ export function RoutePlannerForm({
               <p className="text-lg font-semibold">{result.mapDistanceKm.toFixed(0)} km</p>
             </div>
             <div>
-              <p className="text-black/50 dark:text-white/50">Fahrzeit</p>
-              <p className="text-lg font-semibold">{formatDuration(result.mapDurationMin)}</p>
+              <p className="text-black/50 dark:text-white/50">Reisezeit</p>
+              <p className="text-lg font-semibold">{formatDuration(result.travelTimeMin)}</p>
             </div>
             <div>
               <p className="text-black/50 dark:text-white/50">Verbrauch</p>
@@ -1231,6 +1232,7 @@ export function RoutePlannerForm({
               end={result.end}
               manualWaypoints={result.manualWaypoints}
               plan={result.plan}
+              travelTimeMin={result.travelTimeMin}
               busy={replanBusy}
               preferredProviders={preferredProviders}
               onDeleteStop={handleDeleteStop}
@@ -1267,8 +1269,8 @@ export function RoutePlannerForm({
               <p className="text-lg font-semibold">{result.mapDistanceKm.toFixed(0)} km</p>
             </div>
             <div>
-              <p className="text-black/50 dark:text-white/50">Fahrzeit</p>
-              <p className="text-lg font-semibold">{formatDuration(result.mapDurationMin)}</p>
+              <p className="text-black/50 dark:text-white/50">Reisezeit</p>
+              <p className="text-lg font-semibold">{formatDuration(result.travelTimeMin)}</p>
             </div>
           </div>
 
