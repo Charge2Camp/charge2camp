@@ -77,6 +77,10 @@ export interface Campsite {
   phone: string | null;
   email: string | null;
   capacity: number | null;
+  /** Manueller Override fuer den EV-Camping-Score (0-100) -- NULL =
+   * weiterhin automatisch berechnet (siehe Haupt-App lib/scoring/
+   * ev-camping-score.ts). */
+  ev_score_override: number | null;
   source: string;
   is_active: boolean;
 }
@@ -122,6 +126,47 @@ export interface CampsiteReview {
   campsite_id: string;
   rating: number;
   comment: string | null;
+  created_at: string;
+}
+
+export type VerificationStatus = "unverified" | "verified" | "outdated";
+
+/** public.vehicle_models -- Referenzkatalog fuer die Fahrzeugauswahl mit
+ * Autofill in der Haupt-App (VehicleForm). Nutzer koennen die Werte nach
+ * dem Autofill frei anpassen -- dieser Katalog ist nur die Vorbelegung,
+ * nicht die Quelle der Wahrheit fuer bereits gespeicherte Fahrzeuge. */
+export interface VehicleModel {
+  id: string;
+  manufacturer: string;
+  model: string;
+  variant: string;
+  battery_capacity_kwh: number | null;
+  consumption_kwh_per_100km: number | null;
+  charging_power_kw: number | null;
+  range_km: number | null;
+  max_towing_weight_braked_kg: number | null;
+  length_m: number | null;
+  source: string;
+  verification_status: VerificationStatus;
+  last_verified_at: string | null;
+  created_at: string;
+}
+
+/** public.caravan_models -- siehe VehicleModel, gleiches Prinzip fuer
+ * Wohnwagen. */
+export interface CaravanModel {
+  id: string;
+  manufacturer: string;
+  model: string;
+  series: string | null;
+  length_m: number;
+  width_m: number;
+  height_m: number;
+  weight_kg: number;
+  gross_vehicle_weight_kg: number | null;
+  source: string;
+  verification_status: VerificationStatus;
+  last_verified_at: string | null;
   created_at: string;
 }
 

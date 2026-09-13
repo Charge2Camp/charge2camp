@@ -113,6 +113,32 @@ export async function setCampsiteActive(campsiteId: string, isActive: boolean) {
   revalidatePath("/campingplaetze");
 }
 
+/** Manueller Override des EV-Camping-Scores (Nutzerwunsch) -- leeres Feld
+ * setzt ev_score_override auf NULL zurueck, wodurch die Haupt-App wieder
+ * automatisch berechnet (siehe CoreCampsite.ev_score_override /
+ * EvScoreBadge in der Haupt-App). core.campsite wird von der Detailseite
+ * dort DIREKT gelesen (nicht ueber campsite_search), deshalb reicht ein
+ * einfaches UPDATE ohne Materialized-View-Refresh. */
+export async function overrideEvScore(campsiteId: string, formData: FormData) {
+  await requireAdmin();
+  const supabase = createServiceClient();
+
+  const raw = (formData.get("ev_score_override") as string) ?? "";
+  const value = raw.trim() === "" ? null : Number(raw);
+  if (value !== null && (!Number.isFinite(value) || value < 0 || value > 100)) {
+    throw new Error("EV-Score muss zwischen 0 und 100 liegen (oder leer für automatische Berechnung).");
+  }
+
+  const { error } = await supabase
+    .schema("core")
+    .from("campsite")
+    .update({ ev_score_override: value, updated_at: new Date().toISOString() })
+    .eq("id", campsiteId);
+
+  if (error) throw new Error(error.message);
+  revalidatePath(`/campingplaetze/${campsiteId}`);
+}
+
 export async function deleteCampsiteReview(reviewId: string, campsiteId: string) {
   await requireAdmin();
   const supabase = createServiceClient();

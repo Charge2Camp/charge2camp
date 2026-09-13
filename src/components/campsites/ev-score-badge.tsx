@@ -3,10 +3,16 @@ import type { EvScoreBreakdown } from "@/lib/scoring/ev-camping-score";
 export function EvScoreBadge({
   breakdown,
   campsite,
+  overrideScore,
 }: {
   breakdown: EvScoreBreakdown;
   campsite: { max_charging_power_kw: number | null; number_of_charging_points: number | null; rating_avg: number | null };
+  /** Manuell im Admin-Backend gesetzter Score (core.campsite.ev_score_override)
+   * -- ersetzt nur die angezeigte Zahl, die "reasons"-Liste bleibt die
+   * automatisch berechnete Begruendung (weiterhin informativ). */
+  overrideScore?: number | null;
 }) {
+  const displayScore = overrideScore ?? breakdown.score;
   const reasons: string[] = [];
   if (breakdown.onSite > 0) reasons.push("Ladepunkt auf dem Platz");
   if (breakdown.power > 0 && campsite.max_charging_power_kw) {
@@ -28,7 +34,8 @@ export function EvScoreBadge({
       <p className="text-sm font-medium text-route">
         EV-Camping-Score
       </p>
-      <p className="text-3xl font-bold">{breakdown.score}/100</p>
+      <p className="text-3xl font-bold">{displayScore}/100</p>
+      {overrideScore != null && <p className="mt-1 text-xs text-black/50 dark:text-white/50">Manuell festgelegt</p>}
       {reasons.length > 0 && (
         <ul className="mt-2 list-inside list-disc text-sm text-black/60 dark:text-white/60">
           {reasons.map((r) => (

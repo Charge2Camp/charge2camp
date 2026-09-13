@@ -15,10 +15,23 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
   const isAdmin = profile?.is_admin ?? false;
   const isBanned = Boolean(user.banned_until && new Date(user.banned_until) > new Date());
 
-  const [{ count: favoritesCount }, { count: caravansCount }, { count: vehiclesCount }] = await Promise.all([
+  const [
+    { count: favoritesCount },
+    { count: caravansCount },
+    { count: vehiclesCount },
+    { count: savedRoutesCount },
+    { count: routesPlannedCount },
+  ] = await Promise.all([
     supabase.from("favorites").select("user_id", { count: "exact", head: true }).eq("user_id", id),
     supabase.from("caravans").select("id", { count: "exact", head: true }).eq("user_id", id),
     supabase.from("vehicles").select("id", { count: "exact", head: true }).eq("user_id", id),
+    supabase.from("saved_routes").select("id", { count: "exact", head: true }).eq("user_id", id),
+    supabase
+      .schema("core")
+      .from("app_usage_event")
+      .select("id", { count: "exact", head: true })
+      .eq("event_type", "route_planned")
+      .eq("user_id", id),
   ]);
 
   return (
@@ -26,8 +39,12 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
       <div>
         <h1 className="text-2xl font-semibold">{user.email}</h1>
         <p className="mt-1 text-sm text-text-muted">
-          Registriert am {new Date(user.created_at).toLocaleDateString("de-DE")} · {favoritesCount ?? 0} Favoriten ·{" "}
-          {vehiclesCount ?? 0} Fahrzeuge · {caravansCount ?? 0} Wohnwagen
+          Registriert am {new Date(user.created_at).toLocaleDateString("de-DE")} · Zuletzt angemeldet:{" "}
+          {user.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" }) : "nie"}
+        </p>
+        <p className="mt-1 text-sm text-text-muted">
+          {vehiclesCount ?? 0} Fahrzeuge · {caravansCount ?? 0} Wohnwagen · {favoritesCount ?? 0} Favoriten ·{" "}
+          {savedRoutesCount ?? 0} gespeicherte Routen · {routesPlannedCount ?? 0} Routen geplant (seit 29.09.2026)
         </p>
       </div>
 

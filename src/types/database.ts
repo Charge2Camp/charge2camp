@@ -240,6 +240,10 @@ export interface CoreCampsite {
   phone: string | null;
   email: string | null;
   capacity: number | null;
+  /** Manuell im Admin-Backend gesetzter EV-Camping-Score (0-100) -- ueberschreibt
+   * die automatische Berechnung (siehe lib/scoring/ev-camping-score.ts)
+   * direkt, solange gesetzt. NULL = weiterhin automatisch berechnen. */
+  ev_score_override: number | null;
   source: string;
   last_seen_at: string;
   created_at: string;

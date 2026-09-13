@@ -18,22 +18,30 @@ export function NavigationLink({
   href,
   className,
   children,
+  onNavigate,
 }: {
   href: string;
   className?: string;
   children: ReactNode;
+  /** Optionaler Callback beim Klick, z. B. fuer die Admin-Statistik
+   * "Segmente exportiert" (siehe route-planner-form.tsx/profil/routen).
+   * Bewusst kein fest eingebautes Tracking hier -- NavigationLink selbst
+   * bleibt ein generischer Deep-Link-Oeffner, die Analytics-Entscheidung
+   * liegt beim Aufrufer. */
+  onNavigate?: () => void;
 }) {
   return (
     <button
       type="button"
-      onClick={() =>
+      onClick={() => {
+        onNavigate?.();
         // Eindeutiger Fenstername pro Klick statt "_blank": ein wiederholt
         // gleicher Name wuerde denselben bereits offenen Tab nur
         // stillschweigend im Hintergrund weiterleiten (Standardverhalten
         // benannter window.open-Ziele) -- so oeffnet jeder Klick zuverlaessig
         // einen neuen Tab, ohne den Charge2Camp-Tab zu verlassen.
-        window.open(href, `charge2camp-navigation-${Date.now()}`, "noopener,noreferrer")
-      }
+        window.open(href, `charge2camp-navigation-${Date.now()}`, "noopener,noreferrer");
+      }}
       className={className}
     >
       {children}

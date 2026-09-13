@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { createServiceClient } from "@/lib/supabase/service";
 
+function formatDateTime(iso: string | null | undefined): string {
+  if (!iso) return "nie";
+  return new Date(iso).toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" });
+}
+
 export default async function UsersPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   const { q } = await searchParams;
   const supabase = createServiceClient();
@@ -47,7 +52,10 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
             href={`/nutzer/${u.id}`}
             className="flex items-center justify-between rounded-md border border-line bg-card p-3 text-sm hover:bg-line/20"
           >
-            <p className="font-medium">{u.email}</p>
+            <div>
+              <p className="font-medium">{u.email}</p>
+              <p className="text-text-muted">Zuletzt angemeldet: {formatDateTime(u.last_sign_in_at)}</p>
+            </div>
             <div className="flex items-center gap-2">
               {isAdminById.get(u.id) && <span className="rounded-full bg-route/10 px-2 py-0.5 text-xs text-route">Admin</span>}
               {u.banned_until && new Date(u.banned_until) > new Date() && (

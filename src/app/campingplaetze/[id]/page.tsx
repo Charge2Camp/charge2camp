@@ -193,6 +193,7 @@ export default async function CampsiteDetailPage({
             number_of_charging_points: numberOfChargingPoints,
             rating_avg: ratingAvg,
           }}
+          overrideScore={site.ev_score_override}
         />
       </div>
 

@@ -1,7 +1,14 @@
 import { notFound } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase/service";
 import type { Amenity, Campsite, CampsiteAmenity, CampsiteCharging, CampsiteReview } from "@/lib/types";
-import { deleteCampsiteReview, overrideCampsiteCharging, setCampsiteActive, updateAmenities, updateCampsite } from "./actions";
+import {
+  deleteCampsiteReview,
+  overrideCampsiteCharging,
+  overrideEvScore,
+  setCampsiteActive,
+  updateAmenities,
+  updateCampsite,
+} from "./actions";
 
 const CHARGING_TYPE_LABELS: Record<string, string> = {
   wallbox: "Wallbox",
@@ -52,6 +59,7 @@ export default async function CampsiteDetailPage({ params }: { params: Promise<{
   const updateAction = updateCampsite.bind(null, id);
   const amenitiesAction = updateAmenities.bind(null, id, amenities.map((a) => a.key));
   const chargingAction = overrideCampsiteCharging.bind(null, id, c.external_key);
+  const evScoreAction = overrideEvScore.bind(null, id);
 
   return (
     <div className="flex max-w-2xl flex-col gap-8">
@@ -130,6 +138,31 @@ export default async function CampsiteDetailPage({ params }: { params: Promise<{
               type="number"
               name="capacity"
               defaultValue={c.capacity ?? ""}
+              className="min-h-11 w-40 rounded-md border border-line px-3 py-2 text-base"
+            />
+          </label>
+          <button type="submit" className="min-h-11 self-start rounded-md bg-action px-4 text-sm font-medium hover:bg-action-hover">
+            Speichern
+          </button>
+        </form>
+      </section>
+
+      <section>
+        <h2 className="text-lg font-semibold">EV-Camping-Score</h2>
+        <p className="mt-1 text-sm text-text-muted">
+          Standardmäßig automatisch berechnet (Ladeinfos, Schnelllader-Nähe, Bewertungen, Aktualität). Ein
+          gesetzter Wert überschreibt die Berechnung direkt; leeres Feld = wieder automatisch berechnen.
+        </p>
+        <form action={evScoreAction} className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
+          <label className="flex flex-col gap-1 text-sm">
+            Score (0-100, leer = automatisch)
+            <input
+              type="number"
+              name="ev_score_override"
+              min={0}
+              max={100}
+              step={1}
+              defaultValue={c.ev_score_override ?? ""}
               className="min-h-11 w-40 rounded-md border border-line px-3 py-2 text-base"
             />
           </label>

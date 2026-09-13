@@ -18,6 +18,7 @@ import { sanitizeProviderKeys } from "@/lib/charging-providers";
 import { fetchBlockedStationIds } from "@/lib/blocked-stations";
 import { distanceKm } from "@/lib/geo";
 import { estimateTravelTimeMin } from "@/lib/travel-time";
+import { logAppUsageEvent } from "@/lib/analytics";
 import type { ManualWaypoint, ManualWaypointWithDistance } from "@/lib/route-timeline";
 import type { Caravan, ChargingReview, SavedRoute, TrailerVerdict, Vehicle } from "@/types/database";
 import { actionErrorMessage as errorMessage, type ActionResult } from "@/lib/action-result";
@@ -568,7 +569,7 @@ async function planRouteInner(formData: FormData): Promise<RoutePlanResult> {
   // von den nur pro Route geloeschten Stopps (excludedStationIds).
   const blockedStationIds = await fetchBlockedStationIds(supabase, user.id);
 
-  return buildRoutePlanResult({
+  const result = await buildRoutePlanResult({
     supabase,
     start,
     end,
@@ -590,6 +591,14 @@ async function planRouteInner(formData: FormData): Promise<RoutePlanResult> {
       ...(detourToleranceKm !== null && { detourToleranceKm }),
     },
   });
+
+  // Nutzerwunsch: Admin-Statistik "wie viele Routen wurden geplant" -- nur
+  // die frische Berechnung hier zaehlt, nicht jedes Neuplanen/Alternative-
+  // Waehlen in Tab 2 (replanChargingStopInner) oder erneutes Oeffnen einer
+  // gespeicherten Route (loadSavedRoute).
+  await logAppUsageEvent(supabase, "route_planned", user.id);
+
+  return result;
 }
 
 export interface ReplanResult {

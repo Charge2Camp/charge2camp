@@ -30,6 +30,7 @@ import {
 } from "@/lib/route-planning";
 import { buildRouteTimeline } from "@/lib/route-timeline";
 import { buildRouteSegments } from "@/lib/route-navigation";
+import { logRouteExportEvent } from "@/lib/analytics-actions";
 import { TRAILER_PIN_COLORS, TRAILER_PIN_ICON_SRC, TRAILER_PIN_LABELS } from "@/lib/trailer-verdict";
 import { CHARGING_PROVIDERS } from "@/lib/charging-providers";
 import type { CampsiteDestinationOption } from "@/lib/campsites";
@@ -1347,6 +1348,7 @@ export function RoutePlannerForm({
             <div className="flex flex-col gap-2">
               <NavigationLink
                 href={routeSegments.fullRouteUrl}
+                onNavigate={() => void logRouteExportEvent("route_full_export")}
                 className="min-h-12 w-fit rounded-md bg-action px-5 py-3 text-sm font-medium text-base hover:bg-action-hover"
               >
                 Gesamte Route navigieren (Google Maps)
@@ -1359,6 +1361,7 @@ export function RoutePlannerForm({
                       <NavigationLink
                         key={segment.label}
                         href={segment.url}
+                        onNavigate={() => void logRouteExportEvent("route_segment_export")}
                         className="min-h-11 rounded-md border border-black/15 px-3 py-2.5 text-sm hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/5"
                       >
                         {segment.label}

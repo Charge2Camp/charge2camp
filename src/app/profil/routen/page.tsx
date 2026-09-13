@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { loadSavedRoute } from "@/app/routenplaner/actions";
 import { buildRouteSegments } from "@/lib/route-navigation";
+import { logRouteExportEvent } from "@/lib/analytics-actions";
 import { NavigationLink } from "@/components/profile/navigation-link";
 import { DeleteSavedRouteButton } from "@/components/profile/delete-saved-route-button";
 import type { SavedRoute } from "@/types/database";
@@ -101,6 +102,7 @@ export default async function SavedRoutesPage() {
                         <div className="mt-2 flex flex-col gap-2">
                           <NavigationLink
                             href={fullRouteUrl}
+                            onNavigate={logRouteExportEvent.bind(null, "route_full_export")}
                             className="w-fit min-h-11 rounded-md bg-action px-4 py-2.5 text-sm font-medium text-base hover:bg-action-hover"
                           >
                             Gesamte Route navigieren (Google Maps)
@@ -115,6 +117,7 @@ export default async function SavedRoutesPage() {
                                   <NavigationLink
                                     key={segment.label}
                                     href={segment.url}
+                                    onNavigate={logRouteExportEvent.bind(null, "route_segment_export")}
                                     className="min-h-11 rounded-md border border-black/15 px-3 py-2.5 text-sm hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/5"
                                   >
                                     {segment.label}
