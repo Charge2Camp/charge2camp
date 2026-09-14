@@ -1,0 +1,257 @@
+import { NextRequest, NextResponse } from "next/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+
+/**
+ * Wiederkehrender Open-Charge-Map-Reimport (Nutzerwunsch: "in welchem
+ * Zyklus gelangen neu gelistete Saeulen in meine Plattform" -- bisher gar
+ * nicht automatisch, siehe ingest/import_ocm.py, das bislang nur von Hand
+ * angestossen wurde). Per Vercel Cron taeglich ausgeloest (vercel.json),
+ * importiert JE LAUF EIN Land aus CORE_COUNTRIES (Wochentag-Rotation,
+ * siehe pickCountryForToday) -- ein voller Zyklus ueber alle Kernlaender
+ * dauert damit eine Woche. Bewusst NICHT alle Laender in einem Lauf: bei
+ * grossen Laendern (DE: ~25.000 Ladepunkte) wuerde das Serverless-
+ * Zeitlimit selbst mit Bulk-Upserts eng, siehe maxDuration unten.
+ *
+ * Portiert dieselbe Kernlogik wie ingest/import_ocm.py (Steckertyp-Mapping,
+ * Ableitung von max_power_kw/connector_count aus den Anschluessen) nach
+ * TypeScript, weil das Python-Skript direkt per psycopg2 verbindet (kein
+ * DB-Passwort im Deploy verfuegbar/gewuenscht) -- dieser Weg laeuft
+ * stattdessen ueber den Service-Role-Client (PostgREST), analog zum
+ * Admin-Backend. raw.charge_point-Zwischenspeicherung (Rohdaten-Cache)
+ * entfaellt hier bewusst -- das raw-Schema ist nicht ueber PostgREST
+ * erreichbar (supabase/config.toml [api] schemas), nur core/enrich.
+ */
+
+// Vercel-Plan dieses Projekts ist Hobby (siehe VERCEL_OIDC_TOKEN-Claim
+// "plan":"hobby" in .env.local) -- 60s ist dort das Maximum fuer
+// maxDuration. Grosse Laender (v. a. DE, ~25.000 Ladepunkte) koennen trotz
+// Bulk-Upserts laenger brauchen als das erlaubt; das Ergebnis-JSON zeigt
+// dann einen Timeout/Abbruch, der naechste taegliche Lauf (gleiches Land,
+// da die Wochentag-Rotation erst am naechsten Wochentag weiterschaltet)
+// wuerde die fehlenden Datensaetze nachholen (Upsert ist idempotent). Bei
+// einem Upgrade auf Pro kann dieser Wert auf bis zu 300 erhoeht werden.
+export const maxDuration = 60;
+
+const CORE_COUNTRIES = ["DE", "FR", "IT", "NL", "AT", "BE", "CH"] as const;
+
+const CONNECTION_TYPE_MAP: Record<number, { standard: string; currentType: "AC" | "DC" }> = {
+  1: { standard: "Type1", currentType: "AC" },
+  2: { standard: "CHAdeMO", currentType: "DC" },
+  25: { standard: "Type2", currentType: "AC" },
+  28: { standard: "Schuko", currentType: "AC" },
+  32: { standard: "CCS1", currentType: "DC" },
+  33: { standard: "CCS2", currentType: "DC" },
+  1036: { standard: "Type2_Socket", currentType: "AC" },
+};
+const CURRENT_TYPE_BY_ID: Record<number, "AC" | "DC"> = { 10: "AC", 20: "AC", 30: "DC" };
+
+function pickCountryForToday(date = new Date()): (typeof CORE_COUNTRIES)[number] {
+  return CORE_COUNTRIES[date.getUTCDay() % CORE_COUNTRIES.length];
+}
+
+interface OcmConnection {
+  ConnectionType?: { ID?: number; Title?: string } | null;
+  ConnectionTypeID?: number;
+  PowerKW?: number | null;
+  CurrentTypeID?: number;
+  Quantity?: number | null;
+}
+
+interface OcmPoi {
+  ID?: number;
+  AddressInfo?: {
+    Title?: string;
+    AddressLine1?: string;
+    AddressLine2?: string;
+    Town?: string;
+    Postcode?: string;
+    Latitude?: number;
+    Longitude?: number;
+    Country?: { ISOCode?: string } | null;
+  } | null;
+  OperatorInfo?: { Title?: string } | null;
+  UsageType?: { Title?: string } | null;
+  StatusType?: { IsOperational?: boolean | null } | null;
+  DateLastStatusUpdate?: string | null;
+  Connections?: OcmConnection[] | null;
+}
+
+interface ParsedConnector {
+  standard: string;
+  power_kw: number | null;
+  current_type: "AC" | "DC" | null;
+  quantity: number;
+}
+
+interface ParsedChargePoint {
+  external_key: string;
+  name: string | null;
+  operator: string | null;
+  network: string | null;
+  geom: string;
+  address: string | null;
+  postcode: string | null;
+  city: string | null;
+  country_code: string | null;
+  access_type: string | null;
+  is_operational: boolean;
+  max_power_kw: number | null;
+  connector_count: number | null;
+  source: "ocm";
+  source_updated_at: string | null;
+  connectors: ParsedConnector[];
+}
+
+function parseConnection(raw: OcmConnection): ParsedConnector {
+  const typeId = raw.ConnectionType?.ID ?? raw.ConnectionTypeID;
+  const mapped = typeId !== undefined ? CONNECTION_TYPE_MAP[typeId] : undefined;
+  const standard = mapped?.standard ?? raw.ConnectionType?.Title ?? (typeId !== undefined ? `unknown:${typeId}` : "unknown");
+  const currentType = mapped?.currentType ?? (raw.CurrentTypeID !== undefined ? CURRENT_TYPE_BY_ID[raw.CurrentTypeID] ?? null : null);
+  return {
+    standard,
+    power_kw: raw.PowerKW ?? null,
+    current_type: currentType,
+    quantity: raw.Quantity ?? 1,
+  };
+}
+
+function parsePoi(poi: OcmPoi): ParsedChargePoint | null {
+  const address = poi.AddressInfo;
+  const lat = address?.Latitude;
+  const lon = address?.Longitude;
+  if (poi.ID === undefined || lat === undefined || lon === undefined) return null;
+
+  const usageTitle = poi.UsageType?.Title?.toLowerCase() ?? "";
+  const accessType = usageTitle.includes("private") ? "private" : usageTitle.includes("restricted") ? "restricted" : poi.UsageType ? "public" : null;
+
+  const isOperational = poi.StatusType?.IsOperational ?? true;
+  const connections = poi.Connections ?? [];
+  const connectors = connections.map(parseConnection);
+  const powerValues = connectors.map((c) => c.power_kw).filter((v): v is number => v !== null);
+  const maxPowerKw = powerValues.length > 0 ? Math.max(...powerValues) : null;
+  const connectorCount = connectors.reduce((sum, c) => sum + c.quantity, 0);
+
+  const addressLine = [address?.AddressLine1, address?.AddressLine2].filter(Boolean).join(", ");
+
+  return {
+    external_key: `ocm:${poi.ID}`,
+    name: address?.Title ?? null,
+    operator: poi.OperatorInfo?.Title ?? null,
+    network: poi.OperatorInfo?.Title ?? null,
+    geom: `SRID=4326;POINT(${lon} ${lat})`,
+    address: addressLine || null,
+    postcode: address?.Postcode ?? null,
+    city: address?.Town ?? null,
+    country_code: address?.Country?.ISOCode ?? null,
+    access_type: accessType,
+    is_operational: isOperational,
+    max_power_kw: maxPowerKw,
+    connector_count: connectorCount || null,
+    source: "ocm",
+    source_updated_at: poi.DateLastStatusUpdate ?? null,
+    connectors,
+  };
+}
+
+function chunk<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < items.length; i += size) chunks.push(items.slice(i, i + size));
+  return chunks;
+}
+
+export async function GET(request: NextRequest) {
+  const authHeader = request.headers.get("authorization");
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return NextResponse.json({ error: "Nicht autorisiert." }, { status: 401 });
+  }
+
+  const apiKey = process.env.OPEN_CHARGE_MAP_API_KEY;
+  if (!apiKey) return NextResponse.json({ error: "OPEN_CHARGE_MAP_API_KEY fehlt." }, { status: 500 });
+
+  const countryParam = request.nextUrl.searchParams.get("country");
+  const country = (countryParam && CORE_COUNTRIES.includes(countryParam as (typeof CORE_COUNTRIES)[number])
+    ? countryParam
+    : pickCountryForToday()) as (typeof CORE_COUNTRIES)[number];
+
+  const supabase = createAdminClient();
+
+  const ocmUrl = new URL("https://api.openchargemap.io/v3/poi");
+  ocmUrl.searchParams.set("key", apiKey);
+  ocmUrl.searchParams.set("countrycode", country);
+  ocmUrl.searchParams.set("maxresults", "100000");
+  ocmUrl.searchParams.set("compact", "false");
+  ocmUrl.searchParams.set("includecomments", "false");
+
+  const ocmResponse = await fetch(ocmUrl, { signal: AbortSignal.timeout(120_000) });
+  if (!ocmResponse.ok) {
+    return NextResponse.json({ error: `OCM-API-Fehler: ${ocmResponse.status}` }, { status: 502 });
+  }
+  const pois = (await ocmResponse.json()) as OcmPoi[];
+
+  const parsed = pois.map(parsePoi).filter((p): p is ParsedChargePoint => p !== null);
+
+  let coreUpserted = 0;
+  for (const batch of chunk(parsed, 300)) {
+    const rows = batch.map((p) => {
+      const { name, operator, network, geom, address, postcode, city, country_code, access_type, is_operational, max_power_kw, connector_count, source, source_updated_at, external_key } = p;
+      return { name, operator, network, geom, address, postcode, city, country_code, access_type, is_operational, max_power_kw, connector_count, source, source_updated_at, external_key };
+    });
+    const { error } = await supabase.schema("core").from("charge_point").upsert(rows, { onConflict: "external_key" });
+    if (error) return NextResponse.json({ error: `charge_point upsert: ${error.message}`, country }, { status: 500 });
+    coreUpserted += rows.length;
+  }
+
+  // IDs der gerade upgeserteten Punkte nachladen, um Anschluesse per
+  // charge_point_id zu schreiben (core.connector kennt external_key nicht).
+  const externalKeys = parsed.map((p) => p.external_key);
+  const idByKey = new Map<string, string>();
+  for (const batch of chunk(externalKeys, 200)) {
+    const { data, error } = await supabase.schema("core").from("charge_point").select("id, external_key").in("external_key", batch);
+    if (error) return NextResponse.json({ error: `id lookup: ${error.message}`, country }, { status: 500 });
+    for (const row of data ?? []) idByKey.set(row.external_key, row.id);
+  }
+
+  // Kleinere Batches als bei den anderen .in()-Aufrufen: UUIDs sind laenger
+  // als external_keys, ein zu grosser Batch sprengt sonst die maximale
+  // URI-Laenge (PostgREST kodiert Filter als Query-Parameter).
+  const chargePointIds = Array.from(idByKey.values());
+  for (const batch of chunk(chargePointIds, 100)) {
+    const { error } = await supabase.schema("core").from("connector").delete().in("charge_point_id", batch);
+    if (error) return NextResponse.json({ error: `connector delete: ${error.message}`, country }, { status: 500 });
+  }
+
+  const connectorRows = parsed.flatMap((p) => {
+    const chargePointId = idByKey.get(p.external_key);
+    if (!chargePointId) return [];
+    return p.connectors.map((c) => ({ charge_point_id: chargePointId, standard: c.standard, power_kw: c.power_kw, current_type: c.current_type, quantity: c.quantity }));
+  });
+  let connectorsInserted = 0;
+  for (const batch of chunk(connectorRows, 500)) {
+    const { error } = await supabase.schema("core").from("connector").insert(batch);
+    if (error) return NextResponse.json({ error: `connector insert: ${error.message}`, country }, { status: 500 });
+    connectorsInserted += batch.length;
+  }
+
+  const { data: deactivatedCount, error: dedupError } = await supabase.schema("core").rpc("deactivate_new_ocm_near_manual");
+  if (dedupError) return NextResponse.json({ error: `dedup: ${dedupError.message}`, country }, { status: 500 });
+
+  const { error: fillError } = await supabase.schema("core").rpc("fill_missing_trailer_suitability");
+  if (fillError) return NextResponse.json({ error: `fill_missing_trailer_suitability: ${fillError.message}`, country }, { status: 500 });
+
+  await supabase.schema("core").rpc("log_import_run", {
+    p_source: "ocm",
+    p_scope: `country:${country}`,
+    p_record_count: coreUpserted,
+    p_status: "ok",
+    p_notes: "vercel-cron",
+  });
+
+  return NextResponse.json({
+    country,
+    fetched: pois.length,
+    parsed: parsed.length,
+    coreUpserted,
+    connectorsInserted,
+    deactivatedNearManual: deactivatedCount,
+  });
+}

@@ -57,6 +57,47 @@ Alle importierten Ladepunkte starten mit
 unverifiziert und muss durch Community-Meldungen oder redaktionelle Prüfung
 befüllt werden, es wurden keine Alt-Bewertungen übernommen.
 
+### Wiederkehrender Reimport (seit 2026-09-14)
+
+`src/app/api/cron/ocm-import/route.ts`, per `vercel.json`-Cron täglich um
+03:00 UTC ausgelöst (`CRON_SECRET`-geschützt). Importiert **ein** Kernland
+pro Lauf (Wochentag-Rotation über DE/FR/IT/NL/AT/BE/CH) — ein voller Zyklus
+über alle sieben Länder dauert eine Woche. Bewusst nicht alle Länder in
+einem Lauf: Vercel-Hobby-Plan begrenzt `maxDuration` auf 60s, bei großen
+Ländern (DE) reicht das selbst mit Bulk-Upserts knapp; ein Upgrade auf Pro
+erlaubt bis zu 300s. TypeScript-Portierung derselben Kernlogik wie
+`ingest/import_ocm.py` (Steckertyp-Mapping, Ableitung von
+`max_power_kw`/`connector_count`), da das Python-Skript per `psycopg2`
+direkt verbindet und dafür kein DB-Passwort im Deploy hinterlegt ist — der
+Cron-Pfad schreibt stattdessen über den Service-Role-Client (PostgREST),
+analog zum Admin-Backend. `raw.charge_point`-Zwischenspeicherung entfällt
+dabei (raw-Schema nicht über PostgREST erreichbar).
+
+**Dublettenschutz gegen manuell erfasste Stationen**
+(`core.deactivate_new_ocm_near_manual`, siehe Migration
+`20260930040000`): Ein neu importierter OCM-Ladepunkt, der innerhalb von
+40m eines bereits bestehenden Nicht-OCM-Datensatzes liegt (typischerweise
+`source='admin_manual'`, siehe unten), wird **nicht verworfen**, sondern
+mit `is_active=false` gespeichert — sichtbar in der App bleibt die
+manuelle Station, der neue OCM-Datensatz taucht im Admin-Dashboard unter
+"Mögliche Dubletten (Ladepunkte)" auf und kann dort manuell
+zusammengeführt werden (`core.merge_charge_points`, siehe unten). Gleiche
+Prüfung, nur als Vorabcheck statt Nachbearbeitung, in
+`ingest/import_ocm.py` für manuelle/größere Reimport-Läufe.
+
+### Dubletten zusammenführen (Admin-Dashboard, seit 2026-09-14)
+
+`core.merge_charge_points`/`core.merge_campsites` (Migration
+`20260930020000`) plus Review-UI unter `/ladestationen/dubletten` und
+`/campingplaetze/dubletten` im Admin-Backend: pro erkanntem Dublettenpaar
+(aus `core.run_quality_checks()`) wählt ein Admin je Feld, welcher der
+beiden Datensätze übernommen wird; Anschlüsse, Bewertungen, Favoriten,
+Blockliste, Anhängertauglichkeit und Campingplatz-Verknüpfungen werden auf
+den erhaltenen Datensatz umgehängt statt beim Löschen des Duplikats
+verloren zu gehen. Koordinaten sind seither auch direkt in den
+Stammdaten-Formularen (Ladepunkt/Campingplatz) bearbeitbar (Auslöser:
+Dashboard-Check "Unplausible Koordinaten").
+
 ## Routing
 
 | Anbieter | URL | Lizenz | Kosten | Status |

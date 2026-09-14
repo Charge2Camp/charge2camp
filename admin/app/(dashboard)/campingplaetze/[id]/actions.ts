@@ -8,21 +8,31 @@ export async function updateCampsite(campsiteId: string, formData: FormData) {
   await requireAdmin();
   const supabase = createServiceClient();
 
-  const { error } = await supabase
-    .schema("core")
-    .from("campsite")
-    .update({
-      name: formData.get("name") as string,
-      address: (formData.get("address") as string) || null,
-      city: (formData.get("city") as string) || null,
-      country_code: (formData.get("country_code") as string) || null,
-      website: (formData.get("website") as string) || null,
-      phone: (formData.get("phone") as string) || null,
-      email: (formData.get("email") as string) || null,
-      capacity: formData.get("capacity") ? Number(formData.get("capacity")) : null,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", campsiteId);
+  const update: Record<string, unknown> = {
+    name: formData.get("name") as string,
+    address: (formData.get("address") as string) || null,
+    city: (formData.get("city") as string) || null,
+    country_code: (formData.get("country_code") as string) || null,
+    website: (formData.get("website") as string) || null,
+    phone: (formData.get("phone") as string) || null,
+    email: (formData.get("email") as string) || null,
+    capacity: formData.get("capacity") ? Number(formData.get("capacity")) : null,
+    updated_at: new Date().toISOString(),
+  };
+
+  // Koordinaten-Korrektur (Auslöser: "Unplausible Koordinaten"), gleiches
+  // Muster wie ladestationen/[id]/actions.ts updateChargePoint.
+  const latRaw = formData.get("latitude");
+  const lonRaw = formData.get("longitude");
+  if (typeof latRaw === "string" && latRaw.trim() && typeof lonRaw === "string" && lonRaw.trim()) {
+    const lat = Number(latRaw);
+    const lon = Number(lonRaw);
+    if (!Number.isFinite(lat) || lat < -90 || lat > 90) throw new Error("Ungültiger Breitengrad.");
+    if (!Number.isFinite(lon) || lon < -180 || lon > 180) throw new Error("Ungültiger Längengrad.");
+    update.geom = `SRID=4326;POINT(${lon} ${lat})`;
+  }
+
+  const { error } = await supabase.schema("core").from("campsite").update(update).eq("id", campsiteId);
 
   if (error) throw new Error(error.message);
   revalidatePath(`/campingplaetze/${campsiteId}`);

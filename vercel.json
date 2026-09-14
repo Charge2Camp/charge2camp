@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/ocm-import",
+      "schedule": "0 3 * * *"
+    }
+  ]
+}

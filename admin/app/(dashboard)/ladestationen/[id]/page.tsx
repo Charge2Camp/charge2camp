@@ -11,12 +11,19 @@ export default async function ChargePointDetailPage({ params }: { params: Promis
   if (!station) notFound();
   const s = station as ChargePoint;
 
-  const [{ data: trailerRow }, { data: reviews }] = await Promise.all([
+  const [{ data: trailerRow }, { data: reviews }, { data: geoRow }] = await Promise.all([
     supabase.schema("enrich").from("trailer_suitability").select("*").eq("charge_point_key", s.external_key).maybeSingle(),
     supabase.from("charging_reviews").select("*").eq("charging_station_id", id).order("created_at", { ascending: false }),
+    // core.charge_point speichert geom als PostGIS geography --
+    // charge_point_geo_admin legt lat/lon als einfache Zahlen offen, OHNE
+    // is_active-Filter (anders als core.charge_point_geo, das die
+    // Haupt-App liest) -- Koordinaten muessen auch fuer deaktivierte
+    // Stationen bearbeitbar bleiben.
+    supabase.schema("core").from("charge_point_geo_admin").select("lat, lon").eq("id", id).maybeSingle(),
   ]);
   const trailer = trailerRow as TrailerSuitability | null;
   const stationReviews = (reviews ?? []) as ChargingReview[];
+  const geo = geoRow as { lat: number; lon: number } | null;
 
   const updateAction = updateChargePoint.bind(null, id);
   const overrideAction = overrideTrailerSuitability.bind(null, s.external_key);
@@ -82,6 +89,32 @@ export default async function ChargePointDetailPage({ params }: { params: Promis
                 name="country_code"
                 defaultValue={s.country_code ?? ""}
                 maxLength={2}
+                className="min-h-11 rounded-md border border-line px-3 py-2 text-base"
+              />
+            </label>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <label className="flex flex-col gap-1 text-sm">
+              Breitengrad (Latitude)
+              <input
+                type="number"
+                step="0.000001"
+                min="-90"
+                max="90"
+                name="latitude"
+                defaultValue={geo?.lat ?? ""}
+                className="min-h-11 rounded-md border border-line px-3 py-2 text-base"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              Längengrad (Longitude)
+              <input
+                type="number"
+                step="0.000001"
+                min="-180"
+                max="180"
+                name="longitude"
+                defaultValue={geo?.lon ?? ""}
                 className="min-h-11 rounded-md border border-line px-3 py-2 text-base"
               />
             </label>

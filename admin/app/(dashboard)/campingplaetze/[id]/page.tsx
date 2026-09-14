@@ -36,18 +36,23 @@ export default async function CampsiteDetailPage({ params }: { params: Promise<{
   if (!campsite) notFound();
   const c = campsite as Campsite;
 
-  const [{ data: amenityCatalog }, { data: campsiteAmenities }, { data: reviews }, { data: charging }] = await Promise.all([
-    supabase.schema("core").from("amenity").select("*").eq("value_type", "bool").order("category").order("label_de"),
-    supabase.schema("core").from("campsite_amenity").select("*").eq("campsite_id", id),
-    supabase.from("campsite_reviews").select("*").eq("campsite_id", id).order("created_at", { ascending: false }),
-    supabase.schema("enrich").from("campsite_charging").select("*").eq("campsite_key", c.external_key).maybeSingle(),
-  ]);
+  const [{ data: amenityCatalog }, { data: campsiteAmenities }, { data: reviews }, { data: charging }, { data: geoRow }] =
+    await Promise.all([
+      supabase.schema("core").from("amenity").select("*").eq("value_type", "bool").order("category").order("label_de"),
+      supabase.schema("core").from("campsite_amenity").select("*").eq("campsite_id", id),
+      supabase.from("campsite_reviews").select("*").eq("campsite_id", id).order("created_at", { ascending: false }),
+      supabase.schema("enrich").from("campsite_charging").select("*").eq("campsite_key", c.external_key).maybeSingle(),
+      // core.campsite_geo_admin: lat/lon, ohne is_active-Filter (siehe
+      // ladestationen/[id]/page.tsx, gleiches Muster).
+      supabase.schema("core").from("campsite_geo_admin").select("lat, lon").eq("id", id).maybeSingle(),
+    ]);
   const amenities = (amenityCatalog ?? []) as Amenity[];
   const activeAmenityKeys = new Set(
     ((campsiteAmenities ?? []) as CampsiteAmenity[]).filter((a) => a.value_bool).map((a) => a.amenity_key)
   );
   const campsiteReviews = (reviews ?? []) as CampsiteReview[];
   const chargingInfo = charging as CampsiteCharging | null;
+  const geo = geoRow as { lat: number; lon: number } | null;
 
   const groups = new Map<string, Amenity[]>();
   for (const amenity of amenities) {
@@ -114,6 +119,32 @@ export default async function CampsiteDetailPage({ params }: { params: Promise<{
                 name="country_code"
                 defaultValue={c.country_code ?? ""}
                 maxLength={2}
+                className="min-h-11 rounded-md border border-line px-3 py-2 text-base"
+              />
+            </label>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <label className="flex flex-col gap-1 text-sm">
+              Breitengrad (Latitude)
+              <input
+                type="number"
+                step="0.000001"
+                min="-90"
+                max="90"
+                name="latitude"
+                defaultValue={geo?.lat ?? ""}
+                className="min-h-11 rounded-md border border-line px-3 py-2 text-base"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              Längengrad (Longitude)
+              <input
+                type="number"
+                step="0.000001"
+                min="-180"
+                max="180"
+                name="longitude"
+                defaultValue={geo?.lon ?? ""}
                 className="min-h-11 rounded-md border border-line px-3 py-2 text-base"
               />
             </label>

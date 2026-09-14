@@ -57,13 +57,13 @@ UPSERT_CORE_SQL = """
 insert into core.charge_point (
     external_key, name, operator, network, geom, address, postcode, city,
     country_code, access_type, is_operational, max_power_kw, connector_count,
-    source, source_updated_at, last_seen_at, updated_at
+    source, source_updated_at, last_seen_at, updated_at, is_active
 ) values (
     %(external_key)s, %(name)s, %(operator)s, %(network)s,
     ST_SetSRID(ST_MakePoint(%(lon)s, %(lat)s), 4326)::geography,
     %(address)s, %(postcode)s, %(city)s, %(country_code)s, %(access_type)s,
     %(is_operational)s, %(max_power_kw)s, %(connector_count)s,
-    'ocm', %(source_updated_at)s, now(), now()
+    'ocm', %(source_updated_at)s, now(), now(), %(initial_is_active)s
 )
 on conflict (external_key) do update set
     name = excluded.name,
@@ -81,7 +81,36 @@ on conflict (external_key) do update set
     source_updated_at = excluded.source_updated_at,
     last_seen_at = now(),
     updated_at = now()
+    -- is_active bewusst NICHT in diesem UPDATE-Zweig: eine bereits
+    -- bestehende Zeile (egal ob von einem Admin de-/reaktiviert, oder von
+    -- der Dublettenpruefung unten inaktiv angelegt) behaelt ihren Status,
+    -- ein erneuter Import soll das nicht ueberschreiben. Nur beim
+    -- ERSTMALIGEN Insert (kein Conflict) greift %(initial_is_active)s.
 returning id
+"""
+
+# Nutzerwunsch (siehe Konversation "was passiert, wenn OCM eine Saeule
+# listet, die ich bereits manuell eingetragen habe"): OCM-Importe pruefen
+# jetzt VOR dem Insert, ob im Umkreis von NEARBY_MANUAL_RADIUS_M bereits ein
+# Ladepunkt mit einer ANDEREN Quelle als 'ocm' existiert (typischerweise
+# source='admin_manual', siehe admin/.../ladestationen/neu). Falls ja: der
+# neue OCM-Datensatz wird trotzdem angelegt (echte OCM-Daten, nicht
+# unterdruecken -- Prinzip "keine Scheindaten" gilt auch umgekehrt: OCM-Info
+# nicht verschweigen), aber inaktiv (is_active=false), damit er nicht als
+# Dublette auf der Karte auftaucht. Der Admin sieht beide Kandidaten dann
+# im Dashboard-Check "Unplausible Koordinaten"/"Moegliche Dubletten" bzw.
+# kann den neuen OCM-Datensatz manuell reaktivieren/zusammenfuehren
+# (core.merge_charge_points, siehe supabase/migrations/
+# 20260930020000_merge_duplicates.sql), falls die manuelle Station veraltet
+# war. Kein automatisches, stilles Zusammenfuehren -- das bleibt eine
+# Admin-Entscheidung.
+NEARBY_MANUAL_RADIUS_M = 40
+
+FIND_NEARBY_NON_OCM_SQL = """
+select 1 from core.charge_point
+where source <> 'ocm'
+  and ST_DWithin(geom, ST_SetSRID(ST_MakePoint(%(lon)s, %(lat)s), 4326)::geography, %(radius)s)
+limit 1
 """
 
 FILL_MISSING_TRAILER_SUITABILITY_SQL = """
@@ -283,6 +312,7 @@ def main() -> None:
     unknown_connection_types: Counter = Counter()
     skipped_no_id_or_coords = 0
     missing_country_code = 0
+    near_manual_duplicates = 0
 
     conn = get_connection()
     try:
@@ -297,6 +327,18 @@ def main() -> None:
                         missing_country_code += 1
 
                     upsert_raw(cur, str(parsed["_ocm_id"]), poi, parsed["lat"], parsed["lon"], run_id)
+
+                    # Dublettenpruefung nur fuer NEUE core.charge_point-Zeilen
+                    # relevant (ON CONFLICT ignoriert initial_is_active
+                    # ohnehin, siehe Kommentar an UPSERT_CORE_SQL).
+                    cur.execute(
+                        FIND_NEARBY_NON_OCM_SQL,
+                        {"lat": parsed["lat"], "lon": parsed["lon"], "radius": NEARBY_MANUAL_RADIUS_M},
+                    )
+                    has_nearby_manual = cur.fetchone() is not None
+                    if has_nearby_manual:
+                        near_manual_duplicates += 1
+                    parsed["initial_is_active"] = not has_nearby_manual
 
                     cur.execute(UPSERT_CORE_SQL, parsed)
                     charge_point_id = cur.fetchone()[0]
@@ -320,6 +362,14 @@ def main() -> None:
         )
     if unknown_connection_types:
         logger.warning("Unbekannte ConnectionType-IDs (Anzahl je ID): %s", dict(unknown_connection_types))
+    if near_manual_duplicates:
+        logger.warning(
+            "%d Ladepunkte lagen beim (Erst-)Import innerhalb von %dm einer bereits bestehenden "
+            "Nicht-OCM-Station (z. B. manuell angelegt) -- als is_active=false gespeichert, siehe "
+            "Admin-Dashboard 'Moegliche Dubletten (Ladepunkte)' zur manuellen Pruefung/Zusammenfuehrung.",
+            near_manual_duplicates,
+            NEARBY_MANUAL_RADIUS_M,
+        )
 
 
 if __name__ == "__main__":

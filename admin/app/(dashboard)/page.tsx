@@ -2,9 +2,9 @@ import Link from "next/link";
 import { createServiceClient } from "@/lib/supabase/service";
 
 const ISSUE_CHECKS = [
-  { name: "coordinate_plausibility", label: "Unplausible Koordinaten" },
-  { name: "duplicate_charge_points", label: "Mögliche Dubletten (Ladepunkte)" },
-  { name: "duplicate_campsites", label: "Mögliche Dubletten (Campingplätze)" },
+  { name: "coordinate_plausibility", label: "Unplausible Koordinaten", href: "/datenqualitaet/koordinaten" },
+  { name: "duplicate_charge_points", label: "Mögliche Dubletten (Ladepunkte)", href: "/ladestationen/dubletten" },
+  { name: "duplicate_campsites", label: "Mögliche Dubletten (Campingplätze)", href: "/campingplaetze/dubletten" },
   { name: "orphaned_enrichment", label: "Verwaiste Anreicherungsdaten" },
   { name: "stale_records", label: "Veraltete Datensätze (>14 Tage)" },
   { name: "disputed_verdicts", label: "Widersprüchliche Anhängertauglichkeit" },
@@ -137,15 +137,22 @@ export default async function DashboardPage() {
         <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
           {ISSUE_CHECKS.map((check) => {
             const count = countsByCheck.get(check.name) ?? 0;
-            return (
-              <div
-                key={check.name}
-                className={`flex items-center justify-between rounded-md border p-3 text-sm ${
-                  count > 0 ? "border-status-busy/40 bg-status-busy/5" : "border-line"
-                }`}
-              >
+            const content = (
+              <>
                 <span>{check.label}</span>
                 <span className={`font-semibold ${count > 0 ? "text-status-busy" : "text-text-muted"}`}>{count}</span>
+              </>
+            );
+            const className = `flex items-center justify-between rounded-md border p-3 text-sm ${
+              count > 0 ? "border-status-busy/40 bg-status-busy/5" : "border-line"
+            }`;
+            return "href" in check ? (
+              <Link key={check.name} href={check.href} className={`${className} hover:bg-line/20`}>
+                {content}
+              </Link>
+            ) : (
+              <div key={check.name} className={className}>
+                {content}
               </div>
             );
           })}
