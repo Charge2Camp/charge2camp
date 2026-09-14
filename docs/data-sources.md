@@ -163,7 +163,16 @@ ausschließlich über den Open-Charge-Map-Ingest
 ([ingest/import_ocm.py](../ingest/import_ocm.py)) in `core.charge_point` /
 `core.connector` — siehe Abschnitt oben zu Open Charge Map. Alle so
 importierten Ladepunkte tragen `source = 'ocm'` und sind echte,
-API-abgerufene Daten, keine Testdaten. Die
+API-abgerufene Daten, keine Testdaten.
+
+Für Stationen, die bei Open Charge Map (noch) nicht gelistet sind, gibt es
+im Admin-Backend unter „Ladestation anlegen“
+([admin/app/(dashboard)/ladestationen/neu](../admin/app/(dashboard)/ladestationen/neu))
+eine manuelle Erfassung mit allen relevanten Feldern (Adresse, Koordinaten,
+Anschlüsse, Anhängertauglichkeit). Diese Einträge tragen
+`source = 'admin_manual'` (Konvention analog zu `'ocm'`/`'demo'`) und
+`external_key` mit Präfix `manual:<uuid>` — echte, von einem Admin geprüfte
+Daten, aber ohne automatischen Re-Import/Update über den OCM-Ingest. Die
 Fahrzeug-/Wohnwagen-Referenzkataloge in `supabase/seeds/02_caravan_models.sql`,
 `supabase/seeds/03_vehicle_models.sql`, `supabase/seeds/04_caravan_models_dethleffs_tabbert.sql`
 und `supabase/seeds/05_caravan_models_knaus.sql` sind dagegen recherchierte

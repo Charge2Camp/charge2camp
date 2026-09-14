@@ -19,7 +19,7 @@ die Streckengeometrie auf bekannte Höhen-/Breiten-/Gewichtsbeschränkungen
 (Warnung, keine automatische Umfahrung — siehe
 [architecture.md](architecture.md), Abschnitt "Gespannlogik &
 Straßenrestriktionen").
-`ChargingProvider`/`TrafficProvider` folgen mit Phase 8 (Live-Daten).
+`ChargingProvider`/`TrafficProvider` folgen mit Phase 9 (Live-Daten).
 
 ## Supabase-Zugriff
 

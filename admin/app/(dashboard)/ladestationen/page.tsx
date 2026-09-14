@@ -48,7 +48,15 @@ export default async function ChargingStationsPage({
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Ladestationen</h1>
-        <p className="text-sm text-text-muted">{count ?? 0} gesamt</p>
+        <div className="flex items-center gap-3">
+          <p className="text-sm text-text-muted">{count ?? 0} gesamt</p>
+          <Link
+            href="/ladestationen/neu"
+            className="min-h-11 rounded-md bg-action px-4 py-2 text-sm font-medium leading-none hover:bg-action-hover"
+          >
+            + Neu anlegen
+          </Link>
+        </div>
       </div>
 
       <form className="flex gap-2" action="/ladestationen">

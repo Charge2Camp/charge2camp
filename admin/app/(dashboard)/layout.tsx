@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 const NAV = [
   { href: "/", label: "Dashboard" },
   { href: "/ladestationen", label: "Ladestationen" },
+  { href: "/ladestationen/neu", label: "Ladestation anlegen" },
   { href: "/ladestationen/massenupload", label: "Massenupload" },
   { href: "/ladestationen/meldungen", label: "Meldungen" },
   { href: "/campingplaetze", label: "Campingplätze" },

@@ -214,7 +214,7 @@ Natives `Linking.openURL` das Oeffnen).
   wird die Summe ehrlich als Teilsumme markiert (`costEstimateIncomplete`)
   statt fehlende Preise stillschweigend als 0 € zu behandeln.
 - **Datum der letzten Community-Bestätigung** statt Live-Status/
-  Oeffnungszeiten (kein Live-Status verfuegbar, siehe Phase 8): jeder
+  Oeffnungszeiten (kein Live-Status verfuegbar, siehe Phase 9): jeder
   vorgeschlagene Ladestopp und jede Alternative zeigt das Datum der
   juengsten `charging_reviews`-Bewertung als Proxy fuer "zuletzt bestaetigt
   funktionsfaehig".
@@ -375,7 +375,14 @@ Routen, Favoriten, Bewertungen) und einer Unterseiten-Navigation
 5. **Community** — Bewertung, Kommentar, Gespannparameter, Score ✅
 6. **Routenplanung** — Start/Ziel, Routing, Fahrzeug, Wohnwagen, Ladeplanung ✅
 7. **Gespannlogik** — Länge/Breite/Höhe/Gewicht, Straßenrestriktionen (OSM) ✅
-8. **Live-Daten** — echte Provider-Adapter anschließen
+8. **Ladestationen-Datenbank finalisieren** — reales europaweites Ladenetz
+   über Open Charge Map einspielen (`ingest/import_ocm.py`), alte Demo-/
+   Testladestationen sowie darauf bezogene Bewertungen und
+   Anhängertauglichkeits-Prüfungen entfernen, damit die Testphase auf einem
+   sauberen, echten Datenstand läuft ✅ Kernländer (DE, AT, CH, IT, FR, NL,
+   BE, 63.209 Ladepunkte, lokal und remote) — restliche europäische Länder
+   folgen bei Bedarf
+9. **Live-Daten** — echte Provider-Adapter anschließen
 
 Jede Phase wird implementiert, getestet, dokumentiert, bevor die nächste
 beginnt.
