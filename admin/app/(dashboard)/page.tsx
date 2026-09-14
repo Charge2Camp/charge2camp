@@ -57,6 +57,7 @@ export default async function DashboardPage() {
     { count: segmentExportCount },
     { count: fullExportCount },
     { data: lastUsageEvent },
+    { data: lastOcmImportRows },
   ] = await Promise.all([
     supabase.schema("core").from("campsite").select("id", { count: "exact", head: true }),
     supabase.schema("core").from("charge_point").select("id", { count: "exact", head: true }),
@@ -74,7 +75,11 @@ export default async function DashboardPage() {
     supabase.schema("core").from("app_usage_event").select("id", { count: "exact", head: true }).eq("event_type", "route_segment_export"),
     supabase.schema("core").from("app_usage_event").select("id", { count: "exact", head: true }).eq("event_type", "route_full_export"),
     supabase.schema("core").from("app_usage_event").select("created_at").order("created_at", { ascending: false }).limit(1).maybeSingle(),
+    supabase.schema("core").rpc("last_ocm_import"),
   ]);
+  const lastOcmImport = lastOcmImportRows?.[0] as
+    | { scope: string; status: string; record_count: number | null; finished_at: string | null; started_at: string }
+    | undefined;
 
   const users = usersResult.data?.users ?? [];
   const userCount = users.length;
@@ -112,6 +117,20 @@ export default async function DashboardPage() {
         <KpiCard label="Ladestationen" value={chargePointCount ?? 0} href="/ladestationen" />
         <KpiCard label="Offene Meldungen" value={pendingReportCount ?? 0} href="/ladestationen/meldungen" />
       </div>
+
+      <p className="text-xs text-text-muted">
+        Letzter OCM-Import:{" "}
+        {lastOcmImport ? (
+          <>
+            {formatDateTime(lastOcmImport.finished_at)} · {lastOcmImport.scope}
+            {lastOcmImport.status !== "ok" && <span className="text-status-down"> ({lastOcmImport.status})</span>}
+            {typeof lastOcmImport.record_count === "number" && ` · ${lastOcmImport.record_count} Ladepunkte`}
+          </>
+        ) : (
+          "noch kein protokollierter Lauf"
+        )}
+        {" · "}läuft täglich per Vercel Cron, rotiert wochentagsweise durch die Kernländer.
+      </p>
 
       <section>
         <h2 className="text-lg font-semibold">Nutzung</h2>
