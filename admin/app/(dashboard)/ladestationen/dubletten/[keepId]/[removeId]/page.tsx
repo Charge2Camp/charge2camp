@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase/service";
 import type { ChargePoint, Connector } from "@/lib/types";
 import { mergeChargePoints } from "./actions";
+import { dismissChargePointDuplicate } from "../../actions";
 
 function FieldRow({
   label,
@@ -142,8 +143,16 @@ export default async function MergeChargePointsPage({ params }: { params: Promis
           anderen Station übernehmen, ändere das nach dem Zusammenführen auf der Detailseite.
         </p>
 
-        <button type="submit" className="min-h-11 self-start rounded-md bg-action px-4 text-sm font-medium hover:bg-action-hover">
-          Zusammenführen
+        <div className="flex gap-2">
+          <button type="submit" className="min-h-11 rounded-md bg-action px-4 text-sm font-medium hover:bg-action-hover">
+            Zusammenführen
+          </button>
+        </div>
+      </form>
+
+      <form action={dismissChargePointDuplicate.bind(null, a.external_key, b.external_key)}>
+        <button type="submit" className="min-h-11 rounded-md border border-line px-4 text-sm font-medium hover:bg-line/20">
+          Keine Dublette – getrennt lassen
         </button>
       </form>
     </div>

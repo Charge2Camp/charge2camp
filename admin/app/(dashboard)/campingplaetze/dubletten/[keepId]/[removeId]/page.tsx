@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase/service";
 import type { Campsite } from "@/lib/types";
 import { mergeCampsites } from "./actions";
+import { dismissCampsiteDuplicate } from "../../actions";
 
 function FieldRow({
   label,
@@ -125,6 +126,12 @@ export default async function MergeCampsitesPage({ params }: { params: Promise<{
 
         <button type="submit" className="min-h-11 self-start rounded-md bg-action px-4 text-sm font-medium hover:bg-action-hover">
           Zusammenführen
+        </button>
+      </form>
+
+      <form action={dismissCampsiteDuplicate.bind(null, a.external_key, b.external_key)}>
+        <button type="submit" className="min-h-11 rounded-md border border-line px-4 text-sm font-medium hover:bg-line/20">
+          Keine Dublette – getrennt lassen
         </button>
       </form>
     </div>

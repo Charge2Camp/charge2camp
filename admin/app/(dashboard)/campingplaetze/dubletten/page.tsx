@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createServiceClient } from "@/lib/supabase/service";
+import { dismissCampsiteDuplicate } from "./actions";
 
 interface DuplicateRow {
   key_a: string;
@@ -35,9 +36,33 @@ export default async function CampsiteDuplicatesPage({ searchParams }: { searchP
       </div>
     );
   }
-  const allDuplicates = ((qualityRows ?? []) as { check_name: string; data: unknown }[])
+  const rawDuplicates = ((qualityRows ?? []) as { check_name: string; data: unknown }[])
     .filter((r) => r.check_name === "duplicate_campsites")
     .map((r) => r.data as DuplicateRow);
+
+  const { data: dismissedRows, error: dismissedError } = await supabase
+    .schema("core")
+    .from("duplicate_dismissal")
+    .select("key_a, key_b")
+    .eq("entity_type", "campsite");
+  if (dismissedError) {
+    return (
+      <div className="flex flex-col gap-4">
+        <Link href="/" className="text-sm text-text-muted hover:underline">
+          ← Dashboard
+        </Link>
+        <p className="rounded-md border border-status-down/40 bg-status-down/5 p-3 text-sm text-status-down">
+          Abgelehnte Paare konnten nicht geladen werden: {dismissedError.message}
+        </p>
+      </div>
+    );
+  }
+  const dismissedSet = new Set((dismissedRows ?? []).map((d) => `${d.key_a}|${d.key_b}`));
+  const allDuplicates = rawDuplicates.filter((d) => {
+    const lo = d.key_a < d.key_b ? d.key_a : d.key_b;
+    const hi = d.key_a < d.key_b ? d.key_b : d.key_a;
+    return !dismissedSet.has(`${lo}|${hi}`);
+  });
 
   const totalPages = Math.max(1, Math.ceil(allDuplicates.length / PAGE_SIZE));
   const duplicates = allDuplicates.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -95,12 +120,22 @@ export default async function CampsiteDuplicatesPage({ searchParams }: { searchP
                     .join(" · ")}
                 </p>
               </div>
-              <Link
-                href={`/campingplaetze/dubletten/${a.id}/${b.id}`}
-                className="min-h-11 shrink-0 rounded-md bg-action px-3 py-2 text-sm font-medium leading-none hover:bg-action-hover"
-              >
-                Zusammenführen
-              </Link>
+              <div className="flex shrink-0 gap-2">
+                <Link
+                  href={`/campingplaetze/dubletten/${a.id}/${b.id}`}
+                  className="min-h-11 rounded-md bg-action px-3 py-2 text-sm font-medium leading-none hover:bg-action-hover"
+                >
+                  Zusammenführen
+                </Link>
+                <form action={dismissCampsiteDuplicate.bind(null, d.key_a, d.key_b)}>
+                  <button
+                    type="submit"
+                    className="min-h-11 rounded-md border border-line px-3 py-2 text-sm font-medium leading-none hover:bg-line/20"
+                  >
+                    Keine Dublette
+                  </button>
+                </form>
+              </div>
             </div>
           );
         })}
