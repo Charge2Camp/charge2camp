@@ -240,7 +240,7 @@ def fetch_from_api(args: argparse.Namespace) -> list[dict]:
         min_lat, min_lon, max_lat, max_lon = (float(x) for x in args.bbox.split(","))
         params["boundingbox"] = f"({min_lat},{min_lon}),({max_lat},{max_lon})"
 
-    response = requests.get("https://api.openchargemap.io/v3/poi", params=params, timeout=60)
+    response = requests.get("https://api.openchargemap.io/v3/poi", params=params, timeout=300)
     response.raise_for_status()
     return response.json()
 

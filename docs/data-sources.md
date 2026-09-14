@@ -32,6 +32,31 @@ werden.
 | Eco-Movement | https://ecomovement.com | kommerziell | kostenpflichtig | Research Required — Adapter/Mock zunächst |
 | Eigene Startdaten (300+ anhängertaugliche Ladepunkte) | privat | eigene Daten | kostenlos | rechtliche Prüfung vor Import ausstehen (§17) |
 
+### Import-Log Open Charge Map (`ingest/import_ocm.py --api`)
+
+Lokale Testphasen-Datenbank, Stand 2026-09-14: Live-Abfrage gegen
+`api.openchargemap.io/v3/poi` je Länder-ISO-Code, `compact=false` (liefert
+aufgelöste Steckertyp-/Betreiber-/Länder-Namen statt nur numerischer IDs).
+Kernländer zuerst importiert (Rest folgt bei Bedarf):
+
+| Land | Ladepunkte | | Land | Ladepunkte |
+|---|---:|---|---|---:|
+| Deutschland (DE) | 24.622 | | Niederlande (NL) | 8.174 |
+| Frankreich (FR) | 16.170 | | Österreich (AT) | 1.345 |
+| Italien (IT) | 10.679 | | Belgien (BE) | 1.287 |
+| Schweiz (CH) | 915 | | Liechtenstein (LI) | 17 |
+
+**Gesamt: 63.209 reale Ladepunkte**, `source = 'ocm'` in `core.charge_point`,
+Steckertyp/Leistung/Anzahl je Anschluss in `core.connector`. Unauflösbare
+OCM-ConnectionType-IDs werden mit dem von der API gelieferten Klartext-Titel
+gespeichert statt geraten; bleibt der Titel ebenfalls leer, steht
+`"Unknown"` (≈800 Anschlüsse) — keine Schätzung. Jeder Lauf ist in
+`raw.import_run` protokolliert (Quelle, Scope, Zeitpunkt, Datensatzzahl).
+Alle importierten Ladepunkte starten mit
+`enrich.trailer_suitability.verdict = 'unknown'` — Anhängertauglichkeit ist
+unverifiziert und muss durch Community-Meldungen oder redaktionelle Prüfung
+befüllt werden, es wurden keine Alt-Bewertungen übernommen.
+
 ## Routing
 
 | Anbieter | URL | Lizenz | Kosten | Status |
@@ -123,17 +148,22 @@ Campingportale werden nicht gescrapt oder ungeprüft übernommen.
 ## Demo-/Testdaten
 
 Die Seed-Daten in [supabase/seeds/01_demo_data.sql](../supabase/seeds/01_demo_data.sql)
-sind frei erfundene Testdaten (`source = 'demo'`, `[DEMO]`-Präfix im Namen)
-für Deutschland, Kroatien und Italien — ausschließlich zur lokalen
-Entwicklung und Demonstration der Funktionen, nicht produktiv nutzbar.
+enthalten frei erfundene Testdaten (`source = 'demo'`, `[DEMO]`-Präfix im
+Namen) für drei Campingplätze in Deutschland, Kroatien und Italien —
+ausschließlich zur lokalen Entwicklung und Demonstration der
+Campingplatz-Funktionen, nicht produktiv nutzbar.
 
-[supabase/seeds/06_demo_charging_stations_muenchen_meran.sql](../supabase/seeds/06_demo_charging_stations_muenchen_meran.sql)
-ergänzt ca. 50 frei erfundene Ladepunkte entlang der Brennerroute
-München–Meran (ebenfalls `source = 'demo'`, `[DEMO]`-Präfix), mit
-gestreuten Ladeleistungen, Anhängertauglichkeits-Einstufungen und
-Korridor-Abständen (0–90 km) — dient ausschließlich als Testdatensatz für
-die Routenplanung (§21–§27, Umweg-Toleranz-Slider), nicht produktiv
-nutzbar. Die
+**Ladestationen werden nicht mehr über erfundene Demo-Seeds befüllt.** Die
+frühere Demo-Tabelle `public.charging_stations` (inkl. der ehemaligen Seeds
+`01_demo_data.sql`-Ladestationsblock und
+`06_demo_charging_stations_muenchen_meran.sql`, ~54 frei erfundene
+Ladepunkte entlang der Brennerroute München–Meran) wurde geleert; die Seeds
+selbst wurden entfernt bzw. bereinigt. Das reale Ladenetz kommt
+ausschließlich über den Open-Charge-Map-Ingest
+([ingest/import_ocm.py](../ingest/import_ocm.py)) in `core.charge_point` /
+`core.connector` — siehe Abschnitt oben zu Open Charge Map. Alle so
+importierten Ladepunkte tragen `source = 'ocm'` und sind echte,
+API-abgerufene Daten, keine Testdaten. Die
 Fahrzeug-/Wohnwagen-Referenzkataloge in `supabase/seeds/02_caravan_models.sql`,
 `supabase/seeds/03_vehicle_models.sql`, `supabase/seeds/04_caravan_models_dethleffs_tabbert.sql`
 und `supabase/seeds/05_caravan_models_knaus.sql` sind dagegen recherchierte

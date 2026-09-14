@@ -9,6 +9,9 @@
 -- PostgREST mit dem Service-Role-Key. Das neue Admin-Backend (admin/)
 -- braucht dagegen direkten Lese-/Schreibzugriff auf die core/enrich-
 -- Basistabellen (Stammdaten- und Anhaengertauglichkeits-Pflege).
+create schema if not exists core;
+create schema if not exists enrich;
+
 grant usage on schema core, enrich to service_role;
 grant all on all tables in schema core, enrich to service_role;
 grant all on all sequences in schema core, enrich to service_role;

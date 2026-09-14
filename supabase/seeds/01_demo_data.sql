@@ -40,36 +40,7 @@ insert into public.campsites (
     'demo', 'unverified', now()
   );
 
-insert into public.charging_stations (
-  id, provider, name, address, latitude, longitude,
-  power_kw, connector_type, connector_count, status, price, currency, opening_hours,
-  trailer_suitable, trailer_suitable_score, trailer_notes, verified_by_community,
-  source, verification_status, last_verified_at, last_updated
-) values
-  (
-    'aaaaaaaa-1111-1111-1111-111111111111',
-    '[DEMO] IONITY',
-    '[DEMO] Schnelllader A8 Rastplatz',
-    'A8 Raststaette Nord, 83233 Bernau', 47.7784, 12.3823,
-    350, 'CCS', 6, 'demo_status_unknown', 0.69, 'EUR', '24/7',
-    'confirmed', 92, 'Drive-Through, breite Zufahrt, Gespann muss nicht abgekoppelt werden.', true,
-    'demo', 'unverified', now(), now()
-  ),
-  (
-    'aaaaaaaa-2222-2222-2222-222222222222',
-    '[DEMO] EnBW',
-    '[DEMO] Ladepark Chiemsee',
-    'Seestrasse 20, 83209 Prien am Chiemsee', 47.8590, 12.3410,
-    150, 'CCS', 4, 'demo_status_unknown', 0.55, 'EUR', '06:00-22:00',
-    'likely', 70, 'Ausreichend Platz laut Community, aber keine offizielle Bestaetigung.', false,
-    'demo', 'unverified', now(), now()
-  ),
-  (
-    'aaaaaaaa-3333-3333-3333-333333333333',
-    '[DEMO] Tesla Supercharger',
-    '[DEMO] Supercharger Porec',
-    'Obala 1, 52440 Porec', 45.2280, 13.5920,
-    250, 'CCS', 8, 'demo_status_unknown', 0.45, 'EUR', '24/7',
-    'unsuitable', 20, 'Enge Parkplaetze, laut mehreren Meldungen nicht gespanntauglich.', true,
-    'demo', 'unverified', now(), now()
-  );
+-- Ladestationen-Demodaten entfernt: public.charging_stations ist eine
+-- ungenutzte Alt-Tabelle (siehe src/lib/route-planning.ts Kommentar), die
+-- App liest Ladepunkte ausschliesslich aus core.charge_point (echte Daten
+-- via ingest/import_ocm.py). Kein Demo-Ladenetz mehr seeden.
