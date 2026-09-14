@@ -28,6 +28,16 @@ function KpiCard({ label, value, href }: { label: string; value: number | string
   );
 }
 
+function Section({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
+  return (
+    <section>
+      <h2 className="text-lg font-semibold">{title}</h2>
+      {description && <p className="mt-1 text-sm text-text-muted">{description}</p>}
+      <div className="mt-3">{children}</div>
+    </section>
+  );
+}
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 function formatDateTime(iso: string | null): string {
@@ -56,7 +66,6 @@ export default async function DashboardPage() {
     { count: routesPlanned30dCount },
     { count: segmentExportCount },
     { count: fullExportCount },
-    { data: lastUsageEvent },
     { data: lastOcmImportRows },
   ] = await Promise.all([
     supabase.schema("core").from("campsite").select("id", { count: "exact", head: true }),
@@ -74,31 +83,20 @@ export default async function DashboardPage() {
       .gte("created_at", daysAgoIso(30)),
     supabase.schema("core").from("app_usage_event").select("id", { count: "exact", head: true }).eq("event_type", "route_segment_export"),
     supabase.schema("core").from("app_usage_event").select("id", { count: "exact", head: true }).eq("event_type", "route_full_export"),
-    supabase.schema("core").from("app_usage_event").select("created_at").order("created_at", { ascending: false }).limit(1).maybeSingle(),
     supabase.schema("core").rpc("last_ocm_import"),
   ]);
   const lastOcmImport = lastOcmImportRows?.[0] as
     | { scope: string; status: string; record_count: number | null; finished_at: string | null; started_at: string }
     | undefined;
 
-  const users = usersResult.data?.users ?? [];
-  const userCount = users.length;
-  const lastSignIns = users.map((u) => u.last_sign_in_at).filter((v): v is string => Boolean(v));
-  const lastSignInAt = lastSignIns.length > 0 ? lastSignIns.sort().at(-1)! : null;
-  // "Zuletzt genutzt": das juengere von "letztes protokolliertes
-  // Nutzungsereignis" (Route geplant/exportiert) und "letzter Login" -- ein
-  // Login allein bedeutet noch keine tatsaechliche Nutzung, ein Ereignis
-  // ohne aktuellen Login (Session laenger gueltig) auch nicht unbedingt
-  // repraesentativ, daher das juengere von beidem als bester verfuegbarer
-  // Anhaltspunkt.
-  const lastEventAt = lastUsageEvent?.created_at ?? null;
-  const lastUsedAt = [lastEventAt, lastSignInAt].filter((v): v is string => Boolean(v)).sort().at(-1) ?? null;
+  const userCount = usersResult.data?.users.length ?? 0;
 
   const qualityRows = (qualityResult.data ?? []) as { check_name: string; data: unknown }[];
   const countsByCheck = new Map<string, number>();
   for (const row of qualityRows) {
     countsByCheck.set(row.check_name, (countsByCheck.get(row.check_name) ?? 0) + 1);
   }
+  const openIssueCount = ISSUE_CHECKS.reduce((sum, c) => sum + (countsByCheck.get(c.name) ?? 0), 0);
 
   const coverageRows = qualityRows
     .filter((r) => r.check_name === "coverage_by_country")
@@ -111,49 +109,51 @@ export default async function DashboardPage() {
         <p className="mt-1 text-sm text-text-muted">Überblick über charge2camp-Daten und Nutzer.</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <KpiCard label="Nutzer" value={userCount} href="/nutzer" />
-        <KpiCard label="Campingplätze" value={campsiteCount ?? 0} href="/campingplaetze" />
-        <KpiCard label="Ladestationen" value={chargePointCount ?? 0} href="/ladestationen" />
-        <KpiCard label="Offene Meldungen" value={pendingReportCount ?? 0} href="/ladestationen/meldungen" />
-      </div>
+      <Section title="Überblick">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <KpiCard label="Nutzer" value={userCount} href="/nutzer" />
+          <KpiCard label="Campingplätze" value={campsiteCount ?? 0} href="/campingplaetze" />
+          <KpiCard label="Ladestationen" value={chargePointCount ?? 0} href="/ladestationen" />
+          <KpiCard label="Offene Meldungen" value={pendingReportCount ?? 0} href="/ladestationen/meldungen" />
+        </div>
+      </Section>
 
-      <p className="text-xs text-text-muted">
-        Letzter OCM-Import:{" "}
-        {lastOcmImport ? (
-          <>
-            {formatDateTime(lastOcmImport.finished_at)} · {lastOcmImport.scope}
-            {lastOcmImport.status !== "ok" && <span className="text-status-down"> ({lastOcmImport.status})</span>}
-            {typeof lastOcmImport.record_count === "number" && ` · ${lastOcmImport.record_count} Ladepunkte`}
-          </>
-        ) : (
-          "noch kein protokollierter Lauf"
-        )}
-        {" · "}läuft täglich per Vercel Cron, rotiert wochentagsweise durch die Kernländer.
-      </p>
-
-      <section>
-        <h2 className="text-lg font-semibold">Nutzung</h2>
-        <p className="mt-1 text-sm text-text-muted">
-          Routen geplant/exportiert zählen erst ab Einführung dieser Statistik (29.09.2026) -- keine rückwirkenden
-          Schätzwerte.
+      <Section
+        title="Ladenetz"
+        description="läuft täglich per Vercel Cron, rotiert wochentagsweise durch die Kernländer."
+      >
+        <p className="text-sm">
+          Letzter OCM-Import:{" "}
+          {lastOcmImport ? (
+            <>
+              <span className="font-medium">{formatDateTime(lastOcmImport.finished_at)}</span> · {lastOcmImport.scope}
+              {lastOcmImport.status !== "ok" && <span className="text-status-down"> ({lastOcmImport.status})</span>}
+              {typeof lastOcmImport.record_count === "number" && ` · ${lastOcmImport.record_count} Ladepunkte`}
+            </>
+          ) : (
+            "noch kein protokollierter Lauf"
+          )}
         </p>
-        <div className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-4">
+      </Section>
+
+      <Section
+        title="Nutzung & Routenplanung"
+        description="Routen geplant/exportiert zählen erst ab Einführung dieser Statistik (29.09.2026) -- keine rückwirkenden Schätzwerte. Login-Zeitpunkt und Routenanzahl je Nutzer stehen auf der jeweiligen Nutzerseite."
+      >
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <KpiCard label="Routen geplant (gesamt)" value={routesPlannedCount ?? 0} />
           <KpiCard label="davon letzte 30 Tage" value={routesPlanned30dCount ?? 0} />
           <KpiCard label="Gespeicherte Routen" value={savedRouteCount ?? 0} href="/nutzer" />
-          <KpiCard label="Zuletzt genutzt" value={formatDateTime(lastUsedAt)} />
           <KpiCard label="Ganze Routen exportiert" value={fullExportCount ?? 0} />
           <KpiCard label="Einzelne Etappen exportiert" value={segmentExportCount ?? 0} />
         </div>
-      </section>
+      </Section>
 
-      <section>
-        <h2 className="text-lg font-semibold">Datenqualität</h2>
-        <p className="mt-1 text-sm text-text-muted">
-          Aus core.run_quality_checks() -- jede Zahl ist die Anzahl gefundener Auffälligkeiten (0 = unauffällig).
-        </p>
-        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+      <Section
+        title="Datenqualität"
+        description={`Aus core.run_quality_checks() -- ${openIssueCount} Auffälligkeiten insgesamt (0 = unauffällig).`}
+      >
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {ISSUE_CHECKS.map((check) => {
             const count = countsByCheck.get(check.name) ?? 0;
             const content = (
@@ -176,12 +176,11 @@ export default async function DashboardPage() {
             );
           })}
         </div>
-      </section>
+      </Section>
 
       {coverageRows.length > 0 && (
-        <section>
-          <h2 className="text-lg font-semibold">Anhängertauglichkeits-Abdeckung nach Land</h2>
-          <div className="mt-3 overflow-x-auto">
+        <Section title="Anhängertauglichkeits-Abdeckung nach Land">
+          <div className="overflow-x-auto">
             <table className="min-w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-line text-text-muted">
@@ -201,7 +200,7 @@ export default async function DashboardPage() {
               </tbody>
             </table>
           </div>
-        </section>
+        </Section>
       )}
     </div>
   );
