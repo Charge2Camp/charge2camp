@@ -169,17 +169,18 @@ werden.
 | evspecifications.com | https://www.evspecifications.com | öffentlich zugängliche Spezifikationsdaten | Kia EV9 GT-Line AWD | 2026-09-04 |
 | Dethleffs (Preisliste Wohnwagen, offizielles Herstellerdokument) | https://www.dethleffs.de | öffentlich publizierte technische Daten, Referenzangabe der Quelle | 14 Modelle MJ2027 (Serien c'joy, c'go & c'go up, SUMMER EDITION) | 2027-02-01 |
 | Tabbert (Preisliste Wohnwagen, offizielles Herstellerdokument) | https://www.tabbert.com | öffentlich publizierte technische Daten, Referenzangabe der Quelle | 10 Modelle MJ2026-1 (Serie CAZADORA) | 2025-08-01 |
-| Knaus (technische Daten, aufbereitet von promobil.de aus Herstellerangaben) | https://www.promobil.de | öffentlich zugängliche Spezifikationsdaten | 23 Modelle (Serien SÜDWIND, SPORT) — **ohne zulässiges Gesamtgewicht**, dieses Feld bleibt bewusst leer statt geschätzt | 2026-09-05 |
+| Knaus (technische Daten, aufbereitet von promobil.de aus Herstellerangaben) | https://www.promobil.de | öffentlich zugängliche Spezifikationsdaten | 23 Modelle (Serien SÜDWIND, SPORT) | 2026-09-05 |
 
 Alle Einträge tragen `source` und `verification_status = 'unverified'` (bzw.
 `'verified'` bei Hobby/Dethleffs/Tabbert, da direkt aus offiziellen
 Herstellerdokumenten). Fahrzeuge ohne werksseitig genehmigte Anhängelast
 wurden bewusst nicht aufgenommen. Andere Wohnwagenmarken (Adria, Fendt,
 Bürstner, Weinsberg, LMC, …) sind als **Research Required** vorgemerkt und
-noch nicht enthalten. Bei Knaus war keine öffentlich zugängliche Quelle mit
-zulässigem Gesamtgewicht pro Modell auffindbar (die offizielle Preisliste war
-zum Zeitpunkt der Recherche nicht erreichbar) — das Feld bleibt für diese 23
-Modelle `null`, statt einen plausiblen, aber ungeprüften Wert einzutragen.
+noch nicht enthalten. `caravan_models`/`caravans` tragen seit 2026-09-14
+(Nutzerentscheidung) kein Gewichtsfeld mehr — Gewicht hat keine Bedeutung
+für Reichweite, Abmessungen oder Anhängertauglichkeits-Kriterien einer
+Ladestation; die frühere Knaus-Lücke beim zulässigen Gesamtgewicht ist
+dadurch gegenstandslos.
 
 ## Ausdrücklich NICHT als Quelle verwendet (§34)
 

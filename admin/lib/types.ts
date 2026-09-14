@@ -162,8 +162,6 @@ export interface CaravanModel {
   length_m: number;
   width_m: number;
   height_m: number;
-  weight_kg: number;
-  gross_vehicle_weight_kg: number | null;
   source: string;
   verification_status: VerificationStatus;
   last_verified_at: string | null;

@@ -38,8 +38,6 @@ export async function addCaravanModel(formData: FormData) {
       length_m: requireNumber(formData.get("length_m")),
       width_m: requireNumber(formData.get("width_m")),
       height_m: requireNumber(formData.get("height_m")),
-      weight_kg: requireNumber(formData.get("weight_kg")),
-      gross_vehicle_weight_kg: optionalNumber(formData.get("gross_vehicle_weight_kg")),
       source: (formData.get("source") as string)?.trim() || "manual",
       verification_status: (formData.get("verification_status") as VerificationStatus) || "unverified",
     })
@@ -64,8 +62,6 @@ export async function updateCaravanModel(id: string, formData: FormData) {
       length_m: requireNumber(formData.get("length_m")),
       width_m: requireNumber(formData.get("width_m")),
       height_m: requireNumber(formData.get("height_m")),
-      weight_kg: requireNumber(formData.get("weight_kg")),
-      gross_vehicle_weight_kg: optionalNumber(formData.get("gross_vehicle_weight_kg")),
       source: (formData.get("source") as string)?.trim() || "manual",
       verification_status: (formData.get("verification_status") as VerificationStatus) || "unverified",
     })

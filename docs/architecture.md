@@ -242,24 +242,26 @@ Hintergrund umleiten) und der Charge2Camp-Tab selbst nie verlassen wird.
 
 ## Gespannlogik & Straßenrestriktionen (§28ff, Phase 7)
 
-**Fahrzeug-Abmessungen ergänzt:** `vehicles` trägt jetzt (analog zu
-`caravans`) auch `width_m`, `height_m`, `weight_kg` (alle optional,
-[supabase/migrations/20260910000000_vehicle_dimensions.sql](../supabase/migrations/20260910000000_vehicle_dimensions.sql)),
-abgefragt im Fahrzeugformular. Zusammen mit den Wohnwagen-Maßen ergibt sich
-daraus das tatsächliche Gespann —
-[src/lib/gespann-dimensions.ts](../src/lib/gespann-dimensions.ts)
-(`combineGespannDimensions`) berechnet Höhe/Breite als jeweils größeres Maß
-aus Fahrzeug/Wohnwagen (eine Beschränkung betrifft das gesamte Gespann) und
-das Gewicht als Summe — aber **nur**, wenn sowohl Fahrzeug- als auch
-Wohnwagenwert bekannt sind (eine Teilsumme wäre als "Gespanngewicht"
-irreführend, §2 keine Scheindaten). Fehlt ein Maß, bleibt es `null` statt
-geschätzt zu werden.
+**Fahrzeug-Abmessungen ergänzt:** `vehicles` trägt (analog zu `caravans`)
+auch `width_m`, `height_m`
+([supabase/migrations/20260910000000_vehicle_dimensions.sql](../supabase/migrations/20260910000000_vehicle_dimensions.sql)).
+Zusammen mit den Wohnwagen-Maßen ergibt sich daraus das tatsächliche
+Gespann — Höhe/Breite als jeweils größeres Maß aus Fahrzeug/Wohnwagen (eine
+Beschränkung betrifft das gesamte Gespann). Fehlt ein Maß, bleibt es `null`
+statt geschätzt zu werden.
+
+**Kein Gewicht (Nutzerentscheidung, 2026-09-14):** Weder `vehicles` noch
+`caravans`/`caravan_models` tragen ein Gewichtsfeld — Gewicht hat keine
+Bedeutung für Reichweite, Abmessungen oder die
+Anhängertauglichkeits-Kriterien einer Ladestation. Der
+`maxweight`-OSM-Tag-Vergleich unten entfällt entsprechend, nur
+`maxheight`/`maxwidth` werden geprüft.
 
 **Straßenrestriktions-Check gegen OSM (Overpass API):**
 [src/lib/providers/road-restrictions/](../src/lib/providers/road-restrictions/)
 (`RoadRestrictionProvider`-Interface, §14-Adapterprinzip) fragt die
 öffentliche Overpass-API (overpass-api.de, kostenlos, kein API-Key) nach
-Wegen im Streckenkorridor mit `maxheight`/`maxwidth`/`maxweight`-Tags und
+Wegen im Streckenkorridor mit `maxheight`/`maxwidth`-Tags und
 vergleicht sie mit den Gespann-Maßen. Aus Rücksicht auf den geteilten,
 öffentlichen Dienst wird die Streckengeometrie auf max. 120
 Stichprobenpunkte reduziert statt jeden Geometriepunkt abzufragen.
@@ -374,7 +376,7 @@ Routen, Favoriten, Bewertungen) und einer Unterseiten-Navigation
 4. **Ladepunkte** — Datenmodell, Kartenansicht, Filter, Anhängertauglichkeit ✅
 5. **Community** — Bewertung, Kommentar, Gespannparameter, Score ✅
 6. **Routenplanung** — Start/Ziel, Routing, Fahrzeug, Wohnwagen, Ladeplanung ✅
-7. **Gespannlogik** — Länge/Breite/Höhe/Gewicht, Straßenrestriktionen (OSM) ✅
+7. **Gespannlogik** — Länge/Breite/Höhe, Straßenrestriktionen (OSM) ✅
 8. **Ladestationen-Datenbank finalisieren** — reales europaweites Ladenetz
    über Open Charge Map einspielen (`ingest/import_ocm.py`), alte Demo-/
    Testladestationen sowie darauf bezogene Bewertungen und

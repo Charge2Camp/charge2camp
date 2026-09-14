@@ -78,29 +78,6 @@ export function CaravanModelForm({
             className="min-h-11 rounded-md border border-line px-3 py-2 text-base"
           />
         </label>
-        <label className="flex flex-col gap-1 text-sm">
-          Gewicht (kg) *
-          <input
-            type="number"
-            step="1"
-            min="0"
-            name="weight_kg"
-            required
-            defaultValue={caravan?.weight_kg ?? ""}
-            className="min-h-11 rounded-md border border-line px-3 py-2 text-base"
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-sm">
-          Zulässiges Gesamtgewicht (kg)
-          <input
-            type="number"
-            step="1"
-            min="0"
-            name="gross_vehicle_weight_kg"
-            defaultValue={caravan?.gross_vehicle_weight_kg ?? ""}
-            className="min-h-11 rounded-md border border-line px-3 py-2 text-base"
-          />
-        </label>
       </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <label className="flex flex-col gap-1 text-sm">

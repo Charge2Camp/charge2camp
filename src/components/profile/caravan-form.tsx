@@ -10,9 +10,6 @@ const EMPTY_FORM = {
   length_m: "",
   width_m: "",
   height_m: "",
-  weight_kg: "",
-  gross_vehicle_weight_kg: "",
-  actual_travel_weight_kg: "",
 };
 
 function caravanToForm(caravan: Caravan): typeof EMPTY_FORM {
@@ -22,9 +19,6 @@ function caravanToForm(caravan: Caravan): typeof EMPTY_FORM {
     length_m: caravan.length_m.toString(),
     width_m: caravan.width_m.toString(),
     height_m: caravan.height_m.toString(),
-    weight_kg: caravan.weight_kg.toString(),
-    gross_vehicle_weight_kg: caravan.gross_vehicle_weight_kg?.toString() ?? "",
-    actual_travel_weight_kg: caravan.actual_travel_weight_kg?.toString() ?? "",
   };
 }
 
@@ -78,9 +72,6 @@ export function CaravanForm({
       length_m: m.length_m.toString(),
       width_m: m.width_m.toString(),
       height_m: m.height_m.toString(),
-      weight_kg: m.weight_kg.toString(),
-      gross_vehicle_weight_kg: m.gross_vehicle_weight_kg?.toString() ?? "",
-      actual_travel_weight_kg: "",
     });
   }
 
@@ -204,46 +195,6 @@ export function CaravanForm({
             required
             value={form.height_m}
             onChange={(e) => updateField("height_m", e.target.value)}
-            className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
-          />
-        </label>
-
-        <label className="flex flex-col gap-1 text-sm">
-          Gewicht (kg) *
-          <input
-            name="weight_kg"
-            type="number"
-            step="1"
-            min="0"
-            required
-            value={form.weight_kg}
-            onChange={(e) => updateField("weight_kg", e.target.value)}
-            className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
-          />
-        </label>
-
-        <label className="flex flex-col gap-1 text-sm">
-          Zulässiges Gesamtgewicht (kg)
-          <input
-            name="gross_vehicle_weight_kg"
-            type="number"
-            step="1"
-            min="0"
-            value={form.gross_vehicle_weight_kg}
-            onChange={(e) => updateField("gross_vehicle_weight_kg", e.target.value)}
-            className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
-          />
-        </label>
-
-        <label className="flex flex-col gap-1 text-sm">
-          Tatsächliches Reisegewicht (kg)
-          <input
-            name="actual_travel_weight_kg"
-            type="number"
-            step="1"
-            min="0"
-            value={form.actual_travel_weight_kg}
-            onChange={(e) => updateField("actual_travel_weight_kg", e.target.value)}
             className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
           />
         </label>

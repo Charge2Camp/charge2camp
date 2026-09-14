@@ -126,9 +126,6 @@ export async function addCaravan(formData: FormData): Promise<ActionResult> {
       length_m: requireNumber(formData.get("length_m")),
       width_m: requireNumber(formData.get("width_m")),
       height_m: requireNumber(formData.get("height_m")),
-      weight_kg: requireNumber(formData.get("weight_kg")),
-      gross_vehicle_weight_kg: parseOptionalNumber(formData.get("gross_vehicle_weight_kg")),
-      actual_travel_weight_kg: parseOptionalNumber(formData.get("actual_travel_weight_kg")),
       model_reference_id: formData.get("model_reference_id") || null,
     });
 
@@ -155,9 +152,6 @@ export async function updateCaravan(id: string, formData: FormData): Promise<Act
         length_m: requireNumber(formData.get("length_m")),
         width_m: requireNumber(formData.get("width_m")),
         height_m: requireNumber(formData.get("height_m")),
-        weight_kg: requireNumber(formData.get("weight_kg")),
-        gross_vehicle_weight_kg: parseOptionalNumber(formData.get("gross_vehicle_weight_kg")),
-        actual_travel_weight_kg: parseOptionalNumber(formData.get("actual_travel_weight_kg")),
         model_reference_id: formData.get("model_reference_id") || null,
       })
       .eq("id", id)

@@ -25,12 +25,22 @@ consumption_kwh_per_100km (optional), charging_power_kw (optional),
 range_km (optional), max_towing_weight_braked_kg (optional),
 length_m (optional, Fahrzeuglaenge fuer Gespannlaenge-Berechnung),
 model_reference_id (optional, verweist auf `vehicle_models`), created_at.
+Kein Gewichtsfeld (siehe Hinweis unten bei `caravans`) — width_m/height_m
+existieren als Spalten (aus der nie gebauten Strassenrestriktions-Pruefung,
+§28ff), werden aber in keinem Formular abgefragt/angezeigt.
 
 ### caravans (Wohnwagen, §7)
 
-id, user_id, manufacturer, model, length_m, width_m, height_m, weight_kg,
-gross_vehicle_weight_kg (optional), actual_travel_weight_kg (optional),
+id, user_id, manufacturer, model, length_m, width_m, height_m,
 model_reference_id (optional, verweist auf `caravan_models`), created_at.
+**Kein Gewichtsfeld** (Nutzerentscheidung, 2026-09-14): Gewicht hat keine
+Bedeutung fuer Reichweite, Abmessungen oder die
+Anhaengertauglichkeits-Kriterien einer Ladestation — `weight_kg`/
+`gross_vehicle_weight_kg`/`actual_travel_weight_kg` wurden entfernt
+(inkl. `vehicles.weight_kg`, das nur fuer eine nie implementierte
+kombinierte Gespann-Gewichtspruefung existierte). `vehicles.
+max_towing_weight_braked_kg` (Anhaengelast-Kapazitaet des Fahrzeugs) ist
+davon unberuehrt, ein anderer Wert.
 
 ### vehicle_models / caravan_models (Referenzkataloge fuer Autofill, §7)
 

@@ -31,9 +31,7 @@ export function CaravanList({ caravans, models }: { caravans: Caravan[]; models:
                 {caravan.manufacturer} {caravan.model}
               </p>
               <p className="text-black/60 dark:text-white/60">
-                {caravan.length_m} × {caravan.width_m} × {caravan.height_m} m · {caravan.weight_kg} kg
-                {caravan.gross_vehicle_weight_kg ? ` · zGG ${caravan.gross_vehicle_weight_kg} kg` : ""}
-                {caravan.actual_travel_weight_kg ? ` · Reisegewicht ${caravan.actual_travel_weight_kg} kg` : ""}
+                {caravan.length_m} × {caravan.width_m} × {caravan.height_m} m
               </p>
             </div>
             <button

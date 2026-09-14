@@ -15,7 +15,7 @@ export default async function CaravanModelsPage({
 
   let query = supabase
     .from("caravan_models")
-    .select("id, manufacturer, model, series, length_m, weight_kg, verification_status", { count: "exact" });
+    .select("id, manufacturer, model, series, length_m, verification_status", { count: "exact" });
   if (q) query = query.or(`manufacturer.ilike.%${q}%,model.ilike.%${q}%,series.ilike.%${q}%`);
 
   const { data, count } = await query
@@ -26,7 +26,7 @@ export default async function CaravanModelsPage({
 
   const models = (data ?? []) as Pick<
     CaravanModel,
-    "id" | "manufacturer" | "model" | "series" | "length_m" | "weight_kg" | "verification_status"
+    "id" | "manufacturer" | "model" | "series" | "length_m" | "verification_status"
   >[];
   const totalPages = Math.max(1, Math.ceil((count ?? 0) / PAGE_SIZE));
 
@@ -69,9 +69,7 @@ export default async function CaravanModelsPage({
               <p className="font-medium">
                 {m.manufacturer} {m.model} {m.series ? `(${m.series})` : ""}
               </p>
-              <p className="text-text-muted">
-                {m.length_m} m lang · {m.weight_kg} kg
-              </p>
+              <p className="text-text-muted">{m.length_m} m lang</p>
             </div>
             {m.verification_status === "unverified" && (
               <span className="rounded-full border border-line px-2 py-0.5 text-xs text-text-muted">ungeprüft</span>

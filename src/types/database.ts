@@ -39,7 +39,6 @@ export interface Vehicle {
   length_m: number | null;
   width_m: number | null;
   height_m: number | null;
-  weight_kg: number | null;
   model_reference_id: string | null;
   created_at: string;
 }
@@ -52,9 +51,6 @@ export interface Caravan {
   length_m: number;
   width_m: number;
   height_m: number;
-  weight_kg: number;
-  gross_vehicle_weight_kg: number | null;
-  actual_travel_weight_kg: number | null;
   model_reference_id: string | null;
   created_at: string;
 }
@@ -84,8 +80,6 @@ export interface CaravanModel {
   length_m: number;
   width_m: number;
   height_m: number;
-  weight_kg: number;
-  gross_vehicle_weight_kg: number | null;
   source: string;
   verification_status: VerificationStatus;
   last_verified_at: string | null;
