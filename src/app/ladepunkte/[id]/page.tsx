@@ -1,37 +1,19 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import type { Caravan, ChargingReview, CoreChargePointGeo, CoreConnector, TrailerSuitabilityRecord, Vehicle } from "@/types/database";
+import type { CoreChargePointGeo, CoreConnector, TrailerSuitabilityRecord } from "@/types/database";
 import { MapView } from "@/components/map/map-view";
-import { ChargingReviewForm } from "@/components/charging-stations/review-form";
-import { ChargingStationFavoriteButton } from "@/components/charging-stations/favorite-button";
-import { ChargingStationBlockButton } from "@/components/charging-stations/block-button";
+import { StationTechnicalDetails } from "@/components/charging-stations/station-technical-details";
+import { StationFavoriteRow } from "@/components/charging-stations/station-favorite-row";
+import { StationCompatibilitySummary } from "@/components/charging-stations/station-compatibility";
 import { RigLengthDistributionChart } from "@/components/charging-stations/rig-length-distribution";
+import { StationReviewsList } from "@/components/charging-stations/station-reviews-list";
+import { StationBlockSection } from "@/components/charging-stations/station-block-section";
 import { TRAILER_PIN_COLORS, TRAILER_PIN_ICON_SRC, TRAILER_PIN_LABELS, getTrailerPinState } from "@/lib/trailer-verdict";
 import { ReviewStateBadge } from "@/components/charging-stations/review-state-badge";
 import { ListNavigation } from "@/components/list-navigation";
-import { PhotoLinkButton } from "@/components/charging-stations/photo-link-button";
-import { buildGoogleMapsPhotoLink } from "@/lib/google-maps-link";
-import { formatConnectorStandard } from "@/lib/connector-standard";
-import { formatAccessType } from "@/lib/access-type";
-import {
-  assessPersonalCompatibility,
-  bucketReviewsByRigLength,
-  PERSONAL_COMPATIBILITY_LABELS,
-  summarizeCommunitySuitability,
-} from "@/lib/scoring/trailer-compatibility";
-
-const SUITABLE_LABELS = { yes: "Ja", limited: "Mit Einschränkungen", no: "Nein" } as const;
-
-const CRITERION_LABELS: Record<
-  "enough_space_for_rig" | "unobstructed_access" | "no_barrier_or_garage" | "side_mounted_charger",
-  string
-> = {
-  enough_space_for_rig: "Genug Platz",
-  unobstructed_access: "Freie Rangierfläche",
-  no_barrier_or_garage: "Kein Parkhaus/Schranke",
-  side_mounted_charger: "Ladesäule seitlich mit Kabellänge",
-};
+import { fetchChargingStationDetailExtras } from "@/lib/charging-station-detail";
+import type { ChargingStationView } from "@/lib/charging-stations";
 
 export default async function ChargingStationDetailPage({
   params,
@@ -52,35 +34,14 @@ export default async function ChargingStationDetailPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [{ data: station }, { data: connectors }, { data: reviews }, favoriteResult, blockedResult] = await Promise.all([
+  const [{ data: station }, { data: connectors }] = await Promise.all([
     supabase.schema("core").from("charge_point_geo").select("*").eq("id", id).maybeSingle(),
     supabase.schema("core").from("connector").select("*").eq("charge_point_id", id),
-    supabase.from("charging_reviews").select("*").eq("charging_station_id", id).order("created_at", { ascending: false }),
-    user
-      ? supabase
-          .from("favorites")
-          .select("entity_id")
-          .eq("user_id", user.id)
-          .eq("entity_type", "charging_station")
-          .eq("entity_id", id)
-          .maybeSingle()
-      : Promise.resolve({ data: null }),
-    user
-      ? supabase
-          .from("blocked_charging_stations")
-          .select("charging_station_id")
-          .eq("user_id", user.id)
-          .eq("charging_station_id", id)
-          .maybeSingle()
-      : Promise.resolve({ data: null }),
   ]);
 
   if (!station) notFound();
   const s = station as CoreChargePointGeo;
   const stationConnectors = (connectors as CoreConnector[]) ?? [];
-  const allReviews = (reviews as ChargingReview[]) ?? [];
-  const isFavorite = Boolean(favoriteResult.data);
-  const isBlocked = Boolean(blockedResult.data);
 
   const { data: trailerRow } = await supabase
     .schema("enrich")
@@ -90,42 +51,9 @@ export default async function ChargingStationDetailPage({
     .maybeSingle();
   const trailer = trailerRow as TrailerSuitabilityRecord | null;
   const pinState = getTrailerPinState(trailer);
-  const photoLink = buildGoogleMapsPhotoLink({
-    name: s.name,
-    address: s.address,
-    postcode: s.postcode,
-    city: s.city,
-    lat: s.lat,
-    lon: s.lon,
-  });
+  const stationView: ChargingStationView = { ...s, connectors: stationConnectors, trailer };
 
-  let ownCaravans: Caravan[] = [];
-  let ownVehicles: Vehicle[] = [];
-  if (user) {
-    const [{ data: caravanData }, { data: vehicleData }] = await Promise.all([
-      supabase
-        .from("caravans")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("vehicles")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false }),
-    ]);
-    ownCaravans = (caravanData as Caravan[]) ?? [];
-    ownVehicles = (vehicleData as Vehicle[]) ?? [];
-  }
-  const ownCaravan = ownCaravans[0] ?? null;
-
-  const communitySummary = summarizeCommunitySuitability(allReviews);
-  const rigLengthDistribution = bucketReviewsByRigLength(allReviews);
-  const personalCompatibility = user
-    ? assessPersonalCompatibility(communitySummary, ownCaravan?.length_m ?? null)
-    : "keine_daten";
-
-  const ownReview = user ? allReviews.find((r) => r.user_id === user.id) : undefined;
+  const extras = await fetchChargingStationDetailExtras(id, user?.id);
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
@@ -159,16 +87,11 @@ export default async function ChargingStationDetailPage({
       )}
 
       {user && (
-        <div className="mt-4 flex items-center gap-2">
-          <ChargingStationFavoriteButton stationId={s.id} initialIsFavorite={isFavorite} />
-          {/* Persoenliche Gespann-Einschaetzung direkt oben neben dem
-              Favoriten-Icon sichtbar (Nutzerwunsch), zusaetzlich zur
-              ausfuehrlicheren Erklaerung weiter unten im Abschnitt
-              "Gespann-Kompatibilitaet". */}
-          <span className="rounded-lg border border-route/30 bg-route/5 p-3 text-sm font-medium text-route">
-            {PERSONAL_COMPATIBILITY_LABELS[personalCompatibility]}
-          </span>
-        </div>
+        <StationFavoriteRow
+          station={stationView}
+          isFavorite={extras.isFavorite}
+          personalCompatibility={extras.personalCompatibility}
+        />
       )}
 
       <div className="mt-6 h-[320px] overflow-hidden rounded-lg border border-black/10 dark:border-white/10">
@@ -186,160 +109,32 @@ export default async function ChargingStationDetailPage({
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
-        <section>
-          <h2 className="font-semibold">Technische Daten</h2>
-          <ul className="mt-2 space-y-1 text-sm">
-            {s.max_power_kw && <li>Max. Ladeleistung: {s.max_power_kw} kW</li>}
-            {stationConnectors.length > 0 && (
-              <li>
-                Anschlüsse:{" "}
-                {stationConnectors
-                  .map((c) => `${c.quantity}× ${formatConnectorStandard(c.standard)}${c.power_kw ? ` (${c.power_kw} kW)` : ""}`)
-                  .join(", ")}
-              </li>
-            )}
-            {s.access_type && <li>Zugang: {formatAccessType(s.access_type)}</li>}
-            {s.address && <li>Adresse: {s.address}</li>}
-          </ul>
-          {/* Nutzerwunsch: der Button war oben (neben Titel/Badges)
-              unübersichtlich -- steht jetzt direkt unter der Anschrift. */}
-          <div className="mt-4 flex flex-wrap items-start gap-2">
-            <Link
-              href={`/routenplaner?destination_station_id=${s.id}`}
-              className="inline-flex min-h-11 items-center rounded-md bg-action px-4 py-2 text-sm font-medium text-base hover:bg-action-hover"
-            >
-              Route hierher planen
-            </Link>
-            {/* Ersatz fuer die zurueckgebaute Bildergalerie (Mapillary/
-                Commons zeigten Street-Level-Fotos, die die eigentliche
-                Frage "passt mein Gespann hier durch?" nicht beantworten
-                konnten) -- rein ausgehender Link zu Google Maps, keine
-                Google-Inhalte in der App. */}
-            <PhotoLinkButton link={photoLink} externalKey={s.external_key} />
-          </div>
-          {!s.is_operational && (
-            <p className="mt-3 text-xs text-amber-700 dark:text-amber-400">
-              Laut Quelle aktuell nicht betriebsbereit gemeldet.
-            </p>
-          )}
-        </section>
-
-        <section>
-          <h2 className="font-semibold">Gespann-Kompatibilität</h2>
-          <p className="mt-2 text-sm">{communitySummary.summary}</p>
-          {communitySummary.overallPositiveRatio !== null && (
-            <p className="mt-1 text-xs text-black/50 dark:text-white/50">
-              {Math.round(communitySummary.overallPositiveRatio * 100)}% positive Rückmeldungen ·{" "}
-              {communitySummary.reviewCount} Bewertungen
-            </p>
-          )}
-
-          <div className="mt-4 rounded-lg border border-route/30 bg-route/5 p-3 text-sm font-medium text-route">
-            {PERSONAL_COMPATIBILITY_LABELS[personalCompatibility]}
-            {personalCompatibility === "keine_daten" && !user && (
-              <span className="mt-1 block text-xs font-normal text-black/50 dark:text-white/50">
-                <Link href="/login" className="text-route hover:underline">
-                  Anmelden
-                </Link>{" "}
-                und Wohnwagen im Profil hinterlegen für eine persönliche Einschätzung.
-              </span>
-            )}
-          </div>
-        </section>
+        <StationTechnicalDetails station={stationView} />
+        <StationCompatibilitySummary
+          communitySummary={extras.communitySummary}
+          personalCompatibility={extras.personalCompatibility}
+          isLoggedIn={Boolean(user)}
+        />
       </div>
 
       <section className="mt-8">
         <h2 className="font-semibold">Eignung nach Gespannlänge</h2>
         <div className="mt-2">
-          <RigLengthDistributionChart distribution={rigLengthDistribution} />
+          <RigLengthDistributionChart distribution={extras.rigLengthDistribution} />
         </div>
       </section>
 
-      <section className="mt-8">
-        <h2 className="font-semibold">Bewertungen</h2>
-        {allReviews.length === 0 ? (
-          <p className="mt-2 text-sm text-black/50 dark:text-white/50">
-            Noch keine Bewertungen vorhanden.
-          </p>
-        ) : (
-          <ul className="mt-2 flex flex-col gap-3">
-            {allReviews.map((review) => (
-              <li
-                key={review.id}
-                className="rounded-md border border-black/10 p-3 text-sm dark:border-white/10"
-              >
-                <p className="font-medium">Anhängertauglich: {SUITABLE_LABELS[review.suitable]}</p>
-                <p className="text-black/60 dark:text-white/60">
-                  {review.trailer_length_m && `${review.trailer_length_m} m`}
-                  {review.trailer_width_m && ` × ${review.trailer_width_m} m`}
-                  {review.caravan_model && ` · ${review.caravan_model}`}
-                </p>
-                {review.suitable === "limited" && review.decoupled_parking_possible !== null && (
-                  <p className="text-black/60 dark:text-white/60">
-                    Wohnwagen abkoppeln &amp; in der Nähe parken:{" "}
-                    {review.decoupled_parking_possible ? "möglich" : "nicht möglich"}
-                  </p>
-                )}
-                {(
-                  Object.keys(CRITERION_LABELS) as Array<keyof typeof CRITERION_LABELS>
-                ).some((key) => review[key] !== null) && (
-                  <div className="mt-1.5 flex flex-wrap gap-1.5">
-                    {(Object.keys(CRITERION_LABELS) as Array<keyof typeof CRITERION_LABELS>)
-                      .filter((key) => review[key] !== null)
-                      .map((key) => (
-                        <span
-                          key={key}
-                          className={`rounded-full px-2 py-0.5 text-xs text-white ${
-                            review[key] ? "bg-route" : "bg-red-600"
-                          }`}
-                        >
-                          {review[key] ? "✓" : "✗"} {CRITERION_LABELS[key]}
-                        </span>
-                      ))}
-                  </div>
-                )}
-                {review.comment && <p className="mt-1 text-black/70 dark:text-white/70">{review.comment}</p>}
-              </li>
-            ))}
-          </ul>
-        )}
+      <StationReviewsList
+        reviews={extras.reviews}
+        isLoggedIn={Boolean(user)}
+        ownReview={extras.ownReview}
+        stationId={s.id}
+        externalKey={s.external_key}
+        vehicles={extras.ownVehicles}
+        caravans={extras.ownCaravans}
+      />
 
-        <div className="mt-4">
-          {!user ? (
-            <p className="text-sm text-black/50 dark:text-white/50">
-              <Link href="/login" className="text-route hover:underline">
-                Anmelden
-              </Link>{" "}
-              um eine Bewertung abzugeben.
-            </p>
-          ) : ownReview ? (
-            <p className="text-sm text-black/50 dark:text-white/50">
-              Du hast diesen Ladepunkt bereits bewertet ({SUITABLE_LABELS[ownReview.suitable]}).
-            </p>
-          ) : (
-            <ChargingReviewForm stationId={s.id} externalKey={s.external_key} vehicles={ownVehicles} caravans={ownCaravans} />
-          )}
-        </div>
-      </section>
-
-      {user && (
-        <section className="mt-8 border-t border-black/10 pt-6 dark:border-white/10">
-          <h2 className="font-semibold">Routenplanung</h2>
-          <p className="mt-1 text-sm text-black/60 dark:text-white/60">
-            Soll dieser Ladepunkt nie mehr als Ladestopp vorgeschlagen werden -- z. B. weil er
-            unzuverlässig oder für dein Gespann ungeeignet ist? Blockierte Ladepunkte bleiben
-            normal auffindbar, werden aber bei der Routenplanung übersprungen. Verwaltung aller
-            blockierten Ladepunkte unter{" "}
-            <Link href="/profil/einstellungen" className="text-route hover:underline">
-              Profil → Einstellungen
-            </Link>
-            .
-          </p>
-          <div className="mt-3">
-            <ChargingStationBlockButton stationId={s.id} initialIsBlocked={isBlocked} />
-          </div>
-        </section>
-      )}
+      {user && <StationBlockSection stationId={s.id} isBlocked={extras.isBlocked} />}
     </div>
   );
 }

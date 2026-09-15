@@ -4,9 +4,10 @@ import { useState, type ComponentType, type SVGProps } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ProfileSidebar } from "@/components/profile-sidebar";
-import { IconCamping, IconLaden, IconProfil, IconRoute } from "@/components/icons/brand-icons";
+import { IconCamping, IconHome, IconLaden, IconProfil, IconRoute } from "@/components/icons/brand-icons";
 
 const TABS = [
+  { href: "/", label: "Home", Icon: IconHome },
   { href: "/campingplaetze", label: "Camping", Icon: IconCamping },
   { href: "/ladepunkte", label: "Laden", Icon: IconLaden },
   { href: "/routenplaner", label: "Route", Icon: IconRoute },
@@ -37,13 +38,16 @@ function TabLink({
 }
 
 /** Permanent sichtbare Bottom-Tab-Bar fuer Touch-Bedienung (Apple-HIG-/
- * Android-Bottom-Navigation-Muster). Bewusst nur 4 Kacheln
- * (docs/design/brand-guide.md Abschnitt 6: "Menueleiste: Laden, Route,
- * Camping, Profil. Community liegt im Profil -- fuenf Tabs sind auf
- * schmalen Geraeten zu viel.") -- Community ist stattdessen ein Eintrag
- * in der ProfileSidebar (siehe dort). Die 4. Kachel ("Profil") oeffnet
- * keine Seite direkt, sondern die ProfileSidebar mit allen
- * Profil-Unterpunkten; ohne Anmeldung fuehrt sie stattdessen zu /login. */
+ * Android-Bottom-Navigation-Muster). 5 Kacheln (docs/design/brand-guide.md
+ * Abschnitt 6) -- Community liegt weiterhin in der ProfileSidebar (siehe
+ * dort), nicht in der Leiste. "Home" (ganz links) ist neu: seit der
+ * Header-Leiste, die mobil komplett entfaellt (siehe site-header.tsx),
+ * braucht es einen anderen Weg zur Startseite als das bisherige Logo --
+ * Aktivzustand bewusst exakter Pfadvergleich (`pathname === "/"`), da
+ * `startsWith` bei "/" sonst auf jeder Seite anschlagen wuerde. Die letzte
+ * Kachel ("Profil") oeffnet keine Seite direkt, sondern die ProfileSidebar
+ * mit allen Profil-Unterpunkten; ohne Anmeldung fuehrt sie stattdessen zu
+ * /login. */
 export function BottomTabBarClient({ isLoggedIn, isAdmin }: { isLoggedIn: boolean; isAdmin: boolean }) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -58,7 +62,7 @@ export function BottomTabBarClient({ isLoggedIn, isAdmin }: { isLoggedIn: boolea
         <ul className="flex">
           {TABS.map((tab) => (
             <li key={tab.href} className="flex flex-1">
-              <TabLink {...tab} active={pathname.startsWith(tab.href)} />
+              <TabLink {...tab} active={tab.href === "/" ? pathname === "/" : pathname.startsWith(tab.href)} />
             </li>
           ))}
           <li className="flex flex-1">

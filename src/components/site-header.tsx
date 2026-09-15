@@ -30,7 +30,13 @@ export async function SiteHeader() {
     // Padding nutzt env(safe-area-inset-top) und respektiert so die
     // Notch/Dynamic Island, sobald die Seite randlos (viewport-fit=cover)
     // laeuft -- auf normalen Browsern ist der Wert 0 und aendert nichts.
-    <header className="relative bg-base pt-[env(safe-area-inset-top)]">
+    //
+    // Mobil (< md) bewusst komplett ausgeblendet (Nutzerwunsch, analog zu
+    // SiteFooter): der "Home"-Zugriff uebers Logo wandert dort in die
+    // Bottom-Tab-Bar (5. Kachel, siehe bottom-tab-bar-client.tsx), damit
+    // z. B. die Ladepunkte-Karte vollbild ohne obere Leiste laufen kann.
+    // Ab md: weiterhin die einzige Desktop-Navigation, unveraendert.
+    <header className="relative hidden bg-base pt-[env(safe-area-inset-top)] md:block">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-2">
         <div className="flex items-center gap-2">
           <Link href="/" className="flex items-center gap-2 py-2">

@@ -113,13 +113,15 @@ Immer Satzanfang groß, nie Versalien. Zeilenlänge höchstens 72 Zeichen.
 24er-Raster, 2 px Strichstärke, runde Enden und Ecken, ausschließlich Outline.
 Der aktive Zustand entsteht über Farbe, nie über Füllung.
 
-Vorhanden: `laden`, `route`, `camping`, `profil`, `community`, `anhaenger`.
+Vorhanden: `home`, `laden`, `route`, `camping`, `profil`, `community`, `anhaenger`.
 
 Der Anhänger ist kein Menüpunkt, sondern der Marker für alles Gespann-Bezogene:
 Filter-Chip, Hinweisfläche, Listeneintrag.
 
-Menüleiste: Laden, Route, Camping, Profil. Community liegt im Profil —
-fünf Tabs sind auf schmalen Geräten zu viel.
+Menüleiste: Home, Laden, Route, Camping, Profil. Fünf Tabs sind das Maximum auf
+schmalen Geräten — Community bleibt deshalb weiterhin im Profil statt in der
+Leiste. Home ersetzt seit dem Vollbild-Kartenumbau der Ladepunkte-Seite (mobil)
+den Zugriff aufs Logo im Header, der auf schmalen Geräten seither entfällt.
 
 ---
 

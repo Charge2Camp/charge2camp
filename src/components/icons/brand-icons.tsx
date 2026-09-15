@@ -19,6 +19,15 @@ const base = {
   strokeLinejoin: "round" as const,
 };
 
+export function IconHome(props: IconProps) {
+  return (
+    <svg {...base} aria-label="Home" role="img" {...props}>
+      <path d="M4 11.5 12 4.5l8 7V20H4Z" />
+      <path d="M9.5 20v-5a2.5 2.5 0 0 1 5 0v5" />
+    </svg>
+  );
+}
+
 export function IconCamping(props: IconProps) {
   return (
     <svg {...base} aria-label="Campingplatz" role="img" {...props}>

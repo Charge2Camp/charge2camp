@@ -83,8 +83,11 @@ export default async function ChargingStationsPage({
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6">
-      <h1 className="text-2xl font-semibold">Ladepunkte</h1>
+    // Mobil bewusst ohne Rand/Ueberschrift (Nutzerwunsch: Vollbild-Karte,
+    // siehe charging-station-map-explorer.tsx) -- ab md unveraendert wie
+    // zuvor, dort bleibt die Karte in der bekannten Box unter der Ueberschrift.
+    <div className="md:mx-auto md:max-w-6xl md:px-4 md:py-6">
+      <h1 className="hidden text-2xl font-semibold md:block">Ladepunkte</h1>
 
       <form action="/ladepunkte">
         <ChargingStationMapExplorer
@@ -93,6 +96,7 @@ export default async function ChargingStationsPage({
           homeAddress={homeAddress}
           emptyMessage={emptyMessage}
           activeFilterCount={activeFilterCount}
+          isLoggedIn={Boolean(user)}
           filterPanel={
             <div className="flex flex-col gap-6">
               <ChargingStationQuickFilters filters={filters} isLoggedIn={Boolean(user)} />

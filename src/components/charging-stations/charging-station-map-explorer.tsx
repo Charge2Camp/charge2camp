@@ -13,11 +13,20 @@ import {
   REVIEW_STATE_LABELS,
 } from "@/lib/trailer-verdict";
 import { ReviewStateBadge } from "@/components/charging-stations/review-state-badge";
+import { StationBottomSheet } from "@/components/charging-stations/station-bottom-sheet";
 import { formatConnectorStandard } from "@/lib/connector-standard";
 import { distanceKm } from "@/lib/geo";
 import { saveListNavigationContext } from "@/components/list-navigation";
 import { loadSavedMapViewport, saveMapViewport, type MapViewport } from "@/lib/map-viewport-storage";
+import { useMediaQuery } from "@/lib/use-media-query";
 import type { ChargingStationFilters, ChargingStationView } from "@/lib/charging-stations";
+
+// Karte + "pointer: coarse" statt nur der Tailwind-md-Breakpoint-Grenze
+// (anders als Header/Bottom-Tab-Bar, siehe site-header.tsx): ein gedrehtes
+// Handy ueberschreitet in Querformat oft 767px CSS-Breite (z. B. iPhone 14
+// Pro: 852px) -- ohne die pointer-Abfrage wuerde die Karte beim Drehen
+// mitten in der Nutzung ins Desktop-Popup-Verhalten zurueckfallen.
+const TOUCH_MAP_QUERY = "(max-width: 767px), (pointer: coarse)";
 
 const LIST_NAV_STORAGE_KEY = "ladepunkte:list-nav";
 const MAP_VIEWPORT_STORAGE_KEY = "ladepunkte:map-viewport";
@@ -187,6 +196,7 @@ export function ChargingStationMapExplorer({
   emptyMessage,
   filterPanel,
   activeFilterCount,
+  isLoggedIn,
 }: {
   /** Serverseitig geladene Erstansicht -- fuer den ersten Render, bevor die
    * Karte ihren tatsaechlichen Kartenausschnitt kennt (siehe
@@ -211,6 +221,10 @@ export function ChargingStationMapExplorer({
    * gehoert zum umschliessenden <form> in ladepunkte/page.tsx. */
   filterPanel: ReactNode;
   activeFilterCount: number;
+  /** Fuer das Bottom-Sheet der mobilen Kartenansicht (Favorit-Button/
+   * Bewertungsformular/Blockieren nur fuer angemeldete Nutzer, siehe
+   * StationBottomSheet). */
+  isLoggedIn: boolean;
 }) {
   const [viewMode, setViewMode] = useState<"map" | "list">("map");
 
@@ -219,6 +233,19 @@ export function ChargingStationMapExplorer({
   }
   const [filterOpen, setFilterOpen] = useState(false);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+
+  // Mobil/Touch bekommt eine eigene Vollbild-Karte + Bottom-Sheet statt der
+  // Desktop-Box mit MapLibre-Popup (siehe TOUCH_MAP_QUERY oben).
+  const isTouchMap = useMediaQuery(TOUCH_MAP_QUERY);
+
+  // Angetippte Station fuers Bottom-Sheet: `selectedStationSnapshot` haelt
+  // bewusst eine EIGENE Kopie statt live aus `stations` nachzuschlagen --
+  // `stations` wird bei jedem Kartenschwenk per handleBoundsChange komplett
+  // ersetzt, ohne eigenen Snapshot wuerde die Station dem offenen Sheet
+  // dann unter der Hand verschwinden.
+  const [selectedStationId, setSelectedStationId] = useState<string | null>(null);
+  const [selectedStationSnapshot, setSelectedStationSnapshot] = useState<ChargingStationView | null>(null);
+
   // Ohne Filter kann die Liste 1000+ Eintraege umfassen (siehe ladepunkte/
   // page.tsx) -- auf einmal ins DOM gerendert waere das spuerbar langsam,
   // deshalb wie bei den Campingplaetzen/Ladepunkten-Listen zuvor
@@ -243,6 +270,11 @@ export function ChargingStationMapExplorer({
   const [isFetchingViewport, setIsFetchingViewport] = useState(false);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fetchSeqRef = useRef(0);
+
+  function selectStation(id: string | null) {
+    setSelectedStationId(id);
+    setSelectedStationSnapshot(id ? (stations.find((s) => s.id === id) ?? null) : null);
+  }
 
   useEffect(() => {
     void Promise.resolve().then(() => setStations(initialStations));
@@ -343,9 +375,12 @@ export function ChargingStationMapExplorer({
         longitude: s.lon,
         label: s.name ?? s.operator ?? "",
         iconSrc: TRAILER_PIN_ICON_SRC[getTrailerPinState(s.trailer)],
-        popupHtml: buildStationPopupHtml(s),
+        // Mobil/Touch uebernimmt das eigene Bottom-Sheet die Kurzinfo (siehe
+        // selectStation/StationBottomSheet weiter unten) -- das native
+        // MapLibre-Popup bleibt dem Desktop vorbehalten (dort unveraendert).
+        popupHtml: isTouchMap ? undefined : buildStationPopupHtml(s),
       })),
-    [stations]
+    [stations, isTouchMap]
   );
 
   // Wird beim (Wieder-)Mounten von MapView ausgewertet (Kartenansicht
@@ -359,7 +394,12 @@ export function ChargingStationMapExplorer({
   const FilterButton = (
     <button
       type="button"
-      onClick={() => setFilterOpen(true)}
+      onClick={() => {
+        setFilterOpen(true);
+        // Zwei uebereinanderliegende Bottom-Sheets (Filter + Stations-Sheet)
+        // vermeiden.
+        selectStation(null);
+      }}
       className="flex min-h-11 items-center gap-1.5 rounded-full bg-white/95 px-4 text-sm font-medium shadow-md hover:bg-white dark:bg-neutral-900/95 dark:hover:bg-neutral-900"
     >
       Filter
@@ -372,29 +412,36 @@ export function ChargingStationMapExplorer({
   );
 
   return (
-    <div className="relative mt-6">
+    <div className="relative md:mt-6">
       {viewMode === "map" ? (
-        <div className="relative h-[70vh] min-h-[420px] overflow-hidden rounded-xl border border-black/10 dark:border-white/10 md:h-[75vh]">
-          {/* Bewusst OHNE selectedId/onMarkerClick: es gibt in der Kartenansicht
-              keine gleichzeitig sichtbare Liste, deren Eintrag beim Antippen
-              eines Pins hervorgehoben werden muesste (anders als z. B. bei
-              campsite-explorer.tsx mit Split-View). Jede Aenderung von
-              selectedId loest in MapView ein komplettes Neu-Rendern aller
-              Marker + fitBounds aus (siehe dortiger useEffect) -- das wuerde
-              bei jedem Antippen eines Pins sofort das gerade geoeffnete
-              Pop-up zerstoeren und die Karte auf die Gesamtansicht
-              zuruecksetzen, noch bevor das Pop-up sichtbar wird. */}
+        <>
+          <div className="fixed inset-x-0 top-0 bottom-16 overflow-hidden md:relative md:inset-auto md:h-[75vh] md:min-h-[420px] md:rounded-xl md:border md:border-black/10 md:dark:border-white/10">
+          {/* Mobil/Touch: onMarkerClick+selectedId oeffnen das eigene
+              Bottom-Sheet statt des MapLibre-Popups (siehe isTouchMap oben).
+              Der ausgewaehlte Pin wird dadurch nebenbei groesser statt
+              andersfarbig hervorgehoben (docs/design/brand-guide.md
+              Abschnitt 7). Desktop bleibt bewusst OHNE selectedId/
+              onMarkerClick: es gibt dort keine gleichzeitig sichtbare Liste,
+              deren Eintrag beim Antippen eines Pins hervorgehoben werden
+              muesste, und jede Aenderung von selectedId loest in MapView ein
+              komplettes Neu-Rendern aller Marker + fitBounds aus (siehe
+              dortiger useEffect) -- das wuerde bei jedem Antippen eines Pins
+              sofort das gerade geoeffnete Pop-up zerstoeren und die Karte auf
+              die Gesamtansicht zuruecksetzen, noch bevor das Pop-up sichtbar
+              wird. */}
           <MapView
             markers={markers}
             cluster
             onBoundsChange={handleBoundsChange}
             onViewportChange={handleViewportChange}
+            onMarkerClick={isTouchMap ? selectStation : undefined}
+            selectedId={isTouchMap ? (selectedStationId ?? undefined) : undefined}
             fitBoundsOnMarkersChange={filters.favoritesOnly}
             initialCenter={savedViewport ?? homeAddress ?? GERMANY_OVERVIEW_CENTER}
             initialZoom={savedViewport?.zoom ?? (homeAddress ? 10 : GERMANY_OVERVIEW_ZOOM)}
           />
 
-          <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-2 p-3">
+          <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-2 p-3 pt-[calc(0.75rem+env(safe-area-inset-top))] md:pt-3">
             <span className="pointer-events-auto rounded-full bg-white/95 px-3 py-1.5 text-sm font-medium shadow-md dark:bg-neutral-900/95">
               {isFetchingViewport ? "Lädt…" : `${stationCountLabel} Ladepunkte`}
             </span>
@@ -417,7 +464,15 @@ export function ChargingStationMapExplorer({
               </p>
             </div>
           )}
-        </div>
+          </div>
+          {isTouchMap && (
+            <StationBottomSheet
+              station={selectedStationSnapshot}
+              isLoggedIn={isLoggedIn}
+              onClose={() => selectStation(null)}
+            />
+          )}
+        </>
       ) : (
         <div>
           <div className="mb-4 flex items-center justify-between gap-2">
