@@ -26,6 +26,7 @@ export function StationReviewsList({
   externalKey,
   vehicles,
   caravans,
+  onReviewSubmitted,
 }: {
   reviews: ChargingReview[];
   isLoggedIn: boolean;
@@ -34,6 +35,8 @@ export function StationReviewsList({
   externalKey: string;
   vehicles: Vehicle[];
   caravans: Caravan[];
+  /** Siehe ChargingReviewForm.onSuccess -- nur vom Bottom-Sheet genutzt. */
+  onReviewSubmitted?: () => void;
 }) {
   return (
     <section className="mt-8">
@@ -93,7 +96,13 @@ export function StationReviewsList({
             Du hast diesen Ladepunkt bereits bewertet ({SUITABLE_LABELS[ownReview.suitable]}).
           </p>
         ) : (
-          <ChargingReviewForm stationId={stationId} externalKey={externalKey} vehicles={vehicles} caravans={caravans} />
+          <ChargingReviewForm
+            stationId={stationId}
+            externalKey={externalKey}
+            vehicles={vehicles}
+            caravans={caravans}
+            onSuccess={onReviewSubmitted}
+          />
         )}
       </div>
     </section>

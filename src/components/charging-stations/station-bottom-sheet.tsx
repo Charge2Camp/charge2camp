@@ -20,7 +20,7 @@ type SnapState = "peek" | "half" | "full";
 // Immer hoher Container (92dvh), alle drei Zustaende sind nur translateY-
 // Offsets davon -- keine Hoehen-Animation zwischen den Snap-Punkten (siehe
 // Kommentar an der Komponente). PEEK_VISIBLE_PX ist bewusst grosszuegig
-// bemessen (Handle + Name/Betreiber + Badges + "Route"-Button + Tab-Bar-
+// bemessen (Handle + Name/Betreiber + Badges + Favorit-Zeile + Tab-Bar-
 // Abstand), damit im Peek-Zustand nichts abgeschnitten wirkt.
 const CONTAINER_HEIGHT_VH = 92;
 const PEEK_VISIBLE_PX = 220;
@@ -50,9 +50,9 @@ interface DragState {
  * Ladepunkte-Karte (nur mobil, siehe charging-station-map-explorer.tsx) --
  * ersetzt dort die Navigation auf /ladepunkte/[id] durch ein Sheet direkt
  * ueber der Karte, das per Ziehen (oder Antippen der Kopfzeile, ohne Ziehen)
- * zwischen drei Positionen einrastet: Peek (Name/Badges/Route-Button), Half
- * (+ technische Daten, Favorit/Block-Buttons), Full (+ Gespann-
- * Kompatibilitaet, Diagramm, Bewertungen -- scrollbar).
+ * zwischen drei Positionen einrastet: Peek (Name/Badges/Favorit +
+ * Gespann-Kompatibilitaet), Half (+ technische Daten inkl. "Route hierher
+ * planen"), Full (+ Diagramm, Bewertungen, Blockieren -- scrollbar).
  *
  * `station` ist ein Snapshot aus dem bereits geladenen Kartenmarker (siehe
  * charging-station-map-explorer.tsx `selectedStationSnapshot`) -- bewusst
@@ -293,27 +293,26 @@ export function StationBottomSheet({
           </button>
         </div>
 
-        <div className="px-4 pt-3" onPointerDown={(e) => e.stopPropagation()}>
-          <Link
-            href={`/routenplaner?destination_station_id=${station.id}`}
-            className="flex min-h-11 w-full items-center justify-center rounded-md bg-action px-4 text-sm font-medium text-base hover:bg-action-hover"
-          >
-            Route hierher planen
-          </Link>
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-8">
-        <div className="flex flex-col gap-6 pt-2">
-          <StationTechnicalDetails station={station} />
-
-          {isLoggedIn && extras && (
+        {/* Favorit + Gespann-Kompatibilitaets-Hinweis ganz oben statt des
+            frueheren "Route hierher planen"-Buttons hier (Nutzerwunsch) --
+            der Route-Button bleibt weiterhin bei den technischen Daten
+            unten erreichbar (StationTechnicalDetails), nur nicht mehr
+            doppelt. Erst sichtbar, sobald `extras` geladen ist -- bis dahin
+            bleibt der Platz leer statt eines Platzhalters. */}
+        {isLoggedIn && extras && (
+          <div className="px-4 pt-3" onPointerDown={(e) => e.stopPropagation()}>
             <StationFavoriteRow
               station={station}
               isFavorite={extras.isFavorite}
               personalCompatibility={extras.personalCompatibility}
             />
-          )}
+          </div>
+        )}
+      </div>
+
+      <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-8">
+        <div className="flex flex-col gap-6 pt-2">
+          <StationTechnicalDetails station={station} />
 
           {extrasLoading && <p className="text-sm text-black/50 dark:text-white/50">Details werden geladen…</p>}
           {extrasError && (
@@ -341,6 +340,7 @@ export function StationBottomSheet({
                 externalKey={station.external_key}
                 vehicles={extras.ownVehicles}
                 caravans={extras.ownCaravans}
+                onReviewSubmitted={() => loadExtras(station.id)}
               />
               {isLoggedIn && <StationBlockSection stationId={station.id} isBlocked={extras.isBlocked} />}
             </>

@@ -10,6 +10,7 @@ export function ChargingReviewForm({
   externalKey,
   vehicles,
   caravans,
+  onSuccess,
 }: {
   stationId: string;
   /** core.charge_point.external_key -- enrich.trailer_suitability/
@@ -20,6 +21,12 @@ export function ChargingReviewForm({
   externalKey: string;
   vehicles: Vehicle[];
   caravans: Caravan[];
+  /** Nach erfolgreichem Speichern -- auf der Detailseite reicht das
+   * automatische Next.js-Router-Refresh (revalidatePath trifft dort direkt
+   * die aktuelle Route), im Bottom-Sheet der Kartenansicht (andere Route,
+   * Daten kommen per Client-Fetch) sonst bleibt die Anzeige veraltet stehen,
+   * ohne dass ein Fehler sichtbar waere. Optional, Detailseite laesst es weg. */
+  onSuccess?: () => void;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [suitable, setSuitable] = useState<"yes" | "limited" | "no">("yes");
@@ -56,6 +63,7 @@ export function ChargingReviewForm({
         setError(null);
         const result = await addChargingReview(formData);
         if (!result.ok) setError(result.error);
+        else onSuccess?.();
       }}
       className="flex flex-col gap-3 rounded-lg border border-black/10 p-4 dark:border-white/10"
     >
