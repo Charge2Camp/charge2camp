@@ -441,7 +441,11 @@ export function ChargingStationMapExplorer({
             initialZoom={savedViewport?.zoom ?? (homeAddress ? 10 : GERMANY_OVERVIEW_ZOOM)}
           />
 
-          <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-2 p-3 pt-[calc(0.75rem+env(safe-area-inset-top))] md:pt-3">
+          {/* z-30 (nicht z-10): muss ueber den Kartenmarkern (z-20, siehe
+              map-view.tsx) liegen, sonst koennen Marker "Trefferzahl"/
+              "Filter"/"Liste" ueberdecken (Nutzerfeedback). Gleiche Ebene
+              wie Popups/MapLibres eigene Bedienelemente, siehe globals.css. */}
+          <div className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-2 p-3 pt-[calc(0.75rem+env(safe-area-inset-top))] md:pt-3">
             <span className="pointer-events-auto rounded-full bg-white/95 px-3 py-1.5 text-sm font-medium shadow-md dark:bg-neutral-900/95">
               {isFetchingViewport ? "Lädt…" : `${stationCountLabel} Ladepunkte`}
             </span>

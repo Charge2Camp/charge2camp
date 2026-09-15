@@ -24,6 +24,29 @@
   z-index: 30;
 }
 
+/* MapLibres eigene Bedienelemente (Zoom, Standort-Button, oben rechts --
+ * siehe map-view.tsx NavigationControl/GeolocateControl) haben von Haus aus
+ * KEINEN expliziten z-index und lagen dadurch teils hinter Markern (z-index
+ * 20) bzw. wurden von ihnen ueberdeckt (Nutzerfeedback: "Icons und Zahlen
+ * ueber den Buttons"). Buttons/Bedienelemente muessen immer ueber Markern
+ * liegen, nie umgekehrt -- gleiche Ebene wie Popups. */
+.maplibregl-ctrl-top-right {
+  z-index: 30;
+}
+
+/* Auf der mobilen Vollbild-Ladepunkte-Karte (charging-station-map-explorer.tsx)
+ * liegen "Trefferzahl"/"Filter"/"Liste" als eigene Pills ueber der Karte,
+ * mit zusaetzlichem Sicherheitsabstand fuer Notch/Dynamic Island
+ * (env(safe-area-inset-top)). MapLibres eigene oben-rechts-Bedienelemente
+ * kennen diesen Abstand nicht und lagen dadurch mit "Filter"/"Liste"
+ * uebereinander (Nutzerfeedback). Ab 768px (Desktop-Box-Kartenansicht,
+ * kein Sicherheitsabstand noetig) bewusst unveraendert. */
+@media (max-width: 767px) {
+  .maplibregl-ctrl-top-right {
+    margin-top: calc(env(safe-area-inset-top) + 3.5rem);
+  }
+}
+
 /* charge2camp Design-Tokens (docs/design/brand-guide.md +
    docs/design/tokens.json) -- EIN Markensystem, kein Hell/Dunkel-Toggle:
    die App ist hell (--c-surface), Kopf-/Fussbereiche und Bottom-Tab-Bar
