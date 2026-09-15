@@ -23,6 +23,20 @@ export const metadata: Metadata = {
   title: "charge2camp – Camping mit Elektroauto",
   description:
     "Finde Campingplätze und plane deine Route mit anhängertauglichen Ladestopps.",
+  // Ohne diese beiden Angaben oeffnet iOS ein "Zum Home-Bildschirm"-Icon nur
+  // in einer abgespeckten Safari-Ansicht (eigene, nicht transparente
+  // Statusleisten-Behandlung) statt echtem Vollbild-Standalone-Modus --
+  // sichtbare Folge war ein cremefarbener Streifen zwischen Statusleiste
+  // und der (eigentlich randlosen) Ladepunkte-Karte auf dem iPhone
+  // (Nutzerfeedback). "black-translucent" macht die Statusleiste
+  // durchsichtig, Inhalte duerfen dann unter ihr zeichnen -- genau das
+  // Verhalten, fuer das env(safe-area-inset-*)/viewport-fit=cover unten
+  // schon vorbereitet waren.
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "charge2camp",
+  },
 };
 
 // Ohne dieses Viewport-Meta faellt iOS Safari auf eine Desktop-Layout-
