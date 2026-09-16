@@ -1,14 +1,13 @@
 import Link from "next/link";
 import { createServiceClient } from "@/lib/supabase/service";
+import { StationListWithBulkEdit } from "./station-list";
 
-const PAGE_SIZE = 30;
-
-const VERDICT_LABELS: Record<string, string> = {
-  yes: "Anhängertauglich",
-  unhitch: "Nur abgekoppelt",
-  no: "Nicht tauglich",
-  unknown: "Ungeprüft",
-};
+const DEFAULT_PAGE_SIZE = 30;
+// Massen-Bearbeitung (siehe station-list.tsx) ist nur fuer Treffer auf der
+// aktuell geladenen Seite moeglich -- bei einer breiten Suche (z.B. Betreiber
+// "ladenetz.de" ueber ganz Deutschland) braucht man dafuer mehr als die
+// sonst uebliche Seitengroesse von 30 auf einmal sichtbar.
+const PAGE_SIZE_OPTIONS = [30, 100, 300] as const;
 
 const SORT_OPTIONS = [
   { value: "name_asc", label: "Name (A–Z)" },
@@ -52,11 +51,16 @@ export default async function ChargingStationsPage({
     verdict?: string;
     min_power?: string;
     sort?: string;
+    page_size?: string;
   }>;
 }) {
-  const { q, page: pageParam, country, operator, verdict, min_power: minPower, sort } = await searchParams;
+  const { q, page: pageParam, country, operator, verdict, min_power: minPower, sort, page_size: pageSizeParam } =
+    await searchParams;
   const page = Math.max(1, Number(pageParam) || 1);
   const activeSort = SORT_OPTIONS.some((o) => o.value === sort) ? sort! : "name_asc";
+  const pageSize = PAGE_SIZE_OPTIONS.includes(Number(pageSizeParam) as (typeof PAGE_SIZE_OPTIONS)[number])
+    ? Number(pageSizeParam)
+    : DEFAULT_PAGE_SIZE;
   const supabase = createServiceClient();
 
   const [{ data: rows, error }, { data: optionsRows }] = await Promise.all([
@@ -67,8 +71,8 @@ export default async function ChargingStationsPage({
       p_verdict: verdict || null,
       p_min_power_kw: minPower ? Number(minPower) : null,
       p_sort: activeSort,
-      p_limit: PAGE_SIZE,
-      p_offset: (page - 1) * PAGE_SIZE,
+      p_limit: pageSize,
+      p_offset: (page - 1) * pageSize,
     }),
     supabase.schema("core").rpc("charge_point_filter_options"),
   ]);
@@ -86,13 +90,13 @@ export default async function ChargingStationsPage({
 
   const stations = (rows ?? []) as AdminListRow[];
   const totalCount = stations[0]?.total_count ?? 0;
-  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const options = (optionsRows?.[0] ?? { countries: [], operators: [] }) as {
     countries: string[] | null;
     operators: string[] | null;
   };
 
-  const baseParams = { q, country, operator, verdict, min_power: minPower, sort: activeSort };
+  const baseParams = { q, country, operator, verdict, min_power: minPower, sort: activeSort, page_size: String(pageSize) };
 
   return (
     <div className="flex flex-col gap-4">
@@ -155,6 +159,13 @@ export default async function ChargingStationsPage({
               </option>
             ))}
           </select>
+          <select name="page_size" defaultValue={String(pageSize)} className="min-h-11 rounded-md border border-line px-2 py-2 text-base">
+            {PAGE_SIZE_OPTIONS.map((n) => (
+              <option key={n} value={n}>
+                {n} pro Seite
+              </option>
+            ))}
+          </select>
         </div>
         <div className="flex gap-2">
           <button type="submit" className="min-h-11 rounded-md bg-action px-4 text-sm font-medium hover:bg-action-hover">
@@ -171,30 +182,7 @@ export default async function ChargingStationsPage({
         </div>
       </form>
 
-      <div className="flex flex-col gap-2">
-        {stations.map((s) => (
-          <Link
-            key={s.id}
-            href={`/ladestationen/${s.id}`}
-            className="flex items-center justify-between rounded-md border border-line bg-card p-3 text-sm hover:bg-line/20"
-          >
-            <div>
-              <p className="font-medium">{s.name ?? s.operator ?? "(ohne Namen)"}</p>
-              <p className="text-text-muted">
-                {[s.city, s.country_code, s.operator, s.max_power_kw ? `${s.max_power_kw} kW` : null].filter(Boolean).join(" · ")}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              {!s.is_active && (
-                <span className="rounded bg-status-down/10 px-2 py-0.5 text-xs font-medium text-status-down">deaktiviert</span>
-              )}
-              {!s.is_operational && <span className="rounded bg-status-down/10 px-2 py-0.5 text-xs text-status-down">außer Betrieb</span>}
-              <span className="rounded-full border border-line px-2 py-0.5 text-xs">{VERDICT_LABELS[s.verdict] ?? s.verdict}</span>
-            </div>
-          </Link>
-        ))}
-        {stations.length === 0 && <p className="text-sm text-text-muted">Keine Treffer.</p>}
-      </div>
+      <StationListWithBulkEdit stations={stations} />
 
       {totalPages > 1 && (
         <div className="flex items-center gap-3 text-sm">
