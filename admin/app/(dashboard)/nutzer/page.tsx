@@ -18,6 +18,22 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
   const { data: profiles } = await supabase.from("profiles").select("id, is_admin");
   const isAdminById = new Map((profiles ?? []).map((p) => [p.id, p.is_admin]));
 
+  // "Zuletzt aktiv" je Nutzer (juengstes app_usage_event) -- echte Nutzung
+  // statt nur last_sign_in_at (reiner Login-Zeitpunkt, siehe nutzer/[id]/
+  // page.tsx). Kein GROUP BY ueber Supabase-JS moeglich, deshalb absteigend
+  // sortiert laden und je user_id nur den ersten (juengsten) Treffer
+  // behalten -- bei der aktuellen MVP-Groessenordnung unproblematisch.
+  const { data: usageEvents } = await supabase
+    .schema("core")
+    .from("app_usage_event")
+    .select("user_id, created_at")
+    .order("created_at", { ascending: false })
+    .limit(5000);
+  const lastActiveByUser = new Map<string, string>();
+  for (const e of usageEvents ?? []) {
+    if (e.user_id && !lastActiveByUser.has(e.user_id)) lastActiveByUser.set(e.user_id, e.created_at as string);
+  }
+
   let users = data?.users ?? [];
   if (q) {
     const needle = q.toLowerCase();
@@ -54,7 +70,10 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
           >
             <div>
               <p className="font-medium">{u.email}</p>
-              <p className="text-text-muted">Zuletzt angemeldet: {formatDateTime(u.last_sign_in_at)}</p>
+              <p className="text-text-muted">
+                Zuletzt angemeldet: {formatDateTime(u.last_sign_in_at)} · Zuletzt aktiv:{" "}
+                {formatDateTime(lastActiveByUser.get(u.id))}
+              </p>
             </div>
             <div className="flex items-center gap-2">
               {isAdminById.get(u.id) && <span className="rounded-full bg-route/10 px-2 py-0.5 text-xs text-route">Admin</span>}

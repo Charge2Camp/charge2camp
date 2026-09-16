@@ -81,6 +81,8 @@ export default async function DashboardPage() {
     { data: lastOcmImportRows },
     { count: newChargePointCount },
     { count: newCampsiteCount },
+    { data: activeUserRows7d },
+    { data: activeUserRows30d },
   ] = await Promise.all([
     supabase.schema("core").from("campsite").select("id", { count: "exact", head: true }),
     supabase.schema("core").from("charge_point").select("id", { count: "exact", head: true }),
@@ -100,6 +102,13 @@ export default async function DashboardPage() {
     supabase.schema("core").rpc("last_ocm_import"),
     supabase.schema("core").from("charge_point").select("id", { count: "exact", head: true }).gte("created_at", startOfWeekIso()),
     supabase.schema("core").from("campsite").select("id", { count: "exact", head: true }).gte("created_at", startOfWeekIso()),
+    // "Aktive Nutzer" = eindeutige user_id mit mind. einem app_usage_event
+    // im Zeitraum -- einfache Engagement-Kennzahl aus dem ohnehin schon
+    // protokollierten Log, kein zusaetzliches Tracking noetig. Distinct
+    // count geht in Supabase-JS nicht direkt, deshalb user_id-Spalte laden
+    // und in JS dedupliezieren (unproblematisch bei der aktuellen Groesse).
+    supabase.schema("core").from("app_usage_event").select("user_id").gte("created_at", daysAgoIso(7)),
+    supabase.schema("core").from("app_usage_event").select("user_id").gte("created_at", daysAgoIso(30)),
   ]);
   const lastOcmImport = lastOcmImportRows?.[0] as
     | { scope: string; status: string; record_count: number | null; finished_at: string | null; started_at: string }
@@ -109,6 +118,8 @@ export default async function DashboardPage() {
   const weekStart = startOfWeekIso();
   const newUserCount = (usersResult.data?.users ?? []).filter((u) => u.created_at >= weekStart).length;
   const newThisWeekCount = (newChargePointCount ?? 0) + (newCampsiteCount ?? 0) + newUserCount;
+  const activeUsers7d = new Set((activeUserRows7d ?? []).map((e) => e.user_id).filter(Boolean)).size;
+  const activeUsers30d = new Set((activeUserRows30d ?? []).map((e) => e.user_id).filter(Boolean)).size;
 
   const qualityRows = (qualityResult.data ?? []) as { check_name: string; data: unknown }[];
   const countsByCheck = new Map<string, number>();
@@ -166,6 +177,8 @@ export default async function DashboardPage() {
           <KpiCard label="Gespeicherte Routen" value={savedRouteCount ?? 0} href="/nutzer" />
           <KpiCard label="Ganze Routen exportiert" value={fullExportCount ?? 0} />
           <KpiCard label="Einzelne Etappen exportiert" value={segmentExportCount ?? 0} />
+          <KpiCard label="Aktive Nutzer (7 Tage)" value={activeUsers7d} href="/nutzer" />
+          <KpiCard label="Aktive Nutzer (30 Tage)" value={activeUsers30d} href="/nutzer" />
         </div>
       </Section>
 

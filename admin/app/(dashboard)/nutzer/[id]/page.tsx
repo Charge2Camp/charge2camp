@@ -21,6 +21,9 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
     { count: vehiclesCount },
     { count: savedRoutesCount },
     { count: routesPlannedCount },
+    { count: segmentExportCount },
+    { count: fullExportCount },
+    { data: lastEventRows },
   ] = await Promise.all([
     supabase.from("favorites").select("user_id", { count: "exact", head: true }).eq("user_id", id),
     supabase.from("caravans").select("id", { count: "exact", head: true }).eq("user_id", id),
@@ -32,7 +35,31 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
       .select("id", { count: "exact", head: true })
       .eq("event_type", "route_planned")
       .eq("user_id", id),
+    supabase
+      .schema("core")
+      .from("app_usage_event")
+      .select("id", { count: "exact", head: true })
+      .eq("event_type", "route_segment_export")
+      .eq("user_id", id),
+    supabase
+      .schema("core")
+      .from("app_usage_event")
+      .select("id", { count: "exact", head: true })
+      .eq("event_type", "route_full_export")
+      .eq("user_id", id),
+    // "Zuletzt aktiv" = juengstes app_usage_event dieses Nutzers -- echte
+    // Nutzung (Route geplant/exportiert), nicht nur last_sign_in_at (reiner
+    // Login-Zeitpunkt, sagt nichts darueber, ob die Session danach ueberhaupt
+    // genutzt wurde). Siehe gleiches Prinzip auf der Nutzerliste.
+    supabase
+      .schema("core")
+      .from("app_usage_event")
+      .select("created_at")
+      .eq("user_id", id)
+      .order("created_at", { ascending: false })
+      .limit(1),
   ]);
+  const lastActiveAt = lastEventRows?.[0]?.created_at as string | undefined;
 
   return (
     <div className="flex max-w-lg flex-col gap-8">
@@ -41,10 +68,16 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
         <p className="mt-1 text-sm text-text-muted">
           Registriert am {new Date(user.created_at).toLocaleDateString("de-DE")} · Zuletzt angemeldet:{" "}
           {user.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" }) : "nie"}
+          {" · "}Zuletzt aktiv:{" "}
+          {lastActiveAt ? new Date(lastActiveAt).toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" }) : "nie (seit 29.09.2026 protokolliert)"}
         </p>
         <p className="mt-1 text-sm text-text-muted">
           {vehiclesCount ?? 0} Fahrzeuge · {caravansCount ?? 0} Wohnwagen · {favoritesCount ?? 0} Favoriten ·{" "}
-          {savedRoutesCount ?? 0} gespeicherte Routen · {routesPlannedCount ?? 0} Routen geplant (seit 29.09.2026)
+          {savedRoutesCount ?? 0} gespeicherte Routen
+        </p>
+        <p className="mt-1 text-sm text-text-muted">
+          {routesPlannedCount ?? 0} Routen geplant · {segmentExportCount ?? 0} Etappen exportiert ·{" "}
+          {fullExportCount ?? 0} ganze Routen exportiert (jeweils seit 29.09.2026 protokolliert)
         </p>
       </div>
 
