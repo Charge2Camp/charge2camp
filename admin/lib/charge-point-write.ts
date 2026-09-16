@@ -100,6 +100,15 @@ export async function createChargePointFromFormData(
       connector_count: connectorCount,
       source: "admin_manual",
       source_updated_at: new Date().toISOString(),
+      // Nutzerwunsch: von Hand angelegte/aus einer Meldung uebernommene
+      // Stationen sollen von Anfang an vor automatischer Ueberschreibung
+      // geschuetzt sein, gleiches Prinzip wie bei der manuellen Korrektur
+      // bestehender Stationen (siehe ladestationen/[id]/actions.ts). Der
+      // "manual:"-external_key kollidiert ohnehin nie mit einem
+      // "ocm:<id>"-Key, aber das Flag haelt die Absicht explizit fest --
+      // z.B. falls diese Station spaeter mit einem OCM-Duplikat
+      // zusammengefuehrt wird (core.merge_charge_points).
+      manual_override: true,
     })
     .select("id")
     .single();
