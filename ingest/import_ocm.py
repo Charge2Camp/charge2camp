@@ -66,17 +66,23 @@ insert into core.charge_point (
     'ocm', %(source_updated_at)s, now(), now(), %(initial_is_active)s
 )
 on conflict (external_key) do update set
-    name = excluded.name,
-    operator = excluded.operator,
+    -- Von Haenden manuell im Admin-Bereich korrigierte Felder (siehe
+    -- admin/.../ladestationen/[id]/actions.ts updateChargePoint) werden bei
+    -- gesetztem manual_override NICHT mehr von OCM ueberschrieben --
+    -- gleiches Prinzip wie is_active weiter unten. Ohne dieses Flag wuerde
+    -- z.B. eine korrigierte "Ladenetz.de"->"Stadtwerke Muenchen"-Aenderung
+    -- beim naechsten Reimport wieder verloren gehen (Nutzerfeedback).
+    name = case when charge_point.manual_override then charge_point.name else excluded.name end,
+    operator = case when charge_point.manual_override then charge_point.operator else excluded.operator end,
     network = excluded.network,
-    geom = excluded.geom,
-    address = excluded.address,
+    geom = case when charge_point.manual_override then charge_point.geom else excluded.geom end,
+    address = case when charge_point.manual_override then charge_point.address else excluded.address end,
     postcode = excluded.postcode,
-    city = excluded.city,
-    country_code = excluded.country_code,
-    access_type = excluded.access_type,
-    is_operational = excluded.is_operational,
-    max_power_kw = excluded.max_power_kw,
+    city = case when charge_point.manual_override then charge_point.city else excluded.city end,
+    country_code = case when charge_point.manual_override then charge_point.country_code else excluded.country_code end,
+    access_type = case when charge_point.manual_override then charge_point.access_type else excluded.access_type end,
+    is_operational = case when charge_point.manual_override then charge_point.is_operational else excluded.is_operational end,
+    max_power_kw = case when charge_point.manual_override then charge_point.max_power_kw else excluded.max_power_kw end,
     connector_count = excluded.connector_count,
     source_updated_at = excluded.source_updated_at,
     last_seen_at = now(),

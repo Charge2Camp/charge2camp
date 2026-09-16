@@ -18,6 +18,7 @@ export async function updateChargePoint(chargePointId: string, formData: FormDat
     access_type: (formData.get("access_type") as string) || null,
     is_operational: formData.get("is_operational") === "1",
     max_power_kw: formData.get("max_power_kw") ? Number(formData.get("max_power_kw")) : null,
+    manual_override: formData.get("manual_override") === "1",
     updated_at: new Date().toISOString(),
   };
 

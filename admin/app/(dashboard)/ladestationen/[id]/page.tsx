@@ -57,6 +57,11 @@ export default async function ChargePointDetailPage({ params }: { params: Promis
 
       <section>
         <h2 className="text-lg font-semibold">Stammdaten</h2>
+        <p className="mt-1 text-sm text-text-muted">
+          {s.manual_override
+            ? "Manuell fixiert -- der tägliche OCM-Import überschreibt diese Felder nicht mehr."
+            : "Noch nicht fixiert -- der tägliche OCM-Import kann diese Felder jederzeit wieder überschreiben."}
+        </p>
         <form action={updateAction} className="mt-3 flex flex-col gap-4">
           <label className="flex flex-col gap-1 text-sm">
             Name
@@ -143,6 +148,10 @@ export default async function ChargePointDetailPage({ params }: { params: Promis
           <label className="flex min-h-11 items-center gap-2 text-sm">
             <input type="checkbox" name="is_operational" value="1" defaultChecked={s.is_operational ?? true} />
             Laut Quelle betriebsbereit
+          </label>
+          <label className="flex min-h-11 items-center gap-2 text-sm">
+            <input type="checkbox" name="manual_override" value="1" defaultChecked={s.manual_override} />
+            Manuell fixiert (OCM-Import überschreibt diese Felder nicht mehr)
           </label>
           <button type="submit" className="min-h-11 self-start rounded-md bg-action px-4 text-sm font-medium hover:bg-action-hover">
             Speichern

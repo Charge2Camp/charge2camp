@@ -22,6 +22,7 @@ export interface ChargePoint {
   source: string;
   last_seen_at: string;
   is_active: boolean;
+  manual_override: boolean;
 }
 
 export interface Connector {
