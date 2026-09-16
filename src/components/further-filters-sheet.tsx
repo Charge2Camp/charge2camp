@@ -38,7 +38,7 @@ export function FurtherFiltersSheet({
             className="ml-auto flex h-full w-full max-w-sm flex-col overflow-hidden bg-white dark:bg-neutral-900"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-black/10 p-4 pt-[calc(1rem+env(safe-area-inset-top))] dark:border-white/10">
+            <div className="flex items-center justify-between border-b border-black/10 p-4 pt-[calc(1rem+var(--safe-top))] dark:border-white/10">
               <h2 className="text-lg font-semibold">Weitere Filter</h2>
               <button
                 type="button"
@@ -49,7 +49,7 @@ export function FurtherFiltersSheet({
                 ×
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">{children}</div>
+            <div className="flex-1 overflow-y-auto p-4 pb-[calc(1rem+var(--safe-bottom))]">{children}</div>
           </div>
         </div>
       )}

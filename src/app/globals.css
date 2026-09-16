@@ -37,13 +37,13 @@
 /* Auf der mobilen Vollbild-Ladepunkte-Karte (charging-station-map-explorer.tsx)
  * liegen "Trefferzahl"/"Filter"/"Liste" als eigene Pills ueber der Karte,
  * mit zusaetzlichem Sicherheitsabstand fuer Notch/Dynamic Island
- * (env(safe-area-inset-top)). MapLibres eigene oben-rechts-Bedienelemente
+ * (var(--safe-top)). MapLibres eigene oben-rechts-Bedienelemente
  * kennen diesen Abstand nicht und lagen dadurch mit "Filter"/"Liste"
  * uebereinander (Nutzerfeedback). Ab 768px (Desktop-Box-Kartenansicht,
  * kein Sicherheitsabstand noetig) bewusst unveraendert. */
 @media (max-width: 767px) {
   .maplibregl-ctrl-top-right {
-    margin-top: calc(env(safe-area-inset-top) + 3.5rem);
+    margin-top: calc(var(--safe-top) + 3.5rem);
   }
 }
 
@@ -79,6 +79,18 @@
   /* --font-display/--font-ui werden von next/font ueber die className am
      <html>-Tag gesetzt (layout.tsx), nicht hier -- next/font hostet die
      Schriftdateien selbst statt sie ueber Google Fonts nachzuladen. */
+
+  /* Fallback-Werte, direkt aus env() -- gelten, bis safe-area-sync.tsx sie
+     per JS mit einem gemessenen Pixelwert ueberschreibt (siehe dort fuer
+     den Hintergrund: env(safe-area-inset-*) wird in dem als Home-Screen-
+     App gestarteten Standalone-Modus auf mehreren getesteten iPhones
+     zuverlaessig als 0 ausgewertet, obwohl viewport-fit=cover, die
+     Apple-/Standard-"capable"-Meta-Tags UND ein Web-App-Manifest korrekt
+     gesetzt sind -- ein bekanntes WebKit-/Next.js-Verhalten, siehe
+     safe-area-sync.tsx). Alle Tailwind-Utilities nutzen ausschliesslich
+     diese Variablen statt env() direkt. */
+  --safe-top: env(safe-area-inset-top);
+  --safe-bottom: env(safe-area-inset-bottom);
 }
 
 @theme inline {

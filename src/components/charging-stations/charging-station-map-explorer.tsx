@@ -419,14 +419,14 @@ export function ChargingStationMapExplorer({
       {viewMode === "map" ? (
         <>
           {/* bottom-Wert muss exakt der tatsaechlichen Bottom-Tab-Bar-Hoehe
-              entsprechen (4rem + env(safe-area-inset-bottom), siehe
+              entsprechen (4rem + var(--safe-bottom), siehe
               bottom-tab-bar-client.tsx/layout.tsx) -- ein fixer bottom-16
               (nur 4rem, ohne Safe-Area) liess die Karte in der als
               Home-Screen-App gestarteten Standalone-Ansicht (dort waechst
               die Tab-Bar um den Home-Indicator-Abstand) am unteren Rand
               hinter der Bar verschwinden, in der normalen Mobile-Browser-
               Ansicht dagegen nicht (Nutzerfeedback). */}
-          <div className="fixed inset-x-0 top-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] overflow-hidden md:relative md:inset-auto md:h-[75vh] md:min-h-[420px] md:rounded-xl md:border md:border-black/10 md:dark:border-white/10">
+          <div className="fixed inset-x-0 top-0 bottom-[calc(4rem+var(--safe-bottom))] overflow-hidden md:relative md:inset-auto md:h-[75vh] md:min-h-[420px] md:rounded-xl md:border md:border-black/10 md:dark:border-white/10">
           {/* Mobil/Touch: onMarkerClick+selectedId oeffnen das eigene
               Bottom-Sheet statt des MapLibre-Popups (siehe isTouchMap oben).
               Der ausgewaehlte Pin wird dadurch nebenbei groesser statt
@@ -456,7 +456,7 @@ export function ChargingStationMapExplorer({
               map-view.tsx) liegen, sonst koennen Marker "Trefferzahl"/
               "Filter"/"Liste" ueberdecken (Nutzerfeedback). Gleiche Ebene
               wie Popups/MapLibres eigene Bedienelemente, siehe globals.css. */}
-          <div className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-2 p-3 pt-[calc(0.75rem+env(safe-area-inset-top))] md:pt-3">
+          <div className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-2 p-3 pt-[calc(0.75rem+var(--safe-top))] md:pt-3">
             <span className="pointer-events-auto rounded-full bg-white/95 px-3 py-1.5 text-sm font-medium shadow-md dark:bg-neutral-900/95">
               {isFetchingViewport ? "Lädt…" : `${stationCountLabel} Ladepunkte`}
             </span>
@@ -562,7 +562,7 @@ export function ChargingStationMapExplorer({
             className="fixed inset-x-0 bottom-0 z-50 flex max-h-[85vh] flex-col overflow-hidden rounded-t-2xl bg-white dark:bg-neutral-900 md:inset-y-0 md:left-0 md:right-auto md:bottom-auto md:h-full md:max-h-none md:w-96 md:rounded-none md:rounded-r-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-black/10 p-4 pt-[calc(1rem+env(safe-area-inset-top))] dark:border-white/10">
+            <div className="flex items-center justify-between border-b border-black/10 p-4 pt-[calc(1rem+var(--safe-top))] dark:border-white/10">
               <h2 className="text-lg font-semibold">Filter</h2>
               <button
                 type="button"
@@ -580,7 +580,7 @@ export function ChargingStationMapExplorer({
                 <form>-Elemente sind ungueltiges HTML und fuehrten dazu, dass
                 "Bewertung abschicken" wirkungslos blieb (Nutzerfeedback,
                 Konsole: "A React form was unexpectedly submitted"). */}
-            <form action="/ladepunkte" className="flex-1 overflow-y-auto p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+            <form action="/ladepunkte" className="flex-1 overflow-y-auto p-4 pb-[calc(1rem+var(--safe-bottom))]">
               {filterPanel}
             </form>
           </div>

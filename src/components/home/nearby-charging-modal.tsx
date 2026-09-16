@@ -141,7 +141,7 @@ export function NearbyChargingModal({ open, onClose }: { open: boolean; onClose:
   return (
     <div className="fixed inset-0 z-50 bg-black/50 sm:flex sm:items-center sm:justify-center sm:p-4">
       <div className="flex h-full w-full flex-col overflow-hidden bg-white dark:bg-neutral-900 sm:h-[85vh] sm:max-h-[720px] sm:w-full sm:max-w-2xl sm:rounded-lg">
-        <div className="flex items-center justify-between border-b border-black/10 p-4 pt-[calc(1rem+env(safe-area-inset-top))] dark:border-white/10 sm:pt-4">
+        <div className="flex items-center justify-between border-b border-black/10 p-4 pt-[calc(1rem+var(--safe-top))] dark:border-white/10 sm:pt-4">
           <h2 className="text-lg font-semibold">Ladesäule in der Nähe suchen</h2>
           <button
             type="button"
@@ -230,7 +230,7 @@ export function NearbyChargingModal({ open, onClose }: { open: boolean; onClose:
             )}
           </div>
 
-          <div className="border-t border-black/10 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] dark:border-white/10">
+          <div className="border-t border-black/10 p-4 pb-[calc(1rem+var(--safe-bottom))] dark:border-white/10">
             <Link
               href={`/ladepunkte${fullSearchParams.toString() ? `?${fullSearchParams.toString()}` : ""}`}
               onClick={onClose}

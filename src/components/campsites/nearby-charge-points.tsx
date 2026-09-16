@@ -62,7 +62,7 @@ export function NearbyChargePointsList({ points }: { points: LinkedChargePoint[]
           onClick={() => setSelectedId(null)}
         >
           <div
-            className="w-full max-w-sm rounded-t-lg bg-white p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] dark:bg-neutral-900 sm:rounded-lg sm:pb-5"
+            className="w-full max-w-sm rounded-t-lg bg-white p-5 pb-[calc(1.25rem+var(--safe-bottom))] dark:bg-neutral-900 sm:rounded-lg sm:pb-5"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-3">

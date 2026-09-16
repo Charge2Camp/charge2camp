@@ -231,7 +231,7 @@ export function StationBottomSheet({
           oberhalb der Bottom-Tab-Bar-Zone frei, die im Peek-/Half-Zustand
           (z-40 > z-[35] hier) davor liegt. */}
       <div
-        className="shrink-0 touch-none select-none pb-[calc(4rem+env(safe-area-inset-bottom))]"
+        className="shrink-0 touch-none select-none pb-[calc(4rem+var(--safe-bottom))]"
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}

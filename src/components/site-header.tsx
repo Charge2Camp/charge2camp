@@ -27,7 +27,7 @@ export async function SiteHeader() {
     // Kopfbereich in --c-base (dunkelgruen), siehe docs/design/brand-guide.md
     // Abschnitt 3 ("Kopfbereiche, Text, dunkle Flaechen") -- Referenz-
     // umsetzung in docs/design (website/index.html, .top). Das oberste
-    // Padding nutzt env(safe-area-inset-top) und respektiert so die
+    // Padding nutzt var(--safe-top) und respektiert so die
     // Notch/Dynamic Island, sobald die Seite randlos (viewport-fit=cover)
     // laeuft -- auf normalen Browsern ist der Wert 0 und aendert nichts.
     //
@@ -36,7 +36,7 @@ export async function SiteHeader() {
     // Bottom-Tab-Bar (5. Kachel, siehe bottom-tab-bar-client.tsx), damit
     // z. B. die Ladepunkte-Karte vollbild ohne obere Leiste laufen kann.
     // Ab md: weiterhin die einzige Desktop-Navigation, unveraendert.
-    <header className="relative hidden bg-base pt-[env(safe-area-inset-top)] md:block">
+    <header className="relative hidden bg-base pt-[var(--safe-top)] md:block">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-2">
         <div className="flex items-center gap-2">
           <Link href="/" className="flex items-center gap-2 py-2">

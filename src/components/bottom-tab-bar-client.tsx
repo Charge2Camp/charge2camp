@@ -57,7 +57,7 @@ export function BottomTabBarClient({ isLoggedIn, isAdmin }: { isLoggedIn: boolea
     <>
       <nav
         aria-label="Hauptnavigation"
-        className="fixed inset-x-0 bottom-0 z-40 bg-base pb-[env(safe-area-inset-bottom)] md:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 bg-base pb-[var(--safe-bottom)] md:hidden"
       >
         <ul className="flex">
           {TABS.map((tab) => (

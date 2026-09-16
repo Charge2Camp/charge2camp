@@ -4,6 +4,7 @@ import "./globals.css";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { BottomTabBar } from "@/components/bottom-tab-bar";
+import { SafeAreaSync } from "@/components/safe-area-sync";
 
 // charge2camp-Markentypografie (docs/design/brand-guide.md Abschnitt 4):
 // Manrope 700 fuer Ueberschriften, Inter 400/500 fuer Fliesstext/UI.
@@ -47,7 +48,7 @@ export const metadata: Metadata = {
   // Zeichnen unter dem Home-Indicator auswerten), fehlte dadurch der echte
   // Vollbild-/Safe-Area-Modus -- sichtbare Folge war ein cremefarbener
   // Streifen unterhalb der Bottom-Tab-Bar, obwohl deren eigenes
-  // env(safe-area-inset-bottom)-Padding korrekt gesetzt ist (Nutzerfeedback,
+  // var(--safe-bottom)-Padding korrekt gesetzt ist (Nutzerfeedback,
   // per Screenshot bestaetigt). Der veraltete Tag manuell ergaenzt, fuer
   // maximale Kompatibilitaet ueber alle iOS-Versionen hinweg.
   other: {
@@ -79,28 +80,21 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${manrope.variable} ${inter.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-surface text-text">
+        <SafeAreaSync />
         <SiteHeader />
         {/* Mobil (< md) hat KEINEN Header (siehe site-header.tsx, komplett
             ausgeblendet) -- ohne eigenes Top-Padding hier wuerde der
             Seiteninhalt in der als Home-Screen-App gestarteten Standalone-
             Ansicht (statusBarStyle "black-translucent", randlos) direkt
             unter der Statusleiste/Notch beginnen und dort teils verdeckt
-            wirken ("zu weit oben"). In der normalen Mobile-Browser-Ansicht
-            ist env(safe-area-inset-top) dagegen 0 (Safaris eigene Leiste
-            belegt den Bereich bereits) -- daher bewusst NICHT als fixer
-            Wert, sondern ueber env(), damit sich das Padding automatisch an
-            Browser- vs. Home-App-Kontext anpasst (Nutzerfeedback: "Screen
-            manchmal zu weit oben/falsch platziert, je nachdem ob Browser
-            oder Home-App"). Ab md: durch den eigenen Header ueberfluessig,
-            deshalb dort zurueckgesetzt.
+            wirken ("zu weit oben"). Ab md: durch den eigenen Header
+            ueberfluessig, deshalb dort zurueckgesetzt.
             Bottom-Tab-Bar (mobile) ist fixed -- Bodenabstand verhindert,
-            dass sie den unteren Seiteninhalt ueberdeckt, ebenfalls inkl.
-            env(safe-area-inset-bottom) aus demselben Grund (ohne den
-            Zusatz passt der Abstand nur in der normalen Mobile-Browser-
-            Ansicht, nicht in der um den Home-Indicator-Bereich gewachsenen
-            Standalone-Tab-Bar, siehe bottom-tab-bar-client.tsx
-            pb-[env(...)]). */}
-        <main className="flex-1 pt-[env(safe-area-inset-top)] pb-[calc(4rem+env(safe-area-inset-bottom))] md:pt-0 md:pb-0">
+            dass sie den unteren Seiteninhalt ueberdeckt.
+            --safe-top/--safe-bottom kommen aus safe-area-sync.tsx (per JS
+            gemessene env(safe-area-inset-*)-Werte, siehe dort fuer den
+            Hintergrund) statt env() hier direkt zu verwenden. */}
+        <main className="flex-1 pt-[var(--safe-top)] pb-[calc(4rem+var(--safe-bottom))] md:pt-0 md:pb-0">
           {children}
         </main>
         <SiteFooter />

@@ -47,7 +47,7 @@ export function ProfileSidebar({
         onClick={onClose}
         className="absolute inset-0 bg-black/50"
       />
-      <div className="absolute inset-y-0 right-0 flex w-72 max-w-[80vw] flex-col bg-card pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] shadow-xl">
+      <div className="absolute inset-y-0 right-0 flex w-72 max-w-[80vw] flex-col bg-card pt-[var(--safe-top)] pb-[var(--safe-bottom)] shadow-xl">
         <div className="flex items-center justify-between border-b border-line p-4">
           <h2 className="font-display text-lg font-bold">Mein Profil</h2>
           <button

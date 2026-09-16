@@ -41,7 +41,7 @@ export function CaravanEditDialog({
   return (
     <div className="fixed inset-0 z-50 bg-black/50 sm:flex sm:items-center sm:justify-center sm:p-4">
       <div className="flex h-full w-full flex-col overflow-hidden bg-white dark:bg-neutral-900 sm:h-auto sm:max-h-[85vh] sm:w-full sm:max-w-lg sm:rounded-lg">
-        <div className="flex items-center justify-between border-b border-black/10 p-4 pt-[calc(1rem+env(safe-area-inset-top))] dark:border-white/10 sm:pt-4">
+        <div className="flex items-center justify-between border-b border-black/10 p-4 pt-[calc(1rem+var(--safe-top))] dark:border-white/10 sm:pt-4">
           <h2 className="text-lg font-semibold">
             {caravan.manufacturer} {caravan.model} bearbeiten
           </h2>
@@ -55,7 +55,7 @@ export function CaravanEditDialog({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+        <div className="flex-1 overflow-y-auto p-4 pb-[calc(1rem+var(--safe-bottom))]">
           <CaravanForm models={models} caravan={caravan} onSaved={onClose} />
 
           <div className="mt-6 border-t border-black/10 pt-4 dark:border-white/10">
