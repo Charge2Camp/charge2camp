@@ -52,6 +52,18 @@ function daysAgoIso(days: number): string {
   return new Date(Date.now() - days * DAY_MS).toISOString();
 }
 
+/** Gleiche Wochenstart-Definition wie datenqualitaet/woche/page.tsx (letzter
+ * Montag 00:00) -- hier nur fuer die KPI-Kachel, die Detailseite macht die
+ * eigentliche Aufschluesselung. */
+function startOfWeekIso(): string {
+  const now = new Date();
+  const day = now.getDay();
+  const diffToMonday = day === 0 ? 6 : day - 1;
+  const monday = new Date(now.getTime() - diffToMonday * DAY_MS);
+  monday.setHours(0, 0, 0, 0);
+  return monday.toISOString();
+}
+
 export default async function DashboardPage() {
   const supabase = createServiceClient();
 
@@ -67,6 +79,8 @@ export default async function DashboardPage() {
     { count: segmentExportCount },
     { count: fullExportCount },
     { data: lastOcmImportRows },
+    { count: newChargePointCount },
+    { count: newCampsiteCount },
   ] = await Promise.all([
     supabase.schema("core").from("campsite").select("id", { count: "exact", head: true }),
     supabase.schema("core").from("charge_point").select("id", { count: "exact", head: true }),
@@ -84,12 +98,17 @@ export default async function DashboardPage() {
     supabase.schema("core").from("app_usage_event").select("id", { count: "exact", head: true }).eq("event_type", "route_segment_export"),
     supabase.schema("core").from("app_usage_event").select("id", { count: "exact", head: true }).eq("event_type", "route_full_export"),
     supabase.schema("core").rpc("last_ocm_import"),
+    supabase.schema("core").from("charge_point").select("id", { count: "exact", head: true }).gte("created_at", startOfWeekIso()),
+    supabase.schema("core").from("campsite").select("id", { count: "exact", head: true }).gte("created_at", startOfWeekIso()),
   ]);
   const lastOcmImport = lastOcmImportRows?.[0] as
     | { scope: string; status: string; record_count: number | null; finished_at: string | null; started_at: string }
     | undefined;
 
   const userCount = usersResult.data?.users.length ?? 0;
+  const weekStart = startOfWeekIso();
+  const newUserCount = (usersResult.data?.users ?? []).filter((u) => u.created_at >= weekStart).length;
+  const newThisWeekCount = (newChargePointCount ?? 0) + (newCampsiteCount ?? 0) + newUserCount;
 
   const qualityRows = (qualityResult.data ?? []) as { check_name: string; data: unknown }[];
   const countsByCheck = new Map<string, number>();
@@ -115,6 +134,7 @@ export default async function DashboardPage() {
           <KpiCard label="Campingplätze" value={campsiteCount ?? 0} href="/campingplaetze" />
           <KpiCard label="Ladestationen" value={chargePointCount ?? 0} href="/ladestationen" />
           <KpiCard label="Offene Meldungen" value={pendingReportCount ?? 0} href="/ladestationen/meldungen" />
+          <KpiCard label="Neu diese Woche" value={newThisWeekCount} href="/datenqualitaet/woche" />
         </div>
       </Section>
 

@@ -37,6 +37,7 @@ const NAV_GROUPS = [
     label: "Verwaltung",
     items: [
       { href: "/nutzer", label: "Nutzer" },
+      { href: "/datenqualitaet/woche", label: "Neu & geändert diese Woche" },
       { href: "/datenqualitaet/koordinaten", label: "Unplausible Koordinaten" },
     ],
   },
