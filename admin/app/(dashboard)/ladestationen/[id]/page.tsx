@@ -121,7 +121,13 @@ export default async function ChargePointDetailPage({ params }: { params: Promis
               Breitengrad (Latitude)
               <input
                 type="number"
-                step="0.000001"
+                // step="any" statt einer festen Nachkommastellen-Anzahl --
+                // aus PostGIS geography ausgelesene Koordinaten haben oft
+                // mehr Nachkommastellen als ein fixer step erlaubt (z.B.
+                // 48.1535782954786). Der Browser blockierte das Absenden
+                // sonst mit einer eigenen "ungueltiger Wert"-Meldung, auch
+                // wenn der Wert gar nicht angefasst wurde (Nutzerfeedback).
+                step="any"
                 min="-90"
                 max="90"
                 name="latitude"
@@ -133,7 +139,7 @@ export default async function ChargePointDetailPage({ params }: { params: Promis
               Längengrad (Longitude)
               <input
                 type="number"
-                step="0.000001"
+                step="any"
                 min="-180"
                 max="180"
                 name="longitude"

@@ -128,7 +128,7 @@ export default async function CampsiteDetailPage({ params }: { params: Promise<{
               Breitengrad (Latitude)
               <input
                 type="number"
-                step="0.000001"
+                step="any"
                 min="-90"
                 max="90"
                 name="latitude"
@@ -140,7 +140,7 @@ export default async function CampsiteDetailPage({ params }: { params: Promise<{
               Längengrad (Longitude)
               <input
                 type="number"
-                step="0.000001"
+                step="any"
                 min="-180"
                 max="180"
                 name="longitude"

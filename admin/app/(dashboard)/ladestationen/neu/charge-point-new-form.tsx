@@ -49,11 +49,11 @@ export function ChargePointNewForm() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <label className="flex flex-col gap-1 text-sm">
             Breitengrad (Latitude) *
-            <input type="number" step="0.000001" min="-90" max="90" name="latitude" required placeholder="47.7745" className={inputClass} />
+            <input type="number" step="any" min="-90" max="90" name="latitude" required placeholder="47.7745" className={inputClass} />
           </label>
           <label className="flex flex-col gap-1 text-sm">
             Längengrad (Longitude) *
-            <input type="number" step="0.000001" min="-180" max="180" name="longitude" required placeholder="12.1233" className={inputClass} />
+            <input type="number" step="any" min="-180" max="180" name="longitude" required placeholder="12.1233" className={inputClass} />
           </label>
         </div>
         <p className="text-xs text-text-muted">
