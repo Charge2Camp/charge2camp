@@ -5,20 +5,20 @@ import type { MetadataRoute } from "next";
 // Web-App-Manifest. Ab iOS 16.4 wertet Safari fuer zum Home-Bildschirm
 // hinzugefuegte Seiten zusaetzlich den Standard-Manifest aus.
 //
-// display: "fullscreen" statt "standalone" -- per Debug-Messung
-// (safe-area-debug.tsx) bestaetigt: im "standalone"-Modus war
-// window.innerHeight/visualViewport.height (841px) auf einem iPhone 14
-// Pro durchgehend 11px KLEINER als screen.height (852px), obwohl
-// env(safe-area-inset-bottom) korrekt gemessen und angewendet wurde
-// (siehe safe-area-sync.tsx) -- dieser Rest-Bereich liegt ausserhalb der
-// WKWebView-Zeichenflaeche und ist damit fuer KEIN CSS/JS auf der Seite
-// erreichbar (WebKit reserviert ihn nativ, nur echte Apps koennen dort
-// zeichnen). Sichtbare Folge: cremefarbener/weisser Streifen unterhalb
-// der Bottom-Tab-Bar, unabhaengig von allen Safe-Area-Fixes.
-// "fullscreen" blendet zusaetzlich die Statusleiste (Uhrzeit/Akku/Empfang)
-// komplett aus, in der Hoffnung, dass WebKit die WKWebView dafuer auf die
-// tatsaechliche volle Bildschirmhoehe vergroessert -- muss auf dem
-// betroffenen Geraet erneut per Debug-Overlay verifiziert werden.
+// display: "standalone" -- "fullscreen" wurde testweise ausprobiert
+// (per Debug-Messung, safe-area-debug.tsx), um eine per Geraet gemessene
+// 11px-Luecke zwischen window.innerHeight/visualViewport.height (841px)
+// und screen.height (852px) zu schliessen (WebKit reserviert diesen Rest
+// unterhalb des korrekt gemessenen env(safe-area-inset-bottom) nativ fuer
+// "Add to Home Screen"-Web-Apps, ausserhalb jeder von der Seite aus
+// erreichbaren Zeichenflaeche -- sichtbare Folge: cremefarbener/weisser
+// Streifen unterhalb der Bottom-Tab-Bar). Ergebnis: iOS ignoriert
+// display: "fullscreen" fuer Home-Screen-Web-Apps komplett (Statusleiste
+// blieb sichtbar, exakt dieselben 841/852px wie zuvor) -- daher zurueck
+// auf "standalone", das echte (und einzig von iOS unterstuetzte)
+// Verhalten. Die Luecke ist eine harte WebKit-Plattformgrenze fuer
+// Home-Screen-Web-Apps (nicht fuer echte native Apps) und bleibt bis zur
+// spaeteren nativen App-Store-App bestehen.
 // `background_color` entspricht der Flaechenfarbe der meisten Seiten
 // (--c-surface), damit der kurze Splash-Screen beim Start nicht mit einem
 // Farbsprung auffaellt.
@@ -29,7 +29,7 @@ export default function manifest(): MetadataRoute.Manifest {
     description:
       "Finde Campingplätze und plane deine Route mit anhängertauglichen Ladestopps.",
     start_url: "/",
-    display: "fullscreen",
+    display: "standalone",
     background_color: "#F2F0E8",
     theme_color: "#0F3B36",
     icons: [

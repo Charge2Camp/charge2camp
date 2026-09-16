@@ -9,21 +9,22 @@ import { useEffect } from "react";
  * Tailwind-Utilities im Projekt nutzen ausschliesslich var(--safe-top)/
  * var(--safe-bottom), nirgends mehr env(...) direkt.
  *
- * Grund: auf mehreren frisch installierten iPhones (Cache geleert, Icon neu
- * hinzugefuegt, mit Web-App-Manifest + beiden apple-/mobile-web-app-capable-
- * Meta-Tags) liefert env(safe-area-inset-bottom) in der als Home-Screen-App
- * gestarteten Standalone-Ansicht durchgehend 0 -- sichtbar direkt beim
- * allerersten Render, nicht erst nach einer Client-seitigen Navigation
- * (Nutzerfeedback, per Screenshot bestaetigt: cremefarbener Streifen im
- * Home-Indicator-Bereich unterhalb der Bottom-Tab-Bar). Das ist ein
- * bekanntes WebKit-Verhalten -- der korrekte Wert wird oft erst NACH dem
- * ersten Layout-Durchlauf verlaesslich berechnet (u. a. dokumentiert im
- * Umfeld von vercel/next.js Diskussion #81264 zu genau diesem Symptom).
- * Deshalb hier: wiederholt per JS ueber ein unsichtbares Hilfselement
- * nachmessen (bei Mount, nach Layout-Wechseln, beim Zurueckkehren aus dem
- * Hintergrund, bei Drehung) und NUR einen plausiblen (> 0) Messwert
- * uebernehmen -- ein zurueckgesetztes env() liefert 0 und darf einen zuvor
- * korrekt gemessenen Wert nicht wieder ueberschreiben.
+ * Per Debug-Messung auf einem betroffenen iPhone bestaetigt: env() selbst
+ * liefert korrekt 34px (kein Bug hier) -- der urspruenglich gemeldete
+ * cremefarbene Streifen unterhalb der Bottom-Tab-Bar liegt an einer davon
+ * UNABHAENGIGEN, harten WebKit-Plattformgrenze fuer "Add to Home Screen"-
+ * Web-Apps (window.innerHeight/visualViewport.height war 11px kleiner als
+ * screen.height -- ein Bereich ausserhalb jeder von der Seite erreichbaren
+ * Zeichenflaeche, siehe manifest.ts). Diese Komponente bleibt trotzdem
+ * bestehen als generelle Absicherung gegen das bekannte, verwandte
+ * WebKit-/Next.js-Verhalten, dass env(safe-area-inset-*) nach einer
+ * Client-seitigen Navigation (next/link) unter bestimmten Bedingungen auf
+ * 0 zurueckgesetzt werden kann (u. a. dokumentiert in vercel/next.js
+ * Diskussion #81264) -- wiederholt per JS ueber ein unsichtbares
+ * Hilfselement nachmessen (bei Mount, nach dem ersten Layout-Durchlauf,
+ * beim Zurueckkehren aus dem Hintergrund, bei Drehung) und NUR einen
+ * plausiblen (> 0) Messwert uebernehmen, damit ein zurueckgesetztes env()
+ * einen zuvor korrekt gemessenen Wert nicht wieder ueberschreibt.
  */
 function measureInsetPx(side: "top" | "bottom"): number {
   const probe = document.createElement("div");

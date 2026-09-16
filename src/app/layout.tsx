@@ -5,7 +5,6 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { BottomTabBar } from "@/components/bottom-tab-bar";
 import { SafeAreaSync } from "@/components/safe-area-sync";
-import { SafeAreaDebug } from "@/components/safe-area-debug";
 
 // charge2camp-Markentypografie (docs/design/brand-guide.md Abschnitt 4):
 // Manrope 700 fuer Ueberschriften, Inter 400/500 fuer Fliesstext/UI.
@@ -44,14 +43,12 @@ export const metadata: Metadata = {
   // veraltete <meta name="apple-mobile-web-app-capable"> (siehe
   // node_modules/next/dist/docs/.../generate-metadata.md, Abschnitt
   // appleWebApp -- AGENTS.md warnt genau vor solchen Breaking Changes).
-  // Auf iOS-Versionen, die den Standard-Tag noch nicht respektieren (oder
-  // ihn nur fuers Verstecken der Safari-Leiste, nicht aber fuer randloses
-  // Zeichnen unter dem Home-Indicator auswerten), fehlte dadurch der echte
-  // Vollbild-/Safe-Area-Modus -- sichtbare Folge war ein cremefarbener
-  // Streifen unterhalb der Bottom-Tab-Bar, obwohl deren eigenes
-  // var(--safe-bottom)-Padding korrekt gesetzt ist (Nutzerfeedback,
-  // per Screenshot bestaetigt). Der veraltete Tag manuell ergaenzt, fuer
-  // maximale Kompatibilitaet ueber alle iOS-Versionen hinweg.
+  // Fuer maximale Kompatibilitaet ueber alle iOS-Versionen hinweg beide
+  // Tags gesetzt. (War zwischenzeitlich Verdaechtiger fuer einen
+  // gemeldeten weissen Streifen unterhalb der Bottom-Tab-Bar -- per
+  // Debug-Messung inzwischen widerlegt, siehe safe-area-sync.tsx/
+  // manifest.ts fuer die tatsaechliche Ursache, eine harte
+  // WKWebView-Groessenbegrenzung.)
   other: {
     "apple-mobile-web-app-capable": "yes",
   },
@@ -82,7 +79,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col bg-surface text-text">
         <SafeAreaSync />
-        <SafeAreaDebug />
         <SiteHeader />
         {/* Mobil (< md) hat KEINEN Header (siehe site-header.tsx, komplett
             ausgeblendet) -- ohne eigenes Top-Padding hier wuerde der
