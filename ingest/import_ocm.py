@@ -83,7 +83,7 @@ on conflict (external_key) do update set
     access_type = case when charge_point.manual_override then charge_point.access_type else excluded.access_type end,
     is_operational = case when charge_point.manual_override then charge_point.is_operational else excluded.is_operational end,
     max_power_kw = case when charge_point.manual_override then charge_point.max_power_kw else excluded.max_power_kw end,
-    connector_count = excluded.connector_count,
+    connector_count = case when charge_point.manual_override then charge_point.connector_count else excluded.connector_count end,
     source_updated_at = excluded.source_updated_at,
     last_seen_at = now(),
     updated_at = now()
@@ -92,7 +92,7 @@ on conflict (external_key) do update set
     -- der Dublettenpruefung unten inaktiv angelegt) behaelt ihren Status,
     -- ein erneuter Import soll das nicht ueberschreiben. Nur beim
     -- ERSTMALIGEN Insert (kein Conflict) greift %(initial_is_active)s.
-returning id
+returning id, manual_override
 """
 
 # Nutzerwunsch (siehe Konversation "was passiert, wenn OCM eine Saeule
@@ -347,9 +347,15 @@ def main() -> None:
                     parsed["initial_is_active"] = not has_nearby_manual
 
                     cur.execute(UPSERT_CORE_SQL, parsed)
-                    charge_point_id = cur.fetchone()[0]
+                    charge_point_id, manual_override = cur.fetchone()
 
-                    replace_connectors(cur, charge_point_id, parsed["_connections"], unknown_connection_types)
+                    # Bei fixierten Stationen (Admin-Korrektur, siehe
+                    # manual_override-Kommentar oben) auch die Anschluesse
+                    # unangetastet lassen -- replace_connectors loescht sonst
+                    # ALLE bestehenden Zeilen und schreibt die OCM-Version
+                    # neu, unabhaengig vom Stationsfeld-Schutz oben.
+                    if not manual_override:
+                        replace_connectors(cur, charge_point_id, parsed["_connections"], unknown_connection_types)
 
                     state["record_count"] += 1
 

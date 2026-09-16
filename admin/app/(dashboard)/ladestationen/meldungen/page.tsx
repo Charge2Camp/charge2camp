@@ -15,11 +15,22 @@ export default async function TrailerReportsPage() {
   const pendingReports = (reports ?? []) as TrailerReport[];
 
   const keys = Array.from(new Set(pendingReports.map((r) => r.charge_point_key)));
-  const { data: stations } =
+  const [{ data: stations }, { data: overrides }] = await Promise.all([
     keys.length > 0
-      ? await supabase.schema("core").from("charge_point").select("id, external_key, name, operator").in("external_key", keys)
-      : { data: [] as { id: string; external_key: string; name: string | null; operator: string | null }[] };
+      ? supabase.schema("core").from("charge_point").select("id, external_key, name, operator").in("external_key", keys)
+      : Promise.resolve({ data: [] as { id: string; external_key: string; name: string | null; operator: string | null }[] }),
+    keys.length > 0
+      ? supabase.schema("enrich").from("trailer_suitability").select("charge_point_key").eq("origin", "admin_override").in("charge_point_key", keys)
+      : Promise.resolve({ data: [] as { charge_point_key: string }[] }),
+  ]);
   const stationByKey = new Map((stations ?? []).map((s) => [s.external_key, s]));
+  // Fuer diese Stationen hat ein Admin die Anhaengertauglichkeit bereits
+  // manuell fixiert (siehe overrideTrailerSuitability) -- "Annehmen" nimmt
+  // die Meldung zwar weiterhin in die Warteschlange auf, aendert die
+  // fixierte Einstufung aber bewusst NICHT mehr (siehe
+  // 20261001010000_protect_admin_override_from_moderation.sql). Ohne diesen
+  // Hinweis wirkt "Annehmen" sonst wie ein Bug ("nichts passiert").
+  const overriddenKeys = new Set((overrides ?? []).map((o) => o.charge_point_key));
 
   return (
     <div className="flex flex-col gap-4">
@@ -50,6 +61,11 @@ export default async function TrailerReportsPage() {
                   {report.drive_through !== null && `, Drive-Through: ${report.drive_through ? "ja" : "nein"}`}
                 </p>
                 {report.notes && <p className="text-text-muted">{report.notes}</p>}
+                {overriddenKeys.has(report.charge_point_key) && (
+                  <p className="text-status-busy">
+                    Anhängertauglichkeit hier bereits admin-fixiert -- &quot;Annehmen&quot; ändert die Einstufung nicht.
+                  </p>
+                )}
               </div>
               <div className="flex gap-2">
                 <form action={moderateReport.bind(null, report.id, "approve")}>

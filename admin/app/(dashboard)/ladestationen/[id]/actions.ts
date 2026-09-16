@@ -18,7 +18,13 @@ export async function updateChargePoint(chargePointId: string, formData: FormDat
     access_type: (formData.get("access_type") as string) || null,
     is_operational: formData.get("is_operational") === "1",
     max_power_kw: formData.get("max_power_kw") ? Number(formData.get("max_power_kw")) : null,
-    manual_override: formData.get("manual_override") === "1",
+    // Jedes Speichern hier ist eine bewusste Admin-Korrektur -- die soll nie
+    // ohne Rueckfrage vom naechtlichen OCM-Reimport rueckgaengig gemacht
+    // werden (Nutzerfeedback: "generell nicht, egal welche Daten"). Bewusst
+    // KEINE Checkbox dafuer mehr (siehe vorherige Version) -- die war
+    // vergessbar und liess die Korrektur beim Nicht-Ankreuzen wirkungslos
+    // verfallen. Aufheben nur noch explizit ueber releaseManualOverride().
+    manual_override: true,
     updated_at: new Date().toISOString(),
   };
 
@@ -89,6 +95,19 @@ export async function overrideTrailerSuitability(chargePointKey: string, formDat
 
   if (error) throw new Error(error.message);
   revalidatePath(`/ladestationen`);
+}
+
+/** Hebt die Fixierung wieder auf -- ab dann darf der naechtliche OCM-Import
+ * Stammdaten fuer diese Station wieder normal aktualisieren. Bewusst eine
+ * eigene, explizite Aktion statt einer Checkbox im Speichern-Formular (siehe
+ * updateChargePoint): Freigeben ist ein bewusster, seltener Schritt, kein
+ * versehentliches Nebenprodukt eines Tippfehler-Fixes. */
+export async function releaseManualOverride(chargePointId: string) {
+  await requireAdmin();
+  const supabase = createServiceClient();
+  const { error } = await supabase.schema("core").from("charge_point").update({ manual_override: false }).eq("id", chargePointId);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/ladestationen/${chargePointId}`);
 }
 
 /** core.charge_point_geo (die einzige Quelle, aus der die Haupt-App
