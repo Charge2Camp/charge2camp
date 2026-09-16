@@ -37,6 +37,22 @@ export const metadata: Metadata = {
     statusBarStyle: "black-translucent",
     title: "charge2camp",
   },
+  // Diese Next.js-Version generiert aus appleWebApp.capable nur noch das
+  // standardisierte <meta name="mobile-web-app-capable">, nicht mehr das
+  // veraltete <meta name="apple-mobile-web-app-capable"> (siehe
+  // node_modules/next/dist/docs/.../generate-metadata.md, Abschnitt
+  // appleWebApp -- AGENTS.md warnt genau vor solchen Breaking Changes).
+  // Auf iOS-Versionen, die den Standard-Tag noch nicht respektieren (oder
+  // ihn nur fuers Verstecken der Safari-Leiste, nicht aber fuer randloses
+  // Zeichnen unter dem Home-Indicator auswerten), fehlte dadurch der echte
+  // Vollbild-/Safe-Area-Modus -- sichtbare Folge war ein cremefarbener
+  // Streifen unterhalb der Bottom-Tab-Bar, obwohl deren eigenes
+  // env(safe-area-inset-bottom)-Padding korrekt gesetzt ist (Nutzerfeedback,
+  // per Screenshot bestaetigt). Der veraltete Tag manuell ergaenzt, fuer
+  // maximale Kompatibilitaet ueber alle iOS-Versionen hinweg.
+  other: {
+    "apple-mobile-web-app-capable": "yes",
+  },
 };
 
 // Ohne dieses Viewport-Meta faellt iOS Safari auf eine Desktop-Layout-
