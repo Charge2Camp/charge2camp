@@ -43,7 +43,7 @@ const REVIEW_STATE_DESCRIPTIONS: Record<ReviewState, string> = {
   not_reviewed: "Es liegt noch keine Angabe zur Anhängertauglichkeit vor.",
 };
 
-const PERSONAL_COMPATIBILITY_ORDER: PersonalCompatibility[] = ["sehr_gut", "eingeschraenkt", "unklar", "keine_daten"];
+const PERSONAL_COMPATIBILITY_ORDER: PersonalCompatibility[] = ["sehr_gut", "eingeschraenkt", "unklar", "nicht_geeignet", "keine_daten"];
 
 const PERSONAL_COMPATIBILITY_DESCRIPTIONS: Record<PersonalCompatibility, string> = {
   sehr_gut:
@@ -51,6 +51,8 @@ const PERSONAL_COMPATIBILITY_DESCRIPTIONS: Record<PersonalCompatibility, string>
   eingeschraenkt:
     "Community-Bewertungen für deine Gespannlänge sind gemischt oder überwiegend negativ -- vor Ort besser vorsichtig planen.",
   unklar: "Es gibt zwar Bewertungen zu diesem Ladepunkt, aber (noch) zu wenige speziell für deine Gespannlänge.",
+  nicht_geeignet:
+    "Mindestens 90% aller Bewertungen zu diesem Ladepunkt sagen „nicht anhängertauglich“ -- das gilt dann für jedes Gespann, unabhängig von deiner hinterlegten Länge.",
   keine_daten:
     "Entweder ist noch kein Wohnwagen in deinem Profil hinterlegt (siehe „Mein Gespann“), oder es liegen für diesen Ladepunkt noch gar keine Bewertungen vor.",
 };

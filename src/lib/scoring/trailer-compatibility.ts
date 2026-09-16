@@ -11,6 +11,13 @@ const LARGE_TRAILER_THRESHOLD_M = 8.5;
 const MIN_REVIEWS_FOR_SUMMARY = 3;
 const MIN_REVIEWS_PER_BUCKET = 2;
 
+/** Nutzerwunsch: Sagen mind. 90% aller Bewertungen (echtes "nein", nicht
+ * "eingeschränkt") "nicht anhängertauglich", gilt das für JEDES Gespann --
+ * unabhängig von der hinterlegten Länge und OHNE Mindestanzahl an
+ * Bewertungen (auch eine einzelne "nein"-Bewertung triggert das, da 1/1 =
+ * 100% >= 90%). Das überstimmt die längenbasierte Bucket-Logik unten. */
+const NOT_SUITABLE_OVERRIDE_RATIO = 0.9;
+
 function suitabilityWeight(suitable: ChargingReview["suitable"]): number {
   if (suitable === "yes") return 1;
   if (suitable === "limited") return 0.5;
@@ -21,6 +28,12 @@ function positiveRatio(reviews: ChargingReview[]): number | null {
   if (reviews.length === 0) return null;
   const sum = reviews.reduce((acc, r) => acc + suitabilityWeight(r.suitable), 0);
   return sum / reviews.length;
+}
+
+function negativeRatio(reviews: ChargingReview[]): number | null {
+  if (reviews.length === 0) return null;
+  const negativeCount = reviews.filter((r) => r.suitable === "no").length;
+  return negativeCount / reviews.length;
 }
 
 export interface CommunitySuitabilitySummary {
@@ -36,6 +49,10 @@ export interface CommunitySuitabilitySummary {
    * vorliegt. */
   normalEvidenceCount: number;
   largeEvidenceCount: number;
+  /** Anteil echter "nein"-Bewertungen (nicht "eingeschränkt") an ALLEN
+   * Bewertungen, unabhängig von der Gespannlänge -- Grundlage für den
+   * NOT_SUITABLE_OVERRIDE_RATIO-Schwellwert in assessPersonalCompatibility. */
+  overallNegativeRatio: number | null;
   summary: string;
 }
 
@@ -66,6 +83,7 @@ export function summarizeCommunitySuitability(
   const normalEvidence = [...normalReviews, ...largePositiveReviews];
 
   const overallPositiveRatio = positiveRatio(reviews);
+  const overallNegativeRatio = negativeRatio(reviews);
   const normalTrailerRatio = positiveRatio(normalEvidence);
   const largeTrailerRatio = positiveRatio(largeReviews);
 
@@ -96,17 +114,19 @@ export function summarizeCommunitySuitability(
     largeTrailerRatio,
     normalEvidenceCount: normalEvidence.length,
     largeEvidenceCount: largeReviews.length,
+    overallNegativeRatio,
     summary,
   };
 }
 
-export type PersonalCompatibility = "sehr_gut" | "eingeschraenkt" | "unklar" | "keine_daten";
+export type PersonalCompatibility = "sehr_gut" | "eingeschraenkt" | "unklar" | "keine_daten" | "nicht_geeignet";
 
 export const PERSONAL_COMPATIBILITY_LABELS: Record<PersonalCompatibility, string> = {
   sehr_gut: "Für dein Gespann: Sehr gut geeignet",
   eingeschraenkt: "Für dein Gespann: Eingeschränkt geeignet",
   unklar: "Für dein Gespann: Keine eindeutige Einschätzung möglich",
   keine_daten: "Für dein Gespann: Noch keine Daten verfügbar",
+  nicht_geeignet: "Für dein Gespann: Nicht geeignet",
 };
 
 /**
@@ -130,6 +150,10 @@ export function assessPersonalCompatibility(
   userTrailerLengthM: number | null
 ): PersonalCompatibility {
   if (userTrailerLengthM === null) return "keine_daten";
+
+  if (summary.overallNegativeRatio !== null && summary.overallNegativeRatio >= NOT_SUITABLE_OVERRIDE_RATIO) {
+    return "nicht_geeignet";
+  }
 
   const isLargeTrailer = userTrailerLengthM > LARGE_TRAILER_THRESHOLD_M;
   const relevantRatio = isLargeTrailer ? summary.largeTrailerRatio : summary.normalTrailerRatio;
