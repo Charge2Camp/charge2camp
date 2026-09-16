@@ -418,7 +418,15 @@ export function ChargingStationMapExplorer({
     <div className="relative md:mt-6">
       {viewMode === "map" ? (
         <>
-          <div className="fixed inset-x-0 top-0 bottom-16 overflow-hidden md:relative md:inset-auto md:h-[75vh] md:min-h-[420px] md:rounded-xl md:border md:border-black/10 md:dark:border-white/10">
+          {/* bottom-Wert muss exakt der tatsaechlichen Bottom-Tab-Bar-Hoehe
+              entsprechen (4rem + env(safe-area-inset-bottom), siehe
+              bottom-tab-bar-client.tsx/layout.tsx) -- ein fixer bottom-16
+              (nur 4rem, ohne Safe-Area) liess die Karte in der als
+              Home-Screen-App gestarteten Standalone-Ansicht (dort waechst
+              die Tab-Bar um den Home-Indicator-Abstand) am unteren Rand
+              hinter der Bar verschwinden, in der normalen Mobile-Browser-
+              Ansicht dagegen nicht (Nutzerfeedback). */}
+          <div className="fixed inset-x-0 top-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] overflow-hidden md:relative md:inset-auto md:h-[75vh] md:min-h-[420px] md:rounded-xl md:border md:border-black/10 md:dark:border-white/10">
           {/* Mobil/Touch: onMarkerClick+selectedId oeffnen das eigene
               Bottom-Sheet statt des MapLibre-Popups (siehe isTouchMap oben).
               Der ausgewaehlte Pin wird dadurch nebenbei groesser statt
