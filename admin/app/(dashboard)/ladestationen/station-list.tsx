@@ -30,6 +30,8 @@ const FIELD_OPTIONS: { value: BulkEditableField; label: string }[] = [
   { value: "access_type", label: "Zugang" },
   { value: "country_code", label: "Land (ISO2)" },
   { value: "is_operational", label: "Betriebsbereit" },
+  { value: "trailer_verdict", label: "Anhängertauglichkeit (geprüft)" },
+  { value: "drive_through", label: "Drive-Through" },
 ];
 
 /** Massen-Bearbeitung (Nutzerwunsch): mehrere Stationen per Checkbox
@@ -77,7 +79,8 @@ export function StationListWithBulkEdit({ stations }: { stations: AdminListRow[]
   }
 
   function valueLabel(): string {
-    if (field === "is_operational") return value === "1" ? "Ja" : "Nein";
+    if (field === "is_operational" || field === "drive_through") return value === "1" ? "Ja" : "Nein";
+    if (field === "trailer_verdict") return VERDICT_LABELS[value] ?? value;
     return value;
   }
 
@@ -160,7 +163,10 @@ export function StationListWithBulkEdit({ stations }: { stations: AdminListRow[]
           <select
             name="field"
             value={field}
-            onChange={(e) => setField(e.target.value as BulkEditableField)}
+            onChange={(e) => {
+              setField(e.target.value as BulkEditableField);
+              setValue("");
+            }}
             className="min-h-11 rounded-md border border-line bg-card px-2 py-2 text-base text-text"
           >
             {FIELD_OPTIONS.map((f) => (
@@ -169,7 +175,7 @@ export function StationListWithBulkEdit({ stations }: { stations: AdminListRow[]
               </option>
             ))}
           </select>
-          {field === "is_operational" ? (
+          {field === "is_operational" || field === "drive_through" ? (
             <select
               name="value"
               value={value}
@@ -180,6 +186,20 @@ export function StationListWithBulkEdit({ stations }: { stations: AdminListRow[]
               <option value="">– auswählen –</option>
               <option value="1">Ja</option>
               <option value="0">Nein</option>
+            </select>
+          ) : field === "trailer_verdict" ? (
+            <select
+              name="value"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              required
+              className="min-h-11 rounded-md border border-line bg-card px-2 py-2 text-base text-text"
+            >
+              <option value="">– auswählen –</option>
+              <option value="yes">Anhängertauglich</option>
+              <option value="unhitch">Nur abgekoppelt erreichbar</option>
+              <option value="no">Nicht anhängertauglich</option>
+              <option value="unknown">Ungeprüft</option>
             </select>
           ) : field === "access_type" ? (
             <select
