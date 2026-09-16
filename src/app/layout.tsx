@@ -5,6 +5,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { BottomTabBar } from "@/components/bottom-tab-bar";
 import { SafeAreaSync } from "@/components/safe-area-sync";
+import { SafeAreaDebug } from "@/components/safe-area-debug";
 
 // charge2camp-Markentypografie (docs/design/brand-guide.md Abschnitt 4):
 // Manrope 700 fuer Ueberschriften, Inter 400/500 fuer Fliesstext/UI.
@@ -81,6 +82,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col bg-surface text-text">
         <SafeAreaSync />
+        <SafeAreaDebug />
         <SiteHeader />
         {/* Mobil (< md) hat KEINEN Header (siehe site-header.tsx, komplett
             ausgeblendet) -- ohne eigenes Top-Padding hier wuerde der
