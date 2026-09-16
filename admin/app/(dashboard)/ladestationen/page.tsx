@@ -45,6 +45,7 @@ export default async function ChargingStationsPage({
 }: {
   searchParams: Promise<{
     q?: string;
+    city?: string;
     page?: string;
     country?: string;
     operator?: string;
@@ -54,7 +55,7 @@ export default async function ChargingStationsPage({
     page_size?: string;
   }>;
 }) {
-  const { q, page: pageParam, country, operator, verdict, min_power: minPower, sort, page_size: pageSizeParam } =
+  const { q, city, page: pageParam, country, operator, verdict, min_power: minPower, sort, page_size: pageSizeParam } =
     await searchParams;
   const page = Math.max(1, Number(pageParam) || 1);
   const activeSort = SORT_OPTIONS.some((o) => o.value === sort) ? sort! : "name_asc";
@@ -66,6 +67,7 @@ export default async function ChargingStationsPage({
   const [{ data: rows, error }, { data: optionsRows }] = await Promise.all([
     supabase.schema("core").rpc("charge_point_admin_list", {
       p_q: q || null,
+      p_city: city || null,
       p_country_code: country || null,
       p_operator: operator || null,
       p_verdict: verdict || null,
@@ -96,7 +98,16 @@ export default async function ChargingStationsPage({
     operators: string[] | null;
   };
 
-  const baseParams = { q, country, operator, verdict, min_power: minPower, sort: activeSort, page_size: String(pageSize) };
+  const baseParams = {
+    q,
+    city,
+    country,
+    operator,
+    verdict,
+    min_power: minPower,
+    sort: activeSort,
+    page_size: String(pageSize),
+  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -114,13 +125,22 @@ export default async function ChargingStationsPage({
       </div>
 
       <form className="flex flex-col gap-2 rounded-md border border-line bg-card p-3" action="/ladestationen">
-        <input
-          type="text"
-          name="q"
-          defaultValue={q}
-          placeholder="Name oder Betreiber suchen…"
-          className="min-h-11 rounded-md border border-line px-3 py-2 text-base"
-        />
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <input
+            type="text"
+            name="q"
+            defaultValue={q}
+            placeholder="Name oder Betreiber suchen…"
+            className="min-h-11 rounded-md border border-line px-3 py-2 text-base"
+          />
+          <input
+            type="text"
+            name="city"
+            defaultValue={city}
+            placeholder="Stadt suchen…"
+            className="min-h-11 rounded-md border border-line px-3 py-2 text-base"
+          />
+        </div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5">
           <select name="country" defaultValue={country ?? ""} className="min-h-11 rounded-md border border-line px-2 py-2 text-base">
             <option value="">Alle Länder</option>
@@ -171,7 +191,7 @@ export default async function ChargingStationsPage({
           <button type="submit" className="min-h-11 rounded-md bg-action px-4 text-sm font-medium hover:bg-action-hover">
             Filtern
           </button>
-          {(q || country || operator || verdict || minPower || (sort && sort !== "name_asc")) && (
+          {(q || city || country || operator || verdict || minPower || (sort && sort !== "name_asc")) && (
             <Link
               href="/ladestationen"
               className="flex min-h-11 items-center rounded-md border border-line px-4 text-sm font-medium hover:bg-line/20"
