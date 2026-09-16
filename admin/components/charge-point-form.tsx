@@ -20,7 +20,14 @@ export function ChargePointForm({
   submitLabel = "Ladestation anlegen",
 }: {
   action: (formData: FormData) => void | Promise<void>;
-  defaultValues?: { latitude?: number | null; longitude?: number | null };
+  defaultValues?: {
+    latitude?: number | null;
+    longitude?: number | null;
+    address?: string | null;
+    postcode?: string | null;
+    city?: string | null;
+    countryCode?: string | null;
+  };
   submitLabel?: string;
 }) {
   const [connectorRows, setConnectorRows] = useState(1);
@@ -45,20 +52,31 @@ export function ChargePointForm({
         </div>
         <label className="flex flex-col gap-1 text-sm">
           Adresse
-          <input name="address" placeholder="Straße und Hausnummer" className={inputClass} />
+          <input
+            name="address"
+            defaultValue={defaultValues?.address ?? ""}
+            placeholder="Straße und Hausnummer"
+            className={inputClass}
+          />
         </label>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <label className="flex flex-col gap-1 text-sm">
             PLZ
-            <input name="postcode" className={inputClass} />
+            <input name="postcode" defaultValue={defaultValues?.postcode ?? ""} className={inputClass} />
           </label>
           <label className="flex flex-col gap-1 text-sm">
             Stadt
-            <input name="city" className={inputClass} />
+            <input name="city" defaultValue={defaultValues?.city ?? ""} className={inputClass} />
           </label>
           <label className="flex flex-col gap-1 text-sm">
             Land (ISO2)
-            <input name="country_code" maxLength={2} placeholder="DE" className={inputClass} />
+            <input
+              name="country_code"
+              defaultValue={defaultValues?.countryCode ?? ""}
+              maxLength={2}
+              placeholder="DE"
+              className={inputClass}
+            />
           </label>
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

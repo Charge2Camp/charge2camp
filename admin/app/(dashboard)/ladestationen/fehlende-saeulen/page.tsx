@@ -70,6 +70,14 @@ export default async function MissingStationReportsPage() {
                 ? `Koordinaten erkannt: ${report.extracted_latitude}, ${report.extracted_longitude}`
                 : "Keine Koordinaten automatisch erkannt -- bitte Link manuell öffnen."}
             </p>
+            {report.extracted_name && (
+              <p className="text-text-muted">Name/Betreiber-Hinweis aus dem Link: {report.extracted_name}</p>
+            )}
+            {(report.extracted_street || report.extracted_city) && (
+              <p className="text-text-muted">
+                Adresse (Reverse-Geocoding): {[report.extracted_street, report.extracted_postcode, report.extracted_city].filter(Boolean).join(", ")}
+              </p>
+            )}
             {report.notes && <p>{report.notes}</p>}
             <div className="flex gap-2">
               <Link

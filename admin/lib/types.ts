@@ -175,6 +175,11 @@ export interface MissingStationReport {
   google_maps_url: string;
   extracted_latitude: number | null;
   extracted_longitude: number | null;
+  extracted_name: string | null;
+  extracted_street: string | null;
+  extracted_postcode: string | null;
+  extracted_city: string | null;
+  extracted_country_code: string | null;
   notes: string | null;
   status: "pending" | "approved" | "rejected";
   created_charge_point_id: string | null;

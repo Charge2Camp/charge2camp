@@ -8,7 +8,7 @@ import { geocodeAddress } from "@/lib/providers/geocoding/nominatim";
 import { deriveCampsiteRating } from "@/lib/scoring/ev-camping-score";
 import { sanitizeProviderKeys } from "@/lib/charging-providers";
 import { actionErrorMessage, type ActionResult } from "@/lib/action-result";
-import { extractCoordinatesFromMapsLink } from "@/lib/maps-link";
+import { extractStationCandidateFromMapsLink } from "@/lib/maps-link";
 
 function parseOptionalNumber(value: FormDataEntryValue | null): number | null {
   if (!value || typeof value !== "string" || value.trim() === "") return null;
@@ -551,13 +551,18 @@ export async function reportMissingStation(formData: FormData): Promise<ActionRe
     const notesRaw = formData.get("notes");
     const notes = typeof notesRaw === "string" && notesRaw.trim() ? notesRaw.trim() : null;
 
-    const extracted = await extractCoordinatesFromMapsLink(googleMapsUrl);
+    const extracted = await extractStationCandidateFromMapsLink(googleMapsUrl);
 
     const { error } = await supabase.schema("enrich").from("missing_station_report").insert({
       user_id: userId,
       google_maps_url: googleMapsUrl,
       extracted_latitude: extracted?.latitude ?? null,
       extracted_longitude: extracted?.longitude ?? null,
+      extracted_name: extracted?.name ?? null,
+      extracted_street: extracted?.street ?? null,
+      extracted_postcode: extracted?.postcode ?? null,
+      extracted_city: extracted?.city ?? null,
+      extracted_country_code: extracted?.countryCode ?? null,
       notes,
     });
 

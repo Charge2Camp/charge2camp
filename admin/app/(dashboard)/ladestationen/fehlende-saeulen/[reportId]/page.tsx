@@ -44,6 +44,18 @@ export default async function MissingStationReportReviewPage({ params }: { param
             ? `Koordinaten automatisch erkannt: ${r.extracted_latitude}, ${r.extracted_longitude} (unten vorausgefüllt, prüfen/anpassen).`
             : "Keine Koordinaten automatisch erkannt -- bitte im geöffneten Link nachsehen und unten manuell eintragen."}
         </p>
+        {(r.extracted_street || r.extracted_city) && (
+          <p className="text-text-muted">
+            Adresse (Reverse-Geocoding, unten vorausgefüllt):{" "}
+            {[r.extracted_street, r.extracted_postcode, r.extracted_city].filter(Boolean).join(", ")}
+          </p>
+        )}
+        {r.extracted_name && (
+          <p className="text-text-muted">
+            Name/Betreiber-Hinweis aus dem Link: <span className="font-medium">{r.extracted_name}</span> -- nicht
+            automatisch übernommen (unklar, ob Stationsname oder Betreiber), bitte unten passend eintragen.
+          </p>
+        )}
         {r.notes && (
           <p>
             <span className="font-medium">Notiz des Nutzers:</span> {r.notes}
@@ -53,7 +65,14 @@ export default async function MissingStationReportReviewPage({ params }: { param
 
       <ChargePointForm
         action={approveMissingStationReport.bind(null, r.id)}
-        defaultValues={{ latitude: r.extracted_latitude, longitude: r.extracted_longitude }}
+        defaultValues={{
+          latitude: r.extracted_latitude,
+          longitude: r.extracted_longitude,
+          address: r.extracted_street,
+          postcode: r.extracted_postcode,
+          city: r.extracted_city,
+          countryCode: r.extracted_country_code,
+        }}
         submitLabel="Direkt einpflegen"
       />
     </div>
