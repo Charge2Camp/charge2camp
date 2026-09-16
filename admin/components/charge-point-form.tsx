@@ -1,17 +1,32 @@
 "use client";
 
 import { useState } from "react";
-import { addChargePoint } from "./actions";
 
 const CONNECTOR_STANDARDS = ["Type2", "CCS2", "CCS1", "CHAdeMO", "Schuko", "Type1", "Type2_Socket", "Tesla (Model S/X)", "NACS / Tesla Supercharger"];
 
 const inputClass = "min-h-11 rounded-md border border-line px-3 py-2 text-base";
 
-export function ChargePointNewForm() {
+/** Geteiltes Stammdaten-/Anschluss-/Anhaengertauglichkeits-Formular --
+ * urspruenglich nur fuer "Ladestation manuell anlegen"
+ * (ladestationen/neu/page.tsx), jetzt auch fuer die Freigabe einer
+ * Nutzer-Meldung (ladestationen/fehlende-saeulen/[reportId]/page.tsx)
+ * genutzt, mit vorausgefuellten Koordinaten aus dem gemeldeten Link. `action`
+ * und `submitLabel` sind austauschbar, die Feldstruktur bleibt fuer beide
+ * Aufrufer identisch (siehe admin/lib/charge-point-write.ts, das beide
+ * Formulare gegen dieselbe Schreiblogik ausliest). */
+export function ChargePointForm({
+  action,
+  defaultValues,
+  submitLabel = "Ladestation anlegen",
+}: {
+  action: (formData: FormData) => void | Promise<void>;
+  defaultValues?: { latitude?: number | null; longitude?: number | null };
+  submitLabel?: string;
+}) {
   const [connectorRows, setConnectorRows] = useState(1);
 
   return (
-    <form action={addChargePoint} className="flex flex-col gap-6">
+    <form action={action} className="flex flex-col gap-6">
       <section className="flex flex-col gap-4">
         <h2 className="text-lg font-semibold">Stammdaten</h2>
         <label className="flex flex-col gap-1 text-sm">
@@ -49,11 +64,31 @@ export function ChargePointNewForm() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <label className="flex flex-col gap-1 text-sm">
             Breitengrad (Latitude) *
-            <input type="number" step="any" min="-90" max="90" name="latitude" required placeholder="47.7745" className={inputClass} />
+            <input
+              type="number"
+              step="any"
+              min="-90"
+              max="90"
+              name="latitude"
+              required
+              defaultValue={defaultValues?.latitude ?? ""}
+              placeholder="47.7745"
+              className={inputClass}
+            />
           </label>
           <label className="flex flex-col gap-1 text-sm">
             Längengrad (Longitude) *
-            <input type="number" step="any" min="-180" max="180" name="longitude" required placeholder="12.1233" className={inputClass} />
+            <input
+              type="number"
+              step="any"
+              min="-180"
+              max="180"
+              name="longitude"
+              required
+              defaultValue={defaultValues?.longitude ?? ""}
+              placeholder="12.1233"
+              className={inputClass}
+            />
           </label>
         </div>
         <p className="text-xs text-text-muted">
@@ -164,7 +199,7 @@ export function ChargePointNewForm() {
       </section>
 
       <button type="submit" className="min-h-11 self-start rounded-md bg-action px-4 text-sm font-medium hover:bg-action-hover">
-        Ladestation anlegen
+        {submitLabel}
       </button>
     </form>
   );

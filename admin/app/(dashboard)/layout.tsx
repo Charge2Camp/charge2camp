@@ -15,6 +15,7 @@ const NAV_GROUPS = [
       { href: "/ladestationen/neu", label: "Anlegen" },
       { href: "/ladestationen/massenupload", label: "Massenupload" },
       { href: "/ladestationen/meldungen", label: "Meldungen" },
+      { href: "/ladestationen/fehlende-saeulen", label: "Fehlende Säulen" },
       { href: "/ladestationen/dubletten", label: "Dubletten" },
     ],
   },

@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ChargePointNewForm } from "./charge-point-new-form";
+import { ChargePointForm } from "@/components/charge-point-form";
+import { addChargePoint } from "./actions";
 
 export default function NewChargePointPage() {
   return (
@@ -14,7 +15,7 @@ export default function NewChargePointPage() {
           <code className="rounded bg-line/40 px-1">source = &quot;admin_manual&quot;</code> in der Datenbank.
         </p>
       </div>
-      <ChargePointNewForm />
+      <ChargePointForm action={addChargePoint} />
     </div>
   );
 }

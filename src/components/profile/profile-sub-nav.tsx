@@ -10,6 +10,7 @@ const TABS = [
   { href: "/profil/gespann", label: "Mein Gespann" },
   { href: "/profil/routen", label: "Meine Routen" },
   { href: "/profil/favoriten", label: "Favoriten" },
+  { href: "/profil/fehlende-saeule", label: "Säule melden" },
   { href: "/profil/bewertungen", label: "Bewertungen" },
   { href: "/profil/einstellungen", label: "Einstellungen" },
   { href: "/profil/legende", label: "Symbole & Begriffe" },

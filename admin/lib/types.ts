@@ -169,6 +169,20 @@ export interface CaravanModel {
   created_at: string;
 }
 
+export interface MissingStationReport {
+  id: number;
+  user_id: string;
+  google_maps_url: string;
+  extracted_latitude: number | null;
+  extracted_longitude: number | null;
+  notes: string | null;
+  status: "pending" | "approved" | "rejected";
+  created_charge_point_id: string | null;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
+  created_at: string;
+}
+
 export interface ChargingReview {
   id: string;
   user_id: string;

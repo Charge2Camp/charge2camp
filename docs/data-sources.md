@@ -187,6 +187,20 @@ dadurch gegenstandslos.
 Google Maps, PiNCAMP, camping.info sowie andere kommerzielle
 Campingportale werden nicht gescrapt oder ungeprüft übernommen.
 
+**Schmale, bewusst dokumentierte Ausnahme:** Meldet ein Nutzer eine fehlende
+Ladestation über "Mein Profil" per geteiltem Google-Maps-Link
+([src/app/profil/fehlende-saeule](../src/app/profil/fehlende-saeule)), löst
+[src/lib/maps-link.ts](../src/lib/maps-link.ts) NUR den Kurzlink-Redirect auf
+und liest die dabei entstehende finale URL (`response.url`) auf ein
+Koordinaten-Muster (`@lat,lon,zoom` bzw. `!3d!4d`) hin aus -- niemals
+`response.text()`/`.json()`, also nie Googles gerenderten Seiteninhalt, Namen,
+Adressen, Bewertungen oder Fotos. Das ist reine URL-Struktur-Analyse eines vom
+Nutzer selbst freiwillig geteilten Links, keine Übernahme aus Googles
+Datenbestand. Alle übrigen Felder (Name, Betreiber, Adresse, Anschlüsse,
+Anhängertauglichkeit) trägt ein Admin nach eigener Prüfung von Hand ein
+([admin/.../ladestationen/fehlende-saeulen](../admin/app/\(dashboard\)/ladestationen/fehlende-saeulen)) --
+nichts landet ohne Admin-Freigabe in `core.charge_point`.
+
 ## Demo-/Testdaten
 
 Die Seed-Daten in [supabase/seeds/01_demo_data.sql](../supabase/seeds/01_demo_data.sql)

@@ -83,6 +83,7 @@ export default async function DashboardPage() {
     { count: newCampsiteCount },
     { data: activeUserRows7d },
     { data: activeUserRows30d },
+    { count: pendingMissingStationCount },
   ] = await Promise.all([
     supabase.schema("core").from("campsite").select("id", { count: "exact", head: true }),
     supabase.schema("core").from("charge_point").select("id", { count: "exact", head: true }),
@@ -109,6 +110,7 @@ export default async function DashboardPage() {
     // und in JS dedupliezieren (unproblematisch bei der aktuellen Groesse).
     supabase.schema("core").from("app_usage_event").select("user_id").gte("created_at", daysAgoIso(7)),
     supabase.schema("core").from("app_usage_event").select("user_id").gte("created_at", daysAgoIso(30)),
+    supabase.schema("enrich").from("missing_station_report").select("id", { count: "exact", head: true }).eq("status", "pending"),
   ]);
   const lastOcmImport = lastOcmImportRows?.[0] as
     | { scope: string; status: string; record_count: number | null; finished_at: string | null; started_at: string }
@@ -145,6 +147,7 @@ export default async function DashboardPage() {
           <KpiCard label="Campingplätze" value={campsiteCount ?? 0} href="/campingplaetze" />
           <KpiCard label="Ladestationen" value={chargePointCount ?? 0} href="/ladestationen" />
           <KpiCard label="Offene Meldungen" value={pendingReportCount ?? 0} href="/ladestationen/meldungen" />
+          <KpiCard label="Fehlende Säulen (offen)" value={pendingMissingStationCount ?? 0} href="/ladestationen/fehlende-saeulen" />
           <KpiCard label="Neu diese Woche" value={newThisWeekCount} href="/datenqualitaet/woche" />
         </div>
       </Section>

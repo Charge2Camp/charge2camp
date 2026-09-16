@@ -8,6 +8,7 @@ import { geocodeAddress } from "@/lib/providers/geocoding/nominatim";
 import { deriveCampsiteRating } from "@/lib/scoring/ev-camping-score";
 import { sanitizeProviderKeys } from "@/lib/charging-providers";
 import { actionErrorMessage, type ActionResult } from "@/lib/action-result";
+import { extractCoordinatesFromMapsLink } from "@/lib/maps-link";
 
 function parseOptionalNumber(value: FormDataEntryValue | null): number | null {
   if (!value || typeof value !== "string" || value.trim() === "") return null;
@@ -531,5 +532,39 @@ export async function setPreferredChargingProviders(formData: FormData): Promise
     return { ok: true, data: undefined };
   } catch (err) {
     return { ok: false, error: actionErrorMessage(err, "Anbieter-Einstellungen konnten nicht gespeichert werden.") };
+  }
+}
+
+/** Meldung einer bei charge2camp fehlenden Ladestation (Nutzerwunsch, "Mein
+ * Profil" -- viele anhaengertaugliche Saeulen fehlen noch auf der Karte).
+ * Koordinaten-Extraktion aus dem geteilten Link (siehe lib/maps-link.ts) ist
+ * rein optional/best-effort und liest NUR die URL-Struktur, nie Googles
+ * Seiteninhalt (siehe docs/data-sources.md) -- schlaegt sie fehl, wird die
+ * Meldung TROTZDEM mit NULL-Koordinaten gespeichert, ein Admin kann den Link
+ * im Review manuell oeffnen (siehe admin/.../ladestationen/fehlende-saeulen).
+ * Landet in enrich.missing_station_report, status='pending', bis ein Admin
+ * sie einpflegt (-> core.charge_point, source="admin_manual") oder ablehnt. */
+export async function reportMissingStation(formData: FormData): Promise<ActionResult> {
+  try {
+    const { supabase, userId } = await requireUserId();
+    const googleMapsUrl = requireString(formData.get("google_maps_url"));
+    const notesRaw = formData.get("notes");
+    const notes = typeof notesRaw === "string" && notesRaw.trim() ? notesRaw.trim() : null;
+
+    const extracted = await extractCoordinatesFromMapsLink(googleMapsUrl);
+
+    const { error } = await supabase.schema("enrich").from("missing_station_report").insert({
+      user_id: userId,
+      google_maps_url: googleMapsUrl,
+      extracted_latitude: extracted?.latitude ?? null,
+      extracted_longitude: extracted?.longitude ?? null,
+      notes,
+    });
+
+    if (error) throw new Error(error.message);
+    revalidatePath("/profil/fehlende-saeule");
+    return { ok: true, data: undefined };
+  } catch (err) {
+    return { ok: false, error: actionErrorMessage(err, "Meldung konnte nicht gespeichert werden.") };
   }
 }
