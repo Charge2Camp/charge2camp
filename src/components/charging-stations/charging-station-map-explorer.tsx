@@ -218,7 +218,10 @@ export function ChargingStationMapExplorer({
   /** Text, wenn `stations` leer ist. */
   emptyMessage: string;
   /** Formularfelder (Quick-Filter + "weitere Filter"), inkl. Submit/Reset --
-   * gehoert zum umschliessenden <form> in ladepunkte/page.tsx. */
+   * das umschliessende <form action="/ladepunkte"> liegt direkt hier in der
+   * Komponente (siehe filterOpen-Panel unten), NICHT mehr in ladepunkte/
+   * page.tsx -- sonst waere auch das Bewertungsformular im Bottom-Sheet
+   * ungueltig darin verschachtelt gewesen. */
   filterPanel: ReactNode;
   activeFilterCount: number;
   /** Fuer das Bottom-Sheet der mobilen Kartenansicht (Favorit-Button/
@@ -562,7 +565,16 @@ export function ChargingStationMapExplorer({
                 ×
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">{filterPanel}</div>
+            {/* Eigenes <form> nur um den Filter-Inhalt, NICHT (wie frueher)
+                um die ganze Seite: ein <form> um die komplette Kartenansicht
+                verschachtelte darin zwangsläufig auch das Bewertungsformular
+                im Bottom-Sheet (StationBottomSheet) -- verschachtelte
+                <form>-Elemente sind ungueltiges HTML und fuehrten dazu, dass
+                "Bewertung abschicken" wirkungslos blieb (Nutzerfeedback,
+                Konsole: "A React form was unexpectedly submitted"). */}
+            <form action="/ladepunkte" className="flex-1 overflow-y-auto p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+              {filterPanel}
+            </form>
           </div>
         </div>
       )}

@@ -89,23 +89,26 @@ export default async function ChargingStationsPage({
     <div className="md:mx-auto md:max-w-6xl md:px-4 md:py-6">
       <h1 className="hidden text-2xl font-semibold md:block">Ladepunkte</h1>
 
-      <form action="/ladepunkte">
-        <ChargingStationMapExplorer
-          initialStations={stations}
-          filters={filters}
-          homeAddress={homeAddress}
-          emptyMessage={emptyMessage}
-          activeFilterCount={activeFilterCount}
-          isLoggedIn={Boolean(user)}
-          filterPanel={
-            <div className="flex flex-col gap-6">
-              <ChargingStationQuickFilters filters={filters} isLoggedIn={Boolean(user)} />
-              <hr className="border-black/10 dark:border-white/10" />
-              <ChargingStationFilterForm filters={filters} connectorTypes={connectorTypes} nameOptions={nameOptions} />
-            </div>
-          }
-        />
-      </form>
+      {/* Bewusst KEIN <form> hier aussen drum -- das wuerde sich um die
+          gesamte Kartenansicht inkl. Bottom-Sheet legen und darin
+          zwangsläufig auch das Bewertungsformular verschachteln (ungueltiges
+          HTML, siehe charging-station-map-explorer.tsx). Das <form> fuer die
+          Filterfelder liegt jetzt dort, enger um filterPanel gefasst. */}
+      <ChargingStationMapExplorer
+        initialStations={stations}
+        filters={filters}
+        homeAddress={homeAddress}
+        emptyMessage={emptyMessage}
+        activeFilterCount={activeFilterCount}
+        isLoggedIn={Boolean(user)}
+        filterPanel={
+          <div className="flex flex-col gap-6">
+            <ChargingStationQuickFilters filters={filters} isLoggedIn={Boolean(user)} />
+            <hr className="border-black/10 dark:border-white/10" />
+            <ChargingStationFilterForm filters={filters} connectorTypes={connectorTypes} nameOptions={nameOptions} />
+          </div>
+        }
+      />
     </div>
   );
 }
