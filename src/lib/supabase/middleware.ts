@@ -26,8 +26,12 @@ export async function updateSession(request: NextRequest) {
   );
 
   // Refreshes the auth token if needed. Required so Server Components can
-  // read a valid session from cookies.
-  await supabase.auth.getUser();
+  // read a valid session from cookies. Also returned so proxy.ts can
+  // redirect unauthenticated visitors away from login-pflichtigen Routen,
+  // ohne die Session hier ein zweites Mal separat abzufragen.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  return supabaseResponse;
+  return { response: supabaseResponse, user };
 }

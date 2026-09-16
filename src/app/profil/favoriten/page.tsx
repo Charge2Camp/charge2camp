@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { Favorite } from "@/types/database";
 
 export default async function FavoritenPage() {
@@ -23,12 +24,13 @@ export default async function FavoritenPage() {
     .filter((f) => f.entity_type === "charging_station")
     .map((f) => f.entity_id);
 
+  const adminClient = createAdminClient();
   const [{ data: campsites }, { data: stations }] = await Promise.all([
     campsiteIds.length
-      ? supabase.schema("core").from("campsite").select("id, name").in("id", campsiteIds)
+      ? adminClient.schema("core").from("campsite").select("id, name").in("id", campsiteIds)
       : Promise.resolve({ data: [] as { id: string; name: string }[] }),
     stationIds.length
-      ? supabase.schema("core").from("charge_point").select("id, name, operator").in("id", stationIds)
+      ? adminClient.schema("core").from("charge_point").select("id, name, operator").in("id", stationIds)
       : Promise.resolve({ data: [] as { id: string; name: string | null; operator: string | null }[] }),
   ]);
 

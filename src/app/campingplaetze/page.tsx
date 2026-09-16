@@ -7,6 +7,7 @@ import {
   parseCampsiteFilters,
 } from "@/lib/campsites";
 import { createClient } from "@/lib/supabase/server";
+import { requireUser } from "@/lib/require-user";
 import { CampsiteFilterForm } from "@/components/campsites/filter-form";
 import { CampsiteQuickFilters } from "@/components/campsites/quick-filters";
 import { FurtherFiltersSheet } from "@/components/further-filters-sheet";
@@ -33,10 +34,11 @@ export default async function CampsitesPage({
     filters.q || filters.country || filters.charging || filters.amenities.length > 0
   );
 
+  // Browsen erfordert Login (Sicherheits-Audit: Campingplatz-Daten sind
+  // die "DNA" des Produkts) -- siehe require-user.ts. Zusaetzliche
+  // Absicherung auf Proxy-Ebene in src/proxy.ts.
+  const user = await requireUser("/campingplaetze");
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
   const [campsites, countries, nameOptions, { data: profile }] = await Promise.all([
     hasActiveFilters ? fetchCampsites(filters) : user ? fetchFavoriteCampsites(user.id) : Promise.resolve([]),

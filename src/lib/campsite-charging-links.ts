@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { CoreCampsiteChargeLink, CoreChargePointGeo, TrailerSuitabilityRecord, TrailerVerdict } from "@/types/database";
 import { getTrailerPinState, TRAILER_PIN_ICON_SRC } from "@/lib/trailer-verdict";
 
@@ -46,7 +46,7 @@ const MAX_WALK_DURATION_S = 15 * 60;
  * des bisher per OSRM abgedeckten Gebiets leer sein (noch nicht Teil
  * dieser Umstellung, siehe docs/architecture.md). */
 export async function fetchLinkedChargePoints(campsiteId: string): Promise<LinkedChargePoint[]> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const { data: links, error } = await supabase
     .schema("core")
     .from("campsite_charge_link")
@@ -124,7 +124,7 @@ export async function fetchNearbyChargePoints(
   longitude: number,
   radiusKm: number
 ): Promise<NearbyChargePoint[]> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const { data, error } = await supabase.schema("core").rpc("charge_points_within_radius", {
     p_lat: latitude,
     p_lon: longitude,

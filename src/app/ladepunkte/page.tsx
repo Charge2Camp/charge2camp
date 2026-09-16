@@ -6,6 +6,7 @@ import {
   parseChargingStationFilters,
 } from "@/lib/charging-stations";
 import { createClient } from "@/lib/supabase/server";
+import { requireUser } from "@/lib/require-user";
 import { ChargingStationFilterForm } from "@/components/charging-stations/filter-form";
 import { ChargingStationQuickFilters } from "@/components/charging-stations/quick-filters";
 import { ChargingStationMapExplorer } from "@/components/charging-stations/charging-station-map-explorer";
@@ -17,10 +18,11 @@ export default async function ChargingStationsPage({
 }) {
   const filters = parseChargingStationFilters(await searchParams);
 
+  // Browsen erfordert Login (Sicherheits-Audit: Ladepunkte-Daten sind die
+  // "DNA" des Produkts) -- siehe require-user.ts. Zusaetzliche
+  // Absicherung auf Proxy-Ebene in src/proxy.ts.
+  const user = await requireUser("/ladepunkte");
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
   // Zuhause-Adresse fuer die initiale Kartenzentrierung (Nutzerwunsch,
   // statt des vorherigen -- zufällig wirkenden -- alphabetisch ersten

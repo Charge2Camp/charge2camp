@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchChargingStations, parseChargingStationFilters, type MapBounds } from "@/lib/charging-stations";
+import { requireApiUser } from "@/lib/api-guard";
 
 /**
  * Internes Endpoint fuer die kartenausschnitt-basierte Ladepunkte-Suche
@@ -14,6 +15,15 @@ import { fetchChargingStations, parseChargingStationFilters, type MapBounds } fr
  * 245" beim reinen Kartenbrowsen nie auftauchte (Nutzerfeedback).
  */
 export async function GET(request: NextRequest) {
+  // Sicherheits-Audit: Login + Rate-Limit Pflicht. Limit grosszuegiger als
+  // bei den anderen Endpunkten (120/min statt 60/min), da der Karten-Client
+  // dies bei aktivem Schwenken/Zoomen alle 500ms aufrufen kann (siehe
+  // VIEWPORT_FETCH_DEBOUNCE_MS in charging-station-map-explorer.tsx) --
+  // ein durchgehend geschwenkter Ausschnitt ueber eine volle Minute kaeme
+  // damit theoretisch auf bis zu 120 Aufrufe.
+  const guard = await requireApiUser("charge-points-viewport", { windowSeconds: 60, maxRequests: 120 });
+  if ("response" in guard) return guard.response;
+
   const sp = request.nextUrl.searchParams;
 
   const bboxRaw = sp.get("bbox");

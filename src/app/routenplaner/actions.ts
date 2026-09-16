@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { geocodeAddress } from "@/lib/providers/geocoding/nominatim";
 import { osrmProvider } from "@/lib/providers/routing/osrm";
 import type { LatLng, RouteResult } from "@/lib/providers/routing/types";
@@ -91,7 +92,6 @@ function sampleRoutePoints(geometry: LatLng[], spacingKm: number): LatLng[] {
  * exakt per corridorDistanceKm prueft -- die DB-seitige Vorfilterung spart
  * nur das Laden tausender offensichtlich zu weit entfernter Ladepunkte. */
 async function fetchCorridorChargingStations(
-  supabase: SupabaseServerClient,
   routeGeometry: LatLng[],
   detourToleranceKm: number
 ): Promise<RouteChargingStation[]> {
@@ -99,9 +99,13 @@ async function fetchCorridorChargingStations(
   const samplePoints = sampleRoutePoints(routeGeometry, spacingKm);
   const radiusM = Math.max(detourToleranceKm, 1) * 1000;
 
+  // Sicherheits-Audit: core.charge_points_within_radius ist nicht mehr an
+  // anon/authenticated granted (siehe 20261004000000_lock_down_core_
+  // enrich_dna.sql) -- Service-Role-Client statt der Nutzer-Session.
+  const adminClient = createAdminClient();
   const results = await Promise.all(
     samplePoints.map((point) =>
-      supabase.schema("core").rpc("charge_points_within_radius", {
+      adminClient.schema("core").rpc("charge_points_within_radius", {
         p_lat: point.latitude,
         p_lon: point.longitude,
         p_radius_m: radiusM,
@@ -369,7 +373,6 @@ async function buildRoutePlanResult({
   });
 
   const chargingStations = await fetchCorridorChargingStations(
-    supabase,
     route.geometry,
     settings.detourToleranceKm ?? DEFAULT_DETOUR_TOLERANCE_KM
   );
@@ -668,11 +671,7 @@ async function replanChargingStopInner(input: {
   const vehicle = await requireVehicle(supabase, input.vehicleId, user.id);
   const caravan = await loadCaravan(supabase, input.caravanId, user.id);
 
-  const chargingStations = await fetchCorridorChargingStations(
-    supabase,
-    input.route.geometry,
-    input.detourToleranceKm
-  );
+  const chargingStations = await fetchCorridorChargingStations(input.route.geometry, input.detourToleranceKm);
 
   // Dauerhaft blockierte Ladepunkte auch hier ausschliessen (frisch geladene
   // Kandidaten, siehe fetchCorridorChargingStations oben -- kennen die

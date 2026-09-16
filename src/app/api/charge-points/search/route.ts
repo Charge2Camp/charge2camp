@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { requireApiUser } from "@/lib/api-guard";
 import type { CoreChargePointGeo, CoreConnector, TrailerSuitabilityRecord, TrailerVerdict } from "@/types/database";
 
 /**
@@ -18,8 +19,14 @@ const MAX_LIMIT = 100;
 const FAST_CHARGER_TRAILER_YES = "yes";
 
 export async function GET(request: NextRequest) {
+  // Sicherheits-Audit: Login + Rate-Limit Pflicht (dieser Endpunkt war
+  // bisher komplett oeffentlich und lieferte den vollen Datensatz inkl.
+  // Anhaengertauglichkeit ohne jede Authentifizierung).
+  const guard = await requireApiUser("charge-points-search", { windowSeconds: 60, maxRequests: 60 });
+  if ("response" in guard) return guard.response;
+
   const sp = request.nextUrl.searchParams;
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   let query = supabase.schema("core").from("charge_point_geo").select("*");
 

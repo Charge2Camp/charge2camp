@@ -1,10 +1,17 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { requireUser } from "@/lib/require-user";
 
 const SUITABLE_LABELS = { yes: "Ja", limited: "Mit Einschränkungen", no: "Nein" } as const;
 
 export default async function CommunityPage() {
+  // Browsen erfordert Login (Sicherheits-Audit: zeigt Ladepunkt-/
+  // Campingplatz-Namen, Teil der "DNA" des Produkts) -- siehe
+  // require-user.ts.
+  await requireUser("/community");
   const supabase = await createClient();
+  const adminClient = createAdminClient();
 
   const [{ data: campsiteReviews }, { data: chargingReviews }] = await Promise.all([
     supabase
@@ -37,7 +44,7 @@ export default async function CommunityPage() {
   const campsiteReviewList = (campsiteReviews as CampsiteReviewRow[] | null) ?? [];
   const campsiteIds = [...new Set(campsiteReviewList.map((r) => r.campsite_id))];
   const { data: campsites } = campsiteIds.length
-    ? await supabase.schema("core").from("campsite").select("id, name").in("id", campsiteIds)
+    ? await adminClient.schema("core").from("campsite").select("id, name").in("id", campsiteIds)
     : { data: [] as { id: string; name: string }[] };
   const campsiteById = new Map((campsites ?? []).map((c) => [c.id, c]));
 
@@ -49,7 +56,7 @@ export default async function CommunityPage() {
   const chargingReviewList = (chargingReviews as ChargingReviewRow[] | null) ?? [];
   const chargingStationIds = [...new Set(chargingReviewList.map((r) => r.charging_station_id))];
   const { data: chargePoints } = chargingStationIds.length
-    ? await supabase.schema("core").from("charge_point").select("id, name, operator").in("id", chargingStationIds)
+    ? await adminClient.schema("core").from("charge_point").select("id, name, operator").in("id", chargingStationIds)
     : { data: [] as { id: string; name: string | null; operator: string | null }[] };
   const chargePointById = new Map((chargePoints ?? []).map((c) => [c.id, c]));
 

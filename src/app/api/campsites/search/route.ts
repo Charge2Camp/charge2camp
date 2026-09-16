@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { searchIndex } from "@/lib/search/meilisearch";
+import { requireApiUser } from "@/lib/api-guard";
 import type { CampsiteSearchRow } from "@/types/database";
 
 /**
@@ -67,6 +68,11 @@ function chargingFilter(value: string): string | null {
 }
 
 export async function GET(request: NextRequest) {
+  // Sicherheits-Audit: Login + Rate-Limit Pflicht (derselbe Datensatz wie
+  // /api/charge-points/search, nur ueber Meilisearch statt Postgres).
+  const guard = await requireApiUser("campsites-search", { windowSeconds: 60, maxRequests: 60 });
+  if ("response" in guard) return guard.response;
+
   const sp = request.nextUrl.searchParams;
 
   const q = sp.get("q") ?? "";

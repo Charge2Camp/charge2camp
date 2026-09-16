@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { requireApiUser } from "@/lib/api-guard";
 import { fetchChargingStationDetailExtras } from "@/lib/charging-station-detail";
 
 /**
@@ -13,13 +13,13 @@ import { fetchChargingStationDetailExtras } from "@/lib/charging-station-detail"
  */
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+
+  // Sicherheits-Audit: Login + Rate-Limit Pflicht.
+  const guard = await requireApiUser("charge-points-detail", { windowSeconds: 60, maxRequests: 120 });
+  if ("response" in guard) return guard.response;
 
   try {
-    const extras = await fetchChargingStationDetailExtras(id, user?.id);
+    const extras = await fetchChargingStationDetailExtras(id, guard.user.id);
     return NextResponse.json(extras);
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Unbekannter Fehler." }, { status: 500 });

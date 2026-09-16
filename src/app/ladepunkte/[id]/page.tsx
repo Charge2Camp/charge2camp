@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { requireUser } from "@/lib/require-user";
 import type { CoreChargePointGeo, CoreConnector, TrailerSuitabilityRecord } from "@/types/database";
 import { MapView } from "@/components/map/map-view";
 import { StationTechnicalDetails } from "@/components/charging-stations/station-technical-details";
@@ -28,22 +29,21 @@ export default async function ChargingStationDetailPage({
   // der den zwischengespeicherten Planungsstand wiederherstellt statt neu
   // zu beginnen -- siehe route-planner-form.tsx handleViewStationDetails.
   const { returnTo } = await searchParams;
-  const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Browsen erfordert Login (Sicherheits-Audit) -- siehe require-user.ts.
+  const user = await requireUser(`/ladepunkte/${id}`);
+  const adminClient = createAdminClient();
 
   const [{ data: station }, { data: connectors }] = await Promise.all([
-    supabase.schema("core").from("charge_point_geo").select("*").eq("id", id).maybeSingle(),
-    supabase.schema("core").from("connector").select("*").eq("charge_point_id", id),
+    adminClient.schema("core").from("charge_point_geo").select("*").eq("id", id).maybeSingle(),
+    adminClient.schema("core").from("connector").select("*").eq("charge_point_id", id),
   ]);
 
   if (!station) notFound();
   const s = station as CoreChargePointGeo;
   const stationConnectors = (connectors as CoreConnector[]) ?? [];
 
-  const { data: trailerRow } = await supabase
+  const { data: trailerRow } = await adminClient
     .schema("enrich")
     .from("trailer_suitability")
     .select("*")

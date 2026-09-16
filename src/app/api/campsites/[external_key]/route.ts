@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { requireApiUser } from "@/lib/api-guard";
 import { fetchLinkedChargePoints } from "@/lib/campsite-charging-links";
 import type { CoreCampsite, CoreConnector } from "@/types/database";
 
@@ -17,7 +18,11 @@ export async function GET(
   const { external_key: encodedKey } = await params;
   const externalKey = decodeURIComponent(encodedKey);
 
-  const supabase = await createClient();
+  // Sicherheits-Audit: Login + Rate-Limit Pflicht.
+  const guard = await requireApiUser("campsites-detail", { windowSeconds: 60, maxRequests: 60 });
+  if ("response" in guard) return guard.response;
+
+  const supabase = createAdminClient();
   const { data: campsite, error } = await supabase
     .schema("core")
     .from("campsite")

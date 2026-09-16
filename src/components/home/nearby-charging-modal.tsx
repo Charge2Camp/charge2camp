@@ -39,11 +39,16 @@ function buildViewportQuery(filters: QuickFilters, bounds: MapBoundsBox): string
  * (Anhängertauglichkeit, Schnelllader) und einer nach Entfernung
  * sortierten Trefferliste. Nutzt dasselbe Kartenausschnitt-basierte
  * Nachladen (/api/charge-points/viewport) wie die volle Ladepunkte-Seite
- * (charging-station-map-explorer.tsx) -- kein Login nötig. */
+ * (charging-station-map-explorer.tsx) -- die Startseite selbst bleibt zwar
+ * ohne Login erreichbar (reine Marketing-Landingpage), der Endpunkt
+ * dahinter erfordert seit dem Sicherheits-Audit aber ein Login (siehe
+ * require-user.ts/api-guard.ts) -- ohne Login zeigt dieses Popup deshalb
+ * einen Login-Hinweis statt einer irrefuehrenden "keine Ladepunkte"-Meldung. */
 export function NearbyChargingModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [filters, setFilters] = useState<QuickFilters>({ trailerVerdict: [], fastChargersOnly: false });
   const [stations, setStations] = useState<ChargingStationView[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [requiresLogin, setRequiresLogin] = useState(false);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [locationDenied, setLocationDenied] = useState(false);
   const boundsRef = useRef<MapBoundsBox | null>(null);
@@ -80,7 +85,13 @@ export function NearbyChargingModal({ open, onClose }: { open: boolean; onClose:
       try {
         const qs = buildViewportQuery(activeFilters, bounds);
         const res = await fetch(`/api/charge-points/viewport?${qs}`);
+        if (seq !== fetchSeqRef.current) return;
+        if (res.status === 401) {
+          setRequiresLogin(true);
+          return;
+        }
         if (!res.ok) return;
+        setRequiresLogin(false);
         const data = (await res.json()) as { stations?: ChargingStationView[] };
         if (seq !== fetchSeqRef.current) return;
         setStations(data.stations ?? []);
@@ -196,7 +207,14 @@ export function NearbyChargingModal({ open, onClose }: { open: boolean; onClose:
           </div>
 
           <div className="flex-1 overflow-y-auto p-4">
-            {sortedStations.length === 0 ? (
+            {requiresLogin ? (
+              <p className="text-sm text-black/50 dark:text-white/50">
+                <Link href="/login?redirect=/ladepunkte" className="text-route hover:underline" onClick={onClose}>
+                  Anmelden
+                </Link>{" "}
+                um Ladepunkte zu sehen.
+              </p>
+            ) : sortedStations.length === 0 ? (
               <p className="text-sm text-black/50 dark:text-white/50">
                 {isLoading ? "Lädt…" : "Keine Ladepunkte im aktuellen Kartenausschnitt -- Karte verschieben oder Filter anpassen."}
               </p>

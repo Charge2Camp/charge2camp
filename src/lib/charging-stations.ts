@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type {
   CoreChargePointGeo,
   CoreConnector,
@@ -81,7 +82,7 @@ export interface ChargingStationView extends CoreChargePointGeo {
  * fuer fetchChargingStations (Filtersuche) und fetchFavoriteChargingStations
  * (Favoriten-Liste) genutzt, damit beide dieselben Kartendaten liefern. */
 async function enrichStations(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: ReturnType<typeof createAdminClient>,
   stations: CoreChargePointGeo[]
 ): Promise<ChargingStationView[]> {
   const ids = stations.map((s) => s.id);
@@ -140,7 +141,7 @@ export async function fetchChargingStations(
   limit = 5000,
   bbox?: MapBounds
 ): Promise<ChargingStationView[]> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   let query = supabase.schema("core").from("charge_point_geo").select("*");
 
   if (filters.q) query = query.ilike("name", `%${filters.q}%`);
@@ -183,15 +184,16 @@ export async function fetchFavoriteChargingStations(userId: string): Promise<Cha
   const stationIds = ((favorites as Favorite[]) ?? []).map((f) => f.entity_id);
   if (stationIds.length === 0) return [];
 
-  const { data, error } = await supabase.schema("core").from("charge_point_geo").select("*").in("id", stationIds);
+  const adminClient = createAdminClient();
+  const { data, error } = await adminClient.schema("core").from("charge_point_geo").select("*").in("id", stationIds);
   if (error) throw new Error(error.message);
-  return enrichStations(supabase, (data as CoreChargePointGeo[]) ?? []);
+  return enrichStations(adminClient, (data as CoreChargePointGeo[]) ?? []);
 }
 
 /** Anzeigename je Ladepunkt (Name, falls vorhanden, sonst Betreiber),
  * unabhaengig von aktiven Filtern, fuer die Vorschlagsliste im Suchfeld. */
 export async function fetchChargingStationNameOptions(): Promise<string[]> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const { data, error } = await supabase
     .schema("core")
     .from("charge_point")
@@ -205,7 +207,7 @@ export async function fetchChargingStationNameOptions(): Promise<string[]> {
 }
 
 export async function fetchConnectorTypeOptions(): Promise<string[]> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const { data, error } = await supabase.schema("core").from("connector").select("standard").limit(5000);
   if (error) throw new Error(error.message);
 

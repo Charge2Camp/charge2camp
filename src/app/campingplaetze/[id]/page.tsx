@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { requireUser } from "@/lib/require-user";
 import type { CampsiteReview } from "@/types/database";
 import type { CampsiteSearchRow, CoreCampsite } from "@/types/database";
 import { fetchAmenityCatalog } from "@/lib/campsites";
@@ -59,15 +61,15 @@ export default async function CampsiteDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Browsen erfordert Login (Sicherheits-Audit) -- siehe require-user.ts.
+  const user = await requireUser(`/campingplaetze/${id}`);
+  const supabase = await createClient();
+  const adminClient = createAdminClient();
 
   const [{ data: campsite }, { data: searchRow }] = await Promise.all([
-    supabase.schema("core").from("campsite").select("*").eq("id", id).eq("is_active", true).maybeSingle(),
-    supabase.schema("core").from("campsite_search").select("*").eq("id", id).maybeSingle(),
+    adminClient.schema("core").from("campsite").select("*").eq("id", id).eq("is_active", true).maybeSingle(),
+    adminClient.schema("core").from("campsite_search").select("*").eq("id", id).maybeSingle(),
   ]);
 
   if (!campsite) notFound();

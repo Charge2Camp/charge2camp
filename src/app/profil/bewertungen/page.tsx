@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   CampsiteReviewList,
   type CampsiteReviewWithCampsite,
@@ -32,8 +33,9 @@ export default async function BewertungenPage() {
 
   const campsiteReviewRows = (campsiteReviews as CampsiteReviewWithCampsite[] | null) ?? [];
   const campsiteIds = [...new Set(campsiteReviewRows.map((r) => r.campsite_id))];
+  const adminClient = createAdminClient();
   const { data: campsites } = campsiteIds.length
-    ? await supabase.schema("core").from("campsite").select("id, name").in("id", campsiteIds)
+    ? await adminClient.schema("core").from("campsite").select("id, name").in("id", campsiteIds)
     : { data: [] as { id: string; name: string }[] };
   const campsiteById = new Map((campsites ?? []).map((c) => [c.id, c]));
   const campsiteReviewsWithCampsite = campsiteReviewRows.map((r) => ({
@@ -50,7 +52,7 @@ export default async function BewertungenPage() {
   const chargingReviewRows = (chargingReviews as ChargingReviewWithStation[] | null) ?? [];
   const chargingStationIds = [...new Set(chargingReviewRows.map((r) => r.charging_station_id))];
   const { data: chargePoints } = chargingStationIds.length
-    ? await supabase.schema("core").from("charge_point").select("id, name, operator").in("id", chargingStationIds)
+    ? await adminClient.schema("core").from("charge_point").select("id, name, operator").in("id", chargingStationIds)
     : { data: [] as { id: string; name: string | null; operator: string | null }[] };
   const chargePointById = new Map((chargePoints ?? []).map((c) => [c.id, c]));
   const chargingReviewsWithStation = chargingReviewRows.map((r) => ({

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { Favorite } from "@/types/database";
 
 export interface FavoriteDestinationOption {
@@ -22,12 +23,13 @@ export async function fetchFavoriteDestinations(userId: string): Promise<Favorit
     .filter((f) => f.entity_type === "charging_station")
     .map((f) => f.entity_id);
 
+  const adminClient = createAdminClient();
   const [{ data: campsites }, { data: stations }] = await Promise.all([
     campsiteIds.length
-      ? supabase.schema("core").from("campsite_search").select("id, name, lat, lon").in("id", campsiteIds)
+      ? adminClient.schema("core").from("campsite_search").select("id, name, lat, lon").in("id", campsiteIds)
       : Promise.resolve({ data: [] as { id: string; name: string; lat: number; lon: number }[] }),
     stationIds.length
-      ? supabase.schema("core").from("charge_point_geo").select("id, name, operator, lat, lon").in("id", stationIds)
+      ? adminClient.schema("core").from("charge_point_geo").select("id, name, operator, lat, lon").in("id", stationIds)
       : Promise.resolve({
           data: [] as { id: string; name: string | null; operator: string | null; lat: number; lon: number }[],
         }),

@@ -35,7 +35,7 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/profil");
+    router.push(searchParams.get("redirect") || "/profil");
     router.refresh();
   }
 

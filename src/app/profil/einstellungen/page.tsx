@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { BlockedStationsList, type BlockedStationOption } from "@/components/profile/blocked-stations-list";
 
 export default async function EinstellungenPage() {
@@ -18,7 +19,7 @@ export default async function EinstellungenPage() {
 
   const blockedStationIds = (blocked ?? []).map((row) => row.charging_station_id);
   const { data: stations } = blockedStationIds.length
-    ? await supabase.schema("core").from("charge_point").select("id, name, operator").in("id", blockedStationIds)
+    ? await createAdminClient().schema("core").from("charge_point").select("id, name, operator").in("id", blockedStationIds)
     : { data: [] as { id: string; name: string | null; operator: string | null }[] };
 
   const stationById = new Map((stations ?? []).map((s) => [s.id, s]));

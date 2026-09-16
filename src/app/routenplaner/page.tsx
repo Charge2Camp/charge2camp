@@ -1,5 +1,6 @@
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { requireUser } from "@/lib/require-user";
 import type { Caravan, Vehicle } from "@/types/database";
 import { fetchCampsiteDestinationOptions } from "@/lib/campsites";
 import { fetchFavoriteDestinations } from "@/lib/favorites";
@@ -15,12 +16,10 @@ export default async function RoutePlannerPage({
     resumeDraft?: string;
   }>;
 }) {
+  // Browsen/Routenplanung erfordert Login (Sicherheits-Audit) -- siehe
+  // require-user.ts.
+  const user = await requireUser("/routenplaner");
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) redirect("/login");
 
   const {
     savedRouteId,
@@ -50,7 +49,7 @@ export default async function RoutePlannerPage({
       .order("created_at", { ascending: false }),
     fetchCampsiteDestinationOptions(),
     destinationStationId
-      ? supabase
+      ? createAdminClient()
           .schema("core")
           .from("charge_point_geo")
           .select("name, operator, lat, lon")
