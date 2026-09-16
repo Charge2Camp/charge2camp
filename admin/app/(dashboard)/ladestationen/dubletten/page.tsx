@@ -44,9 +44,9 @@ const SORT_OPTIONS = [
 export default async function ChargePointDuplicatesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; q?: string; min_power?: string; sort?: string }>;
+  searchParams: Promise<{ page?: string; q?: string; min_power?: string; sort?: string; merged?: string; dismissed?: string }>;
 }) {
-  const { page: pageParam, q, min_power: minPowerParam, sort } = await searchParams;
+  const { page: pageParam, q, min_power: minPowerParam, sort, merged, dismissed } = await searchParams;
   const page = Math.max(1, Number(pageParam) || 1);
   const activeSort = SORT_OPTIONS.some((o) => o.value === sort) ? sort! : "power_desc";
   const minPower = minPowerParam ? Number(minPowerParam) : null;
@@ -152,6 +152,10 @@ export default async function ChargePointDuplicatesPage({
   const totalPages = Math.max(1, Math.ceil(sortedDuplicates.length / PAGE_SIZE));
   const pageDuplicates = sortedDuplicates.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const baseParams = { q, min_power: minPowerParam, sort: activeSort };
+  // An die Zusammenfuehren-/Keine-Dublette-Aktionen durchgereicht, damit man
+  // danach wieder bei denselben Filtern/derselben Seite landet, statt bei
+  // Seite 1 ohne Filter (Nutzerfeedback).
+  const returnQuery = buildQuery({ ...baseParams, page: String(page) });
 
   return (
     <div className="flex flex-col gap-4">
@@ -166,6 +170,12 @@ export default async function ChargePointDuplicatesPage({
           Datensatz bestehen bleibt.
         </p>
       </div>
+
+      {(merged === "1" || dismissed === "1") && (
+        <p className="rounded-md border border-route/40 bg-route/10 p-3 text-sm text-route">
+          {merged === "1" ? "Zusammenführung erfolgreich." : "Als „Keine Dublette“ gespeichert."}
+        </p>
+      )}
 
       <form className="flex flex-col gap-2 rounded-md border border-line bg-card p-3" action="/ladestationen/dubletten">
         <input
@@ -223,12 +233,12 @@ export default async function ChargePointDuplicatesPage({
               </div>
               <div className="flex shrink-0 gap-2">
                 <Link
-                  href={`/ladestationen/dubletten/${a.id}/${b.id}`}
+                  href={`/ladestationen/dubletten/${a.id}/${b.id}?${returnQuery}`}
                   className="min-h-11 rounded-md bg-action px-3 py-2 text-sm font-medium leading-none hover:bg-action-hover"
                 >
                   Zusammenführen
                 </Link>
-                <form action={dismissChargePointDuplicate.bind(null, d.key_a, d.key_b)}>
+                <form action={dismissChargePointDuplicate.bind(null, d.key_a, d.key_b, returnQuery)}>
                   <button
                     type="submit"
                     className="min-h-11 rounded-md border border-line px-3 py-2 text-sm font-medium leading-none hover:bg-line/20"

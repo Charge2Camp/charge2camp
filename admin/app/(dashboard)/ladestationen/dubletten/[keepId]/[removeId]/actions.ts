@@ -17,6 +17,7 @@ export async function mergeChargePoints(formData: FormData) {
   const survivorId = formData.get("survivor_id") as string;
   const aId = formData.get("a_id") as string;
   const bId = formData.get("b_id") as string;
+  const returnQuery = (formData.get("return_query") as string) ?? "";
   if (!survivorId || (survivorId !== aId && survivorId !== bId)) throw new Error("Ungültige Auswahl.");
   const otherId = survivorId === aId ? bId : aId;
 
@@ -40,5 +41,11 @@ export async function mergeChargePoints(formData: FormData) {
 
   revalidatePath("/ladestationen");
   revalidatePath("/ladestationen/dubletten");
-  redirect(`/ladestationen/${survivorId}`);
+  // Zurueck zur Dubletten-Liste (mit denselben Filtern/derselben Seite wie
+  // vorher) statt zur Detailseite des ueberlebenden Datensatzes --
+  // Nutzerwunsch: nach dem Zusammenfuehren direkt mit der naechsten
+  // Dublette weitermachen koennen, inkl. kurzer Erfolgsbestaetigung.
+  const params = new URLSearchParams(returnQuery);
+  params.set("merged", "1");
+  redirect(`/ladestationen/dubletten?${params.toString()}`);
 }

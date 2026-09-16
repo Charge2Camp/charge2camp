@@ -37,8 +37,22 @@ function FieldRow({
   );
 }
 
-export default async function MergeChargePointsPage({ params }: { params: Promise<{ keepId: string; removeId: string }> }) {
+export default async function MergeChargePointsPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ keepId: string; removeId: string }>;
+  searchParams: Promise<Record<string, string | undefined>>;
+}) {
   const { keepId, removeId } = await params;
+  // Filter/Seite der aufrufenden Dubletten-Liste (siehe ../page.tsx) --
+  // wird unten unveraendert als Hidden-Feld durchgereicht, damit man nach
+  // dem Zusammenfuehren/Ablehnen wieder dort landet, statt bei Seite 1 ohne
+  // Filter (Nutzerfeedback).
+  const rawSearchParams = await searchParams;
+  const returnQuery = new URLSearchParams(
+    Object.fromEntries(Object.entries(rawSearchParams).filter(([, v]) => v !== undefined) as [string, string][])
+  ).toString();
   const supabase = createServiceClient();
 
   const [{ data: aRow }, { data: bRow }] = await Promise.all([
@@ -61,7 +75,7 @@ export default async function MergeChargePointsPage({ params }: { params: Promis
   return (
     <div className="flex max-w-3xl flex-col gap-6">
       <div>
-        <Link href="/ladestationen/dubletten" className="text-sm text-text-muted hover:underline">
+        <Link href={`/ladestationen/dubletten?${returnQuery}`} className="text-sm text-text-muted hover:underline">
           ← Dubletten
         </Link>
         <h1 className="mt-1 text-2xl font-semibold">Ladepunkte zusammenführen</h1>
@@ -76,6 +90,7 @@ export default async function MergeChargePointsPage({ params }: { params: Promis
       <form action={mergeChargePoints} className="flex flex-col gap-4">
         <input type="hidden" name="a_id" value={a.id} />
         <input type="hidden" name="b_id" value={b.id} />
+        <input type="hidden" name="return_query" value={returnQuery} />
 
         <div className="rounded-md border border-line bg-card p-3">
           <p className="mb-2 text-sm font-medium">Datensatz, der bestehen bleibt (ID/external_key)</p>
@@ -150,7 +165,7 @@ export default async function MergeChargePointsPage({ params }: { params: Promis
         </div>
       </form>
 
-      <form action={dismissChargePointDuplicate.bind(null, a.external_key, b.external_key)}>
+      <form action={dismissChargePointDuplicate.bind(null, a.external_key, b.external_key, returnQuery)}>
         <button type="submit" className="min-h-11 rounded-md border border-line px-4 text-sm font-medium hover:bg-line/20">
           Keine Dublette – getrennt lassen
         </button>
