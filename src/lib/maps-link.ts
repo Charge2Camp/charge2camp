@@ -1,3 +1,5 @@
+import { geocodeAddress } from "@/lib/providers/geocoding/nominatim";
+
 export interface ExtractedCoordinates {
   latitude: number;
   longitude: number;
@@ -21,6 +23,23 @@ export function parseCoordinatesFromUrl(url: string): ExtractedCoordinates | nul
   if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) return null;
 
   return { latitude, longitude };
+}
+
+/** Manche Google-Maps-Kurzlinks (je nachdem, ueber welchen "Teilen"-Button
+ * sie erzeugt wurden) loesen NICHT zu einer URL mit eingebetteten
+ * Koordinaten auf, sondern zu einer Such-URL der Form
+ * ".../maps?q=Name,+Strasse+Hausnummer,+PLZ+Ort&ftid=...". Der `q`-Parameter
+ * ist reiner URL-Text (kein Google-Seiteninhalt) und kann als Adresse an
+ * einen eigenen Geocoder (Nominatim, bereits fuer die Routenplanung im
+ * Einsatz) uebergeben werden, um doch noch Koordinaten zu erhalten. */
+function extractAddressQueryParam(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    const q = parsed.searchParams.get("q");
+    return q && q.trim() ? q.trim() : null;
+  } catch {
+    return null;
+  }
 }
 
 /** Loest einen (ggf. verkuerzten, z.B. maps.app.goo.gl) Google-Maps-Link per
@@ -51,7 +70,32 @@ export async function extractCoordinatesFromMapsLink(rawUrl: string): Promise<Ex
       headers: { "User-Agent": "Charge2Camp-dev/0.1 (MVP, Link-Aufloesung)" },
     });
     clearTimeout(timer);
-    return parseCoordinatesFromUrl(decodeURIComponent(response.url || rawUrl));
+    const finalUrl = decodeURIComponent(response.url || rawUrl);
+
+    const fromUrlStructure = parseCoordinatesFromUrl(finalUrl);
+    if (fromUrlStructure) return fromUrlStructure;
+
+    // Fallback: kein @lat,lon/!3d!4d-Muster gefunden (siehe
+    // extractAddressQueryParam) -- Adresse aus dem q-Parameter ueber den
+    // eigenen Geocoder aufloesen statt aufzugeben. geocodeAddress() wirft
+    // bei einer fehlgeschlagenen Anfrage, deshalb im selben try/catch --
+    // ein Geocoding-Fehler darf die Meldung ebenso wenig blockieren wie ein
+    // Aufloese-Fehler oben.
+    const addressQuery = extractAddressQueryParam(finalUrl);
+    if (!addressQuery) return null;
+
+    const geocoded = await geocodeAddress(addressQuery);
+    if (geocoded) return { latitude: geocoded.latitude, longitude: geocoded.longitude };
+
+    // q ist typischerweise "Name, Strasse Hausnummer, PLZ Ort" -- Nominatims
+    // strukturierte Suche findet damit oft nichts (Praxistest: "Allego
+    // Charging Station, Messerschmittstraße 10, 86453 Dasing" -> 0
+    // Treffer), weil der fuehrende Name kein Adressbestandteil ist. Zweiter
+    // Versuch ohne das erste Komma-Segment (den vermuteten Namen).
+    const withoutFirstSegment = addressQuery.split(",").slice(1).join(",").trim();
+    if (!withoutFirstSegment) return null;
+    const geocodedWithoutName = await geocodeAddress(withoutFirstSegment);
+    return geocodedWithoutName ? { latitude: geocodedWithoutName.latitude, longitude: geocodedWithoutName.longitude } : null;
   } catch {
     return null;
   }

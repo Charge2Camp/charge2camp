@@ -194,9 +194,15 @@ Ladestation über "Mein Profil" per geteiltem Google-Maps-Link
 und liest die dabei entstehende finale URL (`response.url`) auf ein
 Koordinaten-Muster (`@lat,lon,zoom` bzw. `!3d!4d`) hin aus -- niemals
 `response.text()`/`.json()`, also nie Googles gerenderten Seiteninhalt, Namen,
-Adressen, Bewertungen oder Fotos. Das ist reine URL-Struktur-Analyse eines vom
-Nutzer selbst freiwillig geteilten Links, keine Übernahme aus Googles
-Datenbestand. Alle übrigen Felder (Name, Betreiber, Adresse, Anschlüsse,
+Adressen, Bewertungen oder Fotos. Löst der Link stattdessen (je nachdem, über
+welchen "Teilen"-Button er erzeugt wurde) zu einer Such-URL der Form
+`.../maps?q=Name,+Adresse&ftid=...` ohne eingebettete Koordinaten auf, wird
+NUR der `q`-Parameter (reiner URL-Text) an den bereits für die Routenplanung
+genutzten eigenen Geocoder (Nominatim/OpenStreetMap,
+[src/lib/providers/geocoding/nominatim.ts](../src/lib/providers/geocoding/nominatim.ts))
+übergeben -- weiterhin keine Anfrage an Google, keine Übernahme aus Googles
+Datenbestand, nur URL-Text plus eigener, längst dokumentierter Geocoding-
+Provider. Alle übrigen Felder (Name, Betreiber, Adresse, Anschlüsse,
 Anhängertauglichkeit) trägt ein Admin nach eigener Prüfung von Hand ein
 ([admin/.../ladestationen/fehlende-saeulen](../admin/app/\(dashboard\)/ladestationen/fehlende-saeulen)) --
 nichts landet ohne Admin-Freigabe in `core.charge_point`.
