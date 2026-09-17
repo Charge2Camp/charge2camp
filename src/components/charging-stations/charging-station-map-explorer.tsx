@@ -55,8 +55,8 @@ function buildViewportQuery(filters: ChargingStationFilters, bounds: MapBoundsBo
   params.set("filters_submitted", "1");
   if (filters.q) params.set("q", filters.q);
   if (filters.fastChargersOnly) params.set("fast", "1");
-  if (filters.connectorType) params.set("connector", filters.connectorType);
   for (const v of filters.trailerVerdict) params.set(`trailer_${v}`, "1");
+  for (const key of filters.connectorCategories) params.set(`connector_${key}`, "1");
   for (const op of filters.operators) params.append("operator", op);
   return params.toString();
 }
@@ -585,13 +585,32 @@ export function ChargingStationMapExplorer({
                 im Bottom-Sheet (StationBottomSheet) -- verschachtelte
                 <form>-Elemente sind ungueltiges HTML und fuehrten dazu, dass
                 "Bewertung abschicken" wirkungslos blieb (Nutzerfeedback,
-                Konsole: "A React form was unexpectedly submitted"). */}
-            <form action="/ladepunkte" className="flex-1 overflow-y-auto p-4 pb-[calc(1rem+var(--safe-bottom))]">
+                Konsole: "A React form was unexpectedly submitted"). Das
+                <form> selbst ist jetzt eine Flex-Spalte: der Filterinhalt
+                scrollt in seinem eigenen Bereich, "Filtern"/"Zuruecksetzen"
+                stehen in einem eigenen, nicht scrollenden Fuss GANZ UNTEN im
+                Panel (Nutzerwunsch) -- immer erreichbar, unabhaengig davon,
+                wie lang die Filterliste gerade ist. */}
+            <form action="/ladepunkte" className="flex flex-1 flex-col overflow-hidden">
               {/* Siehe resolveFastChargersOnly (charging-stations.ts): markiert
                   jeden echten Formular-Submit, damit ein bewusst abgewaehltes
                   "Nur Schnelllader" nicht wieder auf den Default zurueckfaellt. */}
               <input type="hidden" name="filters_submitted" value="1" />
-              {filterPanel}
+              <div className="flex-1 overflow-y-auto p-4">{filterPanel}</div>
+              <div className="flex flex-col gap-2 border-t border-black/10 p-4 pb-[calc(1rem+var(--safe-bottom))] dark:border-white/10 sm:flex-row">
+                <button
+                  type="submit"
+                  className="min-h-12 flex-1 rounded-md bg-action px-4 py-3 font-medium text-base hover:bg-action-hover"
+                >
+                  Filtern
+                </button>
+                <Link
+                  href="/ladepunkte"
+                  className="flex min-h-12 flex-1 items-center justify-center rounded-md border border-black/10 px-4 hover:bg-black/5 dark:border-white/10 dark:hover:bg-white/10"
+                >
+                  Zurücksetzen
+                </Link>
+              </div>
             </form>
           </div>
         </div>

@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { CONNECTOR_CATEGORIES, connectorStandardMatchesAnyCategory } from "@/lib/connector-categories";
 import type {
   CoreChargePointGeo,
   CoreConnector,
@@ -48,7 +49,10 @@ export interface ChargingStationFilters {
   q?: string;
   trailerVerdict: TrailerVerdict[];
   fastChargersOnly: boolean;
-  connectorType?: string;
+  /** Schluessel aus CONNECTOR_CATEGORIES (connector-categories.ts), mehrfach
+   * waehlbar -- ein Ladepunkt passt, sobald mindestens einer seiner
+   * Connectoren zu MINDESTENS einer der gewaehlten Kategorien passt. */
+  connectorCategories: string[];
   /** Exakte core.charge_point.operator-Werte (siehe
    * fetchChargingStationOperatorOptions), mehrfach waehlbar -- ein
    * Ladepunkt passt, sobald sein `operator` GENAU einem der gewaehlten
@@ -84,9 +88,10 @@ export function parseChargingStationFilters(
     const v = searchParams[key];
     return Array.isArray(v) ? v[0] : v;
   };
-  // Ladeanbieter: mehrere gleichnamige Checkboxen (name="operator"), anders
-  // als trailer_${v}/provider_${key} vorher -- deshalb ALLE Werte fuer den
-  // Schluessel noetig, nicht nur den ersten (siehe get() oben).
+  // Ladeanbieter: mehrere gleichnamige Checkboxen (name="operator", ein
+  // Parameter pro Auswahl), anders als trailer_${v}/connector_${key} (ein
+  // Parametername PRO WERT) -- deshalb ALLE Werte fuer den Schluessel
+  // noetig, nicht nur der erste (siehe get() oben).
   const getAll = (key: string): string[] => {
     const v = searchParams[key];
     if (v === undefined) return [];
@@ -96,12 +101,15 @@ export function parseChargingStationFilters(
   const verdicts: TrailerVerdict[] = (["yes", "unhitch", "no", "unknown"] as const).filter(
     (v) => get(`trailer_${v}`) === "1"
   );
+  const connectorCategories = CONNECTOR_CATEGORIES.map((c) => c.key).filter(
+    (key) => get(`connector_${key}`) === "1"
+  );
 
   return {
     q: get("q")?.trim() || undefined,
     trailerVerdict: verdicts,
     fastChargersOnly: resolveFastChargersOnly(get("fast"), get("filters_submitted") === "1"),
-    connectorType: get("connector") || undefined,
+    connectorCategories,
     operators: getAll("operator"),
     favoritesOnly: get("favorites") === "1",
   };
@@ -158,7 +166,7 @@ export interface MapBounds {
   north: number;
 }
 
-/** trailerVerdict/connectorType filtern erst NACH dem Laden (in JS) statt
+/** trailerVerdict/connectorCategories filtern erst NACH dem Laden (in JS) statt
  * in der SQL-Abfrage -- fuer den MVP-Datenumfang ausreichend.
  * `limit` bewusst ueberschreibbar: die kartenzentrierte Ladepunkte-Seite
  * laedt ohne aktiven Filter (Karten-Erstueberblick) eine kleinere Menge als
@@ -201,8 +209,10 @@ export async function fetchChargingStations(
   if (filters.trailerVerdict.length > 0) {
     results = results.filter((r) => r.trailer && filters.trailerVerdict.includes(r.trailer.verdict));
   }
-  if (filters.connectorType) {
-    results = results.filter((r) => r.connectors.some((c) => c.standard === filters.connectorType));
+  if (filters.connectorCategories.length > 0) {
+    results = results.filter((r) =>
+      r.connectors.some((c) => connectorStandardMatchesAnyCategory(c.standard, filters.connectorCategories))
+    );
   }
   if (filters.operators.length > 0) {
     results = results.filter((r) => r.operator !== null && filters.operators.includes(r.operator));
@@ -273,16 +283,4 @@ export async function fetchChargingStationOperatorOptions(): Promise<ChargingSta
     operator: row.operator,
     stationCount: row.station_count,
   }));
-}
-
-export async function fetchConnectorTypeOptions(): Promise<string[]> {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase.schema("core").from("connector").select("standard").limit(5000);
-  if (error) throw new Error(error.message);
-
-  const types = new Set<string>();
-  for (const row of data ?? []) {
-    if (row.standard) types.add(row.standard);
-  }
-  return Array.from(types).sort();
 }

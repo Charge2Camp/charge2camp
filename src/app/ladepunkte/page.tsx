@@ -2,14 +2,12 @@ import {
   fetchChargingStationNameOptions,
   fetchChargingStationOperatorOptions,
   fetchChargingStations,
-  fetchConnectorTypeOptions,
   fetchFavoriteChargingStations,
   parseChargingStationFilters,
 } from "@/lib/charging-stations";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/require-user";
-import { ChargingStationFilterForm } from "@/components/charging-stations/filter-form";
-import { ChargingStationQuickFilters } from "@/components/charging-stations/quick-filters";
+import { ChargingStationFilterFields } from "@/components/charging-stations/filter-fields";
 import { ChargingStationMapExplorer } from "@/components/charging-stations/charging-station-map-explorer";
 
 export default async function ChargingStationsPage({
@@ -61,7 +59,10 @@ export default async function ChargingStationsPage({
   // groessere Limit unten bei JEDEM Erstaufruf greifen, auch ohne dass der
   // Nutzer irgendetwas veraendert hat.
   const hasActiveFilters = Boolean(
-    filters.q || filters.connectorType || filters.trailerVerdict.length > 0 || filters.operators.length > 0
+    filters.q ||
+      filters.connectorCategories.length > 0 ||
+      filters.trailerVerdict.length > 0 ||
+      filters.operators.length > 0
   );
   const stationLimit = hasActiveFilters ? 5000 : 1500;
   const stations =
@@ -69,17 +70,16 @@ export default async function ChargingStationsPage({
       ? await fetchFavoriteChargingStations(user.id)
       : await fetchChargingStations(filters, stationLimit);
 
-  const [connectorTypes, nameOptions, operatorOptions] = await Promise.all([
-    fetchConnectorTypeOptions(),
+  const [nameOptions, operatorOptions] = await Promise.all([
     fetchChargingStationNameOptions(),
     fetchChargingStationOperatorOptions(),
   ]);
 
   const activeFilterCount =
     (filters.q ? 1 : 0) +
-    (filters.connectorType ? 1 : 0) +
     (filters.favoritesOnly ? 1 : 0) +
     filters.trailerVerdict.length +
+    filters.connectorCategories.length +
     filters.operators.length;
 
   let emptyMessage: string;
@@ -111,16 +111,12 @@ export default async function ChargingStationsPage({
         activeFilterCount={activeFilterCount}
         isLoggedIn={Boolean(user)}
         filterPanel={
-          <div className="flex flex-col gap-6">
-            <ChargingStationQuickFilters filters={filters} isLoggedIn={Boolean(user)} />
-            <hr className="border-black/10 dark:border-white/10" />
-            <ChargingStationFilterForm
-              filters={filters}
-              connectorTypes={connectorTypes}
-              nameOptions={nameOptions}
-              operatorOptions={operatorOptions}
-            />
-          </div>
+          <ChargingStationFilterFields
+            filters={filters}
+            isLoggedIn={Boolean(user)}
+            nameOptions={nameOptions}
+            operatorOptions={operatorOptions}
+          />
         }
       />
     </div>
