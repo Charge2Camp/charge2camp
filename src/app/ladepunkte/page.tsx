@@ -1,5 +1,6 @@
 import {
   fetchChargingStationNameOptions,
+  fetchChargingStationOperatorOptions,
   fetchChargingStations,
   fetchConnectorTypeOptions,
   fetchFavoriteChargingStations,
@@ -60,7 +61,7 @@ export default async function ChargingStationsPage({
   // groessere Limit unten bei JEDEM Erstaufruf greifen, auch ohne dass der
   // Nutzer irgendetwas veraendert hat.
   const hasActiveFilters = Boolean(
-    filters.q || filters.connectorType || filters.trailerVerdict.length > 0 || filters.operatorKeys.length > 0
+    filters.q || filters.connectorType || filters.trailerVerdict.length > 0 || filters.operators.length > 0
   );
   const stationLimit = hasActiveFilters ? 5000 : 1500;
   const stations =
@@ -68,9 +69,10 @@ export default async function ChargingStationsPage({
       ? await fetchFavoriteChargingStations(user.id)
       : await fetchChargingStations(filters, stationLimit);
 
-  const [connectorTypes, nameOptions] = await Promise.all([
+  const [connectorTypes, nameOptions, operatorOptions] = await Promise.all([
     fetchConnectorTypeOptions(),
     fetchChargingStationNameOptions(),
+    fetchChargingStationOperatorOptions(),
   ]);
 
   const activeFilterCount =
@@ -78,7 +80,7 @@ export default async function ChargingStationsPage({
     (filters.connectorType ? 1 : 0) +
     (filters.favoritesOnly ? 1 : 0) +
     filters.trailerVerdict.length +
-    filters.operatorKeys.length;
+    filters.operators.length;
 
   let emptyMessage: string;
   if (filters.favoritesOnly) {
@@ -112,7 +114,12 @@ export default async function ChargingStationsPage({
           <div className="flex flex-col gap-6">
             <ChargingStationQuickFilters filters={filters} isLoggedIn={Boolean(user)} />
             <hr className="border-black/10 dark:border-white/10" />
-            <ChargingStationFilterForm filters={filters} connectorTypes={connectorTypes} nameOptions={nameOptions} />
+            <ChargingStationFilterForm
+              filters={filters}
+              connectorTypes={connectorTypes}
+              nameOptions={nameOptions}
+              operatorOptions={operatorOptions}
+            />
           </div>
         }
       />

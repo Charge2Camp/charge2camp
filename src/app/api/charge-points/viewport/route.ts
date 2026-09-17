@@ -35,8 +35,16 @@ export async function GET(request: NextRequest) {
   const [west, south, east, north] = parts;
   const bbox: MapBounds = { west, south, east, north };
 
-  const searchParamsObject: Record<string, string> = {};
-  for (const [key, value] of sp.entries()) searchParamsObject[key] = value;
+  // Mehrere gleichnamige Parameter (z. B. operator=A&operator=B fuer den
+  // Ladeanbieter-Filter) muessen als Array ankommen -- ein simples
+  // Ueberschreiben pro Key wuerde alle bis auf den letzten Wert verwerfen.
+  const searchParamsObject: Record<string, string | string[]> = {};
+  for (const [key, value] of sp.entries()) {
+    const existing = searchParamsObject[key];
+    if (existing === undefined) searchParamsObject[key] = value;
+    else if (Array.isArray(existing)) existing.push(value);
+    else searchParamsObject[key] = [existing, value];
+  }
   const filters = parseChargingStationFilters(searchParamsObject);
 
   try {

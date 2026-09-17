@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { CHARGING_PROVIDERS, operatorMatchesAnyProvider } from "@/lib/charging-providers";
 import type {
   CoreChargePointGeo,
   CoreConnector,
@@ -10,6 +9,13 @@ import type {
 } from "@/types/database";
 
 const FAST_CHARGER_MIN_KW = 100;
+
+/** Nutzerwunsch: der Ladeanbieter-Filter soll ALLE tatsaechlich in der DB
+ * vorkommenden Anbieter zeigen (core.charge_point.operator), nicht nur eine
+ * feste Auswahl -- aber nur solche mit mindestens so vielen aktiven
+ * Stationen, dass die Auswahl auch wirklich Treffer liefert (siehe
+ * fetchChargingStationOperatorOptions). */
+const MIN_STATIONS_PER_OPERATOR = 5;
 
 /** PostgREST kodiert `.in(...)` als Query-Parameter in der URL -- bei
  * mehreren tausend IDs (siehe fetchChargingStations, bis zu 5000 Stationen)
@@ -43,10 +49,11 @@ export interface ChargingStationFilters {
   trailerVerdict: TrailerVerdict[];
   fastChargersOnly: boolean;
   connectorType?: string;
-  /** Schluessel aus CHARGING_PROVIDERS (charging-providers.ts), mehrfach
-   * waehlbar -- ein Ladepunkt passt, sobald sein `operator` zu MINDESTENS
-   * einem der gewaehlten Anbieter passt (operatorMatchesAnyProvider). */
-  operatorKeys: string[];
+  /** Exakte core.charge_point.operator-Werte (siehe
+   * fetchChargingStationOperatorOptions), mehrfach waehlbar -- ein
+   * Ladepunkt passt, sobald sein `operator` GENAU einem der gewaehlten
+   * Werte entspricht. */
+  operators: string[];
   /** Nur eigene Favoriten -- ersetzt (bei Aktivierung) alle anderen Filter,
    * siehe ladepunkte/page.tsx: eigener Fetch-Pfad ueber
    * fetchFavoriteChargingStations statt fetchChargingStations. */
@@ -77,18 +84,25 @@ export function parseChargingStationFilters(
     const v = searchParams[key];
     return Array.isArray(v) ? v[0] : v;
   };
+  // Ladeanbieter: mehrere gleichnamige Checkboxen (name="operator"), anders
+  // als trailer_${v}/provider_${key} vorher -- deshalb ALLE Werte fuer den
+  // Schluessel noetig, nicht nur den ersten (siehe get() oben).
+  const getAll = (key: string): string[] => {
+    const v = searchParams[key];
+    if (v === undefined) return [];
+    return Array.isArray(v) ? v : [v];
+  };
 
   const verdicts: TrailerVerdict[] = (["yes", "unhitch", "no", "unknown"] as const).filter(
     (v) => get(`trailer_${v}`) === "1"
   );
-  const operatorKeys = CHARGING_PROVIDERS.map((p) => p.key).filter((key) => get(`provider_${key}`) === "1");
 
   return {
     q: get("q")?.trim() || undefined,
     trailerVerdict: verdicts,
     fastChargersOnly: resolveFastChargersOnly(get("fast"), get("filters_submitted") === "1"),
     connectorType: get("connector") || undefined,
-    operatorKeys,
+    operators: getAll("operator"),
     favoritesOnly: get("favorites") === "1",
   };
 }
@@ -190,8 +204,8 @@ export async function fetchChargingStations(
   if (filters.connectorType) {
     results = results.filter((r) => r.connectors.some((c) => c.standard === filters.connectorType));
   }
-  if (filters.operatorKeys.length > 0) {
-    results = results.filter((r) => operatorMatchesAnyProvider(r.operator, filters.operatorKeys));
+  if (filters.operators.length > 0) {
+    results = results.filter((r) => r.operator !== null && filters.operators.includes(r.operator));
   }
   return results;
 }
@@ -231,6 +245,34 @@ export async function fetchChargingStationNameOptions(): Promise<string[]> {
   if (error) throw new Error(error.message);
   const labels = (data ?? []).map((row) => row.name ?? row.operator).filter(Boolean);
   return Array.from(new Set(labels));
+}
+
+export interface ChargingStationOperatorOption {
+  operator: string;
+  stationCount: number;
+}
+
+/** Alle core.charge_point.operator-Werte mit mindestens
+ * MIN_STATIONS_PER_OPERATOR aktiven Stationen, fuer die Checkbox-Auswahl im
+ * Ladeanbieter-Filter (Nutzerwunsch: "alle Anbieter aus der Datenbank ...
+ * mit mindestens fuenf auffindbaren Stationen" statt einer festen Liste).
+ * Ueber 18.000 core.charge_point-Zeilen client-/JS-seitig zu gruppieren
+ * wuerde entweder am PostgREST-max_rows-Limit (5000) scheitern oder viele
+ * paginierte Requests bei JEDEM Seitenaufruf brauchen -- die Aggregation
+ * laeuft deshalb als SQL-Funktion direkt in Postgres (core.
+ * charge_point_operator_options, siehe
+ * 20261006000000_charge_point_operator_options.sql), analog zu
+ * core.charge_point_filter_options() im Admin-Bereich. */
+export async function fetchChargingStationOperatorOptions(): Promise<ChargingStationOperatorOption[]> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .schema("core")
+    .rpc("charge_point_operator_options", { p_min_stations: MIN_STATIONS_PER_OPERATOR });
+  if (error) throw new Error(error.message);
+  return ((data as { operator: string; station_count: number }[]) ?? []).map((row) => ({
+    operator: row.operator,
+    stationCount: row.station_count,
+  }));
 }
 
 export async function fetchConnectorTypeOptions(): Promise<string[]> {

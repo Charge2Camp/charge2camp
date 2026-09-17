@@ -57,7 +57,7 @@ function buildViewportQuery(filters: ChargingStationFilters, bounds: MapBoundsBo
   if (filters.fastChargersOnly) params.set("fast", "1");
   if (filters.connectorType) params.set("connector", filters.connectorType);
   for (const v of filters.trailerVerdict) params.set(`trailer_${v}`, "1");
-  for (const key of filters.operatorKeys) params.set(`provider_${key}`, "1");
+  for (const op of filters.operators) params.append("operator", op);
   return params.toString();
 }
 
