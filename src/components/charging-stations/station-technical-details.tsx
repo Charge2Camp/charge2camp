@@ -35,7 +35,14 @@ export function StationTechnicalDetails({ station }: { station: ChargingStationV
           </li>
         )}
         {station.access_type && <li>Zugang: {formatAccessType(station.access_type)}</li>}
-        {station.address && <li>Adresse: {station.address}</li>}
+        {(station.address || station.postcode || station.city) && (
+          <li>
+            Adresse:{" "}
+            {[station.address, [station.postcode, station.city].filter(Boolean).join(" ")]
+              .filter(Boolean)
+              .join(", ")}
+          </li>
+        )}
       </ul>
       <div className="mt-4 flex flex-wrap items-start gap-2">
         <Link
