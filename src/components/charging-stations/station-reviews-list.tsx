@@ -15,7 +15,7 @@ const CRITERION_LABELS: Record<
   enough_space_for_rig: "Genug Platz",
   unobstructed_access: "Freie Rangierfläche",
   no_barrier_or_garage: "Kein Parkhaus/Schranke",
-  side_mounted_charger: "Ladesäule seitlich mit Kabellänge",
+  side_mounted_charger: "Kabellänge ausreichend",
 };
 
 /** Bewertungsliste + Formular/Hinweis darunter -- gemeinsam genutzt von

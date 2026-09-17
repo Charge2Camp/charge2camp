@@ -71,8 +71,8 @@ const REVIEW_CRITERIA = [
     description: "Keine Höhen- oder Breitenbeschränkung durch Parkhaus, Schranke oder Bordstein.",
   },
   {
-    label: "Ladesäule seitlich mit Kabellänge",
-    description: "Die Säule steht seitlich zum Stellplatz und das Ladekabel ist lang genug fürs Zugfahrzeug vorne am Gespann.",
+    label: "Kabellänge ausreichend",
+    description: "Das Ladekabel ist lang genug, um vom Kabelanschluss der Säule bis zur Ladebuchse des Zugfahrzeugs vorne am Gespann zu reichen.",
   },
 ];
 

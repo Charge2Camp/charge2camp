@@ -105,7 +105,13 @@ export async function addChargingReview(formData: FormData): Promise<ActionResul
         // supabase/migrations/20260927000000_security_hardening_admin_rpcs.sql).
         p_display_name: null,
         p_verdict: verdict,
-        p_drive_through: null,
+        // Nur relevant, wenn das Gespann laut Bewertung ohne Abkoppeln
+        // nutzbar ist ("yes") -- das Formular fragt Drive-Through deshalb
+        // nur dann ab (siehe review-form.tsx). Aggregation zu
+        // enrich.trailer_suitability.drive_through (2-Bestaetigungs-Schwelle
+        // bzw. sofort bei Admin) passiert serverseitig in
+        // enrich.submit_trailer_report()/moderate_trailer_report().
+        p_drive_through: suitable === "yes" ? parseOptionalBoolean(formData.get("drive_through")) : null,
         p_notes: typeof comment === "string" && comment.trim() ? comment.trim() : null,
         p_photo_url: null,
         p_rig_length_m: parseOptionalNumber(formData.get("trailer_length_m")),

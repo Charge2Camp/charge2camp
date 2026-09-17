@@ -31,6 +31,7 @@ export function ChargingReviewForm({
   const [error, setError] = useState<string | null>(null);
   const [suitable, setSuitable] = useState<"yes" | "limited" | "no">("yes");
   const [decoupledParkingPossible, setDecoupledParkingPossible] = useState("");
+  const [driveThrough, setDriveThrough] = useState("");
   const [enoughSpaceForRig, setEnoughSpaceForRig] = useState("");
   const [unobstructedAccess, setUnobstructedAccess] = useState("");
   const [noBarrierOrGarage, setNoBarrierOrGarage] = useState("");
@@ -134,6 +135,45 @@ export function ChargingReviewForm({
               onChange={() => setDecoupledParkingPossible("no")}
             />
             Nein
+          </label>
+        </fieldset>
+      )}
+
+      {suitable === "yes" && (
+        <fieldset className="flex flex-col gap-1 rounded-md border border-black/10 p-3 text-sm dark:border-white/10">
+          <legend className="mb-1 font-medium">
+            Konntest du mit dem Gespann durchfahren, ohne rangieren oder rückwärtsfahren zu
+            müssen (Drive-Through)?
+          </legend>
+          <label className="flex min-h-11 items-center gap-2">
+            <input
+              type="radio"
+              name="drive_through"
+              value="yes"
+              checked={driveThrough === "yes"}
+              onChange={() => setDriveThrough("yes")}
+            />
+            Ja
+          </label>
+          <label className="flex min-h-11 items-center gap-2">
+            <input
+              type="radio"
+              name="drive_through"
+              value="no"
+              checked={driveThrough === "no"}
+              onChange={() => setDriveThrough("no")}
+            />
+            Nein
+          </label>
+          <label className="flex min-h-11 items-center gap-2">
+            <input
+              type="radio"
+              name="drive_through"
+              value=""
+              checked={driveThrough === ""}
+              onChange={() => setDriveThrough("")}
+            />
+            Weiß nicht
           </label>
         </fieldset>
       )}
