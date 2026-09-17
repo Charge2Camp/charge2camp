@@ -81,7 +81,20 @@ on conflict (external_key) do update set
     city = case when charge_point.manual_override then charge_point.city else excluded.city end,
     country_code = case when charge_point.manual_override then charge_point.country_code else excluded.country_code end,
     access_type = case when charge_point.manual_override then charge_point.access_type else excluded.access_type end,
-    is_operational = case when charge_point.manual_override then charge_point.is_operational else excluded.is_operational end,
+    -- Ausnahme vom manual_override-Schutz: meldet OCM eine Saeule als NICHT
+    -- betriebsbereit, wird das immer uebernommen, auch wenn ein Admin die
+    -- Zeile fixiert hat. Datenqualitaet/Aktualitaet zu "ausser Betrieb" hat
+    -- hier Vorrang vor dem sonst geltenden Schutz vor stillem Ueberschreiben
+    -- (Nutzervorgabe) -- eine veraltete "betriebsbereit"-Korrektur soll
+    -- Nutzer nicht zu einer defekten Saeule schicken. Meldet OCM dagegen
+    -- (wieder) betriebsbereit, gilt der normale manual_override-Schutz
+    -- weiter (kein automatisches "Reparieren" einer Admin-Korrektur in die
+    -- andere Richtung).
+    is_operational = case
+        when not excluded.is_operational then false
+        when charge_point.manual_override then charge_point.is_operational
+        else excluded.is_operational
+    end,
     max_power_kw = case when charge_point.manual_override then charge_point.max_power_kw else excluded.max_power_kw end,
     connector_count = case when charge_point.manual_override then charge_point.connector_count else excluded.connector_count end,
     source_updated_at = excluded.source_updated_at,
