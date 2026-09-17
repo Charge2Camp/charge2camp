@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { PhotoLinkButton } from "@/components/charging-stations/photo-link-button";
 import { buildGoogleMapsPhotoLink } from "@/lib/google-maps-link";
-import { formatConnectorStandard } from "@/lib/connector-standard";
+import { groupConnectorsForDisplay } from "@/lib/connector-standard";
 import { formatAccessType } from "@/lib/access-type";
 import type { ChargingStationView } from "@/lib/charging-stations";
 
@@ -29,8 +29,8 @@ export function StationTechnicalDetails({ station }: { station: ChargingStationV
         {station.connectors.length > 0 && (
           <li>
             Anschlüsse:{" "}
-            {station.connectors
-              .map((c) => `${c.quantity}× ${formatConnectorStandard(c.standard)}${c.power_kw ? ` (${c.power_kw} kW)` : ""}`)
+            {groupConnectorsForDisplay(station.connectors)
+              .map((c) => `${c.quantity}× ${c.label}${c.powerKw ? ` (${c.powerKw} kW)` : ""}`)
               .join(", ")}
           </li>
         )}
