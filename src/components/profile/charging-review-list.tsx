@@ -12,6 +12,10 @@ export type ChargingReviewWithStation = ChargingReview & {
 
 const SUITABLE_LABELS = { yes: "Ja", limited: "Mit Einschränkungen", no: "Nein" } as const;
 
+function formatReviewMonth(iso: string): string {
+  return new Date(iso).toLocaleDateString("de-DE", { month: "short", year: "numeric" });
+}
+
 function EditForm({
   review,
   onCancel,
@@ -260,6 +264,7 @@ export function ChargingReviewList({ reviews }: { reviews: ChargingReviewWithSta
                 </Link>
                 <span>Anhängertauglich: {SUITABLE_LABELS[review.suitable]}</span>
               </div>
+              <p className="text-xs text-black/40 dark:text-white/40">{formatReviewMonth(review.created_at)}</p>
               <p className="mt-1 text-black/60 dark:text-white/60">
                 {review.trailer_length_m && `${review.trailer_length_m} m`}
                 {review.trailer_width_m && ` × ${review.trailer_width_m} m`}

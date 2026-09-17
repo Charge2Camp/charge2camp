@@ -4,6 +4,10 @@ import type { Caravan, ChargingReview, Vehicle } from "@/types/database";
 
 const SUITABLE_LABELS = { yes: "Ja", limited: "Mit Einschränkungen", no: "Nein" } as const;
 
+function formatReviewMonth(iso: string): string {
+  return new Date(iso).toLocaleDateString("de-DE", { month: "short", year: "numeric" });
+}
+
 const CRITERION_LABELS: Record<
   "enough_space_for_rig" | "unobstructed_access" | "no_barrier_or_garage" | "side_mounted_charger",
   string
@@ -47,7 +51,12 @@ export function StationReviewsList({
         <ul className="mt-2 flex flex-col gap-3">
           {reviews.map((review) => (
             <li key={review.id} className="rounded-md border border-black/10 p-3 text-sm dark:border-white/10">
-              <p className="font-medium">Anhängertauglich: {SUITABLE_LABELS[review.suitable]}</p>
+              <div className="flex items-baseline justify-between gap-2">
+                <p className="font-medium">Anhängertauglich: {SUITABLE_LABELS[review.suitable]}</p>
+                <span className="shrink-0 text-xs text-black/40 dark:text-white/40">
+                  {formatReviewMonth(review.created_at)}
+                </span>
+              </div>
               <p className="text-black/60 dark:text-white/60">
                 {review.trailer_length_m && `${review.trailer_length_m} m`}
                 {review.trailer_width_m && ` × ${review.trailer_width_m} m`}

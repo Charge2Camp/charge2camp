@@ -28,6 +28,10 @@ const NEARBY_RADIUS_KM = 25;
 const FAST_CHARGER_MIN_KW = 150;
 const FAST_CHARGER_RADIUS_KM = 15;
 
+function formatReviewMonth(iso: string): string {
+  return new Date(iso).toLocaleDateString("de-DE", { month: "short", year: "numeric" });
+}
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
@@ -319,7 +323,12 @@ export default async function CampsiteDetailPage({
                 key={review.id}
                 className="rounded-md border border-black/10 p-3 text-sm dark:border-white/10"
               >
-                <p className="font-medium">★ {review.rating}/5</p>
+                <div className="flex items-baseline justify-between gap-2">
+                  <p className="font-medium">★ {review.rating}/5</p>
+                  <span className="shrink-0 text-xs text-black/40 dark:text-white/40">
+                    {formatReviewMonth(review.created_at)}
+                  </span>
+                </div>
                 {review.comment && <p className="mt-1 text-black/70 dark:text-white/70">{review.comment}</p>}
               </li>
             ))}

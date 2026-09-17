@@ -9,6 +9,10 @@ export type CampsiteReviewWithCampsite = CampsiteReview & {
   campsites: { id: string; name: string } | null;
 };
 
+function formatReviewMonth(iso: string): string {
+  return new Date(iso).toLocaleDateString("de-DE", { month: "short", year: "numeric" });
+}
+
 function EditForm({ review, onCancel }: { review: CampsiteReviewWithCampsite; onCancel: () => void }) {
   const [chargingOnSite, setChargingOnSite] = useState(review.charging_on_site);
   const [chargingWalkable, setChargingWalkable] = useState(review.charging_walkable);
@@ -171,6 +175,7 @@ export function CampsiteReviewList({ reviews }: { reviews: CampsiteReviewWithCam
                 </Link>
                 <span>★ {review.rating}/5</span>
               </div>
+              <p className="text-xs text-black/40 dark:text-white/40">{formatReviewMonth(review.created_at)}</p>
               <p className="mt-1 text-xs text-black/50 dark:text-white/50">
                 Laden auf dem Platz: {review.charging_on_site ? "ja" : "nein"} · Fußläufig nutzbar:{" "}
                 {review.charging_walkable ? "ja" : "nein"}
