@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { CHARGING_PROVIDERS, operatorMatchesAnyProvider } from "@/lib/charging-providers";
 import type {
   CoreChargePointGeo,
   CoreConnector,
@@ -42,10 +43,31 @@ export interface ChargingStationFilters {
   trailerVerdict: TrailerVerdict[];
   fastChargersOnly: boolean;
   connectorType?: string;
+  /** Schluessel aus CHARGING_PROVIDERS (charging-providers.ts), mehrfach
+   * waehlbar -- ein Ladepunkt passt, sobald sein `operator` zu MINDESTENS
+   * einem der gewaehlten Anbieter passt (operatorMatchesAnyProvider). */
+  operatorKeys: string[];
   /** Nur eigene Favoriten -- ersetzt (bei Aktivierung) alle anderen Filter,
    * siehe ladepunkte/page.tsx: eigener Fetch-Pfad ueber
    * fetchFavoriteChargingStations statt fetchChargingStations. */
   favoritesOnly: boolean;
+}
+
+/** Nutzerwunsch: "Nur Schnelllader" ist der Default-Zustand bei einem
+ * frischen Seitenaufruf (Zielgruppe braucht auf der Reise vor allem
+ * DC-Schnelllader). HTML-Checkboxen senden im unchecked-Zustand aber gar
+ * keinen Parameter -- ohne weiteres Signal liesse sich "Nutzer war noch nie
+ * hier" (Default soll gelten) nicht von "Nutzer hat bewusst abgewaehlt und
+ * abgeschickt" (Default soll NICHT gelten) unterscheiden. Das einzige
+ * <form> im Filter-Panel (charging-station-map-explorer.tsx) traegt deshalb
+ * IMMER ein verstecktes `filters_submitted=1`-Feld; genauso haengt
+ * buildViewportQuery (selbe Datei) es bei jedem Kartenschwenk an, weil auch
+ * das eine "explizite" Anfrage mit dem aktuellen Filterzustand ist. Fehlt
+ * das Feld (reiner Aufruf von "/ladepunkte" ohne Query, z. B. per
+ * "Zuruecksetzen"-Link), gilt der Default. */
+function resolveFastChargersOnly(fastParam: string | undefined, filtersSubmitted: boolean): boolean {
+  if (!filtersSubmitted) return true;
+  return fastParam === "1";
 }
 
 export function parseChargingStationFilters(
@@ -59,12 +81,14 @@ export function parseChargingStationFilters(
   const verdicts: TrailerVerdict[] = (["yes", "unhitch", "no", "unknown"] as const).filter(
     (v) => get(`trailer_${v}`) === "1"
   );
+  const operatorKeys = CHARGING_PROVIDERS.map((p) => p.key).filter((key) => get(`provider_${key}`) === "1");
 
   return {
     q: get("q")?.trim() || undefined,
     trailerVerdict: verdicts,
-    fastChargersOnly: get("fast") === "1",
+    fastChargersOnly: resolveFastChargersOnly(get("fast"), get("filters_submitted") === "1"),
     connectorType: get("connector") || undefined,
+    operatorKeys,
     favoritesOnly: get("favorites") === "1",
   };
 }
@@ -165,6 +189,9 @@ export async function fetchChargingStations(
   }
   if (filters.connectorType) {
     results = results.filter((r) => r.connectors.some((c) => c.standard === filters.connectorType));
+  }
+  if (filters.operatorKeys.length > 0) {
+    results = results.filter((r) => operatorMatchesAnyProvider(r.operator, filters.operatorKeys));
   }
   return results;
 }

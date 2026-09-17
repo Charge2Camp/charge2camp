@@ -54,8 +54,13 @@ export default async function ChargingStationsPage({
   // langfristig sichtbar sind (das tat es fruehrer faelschlich: eine rein
   // alphabetische Sortierung nach Name blendete beim reinen Kartenbrowsen
   // saemtliche Namen ab ungefaehr "S" dauerhaft aus, siehe fetchChargingStations).
+  // "Nur Schnelllader" ist seit Nutzerwunsch der Default-Zustand (siehe
+  // resolveFastChargersOnly in charging-stations.ts) und zaehlt deshalb
+  // bewusst NICHT als "aktiver Filter" -- sonst wuerde die Badge/das
+  // groessere Limit unten bei JEDEM Erstaufruf greifen, auch ohne dass der
+  // Nutzer irgendetwas veraendert hat.
   const hasActiveFilters = Boolean(
-    filters.q || filters.connectorType || filters.fastChargersOnly || filters.trailerVerdict.length > 0
+    filters.q || filters.connectorType || filters.trailerVerdict.length > 0 || filters.operatorKeys.length > 0
   );
   const stationLimit = hasActiveFilters ? 5000 : 1500;
   const stations =
@@ -71,9 +76,9 @@ export default async function ChargingStationsPage({
   const activeFilterCount =
     (filters.q ? 1 : 0) +
     (filters.connectorType ? 1 : 0) +
-    (filters.fastChargersOnly ? 1 : 0) +
     (filters.favoritesOnly ? 1 : 0) +
-    filters.trailerVerdict.length;
+    filters.trailerVerdict.length +
+    filters.operatorKeys.length;
 
   let emptyMessage: string;
   if (filters.favoritesOnly) {

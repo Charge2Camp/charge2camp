@@ -48,7 +48,7 @@ export function ChargingStationQuickFilters({
 
       <label className="flex min-h-11 items-center gap-2">
         <input type="checkbox" name="fast" value="1" defaultChecked={filters.fastChargersOnly} />
-        Nur Schnelllader (≥100 kW)
+        Nur Schnelllader (≥100 kW) — standardmäßig aktiv
       </label>
 
       <div className="flex flex-col gap-2 sm:flex-row">

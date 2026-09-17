@@ -48,10 +48,16 @@ const GERMANY_OVERVIEW_ZOOM = 4.5;
 function buildViewportQuery(filters: ChargingStationFilters, bounds: MapBoundsBox): string {
   const params = new URLSearchParams();
   params.set("bbox", `${bounds.west},${bounds.south},${bounds.east},${bounds.north}`);
+  // Markiert die Anfrage als "expliziter Filterzustand" (siehe
+  // resolveFastChargersOnly in charging-stations.ts) -- ohne das wuerde ein
+  // bewusst abgewaehltes "Nur Schnelllader" beim naechsten Kartenschwenk
+  // wieder auf den Default zurueckspringen, weil fast dann fehlt.
+  params.set("filters_submitted", "1");
   if (filters.q) params.set("q", filters.q);
   if (filters.fastChargersOnly) params.set("fast", "1");
   if (filters.connectorType) params.set("connector", filters.connectorType);
   for (const v of filters.trailerVerdict) params.set(`trailer_${v}`, "1");
+  for (const key of filters.operatorKeys) params.set(`provider_${key}`, "1");
   return params.toString();
 }
 
@@ -581,6 +587,10 @@ export function ChargingStationMapExplorer({
                 "Bewertung abschicken" wirkungslos blieb (Nutzerfeedback,
                 Konsole: "A React form was unexpectedly submitted"). */}
             <form action="/ladepunkte" className="flex-1 overflow-y-auto p-4 pb-[calc(1rem+var(--safe-bottom))]">
+              {/* Siehe resolveFastChargersOnly (charging-stations.ts): markiert
+                  jeden echten Formular-Submit, damit ein bewusst abgewaehltes
+                  "Nur Schnelllader" nicht wieder auf den Default zurueckfaellt. */}
+              <input type="hidden" name="filters_submitted" value="1" />
               {filterPanel}
             </form>
           </div>

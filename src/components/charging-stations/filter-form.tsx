@@ -1,6 +1,7 @@
 import { NameSuggestField } from "@/components/name-suggest-field";
 import type { ChargingStationFilters } from "@/lib/charging-stations";
 import { formatConnectorStandard } from "@/lib/connector-standard";
+import { CHARGING_PROVIDERS } from "@/lib/charging-providers";
 
 /** "Weitere Filter" -- Suche + Steckertyp. Anhaengertauglichkeit, Schnelllader
  * und Favoriten stehen als Quick-Filter im selben Panel (siehe
@@ -45,6 +46,23 @@ export function ChargingStationFilterForm({
           ))}
         </select>
       </label>
+
+      <fieldset className="flex flex-col gap-2">
+        <legend className="mb-1 font-medium">Ladeanbieter</legend>
+        <div className="grid grid-cols-2 gap-x-3 gap-y-1 sm:grid-cols-3">
+          {CHARGING_PROVIDERS.map((provider) => (
+            <label key={provider.key} className="flex min-h-11 items-center gap-2">
+              <input
+                type="checkbox"
+                name={`provider_${provider.key}`}
+                value="1"
+                defaultChecked={filters.operatorKeys.includes(provider.key)}
+              />
+              {provider.label}
+            </label>
+          ))}
+        </div>
+      </fieldset>
     </div>
   );
 }
