@@ -103,6 +103,15 @@ strukturierte Einzelkriterien fuer "echten Drive-Through ohne Rangieren/
 Abkoppeln" statt nur Freitext in `trailer_notes` -- machen
 Community-Bewertungen konsistenter vergleichbar.
 
+`is_admin_review` (per Trigger `charging_reviews_set_admin_flag` gesetzt,
+nicht vom Client beeinflussbar): true, wenn `profiles.is_admin` für
+`user_id` zum Zeitpunkt der Bewertung true war. Lässt Admin-Bewertungen mit
+`trailer_length_m` in den Gespannlängen-Empfehlungen
+(`normalTrailerRatio`/`largeTrailerRatio`, `bucketReviewsByRigLength` in
+[src/lib/scoring/trailer-compatibility.ts](../src/lib/scoring/trailer-compatibility.ts))
+doppelt zählen, damit eine einzelne Admin-Bewertung mit Gespannlänge sofort
+für eine Einschätzung ausreicht.
+
 ### saved_routes (§21–§27, Routenplaner)
 
 Gespeicherte Routenplanungen: Start-/Ziel-Query + Koordinaten +

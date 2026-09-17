@@ -161,6 +161,12 @@ export interface ChargingReview {
   unobstructed_access: boolean | null;
   no_barrier_or_garage: boolean | null;
   side_mounted_charger: boolean | null;
+
+  // Per Trigger gesetzt (siehe 20261005000000_admin_review_double_weight.sql):
+  // true, wenn profiles.is_admin fuer user_id zum Zeitpunkt der Bewertung
+  // true war. Laesst Admin-Bewertungen mit Gespannlaenge doppelt in die
+  // Gespannlaengen-Empfehlungen einfliessen (trailer-compatibility.ts).
+  is_admin_review: boolean;
 }
 
 export interface SavedRoute {

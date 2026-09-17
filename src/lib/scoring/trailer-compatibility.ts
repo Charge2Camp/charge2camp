@@ -18,6 +18,22 @@ const MIN_REVIEWS_PER_BUCKET = 2;
  * 100% >= 90%). Das überstimmt die längenbasierte Bucket-Logik unten. */
 const NOT_SUITABLE_OVERRIDE_RATIO = 0.9;
 
+/** Nutzerwunsch: Eine Bewertung MIT Gespannlaenge zaehlt fuer die
+ * Gespannlaengen-Empfehlungen (normalTrailerRatio/largeTrailerRatio,
+ * bucketReviewsByRigLength) doppelt, wenn sie von einem Admin stammt
+ * (`is_admin_review`, per Trigger gesetzt -- siehe
+ * 20261005000000_admin_review_double_weight.sql). Ziel: Sobald ein Admin
+ * fuer diese Saeule EINE Bewertung mit Gespannlaenge abgegeben hat, reicht
+ * das bereits fuer MIN_REVIEWS_PER_BUCKET (= 2) und damit fuer eine sofortige
+ * Einschaetzung, ohne auf eine zweite Community-Bewertung warten zu
+ * muessen. Betrifft NUR die laengenbezogenen Buckets, nicht den
+ * laengenunabhaengigen NOT_SUITABLE_OVERRIDE_RATIO oben oder die generelle
+ * overallPositiveRatio/summary-Einschaetzung.
+ */
+function expandWeightedForLengthEvidence(reviews: ChargingReview[]): ChargingReview[] {
+  return reviews.flatMap((r) => (r.is_admin_review && r.trailer_length_m !== null ? [r, r] : [r]));
+}
+
 function suitabilityWeight(suitable: ChargingReview["suitable"]): number {
   if (suitable === "yes") return 1;
   if (suitable === "limited") return 0.5;
@@ -80,12 +96,13 @@ export function summarizeCommunitySuitability(
     (r) => (r.trailer_length_m ?? 0) > LARGE_TRAILER_THRESHOLD_M
   );
   const largePositiveReviews = largeReviews.filter((r) => r.suitable === "yes");
-  const normalEvidence = [...normalReviews, ...largePositiveReviews];
+  const normalEvidence = expandWeightedForLengthEvidence([...normalReviews, ...largePositiveReviews]);
+  const largeEvidence = expandWeightedForLengthEvidence(largeReviews);
 
   const overallPositiveRatio = positiveRatio(reviews);
   const overallNegativeRatio = negativeRatio(reviews);
   const normalTrailerRatio = positiveRatio(normalEvidence);
-  const largeTrailerRatio = positiveRatio(largeReviews);
+  const largeTrailerRatio = positiveRatio(largeEvidence);
 
   let summary: string;
 
@@ -93,7 +110,7 @@ export function summarizeCommunitySuitability(
     summary = "Noch nicht genug Bewertungen für eine verlässliche Einschätzung.";
   } else if (
     normalEvidence.length >= MIN_REVIEWS_PER_BUCKET &&
-    largeReviews.length >= MIN_REVIEWS_PER_BUCKET &&
+    largeEvidence.length >= MIN_REVIEWS_PER_BUCKET &&
     normalTrailerRatio !== null &&
     largeTrailerRatio !== null &&
     normalTrailerRatio - largeTrailerRatio >= 0.3
@@ -113,7 +130,7 @@ export function summarizeCommunitySuitability(
     normalTrailerRatio,
     largeTrailerRatio,
     normalEvidenceCount: normalEvidence.length,
-    largeEvidenceCount: largeReviews.length,
+    largeEvidenceCount: largeEvidence.length,
     overallNegativeRatio,
     summary,
   };
@@ -240,7 +257,7 @@ export function bucketReviewsByRigLength(reviews: ChargingReview[]): RigLengthDi
         ? []
         : withLength.filter((r) => r.trailer_length_m > bucket.maxM && r.suitable === "yes");
 
-    const evidence = [...inBucket, ...inheritedPositive];
+    const evidence = expandWeightedForLengthEvidence([...inBucket, ...inheritedPositive]);
 
     return {
       ...bucket,
