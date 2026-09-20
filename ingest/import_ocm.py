@@ -94,16 +94,12 @@ order by same_operator desc nulls last
 limit 1
 """
 
+# Seit supabase/migrations/
+# 20261013000000_fill_missing_trailer_suitability_any_source.sql quellen-
+# uebergreifend (nicht mehr nur 'ocm') -- damit bekommen auch neue
+# ingest/import_bnetza.py-Ladepunkte eine 'unknown'-Platzhalterzeile.
 FILL_MISSING_TRAILER_SUITABILITY_SQL = """
-insert into enrich.trailer_suitability (charge_point_key, verdict, origin)
-select cp.external_key, 'unknown', 'auto'
-from core.charge_point cp
-where cp.source = 'ocm'
-  and not exists (
-      select 1 from enrich.trailer_suitability ts
-      where ts.charge_point_key = cp.external_key
-  )
-on conflict (charge_point_key) do nothing
+select core.fill_missing_trailer_suitability()
 """
 
 

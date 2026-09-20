@@ -112,7 +112,7 @@ Anhängertauglichkeit.
 | Priorität | Quelle | `source_id` | Registry-Priorität |
 |---|---|---|---:|
 | 1 | Charge2Camp Admin/Sascha-Liste (manuell) | `admin_manual`, `sascha_list` | 100 |
-| 2 | Bundesnetzagentur Ladesäulenregister | `bundesnetzagentur` | 90 (Registry-Eintrag angelegt, **noch kein Live-Import** — siehe unten) |
+| 2 | Bundesnetzagentur Ladesäulenregister | `bundesnetzagentur` | 90 |
 | 4 | Open Charge Map | `ocm` | 40 (Community-Daten, keine staatliche Quelle) |
 | 5 | OpenStreetMap | `osm` | 10 (nur Kontext-/Geodaten, keine Ladeinfrastruktur-Stammdaten) |
 
@@ -125,13 +125,47 @@ bewusst beibehaltenen Ausnahme `core.charge_point.manual_override`
 (Stammdaten-Korrekturen im Admin-Bereich), siehe Kommentar an
 `core.upsert_charge_point()`.
 
-**Bundesnetzagentur — Status: Adapter-Gerüst, kein Live-Import.** Das
-Ladesäulenregister wird nicht per API, sondern als periodischer CSV/XLSX-
-Download bereitgestellt. `ingest/import_bnetza.py` ist strukturell
-vorbereitet (analog `import_ocm.py --file`), die Spaltenzuordnung ist aber
-bewusst noch nicht implementiert — Prinzip "keine Scheindaten": es wird
-keine Spalte geraten, solange keine echte Exportdatei vorliegt. Sobald eine
-aktuelle Datei verfügbar ist, folgt die reale Anbindung inkl. Tests.
+### Import-Log Bundesnetzagentur (`ingest/import_bnetza.py --file`)
+
+Aktiv seit 2026-09-20, verifiziert gegen eine echte Exportdatei
+(`Ladesaeulenregister_BNetzA_2026-09-01.csv`, Stand 01.09.2026,
+**116.443 Ladeeinrichtungen**, 219.826 Anschlüsse). Kein Live-API — das
+Ladesäulenregister wird von der Bundesnetzagentur als periodischer
+CSV-Download bereitgestellt (`ladesaeulenregister.de`), UTF-8-kodiert mit
+BOM, Trennzeichen `;`, deutsches Dezimalkomma bei Koordinaten/Leistung, 10
+Praeambel-/Kopfzeilen vor der eigentlichen Spaltenkopfzeile. Details zur
+Spaltenzuordnung (inkl. der parallelen `Steckertypen<N>`/`Nennleistung
+Stecker<N>`-Listenstruktur je "Ladepunkt"-Gruppe) siehe Moduldocstring in
+[ingest/import_bnetza.py](../ingest/import_bnetza.py).
+
+`source_id = 'DE'`-Ladepunkte tragen `source = 'bundesnetzagentur'`,
+`access_type = 'public'` (das Register erfasst laut eigener Präambel
+ausschließlich öffentlich zugängliche Ladeeinrichtungen — dokumentiertes
+Faktum der Quelle, keine Annahme) und `country_code = 'DE'`. Steckertypen
+werden auf dieselben `core.connector.standard`-Werte abgebildet, die der
+bestehende Steckertyp-Filter (`src/lib/connector-categories.ts`) bereits
+kennt (Type2/Type2_Socket/Type1/Schuko/CCS2/CHAdeMO/"CEE 3 Pin"/"CEE 5
+Pin"); "DC Megawatt Charging System (MCS)" und "DC Tesla Fahrzeugkupplung
+(Typ 2)" sind neue, in der Kategorienliste noch nicht erfasste Typen — sie
+landen unverändert in `core.connector.standard`, statt in eine
+elektrisch falsche Kategorie gezwungen zu werden.
+
+Gleicher zentraler Resolver wie OCM (`core.upsert_charge_point()`),
+gleicher Nachbarschafts-Dublettencheck gegen manuell erfasste Stationen wie
+`ingest/import_ocm.py` (40m-Radius + Betreiber-Abgleich als
+Dublettensignal), gleiches `enrich.trailer_suitability`-Auffüllen für neu
+importierte Stationen ohne bestehende Bewertung (seit
+`20261013000000_fill_missing_trailer_suitability_any_source.sql`
+quellenübergreifend, nicht mehr nur für `ocm`). Import-Dauer für die volle
+DE-Datei lokal: ca. 6 Minuten (Einzeiliger Upsert pro Zeile inkl.
+Dublettenprüfung, kein Bulk-Pfad wie beim TS-Cron für OCM). Idempotenz
+gegen einen erneuten Lauf derselben Datei verifiziert (Zeilen-/
+Anschlusszahl unverändert).
+
+**Wiederkehrender Import:** noch nicht automatisiert (kein Cron wie bei
+OCM) — die Bundesnetzagentur veröffentlicht keine feste
+Aktualisierungsfrequenz für den Download, ein manueller/geplanter
+Reimport-Rhythmus ist noch zu entscheiden.
 
 ## Routing
 
