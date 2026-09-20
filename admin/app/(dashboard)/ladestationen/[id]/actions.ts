@@ -50,10 +50,15 @@ export async function updateChargePoint(chargePointId: string, formData: FormDat
 }
 
 /** Manuelle Korrektur der Anhaengertauglichkeit durch einen Admin --
- * schreibt direkt in enrich.trailer_suitability, UNABHAENGIG von der
- * community-basierten Meldungs-/Moderations-Warteschlange
- * (enrich.trailer_report / moderate_trailer_report). origin="admin_override"
- * und verified_by/verified_at machen den manuellen Ursprung nachvollziehbar. */
+ * schreibt UNABHAENGIG von der community-basierten Meldungs-/
+ * Moderations-Warteschlange (enrich.trailer_report / moderate_trailer_report)
+ * ueber enrich.set_trailer_suitability() -- die einzige erlaubte
+ * Schreibfunktion (siehe supabase/migrations/
+ * 20261012000000_field_provenance_and_source_registry.sql). Die Funktion
+ * setzt manual_override=true + source_type='MANUAL' automatisch, weil
+ * origin='admin_override' uebergeben wird; damit ist die Bewertung ab sofort
+ * hart geschuetzt (Auftragsdokument Abschnitt 3), nicht mehr nur per
+ * origin-Konvention. */
 export async function overrideTrailerSuitability(chargePointKey: string, formData: FormData) {
   const admin = await requireAdmin();
   const supabase = createServiceClient();
@@ -77,21 +82,16 @@ export async function overrideTrailerSuitability(chargePointKey: string, formDat
   const verdict = formData.get("verdict") as TrailerVerdict;
   const maneuveringSpace = (formData.get("maneuvering_space") as string) || null;
 
-  const { error } = await supabase.schema("enrich").from("trailer_suitability").upsert(
-    {
-      charge_point_key: chargePointKey,
-      verdict,
-      drive_through: formData.get("drive_through") === "1",
-      pull_in_length_m: formData.get("pull_in_length_m") ? Number(formData.get("pull_in_length_m")) : null,
-      maneuvering_space: maneuveringSpace as ManeuveringSpace | null,
-      notes: (formData.get("notes") as string) || null,
-      origin: "admin_override",
-      verified_at: new Date().toISOString(),
-      verified_by: admin.id,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "charge_point_key" }
-  );
+  const { error } = await supabase.schema("enrich").rpc("set_trailer_suitability", {
+    p_charge_point_key: chargePointKey,
+    p_verdict: verdict,
+    p_origin: "admin_override",
+    p_drive_through: formData.get("drive_through") === "1",
+    p_pull_in_length_m: formData.get("pull_in_length_m") ? Number(formData.get("pull_in_length_m")) : null,
+    p_maneuvering_space: maneuveringSpace as ManeuveringSpace | null,
+    p_notes: (formData.get("notes") as string) || null,
+    p_verified_by: admin.id,
+  });
 
   if (error) throw new Error(error.message);
   revalidatePath(`/ladestationen`);

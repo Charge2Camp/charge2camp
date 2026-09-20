@@ -98,6 +98,41 @@ verloren zu gehen. Koordinaten sind seither auch direkt in den
 Stammdaten-Formularen (Ladepunkt/Campingplatz) bearbeitbar (Auslöser:
 Dashboard-Check "Unplausible Koordinaten").
 
+### Verbindliche Quellenpriorität & feldbasierte Provenance (seit 2026-09-20)
+
+Auftrag: `\\MyCloud\work\charge2camp\LAdesäule_Schnittstellen.rtf`. Umgesetzt in
+[supabase/migrations/20261012000000_field_provenance_and_source_registry.sql](../supabase/migrations/20261012000000_field_provenance_and_source_registry.sql):
+`core.source_registry` (Priorität je Quelle), `core.upsert_charge_point()`
+als **einziger** Merge-Resolver für `core.charge_point` (jedes Feld einzeln,
+nicht der ganze Datensatz — sowohl `ingest/import_ocm.py` als auch
+`src/app/api/cron/ocm-import/route.ts` rufen dieselbe Funktion auf), und
+`enrich.set_trailer_suitability()` als einziger Schreibpfad für
+Anhängertauglichkeit.
+
+| Priorität | Quelle | `source_id` | Registry-Priorität |
+|---|---|---|---:|
+| 1 | Charge2Camp Admin/Sascha-Liste (manuell) | `admin_manual`, `sascha_list` | 100 |
+| 2 | Bundesnetzagentur Ladesäulenregister | `bundesnetzagentur` | 90 (Registry-Eintrag angelegt, **noch kein Live-Import** — siehe unten) |
+| 4 | Open Charge Map | `ocm` | 40 (Community-Daten, keine staatliche Quelle) |
+| 5 | OpenStreetMap | `osm` | 10 (nur Kontext-/Geodaten, keine Ladeinfrastruktur-Stammdaten) |
+
+**Harte Regel unabhängig von der Priorität:** Eine manuell verifizierte
+Anhängertauglichkeit (`enrich.trailer_suitability.manual_override = true`)
+darf durch keinen automatischen Import geändert werden, auch nicht auf
+`unknown` zurückgesetzt. Alle anderen Ladepunkt-Felder bleiben weiterhin per
+Quellenpriorität automatisch aktualisierbar — mit der bestehenden,
+bewusst beibehaltenen Ausnahme `core.charge_point.manual_override`
+(Stammdaten-Korrekturen im Admin-Bereich), siehe Kommentar an
+`core.upsert_charge_point()`.
+
+**Bundesnetzagentur — Status: Adapter-Gerüst, kein Live-Import.** Das
+Ladesäulenregister wird nicht per API, sondern als periodischer CSV/XLSX-
+Download bereitgestellt. `ingest/import_bnetza.py` ist strukturell
+vorbereitet (analog `import_ocm.py --file`), die Spaltenzuordnung ist aber
+bewusst noch nicht implementiert — Prinzip "keine Scheindaten": es wird
+keine Spalte geraten, solange keine echte Exportdatei vorliegt. Sobald eine
+aktuelle Datei verfügbar ist, folgt die reale Anbindung inkl. Tests.
+
 ## Routing
 
 | Anbieter | URL | Lizenz | Kosten | Status |

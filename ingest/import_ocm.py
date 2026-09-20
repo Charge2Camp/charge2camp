@@ -53,59 +53,15 @@ CONNECTION_TYPE_MAP: dict[int, tuple[str, str]] = {
 # 30 = DC.
 CURRENT_TYPE_BY_ID: dict[int, str] = {10: "AC", 20: "AC", 30: "DC"}
 
+# Merge-Logik lebt seit supabase/migrations/
+# 20261012000000_field_provenance_and_source_registry.sql zentral in
+# core.upsert_charge_point() -- vorher stand die Feld-fuer-Feld-
+# Schutzlogik nur hier inline UND (getrennt, potenziell abweichend) im
+# TS-Vercel-Cron (src/app/api/cron/ocm-import/route.ts). Beide Importer
+# rufen jetzt dieselbe SQL-Funktion auf, siehe Auftragsdokument Abschnitt 13
+# ("Alle Datenimporte muessen denselben zentralen Resolver verwenden").
 UPSERT_CORE_SQL = """
-insert into core.charge_point (
-    external_key, name, operator, network, geom, address, postcode, city,
-    country_code, access_type, is_operational, max_power_kw, connector_count,
-    source, source_updated_at, last_seen_at, updated_at, is_active
-) values (
-    %(external_key)s, %(name)s, %(operator)s, %(network)s,
-    ST_SetSRID(ST_MakePoint(%(lon)s, %(lat)s), 4326)::geography,
-    %(address)s, %(postcode)s, %(city)s, %(country_code)s, %(access_type)s,
-    %(is_operational)s, %(max_power_kw)s, %(connector_count)s,
-    'ocm', %(source_updated_at)s, now(), now(), %(initial_is_active)s
-)
-on conflict (external_key) do update set
-    -- Von Haenden manuell im Admin-Bereich korrigierte Felder (siehe
-    -- admin/.../ladestationen/[id]/actions.ts updateChargePoint) werden bei
-    -- gesetztem manual_override NICHT mehr von OCM ueberschrieben --
-    -- gleiches Prinzip wie is_active weiter unten. Ohne dieses Flag wuerde
-    -- z.B. eine korrigierte "Ladenetz.de"->"Stadtwerke Muenchen"-Aenderung
-    -- beim naechsten Reimport wieder verloren gehen (Nutzerfeedback).
-    name = case when charge_point.manual_override then charge_point.name else excluded.name end,
-    operator = case when charge_point.manual_override then charge_point.operator else excluded.operator end,
-    network = excluded.network,
-    geom = case when charge_point.manual_override then charge_point.geom else excluded.geom end,
-    address = case when charge_point.manual_override then charge_point.address else excluded.address end,
-    postcode = excluded.postcode,
-    city = case when charge_point.manual_override then charge_point.city else excluded.city end,
-    country_code = case when charge_point.manual_override then charge_point.country_code else excluded.country_code end,
-    access_type = case when charge_point.manual_override then charge_point.access_type else excluded.access_type end,
-    -- Ausnahme vom manual_override-Schutz: meldet OCM eine Saeule als NICHT
-    -- betriebsbereit, wird das immer uebernommen, auch wenn ein Admin die
-    -- Zeile fixiert hat. Datenqualitaet/Aktualitaet zu "ausser Betrieb" hat
-    -- hier Vorrang vor dem sonst geltenden Schutz vor stillem Ueberschreiben
-    -- (Nutzervorgabe) -- eine veraltete "betriebsbereit"-Korrektur soll
-    -- Nutzer nicht zu einer defekten Saeule schicken. Meldet OCM dagegen
-    -- (wieder) betriebsbereit, gilt der normale manual_override-Schutz
-    -- weiter (kein automatisches "Reparieren" einer Admin-Korrektur in die
-    -- andere Richtung).
-    is_operational = case
-        when not excluded.is_operational then false
-        when charge_point.manual_override then charge_point.is_operational
-        else excluded.is_operational
-    end,
-    max_power_kw = case when charge_point.manual_override then charge_point.max_power_kw else excluded.max_power_kw end,
-    connector_count = case when charge_point.manual_override then charge_point.connector_count else excluded.connector_count end,
-    source_updated_at = excluded.source_updated_at,
-    last_seen_at = now(),
-    updated_at = now()
-    -- is_active bewusst NICHT in diesem UPDATE-Zweig: eine bereits
-    -- bestehende Zeile (egal ob von einem Admin de-/reaktiviert, oder von
-    -- der Dublettenpruefung unten inaktiv angelegt) behaelt ihren Status,
-    -- ein erneuter Import soll das nicht ueberschreiben. Nur beim
-    -- ERSTMALIGEN Insert (kein Conflict) greift %(initial_is_active)s.
-returning id, manual_override
+select id, manual_override from core.upsert_charge_point(%(payload)s, 'ocm')
 """
 
 # Nutzerwunsch (siehe Konversation "was passiert, wenn OCM eine Saeule
@@ -125,10 +81,16 @@ returning id, manual_override
 # Admin-Entscheidung.
 NEARBY_MANUAL_RADIUS_M = 40
 
+# same_operator zusaetzlich zur reinen Radiuspruefung (Auftragsdokument
+# Abschnitt 16, Matching-Stufe 2 "exakte Koordinaten + Betreiber") -- geht
+# NICHT in die is_active-Entscheidung ein (bleibt bewusst Admin-Aufgabe, s.o.),
+# dient nur als staerkeres/schwaecheres Duplikat-Signal im Log.
 FIND_NEARBY_NON_OCM_SQL = """
-select 1 from core.charge_point
+select operator = %(operator)s as same_operator
+from core.charge_point
 where source <> 'ocm'
   and ST_DWithin(geom, ST_SetSRID(ST_MakePoint(%(lon)s, %(lat)s), 4326)::geography, %(radius)s)
+order by same_operator desc nulls last
 limit 1
 """
 
@@ -332,6 +294,7 @@ def main() -> None:
     skipped_no_id_or_coords = 0
     missing_country_code = 0
     near_manual_duplicates = 0
+    near_manual_same_operator = 0
 
     conn = get_connection()
     try:
@@ -352,14 +315,23 @@ def main() -> None:
                     # ohnehin, siehe Kommentar an UPSERT_CORE_SQL).
                     cur.execute(
                         FIND_NEARBY_NON_OCM_SQL,
-                        {"lat": parsed["lat"], "lon": parsed["lon"], "radius": NEARBY_MANUAL_RADIUS_M},
+                        {
+                            "lat": parsed["lat"],
+                            "lon": parsed["lon"],
+                            "radius": NEARBY_MANUAL_RADIUS_M,
+                            "operator": parsed["operator"],
+                        },
                     )
-                    has_nearby_manual = cur.fetchone() is not None
+                    nearby_row = cur.fetchone()
+                    has_nearby_manual = nearby_row is not None
                     if has_nearby_manual:
                         near_manual_duplicates += 1
+                        if nearby_row[0]:
+                            near_manual_same_operator += 1
                     parsed["initial_is_active"] = not has_nearby_manual
 
-                    cur.execute(UPSERT_CORE_SQL, parsed)
+                    payload = {k: v for k, v in parsed.items() if not k.startswith("_")}
+                    cur.execute(UPSERT_CORE_SQL, {"payload": Json(payload)})
                     charge_point_id, manual_override = cur.fetchone()
 
                     # Bei fixierten Stationen (Admin-Korrektur, siehe
@@ -395,6 +367,12 @@ def main() -> None:
             near_manual_duplicates,
             NEARBY_MANUAL_RADIUS_M,
         )
+        if near_manual_same_operator:
+            logger.warning(
+                "Davon %d mit identischem Betreiber wie die bestehende Nicht-OCM-Station -- "
+                "starkes Dublettensignal (Auftragsdokument Abschnitt 16, Matching-Stufe 2).",
+                near_manual_same_operator,
+            )
 
 
 if __name__ == "__main__":

@@ -190,37 +190,52 @@ export async function GET(request: NextRequest) {
 
   const parsed = pois.map(parsePoi).filter((p): p is ParsedChargePoint => p !== null);
 
+  // Schreibt ueber core.upsert_charge_point() (siehe supabase/migrations/
+  // 20261012000000_field_provenance_and_source_registry.sql) statt eines
+  // rohen PostgREST-.upsert(): Letzteres schrieb bedingungslos alle Spalten
+  // und ignorierte damit core.charge_point.manual_override komplett -- eine
+  // Admin-Korrektur (z. B. Betreiber) wurde vom taeglichen Cron trotzdem
+  // ueberschrieben, obwohl ingest/import_ocm.py (manueller Lauf) denselben
+  // Fall bereits korrekt schuetzte. Die RPC ist jetzt der EINZIGE Merge-Pfad
+  // fuer core.charge_point, in Python wie in TS.
   let coreUpserted = 0;
-  for (const batch of chunk(parsed, 300)) {
-    const rows = batch.map((p) => {
-      const { name, operator, network, geom, address, postcode, city, country_code, access_type, is_operational, max_power_kw, connector_count, source, source_updated_at, external_key } = p;
-      return { name, operator, network, geom, address, postcode, city, country_code, access_type, is_operational, max_power_kw, connector_count, source, source_updated_at, external_key };
-    });
-    const { error } = await supabase.schema("core").from("charge_point").upsert(rows, { onConflict: "external_key" });
-    if (error) return NextResponse.json({ error: `charge_point upsert: ${error.message}`, country }, { status: 500 });
-    coreUpserted += rows.length;
-  }
-
-  // IDs der gerade upgeserteten Punkte nachladen, um Anschluesse per
-  // charge_point_id zu schreiben (core.connector kennt external_key nicht).
-  const externalKeys = parsed.map((p) => p.external_key);
   const idByKey = new Map<string, string>();
-  for (const batch of chunk(externalKeys, 200)) {
-    const { data, error } = await supabase.schema("core").from("charge_point").select("id, external_key").in("external_key", batch);
-    if (error) return NextResponse.json({ error: `id lookup: ${error.message}`, country }, { status: 500 });
-    for (const row of data ?? []) idByKey.set(row.external_key, row.id);
+  const manualOverrideByKey = new Map<string, boolean>();
+  for (const batch of chunk(parsed, 300)) {
+    const payloads = batch.map((p) => {
+      const { geom, ...rest } = p;
+      const match = /POINT\(([-\d.]+) ([-\d.]+)\)/.exec(geom);
+      const lon = match ? Number(match[1]) : null;
+      const lat = match ? Number(match[2]) : null;
+      return { ...rest, lon, lat };
+    });
+    const { data, error } = await supabase.schema("core").rpc("upsert_charge_points_bulk", {
+      p_payloads: payloads,
+      p_source: "ocm",
+    });
+    if (error) return NextResponse.json({ error: `charge_point upsert: ${error.message}`, country }, { status: 500 });
+    for (const row of (data ?? []) as { external_key: string; id: string; manual_override: boolean }[]) {
+      idByKey.set(row.external_key, row.id);
+      manualOverrideByKey.set(row.external_key, row.manual_override);
+    }
+    coreUpserted += batch.length;
   }
 
   // Kleinere Batches als bei den anderen .in()-Aufrufen: UUIDs sind laenger
   // als external_keys, ein zu grosser Batch sprengt sonst die maximale
-  // URI-Laenge (PostgREST kodiert Filter als Query-Parameter).
-  const chargePointIds = Array.from(idByKey.values());
+  // URI-Laenge (PostgREST kodiert Filter als Query-Parameter). Bei
+  // manual_override=true bleiben die Anschluesse unangetastet -- gleiches
+  // Prinzip wie replace_connectors() in ingest/import_ocm.py.
+  const chargePointIds = Array.from(idByKey.entries())
+    .filter(([key]) => !manualOverrideByKey.get(key))
+    .map(([, id]) => id);
   for (const batch of chunk(chargePointIds, 100)) {
     const { error } = await supabase.schema("core").from("connector").delete().in("charge_point_id", batch);
     if (error) return NextResponse.json({ error: `connector delete: ${error.message}`, country }, { status: 500 });
   }
 
   const connectorRows = parsed.flatMap((p) => {
+    if (manualOverrideByKey.get(p.external_key)) return [];
     const chargePointId = idByKey.get(p.external_key);
     if (!chargePointId) return [];
     return p.connectors.map((c) => ({ charge_point_id: chargePointId, standard: c.standard, power_kw: c.power_kw, current_type: c.current_type, quantity: c.quantity }));

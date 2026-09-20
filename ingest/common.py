@@ -82,4 +82,13 @@ def import_run(conn, source: str, scope: str | None, notes: str | None = None) -
                 "update raw.import_run set status='ok', finished_at=now(), record_count=%s where id=%s",
                 (state["record_count"], run_id),
             )
+            # core.source_registry.last_successful_import nachfuehren (siehe
+            # supabase/migrations/
+            # 20261012000000_field_provenance_and_source_registry.sql) --
+            # kein Fehler, falls die Quelle dort noch nicht registriert ist
+            # (z. B. kuenftige Importer vor ihrem ersten Registry-Eintrag).
+            cur.execute(
+                "update core.source_registry set last_successful_import = now() where source_id = %s",
+                (source,),
+            )
         conn.commit()
