@@ -5,7 +5,8 @@ import { dismissChargePointDuplicate } from "./actions";
 interface DuplicateRow {
   key_a: string;
   key_b: string;
-  operator: string | null;
+  operator_a: string | null;
+  operator_b: string | null;
   distance_m: number;
 }
 
@@ -133,7 +134,7 @@ export default async function ChargePointDuplicatesPage({
       if (maxKw < minPower) return false;
     }
     if (needle) {
-      const haystack = [a.name, a.operator, a.city, b.name, b.operator, b.city, dup.operator]
+      const haystack = [a.name, a.operator, a.city, b.name, b.operator, b.city, dup.operator_a, dup.operator_b]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
@@ -165,9 +166,10 @@ export default async function ChargePointDuplicatesPage({
         </Link>
         <h1 className="mt-1 text-2xl font-semibold">Mögliche Dubletten (Ladepunkte)</h1>
         <p className="mt-1 text-sm text-text-muted">
-          Ladepunkte innerhalb von 25m mit übereinstimmendem Betreiber, aus core.run_quality_checks() --{" "}
-          {resolvedDuplicates.length} gesamt, {sortedDuplicates.length} nach Filter. Pro Paar entscheidest du, welcher
-          Datensatz bestehen bleibt.
+          Ladepunkte innerhalb von 25m (Schnelllader: 100m), quellenübergreifend, aus core.run_quality_checks() --{" "}
+          {resolvedDuplicates.length} gesamt, {sortedDuplicates.length} nach Filter. Betreiber müssen nicht
+          übereinstimmen (z. B. OCM vs. Bundesnetzagentur schreiben denselben Betreiber oft unterschiedlich) — pro
+          Paar entscheidest du, welcher Datensatz bestehen bleibt.
         </p>
       </div>
 
@@ -228,7 +230,14 @@ export default async function ChargePointDuplicatesPage({
                   {a.name ?? a.operator ?? a.external_key} ({a.source}) ↔ {b.name ?? b.operator ?? b.external_key} ({b.source})
                 </p>
                 <p className="text-text-muted">
-                  {[d.operator, a.city, `${d.distance_m}m Abstand`, maxKw ? `${maxKw} kW` : null].filter(Boolean).join(" · ")}
+                  {[
+                    d.operator_a === d.operator_b ? d.operator_a : [d.operator_a, d.operator_b].filter(Boolean).join(" ↔ "),
+                    a.city,
+                    `${d.distance_m}m Abstand`,
+                    maxKw ? `${maxKw} kW` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
                 </p>
               </div>
               <div className="flex shrink-0 gap-2">
