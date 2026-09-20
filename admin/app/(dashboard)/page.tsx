@@ -79,6 +79,7 @@ export default async function DashboardPage() {
     { count: segmentExportCount },
     { count: fullExportCount },
     { data: lastOcmImportRows },
+    { data: lastBnetzaImportRows },
     { count: newChargePointCount },
     { count: newCampsiteCount },
     { data: activeUserRows7d },
@@ -101,6 +102,12 @@ export default async function DashboardPage() {
     supabase.schema("core").from("app_usage_event").select("id", { count: "exact", head: true }).eq("event_type", "route_segment_export"),
     supabase.schema("core").from("app_usage_event").select("id", { count: "exact", head: true }).eq("event_type", "route_full_export"),
     supabase.schema("core").rpc("last_ocm_import"),
+    // core.last_import() ist der generalisierte Nachfolger von
+    // core.last_ocm_import() (siehe
+    // supabase/migrations/20261015000000_last_bnetza_import_info.sql) --
+    // fuer BNetzA direkt mit source-Parameter statt einer eigenen
+    // last_bnetza_import()-Funktion.
+    supabase.schema("core").rpc("last_import", { p_source: "bundesnetzagentur" }),
     supabase.schema("core").from("charge_point").select("id", { count: "exact", head: true }).gte("created_at", startOfWeekIso()),
     supabase.schema("core").from("campsite").select("id", { count: "exact", head: true }).gte("created_at", startOfWeekIso()),
     // "Aktive Nutzer" = eindeutige user_id mit mind. einem app_usage_event
@@ -113,6 +120,13 @@ export default async function DashboardPage() {
     supabase.schema("enrich").from("missing_station_report").select("id", { count: "exact", head: true }).eq("status", "pending"),
   ]);
   const lastOcmImport = lastOcmImportRows?.[0] as
+    | { scope: string; status: string; record_count: number | null; finished_at: string | null; started_at: string }
+    | undefined;
+  // Anders als OCM (taeglicher Vercel Cron) kann BNetzA in einer Umgebung
+  // noch NIE gelaufen sein (kein Cron, siehe Hinweistext unten) --
+  // lastBnetzaImport bleibt dann bewusst undefined statt eines
+  // Platzhalter-Laufs.
+  const lastBnetzaImport = lastBnetzaImportRows?.[0] as
     | { scope: string; status: string; record_count: number | null; finished_at: string | null; started_at: string }
     | undefined;
 
@@ -167,6 +181,26 @@ export default async function DashboardPage() {
           ) : (
             "noch kein protokollierter Lauf"
           )}
+        </p>
+        <p className="mt-2 text-sm">
+          Letzter BNetzA-Import:{" "}
+          {lastBnetzaImport ? (
+            <>
+              <span className="font-medium">{formatDateTime(lastBnetzaImport.finished_at)}</span> · {lastBnetzaImport.scope}
+              {lastBnetzaImport.status !== "ok" && <span className="text-status-down"> ({lastBnetzaImport.status})</span>}
+              {typeof lastBnetzaImport.record_count === "number" && ` · ${lastBnetzaImport.record_count} Ladepunkte`}
+            </>
+          ) : (
+            "noch nie importiert"
+          )}
+        </p>
+        {/* Kein Upload-UI/Cron fuer BNetzA (Nutzerentscheidung: eine
+            Datei-Upload-Flaeche mit Fortschrittsanzeige wuerde an Vercels
+            60s-Function-Timeout scheitern, siehe maxDuration in
+            src/app/api/cron/ocm-import/route.ts) -- nur ein Hinweis auf den
+            manuellen CLI-Befehl, bewusst unauffaellig statt als CTA. */}
+        <p className="mt-1 text-xs text-text-muted">
+          Reimport manuell via <code>ingest/import_bnetza.py --file &lt;pfad-zur-csv&gt;</code> (kein automatischer Cron).
         </p>
       </Section>
 

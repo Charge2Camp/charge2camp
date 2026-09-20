@@ -66,7 +66,7 @@ from typing import Any
 
 from psycopg2.extras import Json, execute_batch
 
-from common import get_connection, import_run, setup_logging
+from common import find_and_absorb_nearby_duplicate, get_connection, import_run, setup_logging
 
 # Rohwert (nach Aufsplitten einer Steckertypen<N>-Zelle an "; ") ->
 # (core.connector.standard, current_type). Siehe Moduldocstring.
@@ -89,22 +89,21 @@ STECKERTYP_MAP: dict[str, tuple[str, str]] = {
 # Exportdatei ermittelt, nicht dokumentiert von der Bundesnetzagentur.
 HEADER_ROWS_BEFORE_COLUMNS = 10
 
-# Gleiches Prinzip wie NEARBY_MANUAL_RADIUS_M in import_ocm.py: ein neu
-# importierter BNetzA-Punkt in der Naehe einer bereits bestehenden
-# Nicht-BNetzA-Station (typischerweise 'admin_manual') wird trotzdem
-# angelegt (echte Daten nicht unterdruecken), aber inaktiv, damit er nicht
-# als sichtbare Dublette auftaucht -- Zusammenfuehrung bleibt eine
-# Admin-Entscheidung (core.merge_charge_points).
+# Ein neu importierter BNetzA-Punkt in der Naehe einer bereits bestehenden
+# Nicht-BNetzA-Station wird trotzdem angelegt (echte Daten nicht
+# unterdruecken), aber inaktiv, damit er nicht als sichtbare Dublette
+# auftaucht. Bei GENAU EINEM eindeutigen Treffer wird zusaetzlich geprueft,
+# ob BNetzA (priority=90) hoeher priorisiert ist als die Quelle des Treffers
+# (typischerweise 'ocm', priority=40) -- wenn ja, werden max_power_kw/
+# connector_count/is_operational UND die Anschluesse automatisch auf den
+# Treffer uebernommen (Nutzervorgabe: BNetzA/nationale Quellen ueberschreiben
+# OCM bei Anschluessen/Ladeleistung/Betriebsbereitschaft). Bei mehreren
+# Kandidaten (mehrdeutig) findet KEINE automatische Uebernahme statt --
+# Zusammenfuehrung bleibt dann eine Admin-Entscheidung
+# (core.merge_charge_points). Siehe ingest/common.py
+# find_and_absorb_nearby_duplicate() und supabase/migrations/
+# 20261019000000_absorb_technical_fields_from_higher_priority.sql.
 NEARBY_MANUAL_RADIUS_M = 40
-
-FIND_NEARBY_NON_BNETZA_SQL = """
-select operator = %(operator)s as same_operator
-from core.charge_point
-where source <> 'bundesnetzagentur'
-  and ST_DWithin(geom, ST_SetSRID(ST_MakePoint(%(lon)s, %(lat)s), 4326)::geography, %(radius)s)
-order by same_operator desc nulls last
-limit 1
-"""
 
 
 def _parse_decimal(value: str | None) -> float | None:
@@ -248,6 +247,7 @@ def main() -> None:
     skipped_no_id_or_coords = 0
     near_manual_duplicates = 0
     near_manual_same_operator = 0
+    absorbed_count = 0
 
     conn = get_connection()
     try:
@@ -275,22 +275,26 @@ def main() -> None:
                         (reg_id, run_id, Json(row), parsed["lat"], parsed["lon"]),
                     )
 
-                    cur.execute(
-                        FIND_NEARBY_NON_BNETZA_SQL,
-                        {
-                            "lat": parsed["lat"],
-                            "lon": parsed["lon"],
-                            "radius": NEARBY_MANUAL_RADIUS_M,
-                            "operator": parsed["operator"],
-                        },
+                    dup = find_and_absorb_nearby_duplicate(
+                        cur,
+                        source="bundesnetzagentur",
+                        lat=parsed["lat"],
+                        lon=parsed["lon"],
+                        operator=parsed["operator"],
+                        max_power_kw=parsed["max_power_kw"],
+                        connector_count=parsed["connector_count"],
+                        is_operational=parsed["is_operational"],
+                        connectors=parsed["_connectors"],
+                        replace_connectors=replace_connectors,
+                        radius=NEARBY_MANUAL_RADIUS_M,
                     )
-                    nearby_row = cur.fetchone()
-                    has_nearby_manual = nearby_row is not None
-                    if has_nearby_manual:
+                    if dup["duplicate"]:
                         near_manual_duplicates += 1
-                        if nearby_row[0]:
+                        if dup["same_operator"]:
                             near_manual_same_operator += 1
-                    parsed["initial_is_active"] = not has_nearby_manual
+                        if dup["absorbed"]:
+                            absorbed_count += 1
+                    parsed["initial_is_active"] = dup["initial_is_active"]
 
                     payload = {k: v for k, v in parsed.items() if not k.startswith("_")}
                     cur.execute(
@@ -311,10 +315,64 @@ def main() -> None:
                 # supabase/migrations/
                 # 20261013000000_fill_missing_trailer_suitability_any_source.sql.
                 cur.execute("select core.fill_missing_trailer_suitability()")
+
+                # Zusammenfassung fuer den Log: "Verarbeitet" (unten) zaehlt nur
+                # geparste Zeilen, sagt aber nichts darueber aus, ob dieser Lauf
+                # tatsaechlich etwas veraendert hat -- core.upsert_charge_point()
+                # ist idempotent, ein Re-Import derselben Datei "verarbeitet"
+                # also genauso viele Zeilen wie der Erstimport, obwohl nichts
+                # Neues passiert. started_at kommt aus raw.import_run statt aus
+                # einem lokalen "jetzt zu Laufbeginn"-Zeitstempel, damit die
+                # Grenze exakt mit dem in import_run() angelegten Lauf
+                # uebereinstimmt (inkl. der Zeit, die load_rows() zum
+                # CSV-Einlesen vor dem ersten Insert braucht).
+                cur.execute("select started_at from raw.import_run where id = %s", (run_id,))
+                run_started_at = cur.fetchone()[0]
+
+                cur.execute(
+                    "select count(*) from core.charge_point where source = 'bundesnetzagentur' and created_at >= %s",
+                    (run_started_at,),
+                )
+                new_charge_point_count = cur.fetchone()[0]
+
+                # distinct charge_point_id: core.upsert_charge_point() kann pro
+                # Zeile mehrere Feld-Konflikte gleichzeitig loggen (z. B. name
+                # UND address geaendert) -- das soll hier als EIN veraenderter
+                # Ladepunkt zaehlen, nicht als mehrere.
+                cur.execute(
+                    """
+                    select count(distinct charge_point_id)
+                    from core.field_change_log
+                    where action = 'applied' and incoming_source = 'bundesnetzagentur' and created_at >= %s
+                    """,
+                    (run_started_at,),
+                )
+                changed_charge_point_count = cur.fetchone()[0]
+
+                cur.execute(
+                    """
+                    select count(*)
+                    from core.field_change_log
+                    where action = 'rejected_by_manual_override' and incoming_source = 'bundesnetzagentur' and created_at >= %s
+                    """,
+                    (run_started_at,),
+                )
+                rejected_change_count = cur.fetchone()[0]
     finally:
         conn.close()
 
     logger.info("Verarbeitet: %d Ladepunkte.", state["record_count"])
+    logger.info(
+        "Davon %d neu angelegt, %d bestehende mit mindestens einer geaenderten Spalte.",
+        new_charge_point_count,
+        changed_charge_point_count,
+    )
+    if rejected_change_count:
+        logger.warning(
+            "%d Feldaenderungen durch manual_override abgelehnt (Admin-Korrektur bleibt bestehen) -- "
+            "siehe core.field_change_log.",
+            rejected_change_count,
+        )
     if skipped_no_id_or_coords:
         logger.warning("%d Datensaetze ohne ID/Koordinaten uebersprungen.", skipped_no_id_or_coords)
     if unknown_connection_types:
@@ -332,6 +390,13 @@ def main() -> None:
                 "Davon %d mit identischem Betreiber wie die bestehende Nicht-BNetzA-Station -- "
                 "starkes Dublettensignal.",
                 near_manual_same_operator,
+            )
+        if absorbed_count:
+            logger.info(
+                "%d davon eindeutig zugeordnet: Anschluesse/Ladeleistung/Betriebsbereitschaft der "
+                "bestehenden (niedriger priorisierten) Station automatisch von BNetzA uebernommen, "
+                "siehe core.field_change_log (action='applied_absorb_higher_priority').",
+                absorbed_count,
             )
 
 

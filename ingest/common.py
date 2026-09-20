@@ -13,7 +13,7 @@ import logging
 import os
 import sys
 from contextlib import contextmanager
-from typing import Iterator
+from typing import Any, Callable, Iterator
 
 # Patcht ssl/requests auf den System-Zertifikatsspeicher (Windows Certificate
 # Store), sobald irgendein Modul dieses Pakets importiert wird -- sonst
@@ -92,3 +92,77 @@ def import_run(conn, source: str, scope: str | None, notes: str | None = None) -
                 (source,),
             )
         conn.commit()
+
+
+# Gemeinsame Nachbarschafts-/Uebernahme-Logik fuer alle nationalen Importer
+# (import_bnetza.py, import_irve.py, import_ripree.py) -- siehe
+# supabase/migrations/20261019000000_absorb_technical_fields_from_higher_priority.sql
+# fuer die Begruendung und Schutzregeln. Zentral hier statt in jedem
+# Importer kopiert, damit sich die Nutzervorgabe ("OCM-Daten werden bei
+# Anschluessen/Ladeleistung/Betriebsbereitschaft immer von einer hoeher
+# priorisierten Quelle ueberschrieben") an EINER Stelle aendern laesst.
+NEARBY_DUPLICATE_RADIUS_M = 40
+
+FIND_NEARBY_SQL = """
+select id, source, manual_override, operator = %(operator)s as same_operator
+from core.charge_point
+where source <> %(source)s
+  and ST_DWithin(geom, ST_SetSRID(ST_MakePoint(%(lon)s, %(lat)s), 4326)::geography, %(radius)s)
+"""
+
+
+def find_and_absorb_nearby_duplicate(
+    cur,
+    *,
+    source: str,
+    lat: float,
+    lon: float,
+    operator: str | None,
+    max_power_kw: float | None,
+    connector_count: int | None,
+    is_operational: bool,
+    connectors: list[dict[str, Any]],
+    replace_connectors: Callable[[Any, str, list[dict[str, Any]]], None],
+    radius: float = NEARBY_DUPLICATE_RADIUS_M,
+) -> dict[str, Any]:
+    """Sucht nach core.charge_point-Zeilen anderer Quellen im Umkreis von
+    `radius` Metern. Bei GENAU EINEM Treffer (eindeutig) wird geprueft, ob
+    die aktuelle Quelle laut core.source_registry eine hoehere Prioritaet
+    hat als die Quelle des Treffers -- wenn ja UND der Treffer nicht
+    manual_override=true ist, werden max_power_kw/connector_count/
+    is_operational automatisch auf den Treffer uebernommen (core.
+    absorb_technical_fields()) und dessen Anschluesse per `replace_connectors`
+    ersetzt. Bei MEHREREN Treffern (mehrdeutig) findet KEINE automatische
+    Uebernahme statt -- das bleibt bewusst eine Admin-Entscheidung ueber das
+    Dubletten-Dashboard, genau wie bisher.
+
+    Rueckgabe: {"initial_is_active": bool, "duplicate": bool,
+    "same_operator": bool, "absorbed": bool, "ambiguous": bool} -- der
+    Aufrufer setzt payload["initial_is_active"] auf den zurueckgegebenen
+    Wert und zaehlt/loggt die uebrigen Felder wie bisher."""
+    cur.execute(FIND_NEARBY_SQL, {"source": source, "lat": lat, "lon": lon, "radius": radius, "operator": operator})
+    matches = cur.fetchall()
+
+    if not matches:
+        return {"initial_is_active": True, "duplicate": False, "same_operator": False, "absorbed": False, "ambiguous": False}
+
+    same_operator = any(m[3] for m in matches)
+
+    if len(matches) > 1:
+        # Mehrdeutig -- mehrere Kandidaten in Reichweite, keine automatische
+        # Zuordnung moeglich. Wie bisher: neue Zeile inaktiv anlegen, Admin
+        # entscheidet im Dubletten-Dashboard.
+        return {"initial_is_active": False, "duplicate": True, "same_operator": same_operator, "absorbed": False, "ambiguous": True}
+
+    target_id, _target_source, target_manual_override, _same_operator = matches[0]
+    absorbed = False
+    if not target_manual_override:
+        cur.execute(
+            "select core.absorb_technical_fields(%s, %s, %s, %s, %s)",
+            (target_id, source, max_power_kw, connector_count, is_operational),
+        )
+        absorbed = cur.fetchone()[0]
+        if absorbed:
+            replace_connectors(cur, target_id, connectors)
+
+    return {"initial_is_active": False, "duplicate": True, "same_operator": same_operator, "absorbed": absorbed, "ambiguous": False}
