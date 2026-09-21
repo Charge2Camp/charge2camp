@@ -3,7 +3,7 @@ import { UploadForm } from "./upload-form";
 import { SourceImportForm } from "./source-import-form";
 import { requireAdmin } from "@/lib/require-admin";
 import { createServiceClient } from "@/lib/supabase/service";
-import type { SourceId } from "./source-import-actions";
+import type { SourceId } from "./source-import-config";
 
 interface LastImportRow {
   scope: string;
@@ -17,20 +17,30 @@ interface LastImportRow {
 // jeweilige Uebersichtsseite, nicht auf die Datei selbst -- Dateinamen/
 // -pfade aendern sich mit jeder neuen Version (z. B. traegt die BNetzA-CSV
 // das Exportdatum im Dateinamen), ein direkter Datei-Link wuerde veralten.
-const SOURCES: { id: SourceId; label: string; downloadUrl: string }[] = [
+// dbSourceId: core.source_registry/core.charge_point.source verwenden fuer
+// BNetzA den vollen Namen "bundesnetzagentur" (siehe supabase/migrations/
+// 20261012000000_field_provenance_and_source_registry.sql), waehrend
+// SourceId/SOURCE_IDS ueberall sonst (Dateiname ingest/import_bnetza.py,
+// GitHub-Workflow-Input) bewusst die kurze Form "bnetza" nutzt -- deshalb
+// hier eine eigene Abbildung fuer den Status-RPC-Aufruf statt id direkt zu
+// verwenden.
+const SOURCES: { id: SourceId; dbSourceId: string; label: string; downloadUrl: string }[] = [
   {
     id: "bnetza",
+    dbSourceId: "bundesnetzagentur",
     label: "Deutschland -- Bundesnetzagentur Ladesäulenregister",
     downloadUrl: "https://www.bundesnetzagentur.de/DE/Fachthemen/ElektrizitaetundGas/E-Mobilitaet/start.html",
   },
   {
     id: "irve",
+    dbSourceId: "irve",
     label: "Frankreich -- Base Nationale des IRVE",
     downloadUrl:
       "https://transport.data.gouv.fr/datasets/base-nationale-des-irve-data-gouv-infrastructures-de-recharge-pour-vehicules-electriques-donnees-statiques",
   },
   {
     id: "ripree",
+    dbSourceId: "ripree",
     label: "Spanien -- RIPREE (MITECO)",
     downloadUrl: "https://energia.serviciosmin.gob.es/Ripree/ExportarInstalaciones/Export",
   },
@@ -47,7 +57,7 @@ export default async function BulkUploadPage() {
 
   const lastImports = await Promise.all(
     SOURCES.map(async (s) => {
-      const { data } = await supabase.schema("core").rpc("last_import", { p_source: s.id });
+      const { data } = await supabase.schema("core").rpc("last_import", { p_source: s.dbSourceId });
       return (data?.[0] as LastImportRow | undefined) ?? null;
     })
   );

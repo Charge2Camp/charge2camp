@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { createSourceUploadUrl, triggerSourceImport, type SourceId } from "./source-import-actions";
+import { createSourceUploadUrl, triggerSourceImport } from "./source-import-actions";
+import type { SourceId } from "./source-import-config";
 
 interface Props {
   source: SourceId;

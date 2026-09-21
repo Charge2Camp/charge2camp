@@ -2,12 +2,7 @@
 
 import { requireAdmin } from "@/lib/require-admin";
 import { createServiceClient } from "@/lib/supabase/service";
-
-/** Muss exakt zu den Dateinamen ingest/import_<source>.py UND zum
- * `source`-Choice-Input in .github/workflows/source-import.yml passen --
- * eine neue Quelle braucht alle drei Stellen synchron. */
-export const SOURCE_IDS = ["bnetza", "irve", "ripree"] as const;
-export type SourceId = (typeof SOURCE_IDS)[number];
+import { SOURCE_IDS, type SourceId } from "./source-import-config";
 
 const STORAGE_BUCKET = "source-imports";
 
