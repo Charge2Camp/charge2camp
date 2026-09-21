@@ -1,0 +1,78 @@
+# Fuehrt einen der nationalen Ladesaeulen-Importer (ingest/import_<source>.py)
+# gegen die Produktionsdatenbank aus. Ausgeloest per workflow_dispatch vom
+# Admin-Backend (siehe admin/app/(dashboard)/ladestationen/massenupload/
+# source-import-actions.ts::triggerSourceImport()) -- NICHT manuell ueber die
+# GitHub-UI gedacht, auch wenn das technisch moeglich ist (storage_path muss
+# auf eine tatsaechlich per Signed-Upload-URL hochgeladene Datei im
+# 'source-imports'-Bucket zeigen).
+#
+# Laeuft bewusst hier statt in einer Vercel-Function: die Importe dauern
+# Minuten bis mehrere Stunden (grosse Dateien + viele einzelne DB-Roundtrips
+# je Zeile), Vercel-Functions haben ein 60s-Zeitlimit (siehe maxDuration in
+# src/app/api/cron/ocm-import/route.ts).
+name: Nationale Quelle importieren
+
+on:
+  workflow_dispatch:
+    inputs:
+      source:
+        description: "Quelle (muss zu ingest/import_<source>.py passen)"
+        required: true
+        type: choice
+        options:
+          - bnetza
+          - irve
+          - ripree
+      storage_path:
+        description: "Pfad der hochgeladenen Datei im 'source-imports'-Storage-Bucket"
+        required: true
+        type: string
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Python-Abhaengigkeiten installieren
+        working-directory: ingest
+        run: pip install -r requirements.txt
+
+      - name: Datei aus Supabase Storage laden
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          STORAGE_PATH: ${{ inputs.storage_path }}
+        run: |
+          set -euo pipefail
+          curl -fsSL \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+            "${SUPABASE_URL}/storage/v1/object/source-imports/${STORAGE_PATH}" \
+            -o ingest/downloaded_source_file.csv
+          ls -la ingest/downloaded_source_file.csv
+
+      - name: Import ausfuehren
+        working-directory: ingest
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python "import_${{ inputs.source }}.py" --file downloaded_source_file.csv
+
+      # Immer aufraeumen, auch wenn der Import fehlgeschlagen ist -- eine
+      # 40-160 MB grosse Datei soll nicht dauerhaft im Storage liegen bleiben,
+      # nur weil ein Lauf abgebrochen ist.
+      - name: Hochgeladene Datei aus Storage entfernen
+        if: always()
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          STORAGE_PATH: ${{ inputs.storage_path }}
+        run: |
+          curl -fsSL -X DELETE \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+            "${SUPABASE_URL}/storage/v1/object/source-imports/${STORAGE_PATH}" \
+            || echo "Aufraeumen fehlgeschlagen (nicht kritisch) -- Datei ggf. manuell im Storage-Bucket loeschen."

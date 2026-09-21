@@ -162,10 +162,63 @@ Dublettenprüfung, kein Bulk-Pfad wie beim TS-Cron für OCM). Idempotenz
 gegen einen erneuten Lauf derselben Datei verifiziert (Zeilen-/
 Anschlusszahl unverändert).
 
-**Wiederkehrender Import:** noch nicht automatisiert (kein Cron wie bei
-OCM) — die Bundesnetzagentur veröffentlicht keine feste
-Aktualisierungsfrequenz für den Download, ein manueller/geplanter
-Reimport-Rhythmus ist noch zu entscheiden.
+**Wiederkehrender Import:** kein fester Cron wie bei OCM (die
+Bundesnetzagentur veröffentlicht keine feste Aktualisierungsfrequenz),
+aber seit 2026-09-21 per Admin-Backend anstoßbar — siehe
+["Admin-Upload (GitHub Actions)"](#admin-upload-github-actions) unten.
+
+### Import-Log IRVE / Base Nationale des IRVE (`ingest/import_irve.py --file`)
+
+Aktiv seit 2026-09-21, verifiziert gegen eine echte Exportdatei
+(transport.data.gouv.fr, Stand 2026-09-20, **223.126 Zeilen →
+54.736 Stationen**, 243.782 Anschlüsse). Im Gegensatz zu BNetzA offiziell
+dokumentiertes Schema ([etalab/schema-irve-statique
+v2.3.1](https://schema.data.gouv.fr/etalab/schema-irve-statique/2.3.1/)),
+täglich aktualisiert, Licence Ouverte v1.0. Die reale Datei weicht trotzdem
+an mehreren Stellen vom Schema ab (uneinheitliche Booleans, ca. 0,8%
+mojibake-kodierte `condition_acces`-Werte, unplausible Nennleistungswerte
+bis 160.000 kW, die ohne Filterung core.charge_point/core.connector
+sprengen würden) — Details siehe Moduldocstring in
+[ingest/import_irve.py](../ingest/import_irve.py).
+
+### Import-Log RIPREE (`ingest/import_ripree.py --file`)
+
+Aktiv seit 2026-09-21, verifiziert gegen eine echte Exportdatei
+(MITECO-Export-Endpunkt, **42.671 Anschlusszeilen → 35.530 Ladepunkte →
+12.031 Installationen**). UTF-16LE-kodiert (ohne BOM — cp1252 decodiert
+dieselben Bytes ohne Fehler, aber lautlos falsch), Excel-Text-Escaping bei
+vier Spalten (`="..."`-Wrapper um Koordinaten/PLZ/Ort). `core.charge_point`
+= eine Zeile je Installation (`COD.INSTALACION`), nicht je Ladepunkt —
+Details siehe Moduldocstring in
+[ingest/import_ripree.py](../ingest/import_ripree.py).
+
+### Admin-Upload (GitHub Actions)
+
+Seit 2026-09-21 im Admin-Backend unter „Ladestationen → Massenupload" →
+Abschnitt „Quellenimport (nationale Register)": Admin lädt die aktuelle
+Rohdatei einer Quelle hoch (Direktlinks zu den offiziellen Downloadseiten
+stehen dort), die Datei geht per signierter Upload-URL direkt in einen
+privaten Supabase-Storage-Bucket (`source-imports`) — **nicht** durch eine
+Vercel-Function, da die Dateien (40–160 MB) dort am Zeit-/Payload-Limit
+scheitern würden (`maxDuration = 60` in
+[src/app/api/cron/ocm-import/route.ts](../src/app/api/cron/ocm-import/route.ts)).
+Der Upload löst per GitHub-REST-API den Workflow
+[.github/workflows/source-import.yml](../.github/workflows/source-import.yml)
+aus, der außerhalb von Vercel (kein Zeitlimit) den passenden
+`ingest/import_<source>.py`-Importer gegen Produktion ausführt und die
+Datei danach wieder aus dem Storage-Bucket löscht. Der Dashboard-Status
+("Letzter Import: …") kommt aus `core.last_import(p_source)` (siehe
+[20261015000000_last_bnetza_import_info.sql](../supabase/migrations/20261015000000_last_bnetza_import_info.sql))
+und aktualisiert sich automatisch, sobald der Workflow fertig ist.
+
+**Muss einmalig manuell eingerichtet werden** (nicht Teil des Codes, siehe
+[admin/app/(dashboard)/ladestationen/massenupload/source-import-actions.ts](../admin/app/(dashboard)/ladestationen/massenupload/source-import-actions.ts)
+und [.github/workflows/source-import.yml](../.github/workflows/source-import.yml)):
+- GitHub-Repo-Secrets: `DATABASE_URL` (Produktions-Connection-String,
+  Session-Pooler Port 5432), `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_URL`.
+- Vercel-Env-Var im `admin`-Projekt: `GITHUB_DISPATCH_TOKEN` (Fine-grained
+  Personal Access Token, Scope nur „Actions: Read and write" auf
+  `Charge2Camp/charge2camp`).
 
 ## Routing
 
