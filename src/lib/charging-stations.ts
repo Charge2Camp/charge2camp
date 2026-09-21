@@ -188,19 +188,34 @@ export async function fetchChargingStations(
   bbox?: MapBounds
 ): Promise<ChargingStationView[]> {
   const supabase = createAdminClient();
-  let query = supabase.schema("core").from("charge_point_geo").select("*");
+  let data: CoreChargePointGeo[] | null;
+  let error: { message: string } | null;
 
-  if (filters.q) query = query.ilike("name", `%${filters.q}%`);
-  if (filters.fastChargersOnly) query = query.gte("max_power_kw", FAST_CHARGER_MIN_KW);
   if (bbox) {
-    query = query
-      .gte("lat", bbox.south)
-      .lte("lat", bbox.north)
-      .gte("lon", bbox.west)
-      .lte("lon", bbox.east);
+    // core.charge_point_geo.lat/lon sind berechnete Spalten (st_y/st_x auf
+    // geom) -- Zahlenvergleiche darauf koennen den GiST-Index auf geom
+    // (idx_cp_geom) nicht nutzen und erzwingen einen Sequential Scan ueber
+    // alle Ladepunkte bei JEDEM Kartenschwenk (gemessen: 14,9s, weit ueber
+    // dem PostgREST-Statement-Timeout -- Nutzermeldung "keine Saeulen auf
+    // der Karte", 2026-09-21). core.charge_points_in_bbox() filtert
+    // stattdessen ueber den raeumlichen "&&"-Operator direkt auf geom (53ms,
+    // siehe 20261023020000_charge_points_in_bbox_spatial_index.sql).
+    ({ data, error } = await supabase.schema("core").rpc("charge_points_in_bbox", {
+      p_west: bbox.west,
+      p_south: bbox.south,
+      p_east: bbox.east,
+      p_north: bbox.north,
+      p_min_power_kw: filters.fastChargersOnly ? FAST_CHARGER_MIN_KW : null,
+      p_q: filters.q ?? null,
+      p_limit: limit,
+    }));
+  } else {
+    let query = supabase.schema("core").from("charge_point_geo").select("*");
+    if (filters.q) query = query.ilike("name", `%${filters.q}%`);
+    if (filters.fastChargersOnly) query = query.gte("max_power_kw", FAST_CHARGER_MIN_KW);
+    ({ data, error } = await query.order("name").limit(limit));
   }
 
-  const { data, error } = await query.order("name").limit(limit);
   if (error) throw new Error(error.message);
   const stations = (data as CoreChargePointGeo[]) ?? [];
 

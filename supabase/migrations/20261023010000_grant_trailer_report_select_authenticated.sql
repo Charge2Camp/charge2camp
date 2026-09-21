@@ -1,0 +1,11 @@
+-- Gefunden waehrend der Untersuchung des "keine Saeulen auf der Karte"-
+-- Nutzerberichts (Sub-Agent-Analyse aller core/enrich-Zugriffe von src/):
+-- die Admin-Moderationsseite fuer Anhaenger-Meldungen
+-- (src/app/api/enrich/charge-points/[external_key]/trailer/moderate/route.ts)
+-- liest enrich.trailer_report ueber den NICHT-Admin-Client (authenticated-
+-- Rolle), aber das Select-Recht fehlte -- vermutlich seit
+-- 20261004000000_lock_down_core_enrich_dna.sql (pauschaler Grant-Entzug),
+-- ohne dass dieser eine Fall nachgezogen wurde. Unabhaengig vom Karten-
+-- Problem (die Karte selbst laeuft ueber den Service-Role-Client, siehe
+-- Chatverlauf 2026-09-21), aber ein echter, kleiner Bugfix.
+grant select on enrich.trailer_report to authenticated;
