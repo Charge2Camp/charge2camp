@@ -223,11 +223,20 @@ export default async function ChargePointDuplicatesPage({
       <div className="flex flex-col gap-2">
         {pageDuplicates.map(({ dup: d, a, b }, i) => {
           const maxKw = Math.max(a.max_power_kw ?? 0, b.max_power_kw ?? 0);
+          // Nutzerwunsch: OCM steht immer rechts und ist nie die per Default
+          // vorausgewaehlte "bestehen bleibt"-Option auf der Zusammenfuehren-
+          // Seite -- die dort per defaultChecked vorausgewaehlte Seite ist
+          // immer die erste ID im Link (siehe [keepId]/[removeId]/page.tsx).
+          // core.charge_point_duplicate hat key_a IMMER als OCM (siehe
+          // core.refresh_charge_point_duplicates()), a.source ist hier
+          // trotzdem die robuste Pruefung statt sich blind auf die
+          // Reihenfolge zu verlassen.
+          const [left, right] = a.source === "ocm" ? [b, a] : [a, b];
           return (
             <div key={i} className="flex flex-col gap-2 rounded-md border border-line bg-card p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="font-medium">
-                  {a.name ?? a.operator ?? a.external_key} ({a.source}) ↔ {b.name ?? b.operator ?? b.external_key} ({b.source})
+                  {left.name ?? left.operator ?? left.external_key} ({left.source}) ↔ {right.name ?? right.operator ?? right.external_key} ({right.source})
                 </p>
                 <p className="text-text-muted">
                   {[
@@ -242,7 +251,7 @@ export default async function ChargePointDuplicatesPage({
               </div>
               <div className="flex shrink-0 gap-2">
                 <Link
-                  href={`/ladestationen/dubletten/${a.id}/${b.id}?${returnQuery}`}
+                  href={`/ladestationen/dubletten/${left.id}/${right.id}?${returnQuery}`}
                   className="min-h-11 rounded-md bg-action px-3 py-2 text-sm font-medium leading-none hover:bg-action-hover"
                 >
                   Zusammenführen
