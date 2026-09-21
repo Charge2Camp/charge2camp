@@ -48,11 +48,16 @@ export default async function ChargingStationsPage({
   // kennt) -- ChargingStationMapExplorer ersetzt sie kurz danach und bei
   // jedem Schwenken/Zoomen durch kartenausschnitt-basiert nachgeladene Daten
   // (/api/charge-points/viewport). Deshalb bewusst klein/ungefaehr belassen
-  // (1500 ohne, 5000 mit Filter) statt hier schon alle 18.000+ Ladepunkte zu
+  // (300 ohne, 5000 mit Filter) statt hier schon alle 234.000+ Ladepunkte zu
   // laden -- das serverseitige Limit bestimmt NICHT mehr, welche Ladepunkte
   // langfristig sichtbar sind (das tat es fruehrer faelschlich: eine rein
   // alphabetische Sortierung nach Name blendete beim reinen Kartenbrowsen
   // saemtliche Namen ab ungefaehr "S" dauerhaft aus, siehe fetchChargingStations).
+  // 1500 wurde nach dem Frankreich/Spanien-Import (10x mehr Ladepunkte) zu
+  // langsam -- fetchChargingStations() + die connector/trailer-Anreicherung
+  // (enrichStations(), 20 parallele Batch-Queries) brauchten dafuer
+  // zusammen ca. 6s DB-Zeit bei schwankendem I/O-Durchsatz der Instanz und
+  // ueberschritten das PostgREST-Statement-Timeout dadurch sporadisch.
   // "Nur Schnelllader" ist seit Nutzerwunsch der Default-Zustand (siehe
   // resolveFastChargersOnly in charging-stations.ts) und zaehlt deshalb
   // bewusst NICHT als "aktiver Filter" -- sonst wuerde die Badge/das
@@ -64,7 +69,7 @@ export default async function ChargingStationsPage({
       filters.trailerVerdict.length > 0 ||
       filters.operators.length > 0
   );
-  const stationLimit = hasActiveFilters ? 5000 : 1500;
+  const stationLimit = hasActiveFilters ? 5000 : 300;
   const stations =
     filters.favoritesOnly && user
       ? await fetchFavoriteChargingStations(user.id)
