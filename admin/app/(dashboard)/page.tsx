@@ -109,7 +109,11 @@ export default async function DashboardPage() {
       supabase.schema("core").from("charge_point").select("id", { count: "exact", head: true }),
       supabase.schema("enrich").from("trailer_report").select("id", { count: "exact", head: true }).eq("status", "pending"),
       supabase.auth.admin.listUsers({ page: 1, perPage: 1000 }),
-      supabase.schema("core").rpc("run_quality_checks"),
+      // core.quality_check_summary() statt run_quality_checks(): liefert
+      // pro Check nur die Anzahl (ausser coverage_by_country, siehe dort)
+      // statt aller 28k+ Einzelzeilen -- diese Seite zeigt nur Kacheln mit
+      // Zahlen, keine Einzeldaten (Audit-Befund 2026-09-22).
+      supabase.schema("core").rpc("quality_check_summary"),
       supabase.from("saved_routes").select("id", { count: "exact", head: true }),
       supabase.schema("core").from("app_usage_event").select("id", { count: "exact", head: true }).eq("event_type", "route_planned"),
       supabase
@@ -172,14 +176,15 @@ export default async function DashboardPage() {
   const activeUsers7d = new Set((activeUserRows7d ?? []).map((e) => e.user_id).filter(Boolean)).size;
   const activeUsers30d = new Set((activeUserRows30d ?? []).map((e) => e.user_id).filter(Boolean)).size;
 
-  const qualityRows = (qualityResult.data ?? []) as { check_name: string; data: unknown }[];
+  const qualitySummaryRows = (qualityResult.data ?? []) as { check_name: string; cnt: number; data: unknown }[];
   const countsByCheck = new Map<string, number>();
-  for (const row of qualityRows) {
-    countsByCheck.set(row.check_name, (countsByCheck.get(row.check_name) ?? 0) + 1);
+  for (const row of qualitySummaryRows) {
+    if (row.check_name === "coverage_by_country") continue;
+    countsByCheck.set(row.check_name, row.cnt);
   }
   const openIssueCount = ISSUE_CHECKS.reduce((sum, c) => sum + (countsByCheck.get(c.name) ?? 0), 0);
 
-  const coverageRows = qualityRows
+  const coverageRows = qualitySummaryRows
     .filter((r) => r.check_name === "coverage_by_country")
     .map((r) => r.data as { country_code: string; total: number; coverage_percent: number | null });
 
