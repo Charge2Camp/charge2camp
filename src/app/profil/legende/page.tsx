@@ -25,7 +25,7 @@ const TRAILER_PIN_DESCRIPTIONS: Record<TrailerPinState, string> = {
   ohne_abkoppeln:
     "Du kannst mit angekoppeltem Wohnwagen laden, musst dafür aber rangieren (kein Durchfahren möglich).",
   bedingt_tauglich:
-    "Eng oder unübersichtlich -- machbar, aber Rangieren nötig und nicht für jedes Gespann geeignet.",
+    "Wahrscheinlich musst du den Wohnwagen abkoppeln und in der Nähe abstellen, bevor du zur Säule fährst -- z. B. weil der Platz für das ganze Gespann nicht reicht oder zu viele Säulen belegt sind.",
   nicht_tauglich:
     "Von der Community oder einem Admin bestätigt: Mit Wohnwagen hier nicht nutzbar.",
   ungeprueft:

@@ -133,7 +133,7 @@ von schlecht nach ideal.
 | Pin | Farbe | Zeichen | Bedeutung |
 |---|---|---|---|
 | nicht tauglich | #B4443A | Kreuz | Gespann passt nicht |
-| bedingt tauglich | #E8A33D | Ausrufezeichen | eng, Rangieren nötig |
+| bedingt tauglich | #E8A33D | Ausrufezeichen | vermutlich abkoppeln nötig |
 | ohne Abkoppeln | #1D9E75 | Haken | Stellplatz fürs Gespann vorhanden |
 | Drive-Through | #C6F24E | Pfeil | durchfahren statt rangieren |
 | ungeprüft | #8E9A94 | Fragezeichen | Angabe fehlt noch |

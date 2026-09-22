@@ -46,7 +46,7 @@ export function getTrailerPinState(
 
 export const TRAILER_PIN_LABELS: Record<TrailerPinState, string> = {
   nicht_tauglich: "Nicht anhängertauglich",
-  bedingt_tauglich: "Bedingt tauglich (eng, Rangieren nötig)",
+  bedingt_tauglich: "Vermutlich abkoppeln nötig",
   ohne_abkoppeln: "Laden ohne Abkoppeln",
   drive_through: "Drive-Through-Laden",
   ungeprueft: "Ungeprüft",
