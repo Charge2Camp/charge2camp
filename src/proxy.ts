@@ -7,7 +7,7 @@ import { updateSession } from "@/lib/supabase/middleware";
 // ZUSAETZLICH zu requireUser() in jeder betroffenen Seite selbst, nicht
 // deren Ersatz -- Next.js' eigene Doku warnt, dass ein spaeterer
 // Matcher-/Routing-Umbau den Proxy-Schutz stillschweigend aushebeln kann.
-const PROTECTED_PREFIXES = ["/ladepunkte", "/campingplaetze", "/community", "/routenplaner"];
+const PROTECTED_PREFIXES = ["/ladepunkte", "/campingplaetze", "/community", "/routenplaner", "/profil"];
 
 export async function proxy(request: NextRequest) {
   const { response, user } = await updateSession(request);

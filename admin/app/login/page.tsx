@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const supabase = createClient();
+  const searchParams = useSearchParams();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -27,7 +28,7 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/");
+    router.push(searchParams.get("redirect") || "/");
     router.refresh();
   }
 
@@ -72,5 +73,20 @@ export default function LoginPage() {
         </button>
       </form>
     </div>
+  );
+}
+
+// useSearchParams() braucht laut Next.js eine Suspense-Grenze, sonst
+// scheitert die statische Prerender-Optimierung dieser Seite (siehe
+// missing-suspense-with-csr-bailout). Die Haupt-App-Login-Seite umgeht das,
+// weil sie durch andere dynamische APIs ohnehin nie statisch generiert
+// wird -- die Admin-Login-Seite (ausserhalb des (dashboard)-Layouts, also
+// ohne requireAdmin()/cookies()-Zugriff) waere sonst der einzige Kandidat
+// fuer eine echte statische Seite in dieser App.
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   );
 }
