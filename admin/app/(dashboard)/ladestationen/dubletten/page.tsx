@@ -8,6 +8,7 @@ interface DuplicateRow {
   operator_a: string | null;
   operator_b: string | null;
   distance_m: number;
+  addr_sim: number | null;
 }
 
 interface StationLookup {
@@ -40,6 +41,14 @@ const SORT_OPTIONS = [
   { value: "power_desc", label: "Ladeleistung (hoch → niedrig)" },
   { value: "power_asc", label: "Ladeleistung (niedrig → hoch)" },
   { value: "distance_asc", label: "Entfernung (nah → fern)" },
+  // Nutzerwunsch: die ~1.200 Paare mit passendem Betreiber, aber keinem
+  // Tier-Match sind ueberwiegend KEINE Dubletten (derselbe Netzbetreiber
+  // an mehreren echten Standorten) -- die "Near Misses" mit der hoechsten
+  // Trefferwahrscheinlichkeit sind Adress-Aehnlichkeiten knapp UNTER der
+  // Tier-Schwelle. Diese Sortierung holt sie nach oben statt sie in der
+  // Zufallsreihenfolge zu verstecken (siehe core.refresh_quality_checks(),
+  // 20261024060000).
+  { value: "addr_sim_desc", label: "Adress-Ähnlichkeit (höchste zuerst)" },
 ] as const;
 
 export default async function ChargePointDuplicatesPage({
@@ -145,6 +154,7 @@ export default async function ChargePointDuplicatesPage({
 
   const sortedDuplicates = [...filteredDuplicates].sort((x, y) => {
     if (activeSort === "distance_asc") return x.dup.distance_m - y.dup.distance_m;
+    if (activeSort === "addr_sim_desc") return (y.dup.addr_sim ?? -1) - (x.dup.addr_sim ?? -1);
     const xKw = Math.max(x.a.max_power_kw ?? 0, x.b.max_power_kw ?? 0);
     const yKw = Math.max(y.a.max_power_kw ?? 0, y.b.max_power_kw ?? 0);
     return activeSort === "power_asc" ? xKw - yKw : yKw - xKw;
@@ -244,6 +254,7 @@ export default async function ChargePointDuplicatesPage({
                     a.city,
                     `${d.distance_m}m Abstand`,
                     maxKw ? `${maxKw} kW` : null,
+                    d.addr_sim != null ? `Adresse ${Math.round(d.addr_sim * 100)}% ähnlich` : null,
                   ]
                     .filter(Boolean)
                     .join(" · ")}
