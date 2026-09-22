@@ -548,7 +548,20 @@ async function planRouteInner(formData: FormData): Promise<RoutePlanResult> {
   // Verbrauch: manuelle Eingabe im Routenplaner > Profilangabe > Standardwert.
   // Bewusst KEINE Herstellerangaben (Batterie/Reichweite) verwenden, siehe
   // src/lib/route-planning.ts.
-  const manualConsumption = parseOptionalPositiveNumber(formData.get("consumption_kwh_per_100km"));
+  const consumptionRaw = formData.get("consumption_kwh_per_100km");
+  const manualConsumption = parseOptionalPositiveNumber(consumptionRaw);
+  // parseOptionalPositiveNumber gibt fuer "0" oder einen nicht-numerischen
+  // Wert genauso null zurueck wie fuer ein leeres Feld -- das wuerde eine
+  // bewusste (wenn auch ungueltige) Eingabe still wie "nicht ausgefuellt"
+  // behandeln und stattdessen leise auf Fahrzeugprofil/Standardwert
+  // zurueckfallen, ohne dass der Nutzer davon erfaehrt (Audit-Befund
+  // 2026-09-22). Nur ein tatsaechlich LEERES Feld gilt als "kein manueller
+  // Wert" -- alles andere Ungueltige wird als Fehler gemeldet.
+  if (typeof consumptionRaw === "string" && consumptionRaw.trim() !== "" && manualConsumption === null) {
+    throw new Error(
+      `Verbrauch "${consumptionRaw}" ist ungueltig -- bitte eine Zahl groesser als 0 (kWh/100km) eingeben oder das Feld leer lassen.`
+    );
+  }
   const consumptionKwhPer100km =
     manualConsumption ?? vehicle.consumption_kwh_per_100km ?? DEFAULT_CONSUMPTION_KWH_PER_100KM;
   const consumptionSource: RoutePlanResult["consumptionSource"] = manualConsumption
@@ -583,7 +596,12 @@ async function planRouteInner(formData: FormData): Promise<RoutePlanResult> {
     consumptionSource,
     settings: {
       preferTrailerSuitable,
-      minPowerKw: minPowerKwRaw ? Number(minPowerKwRaw) : undefined,
+      // parseOptionalPositiveNumber statt einem rohen Number(...) --
+      // dieses Feld kam bisher bei nicht-numerischer Eingabe (NaN) als
+      // "!minPowerKw"-faellt-durch beim Filtern (route-planning.ts) an,
+      // die Mindest-Ladeleistungs-Anforderung wurde also still ignoriert
+      // statt validiert (Audit-Befund 2026-09-22).
+      minPowerKw: parseOptionalPositiveNumber(minPowerKwRaw) ?? undefined,
       preferredProviders,
       avoidedProviders,
       excludedStationIds: blockedStationIds,

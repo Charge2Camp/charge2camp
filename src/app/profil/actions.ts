@@ -10,15 +10,26 @@ import { sanitizeProviderKeys } from "@/lib/charging-providers";
 import { actionErrorMessage, type ActionResult } from "@/lib/action-result";
 import { extractStationCandidateFromMapsLink } from "@/lib/maps-link";
 
+// Alle Aufrufer sind physische Groessen eines Fahrzeugs/Wohnwagens
+// (Batteriekapazitaet, Verbrauch, Ladeleistung, Reichweite, Laenge/Breite/
+// Hoehe) -- fuer keine davon ist 0 oder negativ ein sinnvoller Wert. Bisher
+// pruefte nur das Client-seitige `min="0"` der Formularfelder das (siehe
+// vehicle-form.tsx/caravan-Formular) -- kein Schutz gegen einen direkten
+// Server-Action-Aufruf ohne JS oder ein kuenftiges Formular ohne dieses
+// Attribut. Eine negative Batteriekapazitaet/ein negativer Verbrauch wuerde
+// in route-planning.ts (effectiveRangeKm = battery/consumption*100) eine
+// negative oder unendliche Reichweite erzeugen, ohne dass der Routenplaner
+// dafuer eine eigene, verstaendliche Fehlermeldung haette (Audit-Befund
+// 2026-09-22).
 function parseOptionalNumber(value: FormDataEntryValue | null): number | null {
   if (!value || typeof value !== "string" || value.trim() === "") return null;
   const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
 function requireNumber(value: FormDataEntryValue | null): number {
   const parsed = parseOptionalNumber(value);
-  if (parsed === null) throw new Error("Pflichtfeld fehlt oder ist keine Zahl.");
+  if (parsed === null) throw new Error("Pflichtfeld fehlt oder ist keine Zahl groesser als 0.");
   return parsed;
 }
 

@@ -53,6 +53,21 @@ ermittelt, siehe Kommentare unten -- KEINE geratenen Spalten):
 Nutzt DENSELBEN zentralen Resolver wie OCM (core.upsert_charge_point(),
 siehe supabase/migrations/20261012000000_field_provenance_and_source_registry.sql)
 -- keine eigene Merge-Logik.
+
+WICHTIG (Nutzerfeedback, siehe supabase/migrations/
+20261019070000_consolidate_bnetza_same_location.sql): "Eine Zeile = eine
+Ladeeinrichtung" (siehe oben) bedeutet NICHT "eine Zeile = ein physischer
+Standort" -- ein Hub mit mehreren Saeulen erzeugt mehrere Zeilen mit exakt
+identischen Koordinaten (empirisch bestaetigt: 11.984 von ca. 30.000
+BNetzA-Standorten betreffen mehrere Zeilen). Damit core.charge_point wie bei
+OCM eine Zeile PRO STANDORT bleibt (sonst gilt z. B. eine
+Anhaengertauglichkeits-Pruefung nur fuer eine von mehreren Saeulen desselben
+Hubs), werden Zeilen mit identischen Koordinaten VOR dem Upsert zu einem
+einzigen Datensatz zusammengefuehrt (siehe _group_rows_by_location() unten)
+-- external_key des Ergebnisses ist bevorzugt eine bereits in core.
+charge_point bestehende Ladeeinrichtungs-ID der Gruppe, sonst die kleinste
+(siehe _group_rows_by_location()-Docstring, warum "kleinste ID" allein
+NICHT stabil ueber Reimporte ist).
 """
 
 from __future__ import annotations
@@ -190,6 +205,94 @@ def parse_row(row: dict[str, str], unknown_counter: Counter) -> dict[str, Any] |
     }
 
 
+def _merge_connectors(connector_lists: list[list[dict[str, Any]]]) -> list[dict[str, Any]]:
+    """Fasst Anschluesse mehrerer Ladeeinrichtungen derselben Gruppe
+    zusammen -- exakte Dopplungen (gleicher standard/power_kw/current_type)
+    werden zu einer Zeile mit summierter quantity, analog zu
+    core.merge_charge_points() (20260930020000)."""
+    merged: dict[tuple[str, float | None, str | None], dict[str, Any]] = {}
+    for connectors in connector_lists:
+        for c in connectors:
+            key = (c["standard"], c["power_kw"], c["current_type"])
+            if key in merged:
+                merged[key]["quantity"] += c["quantity"]
+            else:
+                merged[key] = dict(c)
+    return list(merged.values())
+
+
+def _location_group_sort_key(reg_id: str) -> tuple[int, int | str]:
+    """Sortierschluessel fuer eine Ladeeinrichtungs-ID innerhalb einer
+    Standort-Gruppe. Ladeeinrichtungs-IDs sind laut Moduldocstring
+    projektweit eindeutig, aber NICHT dokumentiert als garantiert
+    numerisch -- ein einzelner unerwarteter Rohwert (Formatwechsel bei
+    BNetzA, Dateneingabefehler) durfte bisher wegen int() den kompletten
+    Importlauf mit ValueError abbrechen. Numerische IDs sortieren weiterhin
+    numerisch (unveraendertes Verhalten fuer den Normalfall), nicht-
+    numerische IDs sortieren deterministisch dahinter, statt den Lauf zu
+    beenden."""
+    try:
+        return (0, int(reg_id))
+    except ValueError:
+        return (1, reg_id)
+
+
+def _group_rows_by_location(
+    cur, parsed_rows: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Fasst geparste Zeilen mit exakt identischen Koordinaten (= dieselbe
+    physische Ladeeinrichtungs-Gruppe/derselbe Standort, siehe Moduldocstring)
+    zu je einem core.upsert_charge_point-Payload zusammen.
+
+    external_key des Ergebnisses: bevorzugt eine Ladeeinrichtungs-ID der
+    Gruppe, die in core.charge_point (source='bundesnetzagentur') BEREITS
+    existiert -- sonst (Erstimport der Gruppe) die kleinste ID. "Immer die
+    kleinste ID" allein ist NICHT stabil ueber Reimporte: wird genau die
+    zuvor kleinste Saeule eines Hubs stillgelegt und faellt aus einem
+    spaeteren Export heraus, waere ohne diese Praeferenz die naechst-
+    kleinere ID der neue external_key -- core.upsert_charge_point() wuerde
+    dafuer eine NEUE core.charge_point-Zeile anlegen statt die bestehende
+    zu aktualisieren, und die alte Zeile (mit ihren Bewertungen/
+    Anhaengertauglichkeits-Pruefungen) bliebe als Karteileiche zurueck.
+
+    max_power_kw = staerkster EINZELNER Anschluss der zusammengefassten
+    Gruppe (Nutzervorgabe), nicht die Summe -- Fallback auf den rohen
+    "Nennleistung Ladeeinrichtung"-Wert der gewaehlten Ueberlebenden-Zeile,
+    falls kein Anschluss eine Nennleistung hat. connector_count = Anzahl der
+    zusammengefassten (bereits deduplizierten) Anschluss-Zeilen."""
+    groups: dict[tuple[float, float], list[dict[str, Any]]] = {}
+    for row in parsed_rows:
+        groups.setdefault((row["lat"], row["lon"]), []).append(row)
+
+    all_keys = [row["external_key"] for row in parsed_rows]
+    cur.execute(
+        "select external_key from core.charge_point "
+        "where source = 'bundesnetzagentur' and external_key = any(%s)",
+        (all_keys,),
+    )
+    existing_keys = {r[0] for r in cur.fetchall()}
+
+    merged_payloads: list[dict[str, Any]] = []
+    for members in groups.values():
+        members.sort(key=lambda r: _location_group_sort_key(r["external_key"].removeprefix("bnetza:")))
+        existing_members = [m for m in members if m["external_key"] in existing_keys]
+        survivor = existing_members[0] if existing_members else members[0]
+        connectors = _merge_connectors([m["_connectors"] for m in members])
+        connector_powers = [c["power_kw"] for c in connectors if c["power_kw"] is not None]
+
+        payload = dict(survivor)
+        payload["_connectors"] = connectors
+        # sum(quantity), nicht len(connectors) -- Anzahl PHYSISCHER
+        # Anschluesse, nicht Anzahl unterschiedlicher Anschluss-Spezifikationen
+        # (analog core.merge_charge_points(), 20260930020000).
+        payload["connector_count"] = sum(c["quantity"] for c in connectors) or None
+        payload["max_power_kw"] = max(connector_powers) if connector_powers else survivor["max_power_kw"]
+        payload["is_operational"] = any(m["is_operational"] for m in members)
+        merged_payloads.append(payload)
+
+    return merged_payloads
+
+
 def load_rows(path: str) -> tuple[list[dict[str, str]], str | None]:
     """Liest die BNetzA-Exportdatei ein und gibt (Datenzeilen als dicts,
     'Letzte Aktualisierung vom:'-Datum aus der Praeambel) zurueck. Siehe
@@ -248,17 +351,23 @@ def main() -> None:
     near_manual_duplicates = 0
     near_manual_same_operator = 0
     absorbed_count = 0
+    merged_row_count = 0
 
     conn = get_connection()
     try:
         with import_run(conn, source="bundesnetzagentur", scope=f"file:{args.file}") as (run_id, state):
             with conn.cursor() as cur:
+                # Pass 1: JEDE Rohzeile wird archiviert (raw.charge_point
+                # bleibt 1:1 zur Exportdatei, unabhaengig von der
+                # Standort-Gruppierung unten) -- siehe Moduldocstring.
+                parsed_rows: list[dict[str, Any]] = []
                 for row in rows:
                     parsed = parse_row(row, unknown_connection_types)
                     if parsed is None:
                         skipped_no_id_or_coords += 1
                         continue
                     parsed["source_updated_at"] = stand_datum
+                    parsed_rows.append(parsed)
 
                     reg_id = parsed["external_key"].removeprefix("bnetza:")
                     cur.execute(
@@ -275,6 +384,12 @@ def main() -> None:
                         (reg_id, run_id, Json(row), parsed["lat"], parsed["lon"]),
                     )
 
+                # Pass 2: nach Standort (identische Koordinaten) gruppiert --
+                # core.charge_point bekommt eine Zeile PRO STANDORT, nicht
+                # pro Ladeeinrichtung (siehe Moduldocstring/
+                # _group_rows_by_location()).
+                location_groups = _group_rows_by_location(cur, parsed_rows)
+                for parsed in location_groups:
                     dup = find_and_absorb_nearby_duplicate(
                         cur,
                         source="bundesnetzagentur",
@@ -310,6 +425,8 @@ def main() -> None:
                         replace_connectors(cur, charge_point_id, parsed["_connectors"])
 
                     state["record_count"] += 1
+
+                merged_row_count = len(parsed_rows) - len(location_groups)
 
                 # Quellenuebergreifend (nicht nur 'ocm'), siehe
                 # supabase/migrations/
@@ -367,6 +484,13 @@ def main() -> None:
         new_charge_point_count,
         changed_charge_point_count,
     )
+    if merged_row_count:
+        logger.info(
+            "%d Ladeeinrichtungs-Zeilen der Exportdatei wurden mit mindestens einer weiteren Zeile "
+            "am selben Standort (identische Koordinaten) zu einem core.charge_point zusammengefasst "
+            "(siehe Moduldocstring/_group_rows_by_location()).",
+            merged_row_count,
+        )
     if rejected_change_count:
         logger.warning(
             "%d Feldaenderungen durch manual_override abgelehnt (Admin-Korrektur bleibt bestehen) -- "

@@ -165,7 +165,15 @@ export default async function CampsiteDetailPage({
       max_charging_power_kw: search?.on_site_power_kw ?? null,
       number_of_charging_points: numberOfChargingPoints,
       rating_avg: ratingAvg,
-      last_verified_at: null, // keine Verifizierungs-Zeitstempel fuer echte Daten, siehe docs/architecture.md
+      // core.campsite.last_seen_at wird bei jedem Reimport aus der Quelle
+      // (z. B. OSM) aktualisiert, wenn der Campingplatz weiterhin dort
+      // gefunden wird -- ein echter, aus der Quelle stammender
+      // Aktualitaets-Zeitstempel (kein erfundener Wert, siehe CLAUDE.md
+      // Regel 2 "keine Scheindaten"). Vorher hart auf null gesetzt, wodurch
+      // dataFreshnessFactor() immer 0 zurueckgab und die dafuer
+      // vorgesehenen 10 von 100 Score-Punkten fuer JEDEN Campingplatz
+      // permanent unerreichbar waren (Audit-Befund 2026-09-22).
+      last_verified_at: site.last_seen_at,
     },
     nearestFastChargerKm
   );

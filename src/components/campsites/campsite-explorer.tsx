@@ -6,10 +6,16 @@ import { MapView } from "@/components/map/map-view";
 import { CAMPSITE_PIN_ICON_SRC } from "@/lib/trailer-verdict";
 import { saveListNavigationContext } from "@/components/list-navigation";
 import { loadSavedMapViewport, saveMapViewport, type MapViewport } from "@/lib/map-viewport-storage";
+import { useMediaQuery } from "@/lib/use-media-query";
 import type { CampsiteSearchRow } from "@/types/database";
 
 const LIST_NAV_STORAGE_KEY = "campingplaetze:list-nav";
 const MAP_VIEWPORT_STORAGE_KEY = "campingplaetze:map-viewport";
+// Gleiche Query wie charging-station-map-explorer.tsx (TOUCH_MAP_QUERY) --
+// Karte + "pointer: coarse" statt nur der md-Breakpoint-Grenze, damit ein
+// gedrehtes Handy in Querformat (oft > 767px CSS-Breite) nicht ins
+// Desktop-Verhalten zurueckfaellt.
+const TOUCH_MAP_QUERY = "(max-width: 767px), (pointer: coarse)";
 
 function CampsiteCard({
   campsite,
@@ -87,6 +93,20 @@ export function CampsiteExplorer({
 }) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [mobileTab, setMobileTab] = useState<"list" | "map">("list");
+  const isTouchMap = useMediaQuery(TOUCH_MAP_QUERY);
+
+  // Auf Touch-Geraeten liegen Liste und Karte in getrennten Tabs (siehe
+  // mobileTab) -- ein Tap auf einen Pin waehrend des "Karte"-Tabs setzte
+  // bisher nur hoveredId, dessen einziger sichtbarer Effekt (Karten-
+  // hervorhebung der CampsiteCard) in der zu dem Zeitpunkt ausgeblendeten
+  // Liste lag. Fuer Touch-Nutzer:innen wechselt ein Tap deshalb zusaetzlich
+  // automatisch in den "Liste"-Tab, damit der Tap ueberhaupt einen
+  // sichtbaren Effekt hat (Audit-Befund 2026-09-22). Auf dem Desktop bleibt
+  // das Verhalten unveraendert (beide Spalten ohnehin gleichzeitig sichtbar).
+  function handleMarkerClick(id: string | null) {
+    setHoveredId(id);
+    if (isTouchMap && id) setMobileTab("list");
+  }
   // Bei bis zu 5000 Treffern (core.campsite_search, siehe fetchCampsites)
   // wuerde die Liste sonst komplett auf einmal ins DOM gerendert -- auf
   // dem Handy spuerbar langsam (siehe Design-Review). Karte zeigt trotzdem
@@ -183,7 +203,7 @@ export function CampsiteExplorer({
           <MapView
             markers={markers}
             selectedId={hoveredId ?? undefined}
-            onMarkerClick={setHoveredId}
+            onMarkerClick={handleMarkerClick}
             onViewportChange={handleViewportChange}
             cluster
             fitBoundsOnMarkersChange={!savedViewport}

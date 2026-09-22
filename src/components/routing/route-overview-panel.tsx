@@ -273,7 +273,7 @@ export function RouteOverviewPanel({
                 type="button"
                 disabled={busy}
                 onClick={() => onDeleteStop(index, stop.station.id)}
-                className="mt-2 text-xs text-black/40 hover:underline disabled:opacity-50 dark:text-white/40"
+                className="mt-2 flex min-h-11 items-center text-left text-xs text-black/40 hover:underline disabled:opacity-50 dark:text-white/40"
               >
                 Keine der Alternativen passend? Diese Ladesäule ausschließen und automatisch neu planen
               </button>
