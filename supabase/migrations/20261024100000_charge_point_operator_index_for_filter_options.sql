@@ -1,0 +1,23 @@
+-- Bugreport: /ladestationen (admin) liess sich nicht mehr oeffnen --
+-- "canceling statement due to statement timeout". core.charge_point ist seit
+-- der letzten Optimierung von core.charge_point_filter_options()
+-- (20260930080000, damals ~18.000 Zeilen laut Kommentar in
+-- 20261006000000_charge_point_operator_options.sql) auf 137.776 Zeilen
+-- gewachsen. Deren Operator-Aggregat
+-- "array_agg(distinct operator order by operator) ... where operator is not
+-- null" hat dafuer bisher keinen passenden Index -- nur den PARTIELLEN
+-- idx_cp_active_operator (WHERE is_active AND operator IS NOT NULL), der bei
+-- fehlendem is_active-Filter in dieser Abfrage nicht greift. Postgres macht
+-- deshalb einen Seq Scan ueber die komplette Tabelle + externe
+-- Festplatten-Sortierung: gemessen 6,0s allein fuer diesen Teil (EXPLAIN
+-- ANALYZE auf Produktion). Der PostgREST-"authenticator"-Rolle, ueber die der
+-- Admin-Client laeuft, ist aber ein statement_timeout von nur 8s gesetzt --
+-- zusammen mit dem Laender-Aggregat (~0,6s) und allgemeinem Overhead kippt
+-- der Aufruf regelmaessig darueber.
+--
+-- Mit diesem (nicht-partiellen) Index auf operator wird aus dem Seq Scan +
+-- Sort ein reiner Index Only Scan in bereits sortierter Reihenfolge --
+-- gemessen (gleiche EXPLAIN-ANALYZE-Methode, in einer zurueckgerollten
+-- Transaktion auf Produktion getestet): 2,2s statt 6,0s. Funktion selbst
+-- bleibt unveraendert, der Planer waehlt den neuen Index automatisch.
+create index if not exists idx_cp_operator on core.charge_point (operator) where operator is not null;
