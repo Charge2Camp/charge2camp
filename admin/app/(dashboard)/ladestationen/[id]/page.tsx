@@ -13,11 +13,31 @@ export default async function ChargePointDetailPage({ params }: { params: Promis
   const { id } = await params;
   const supabase = createServiceClient();
 
-  const { data: station } = await supabase.schema("core").from("charge_point").select("*").eq("id", id).maybeSingle();
+  const { data: station, error: stationError } = await supabase
+    .schema("core")
+    .from("charge_point")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  // notFound() allein wuerde einen echten Abfragefehler (z.B. Verbindungs-
+  // problem) genauso behandeln wie "Station existiert nicht mehr" -- fuer
+  // eine Detailseite, die direkt zu Schreibformularen fuehrt, ist das
+  // irrefuehrend (Audit-Befund 2026-09-22, gleiche Fehlerklasse wie im
+  // Dashboard).
+  if (stationError) {
+    return (
+      <div className="flex max-w-2xl flex-col gap-4">
+        <h1 className="text-2xl font-semibold">Ladestation</h1>
+        <p className="rounded-md border border-status-down/40 bg-status-down/5 p-3 text-sm text-status-down">
+          Station konnte nicht geladen werden: {stationError.message}
+        </p>
+      </div>
+    );
+  }
   if (!station) notFound();
   const s = station as ChargePoint;
 
-  const [{ data: trailerRow }, { data: reviews }, { data: geoRow }] = await Promise.all([
+  const [{ data: trailerRow, error: trailerError }, { data: reviews, error: reviewsError }, { data: geoRow }] = await Promise.all([
     supabase.schema("enrich").from("trailer_suitability").select("*").eq("charge_point_key", s.external_key).maybeSingle(),
     supabase.from("charging_reviews").select("*").eq("charging_station_id", id).order("created_at", { ascending: false }),
     // core.charge_point speichert geom als PostGIS geography --
@@ -181,10 +201,22 @@ export default async function ChargePointDetailPage({ params }: { params: Promis
 
       <section>
         <h2 className="text-lg font-semibold">Anhängertauglichkeit (manuelle Korrektur)</h2>
-        <p className="mt-1 text-sm text-text-muted">
-          Überschreibt die community-basierte Einschätzung direkt. Aktuell: {trailer?.verdict ?? "ungeprüft"}
-          {trailer?.origin ? ` (Quelle: ${trailer.origin})` : ""}.
-        </p>
+        {trailerError ? (
+          // Bewusst KEIN Formular anzeigen, solange der bestehende Wert
+          // nicht geladen werden konnte: das Formular startet sonst leer
+          // ("ungeprüft", alle Felder frei) und ein Speichern wuerde eine
+          // eventuell vorhandene echte Einstufung stillschweigend
+          // ueberschreiben (Audit-Befund 2026-09-22).
+          <p className="mt-1 rounded-md border border-status-down/40 bg-status-down/5 p-3 text-sm text-status-down">
+            Aktuelle Einstufung konnte nicht geladen werden ({trailerError.message}) -- Formular ausgeblendet, um ein
+            versehentliches Überschreiben zu vermeiden. Seite neu laden.
+          </p>
+        ) : (
+          <>
+            <p className="mt-1 text-sm text-text-muted">
+              Überschreibt die community-basierte Einschätzung direkt. Aktuell: {trailer?.verdict ?? "ungeprüft"}
+              {trailer?.origin ? ` (Quelle: ${trailer.origin})` : ""}.
+            </p>
         <form action={overrideAction} className="mt-3 flex flex-col gap-4">
           <label className="flex flex-col gap-1 text-sm">
             Einstufung
@@ -237,10 +269,17 @@ export default async function ChargePointDetailPage({ params }: { params: Promis
             Anhängertauglichkeit speichern
           </button>
         </form>
+          </>
+        )}
       </section>
 
       <section>
         <h2 className="text-lg font-semibold">Bewertungen ({stationReviews.length})</h2>
+        {reviewsError && (
+          <p className="mt-1 rounded-md border border-status-down/40 bg-status-down/5 p-3 text-sm text-status-down">
+            Bewertungen konnten nicht geladen werden: {reviewsError.message}
+          </p>
+        )}
         <ul className="mt-3 flex flex-col gap-2">
           {stationReviews.map((review) => (
             <li key={review.id} className="flex items-start justify-between gap-3 rounded-md border border-line p-3 text-sm">

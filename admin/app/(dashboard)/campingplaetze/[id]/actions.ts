@@ -16,7 +16,10 @@ export async function updateCampsite(campsiteId: string, formData: FormData) {
     website: (formData.get("website") as string) || null,
     phone: (formData.get("phone") as string) || null,
     email: (formData.get("email") as string) || null,
-    capacity: formData.get("capacity") ? Number(formData.get("capacity")) : null,
+    capacity: (() => {
+      const n = formData.get("capacity") ? Number(formData.get("capacity")) : null;
+      return n !== null && Number.isFinite(n) && n > 0 ? n : null;
+    })(),
     updated_at: new Date().toISOString(),
   };
 
@@ -59,8 +62,14 @@ export async function overrideCampsiteCharging(campsiteId: string, campsiteKey: 
       campsite_key: campsiteKey,
       has_charging: formData.get("has_charging") === "1",
       charging_type: (formData.get("charging_type") as string) || null,
-      max_power_kw: formData.get("max_power_kw") ? Number(formData.get("max_power_kw")) : null,
-      point_count: formData.get("point_count") ? Number(formData.get("point_count")) : null,
+      max_power_kw: (() => {
+        const n = formData.get("max_power_kw") ? Number(formData.get("max_power_kw")) : null;
+        return n !== null && Number.isFinite(n) && n > 0 ? n : null;
+      })(),
+      point_count: (() => {
+        const n = formData.get("point_count") ? Number(formData.get("point_count")) : null;
+        return n !== null && Number.isFinite(n) && n >= 0 ? n : null;
+      })(),
       pitch_charging: formData.get("pitch_charging") === "1",
       origin: "admin_override",
       checked_at: new Date().toISOString(),

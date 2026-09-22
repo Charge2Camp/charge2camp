@@ -32,12 +32,35 @@ export default async function CampsiteDetailPage({ params }: { params: Promise<{
   const { id } = await params;
   const supabase = createServiceClient();
 
-  const { data: campsite } = await supabase.schema("core").from("campsite").select("*").eq("id", id).maybeSingle();
+  const { data: campsite, error: campsiteError } = await supabase
+    .schema("core")
+    .from("campsite")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  // Wie ladestationen/[id]/page.tsx: notFound() allein wuerde einen echten
+  // Abfragefehler wie "Campingplatz existiert nicht mehr" behandeln (Audit-
+  // Befund 2026-09-22).
+  if (campsiteError) {
+    return (
+      <div className="flex max-w-2xl flex-col gap-4">
+        <h1 className="text-2xl font-semibold">Campingplatz</h1>
+        <p className="rounded-md border border-status-down/40 bg-status-down/5 p-3 text-sm text-status-down">
+          Campingplatz konnte nicht geladen werden: {campsiteError.message}
+        </p>
+      </div>
+    );
+  }
   if (!campsite) notFound();
   const c = campsite as Campsite;
 
-  const [{ data: amenityCatalog }, { data: campsiteAmenities }, { data: reviews }, { data: charging }, { data: geoRow }] =
-    await Promise.all([
+  const [
+    { data: amenityCatalog },
+    { data: campsiteAmenities },
+    { data: reviews },
+    { data: charging, error: chargingError },
+    { data: geoRow },
+  ] = await Promise.all([
       supabase.schema("core").from("amenity").select("*").eq("value_type", "bool").order("category").order("label_de"),
       supabase.schema("core").from("campsite_amenity").select("*").eq("campsite_id", id),
       supabase.from("campsite_reviews").select("*").eq("campsite_id", id).order("created_at", { ascending: false }),
@@ -205,6 +228,19 @@ export default async function CampsiteDetailPage({ params }: { params: Promise<{
 
       <section>
         <h2 className="text-lg font-semibold">Ladeinfos auf dem Gelände</h2>
+        {chargingError ? (
+          // Bewusst KEIN Formular anzeigen, solange der bestehende Wert
+          // nicht geladen werden konnte -- ein Speichern des leeren
+          // Formulars wuerde eine eventuell vorhandene echte Ladeinfo
+          // stillschweigend ueberschreiben (Audit-Befund 2026-09-22, gleiche
+          // Klasse wie bei der Anhaengertauglichkeit auf der Ladestations-
+          // Detailseite).
+          <p className="mt-1 rounded-md border border-status-down/40 bg-status-down/5 p-3 text-sm text-status-down">
+            Aktuelle Ladeinfos konnten nicht geladen werden ({chargingError.message}) -- Formular ausgeblendet, um ein
+            versehentliches Überschreiben zu vermeiden. Seite neu laden.
+          </p>
+        ) : (
+          <>
         <p className="mt-1 text-sm text-text-muted">
           Überschreibt die automatisch aus OSM-Daten abgeleitete Einschätzung (z. B. wenn ein Ladepunkt ohne
           eigenen OSM-Eintrag existiert oder die Anzahl nicht stimmt).
@@ -261,6 +297,8 @@ export default async function CampsiteDetailPage({ params }: { params: Promise<{
             Ladeinfos speichern
           </button>
         </form>
+          </>
+        )}
       </section>
 
       <section>

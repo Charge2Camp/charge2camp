@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/require-admin";
 import { createServiceClient } from "@/lib/supabase/service";
+import { optionalPositiveNumber } from "@/lib/charge-point-write";
 import type { ManeuveringSpace, TrailerVerdict } from "@/lib/types";
 
 export async function updateChargePoint(chargePointId: string, formData: FormData) {
@@ -17,7 +18,7 @@ export async function updateChargePoint(chargePointId: string, formData: FormDat
     country_code: (formData.get("country_code") as string) || null,
     access_type: (formData.get("access_type") as string) || null,
     is_operational: formData.get("is_operational") === "1",
-    max_power_kw: formData.get("max_power_kw") ? Number(formData.get("max_power_kw")) : null,
+    max_power_kw: optionalPositiveNumber(formData.get("max_power_kw")),
     // Jedes Speichern hier ist eine bewusste Admin-Korrektur -- die soll nie
     // ohne Rueckfrage vom naechtlichen OCM-Reimport rueckgaengig gemacht
     // werden (Nutzerfeedback: "generell nicht, egal welche Daten"). Bewusst
@@ -87,7 +88,7 @@ export async function overrideTrailerSuitability(chargePointKey: string, formDat
     p_verdict: verdict,
     p_origin: "admin_override",
     p_drive_through: formData.get("drive_through") === "1",
-    p_pull_in_length_m: formData.get("pull_in_length_m") ? Number(formData.get("pull_in_length_m")) : null,
+    p_pull_in_length_m: optionalPositiveNumber(formData.get("pull_in_length_m")),
     p_maneuvering_space: maneuveringSpace as ManeuveringSpace | null,
     p_notes: (formData.get("notes") as string) || null,
     p_verified_by: admin.id,

@@ -20,6 +20,15 @@ export function optionalNumber(value: FormDataEntryValue | null): number | null 
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+// Anders als optionalNumber() (u.a. fuer Breiten-/Laengengrad genutzt, wo 0
+// und negative Werte gueltig sind) -- fuer Ladeleistung/Einfahrlaenge/
+// Anschlussanzahl ist 0 oder negativ nie ein sinnvoller Wert (Audit-Befund
+// 2026-09-22, gleiche Klasse wie in src/app/profil/actions.ts gefixt).
+export function optionalPositiveNumber(value: FormDataEntryValue | null): number | null {
+  const parsed = optionalNumber(value);
+  return parsed !== null && parsed > 0 ? parsed : null;
+}
+
 export function requireCoordinate(value: FormDataEntryValue | null, label: string): number {
   const parsed = optionalNumber(value);
   if (parsed === null) throw new Error(`${label} ist ein Pflichtfeld.`);
@@ -40,9 +49,9 @@ export function readConnectors(formData: FormData): ConnectorInput[] {
     if (!standard) continue;
     rows.push({
       standard,
-      power_kw: optionalNumber(formData.get(`connector_power_kw_${i}`)),
+      power_kw: optionalPositiveNumber(formData.get(`connector_power_kw_${i}`)),
       current_type: optionalString(formData.get(`connector_current_type_${i}`)),
-      quantity: optionalNumber(formData.get(`connector_quantity_${i}`)) ?? 1,
+      quantity: optionalPositiveNumber(formData.get(`connector_quantity_${i}`)) ?? 1,
     });
   }
   return rows;
@@ -145,7 +154,7 @@ export async function createChargePointFromFormData(
     charge_point_key: externalKey,
     verdict,
     drive_through: formData.get("drive_through") === "1",
-    pull_in_length_m: optionalNumber(formData.get("pull_in_length_m")),
+    pull_in_length_m: optionalPositiveNumber(formData.get("pull_in_length_m")),
     maneuvering_space: maneuveringSpace as ManeuveringSpace | null,
     notes: optionalString(formData.get("notes")),
     origin: "admin_manual",

@@ -6,10 +6,17 @@ import { requireAdmin } from "@/lib/require-admin";
 import { createServiceClient } from "@/lib/supabase/service";
 import type { VerificationStatus } from "@/lib/types";
 
+// Alle Aufrufer sind physische Groessen (Batteriekapazitaet, Verbrauch,
+// Ladeleistung, Reichweite, Anhaengelast, Laenge) -- 0 oder negativ ist
+// fuer keine davon sinnvoll. Dieser Katalog landet direkt in der
+// "Modell auswaehlen"-Dropdown der Haupt-App (siehe addVehicleModel-
+// Kommentar) -- ein hier gespeicherter Negativwert wuerde sich potenziell
+// auf viele Nutzerprofile gleichzeitig auswirken (Audit-Befund 2026-09-22,
+// gleiche Klasse wie zuvor in src/app/profil/actions.ts gefixt).
 function optionalNumber(value: FormDataEntryValue | null): number | null {
   if (!value || typeof value !== "string" || value.trim() === "") return null;
   const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
 function requireString(value: FormDataEntryValue | null): string {

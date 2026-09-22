@@ -6,10 +6,12 @@ import { requireAdmin } from "@/lib/require-admin";
 import { createServiceClient } from "@/lib/supabase/service";
 import type { VerificationStatus } from "@/lib/types";
 
+// Siehe fahrzeugmodelle/actions.ts optionalNumber -- gleicher Grund
+// (Audit-Befund 2026-09-22).
 function optionalNumber(value: FormDataEntryValue | null): number | null {
   if (!value || typeof value !== "string" || value.trim() === "") return null;
   const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
 function requireString(value: FormDataEntryValue | null): string {
