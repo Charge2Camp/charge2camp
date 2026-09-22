@@ -64,71 +64,106 @@ function startOfWeekIso(): string {
   return monday.toISOString();
 }
 
+type LastImportRow = { scope: string; status: string; record_count: number | null; finished_at: string | null; started_at: string };
+
+// Alle drei nationalen CSV-Quellen (Admin-Upload via GitHub Actions, siehe
+// massenupload/) -- vorher zeigte der Dashboard nur BNetzA an, IRVE
+// (Frankreich) und RIPREE (Spanien) liefen zwar bereits regelmaessig ueber
+// denselben Upload-Weg, waren aber nirgends im Ueberblick sichtbar (Audit-
+// Befund 2026-09-22: "Es fehlt die Info, wann zuletzt die FR Liste
+// hochgeladen wurde"). source-Werte muessen core.source_registry.source_id
+// entsprechen (core.last_import() ist der generalisierte Nachfolger von
+// core.last_ocm_import(), siehe 20261015000000_last_bnetza_import_info.sql).
+const NATIONAL_SOURCES = [
+  { source: "bundesnetzagentur", label: "BNetzA (Deutschland)" },
+  { source: "irve", label: "IRVE (Frankreich)" },
+  { source: "ripree", label: "RIPREE (Spanien)" },
+] as const;
+
 export default async function DashboardPage() {
   const supabase = createServiceClient();
 
   const [
-    { count: campsiteCount },
-    { count: chargePointCount },
-    { count: pendingReportCount },
-    usersResult,
-    qualityResult,
-    { count: savedRouteCount },
-    { count: routesPlannedCount },
-    { count: routesPlanned30dCount },
-    { count: segmentExportCount },
-    { count: fullExportCount },
-    { data: lastOcmImportRows },
-    { data: lastBnetzaImportRows },
-    { count: newChargePointCount },
-    { count: newCampsiteCount },
-    { data: activeUserRows7d },
-    { data: activeUserRows30d },
-    { count: pendingMissingStationCount },
+    [
+      { count: campsiteCount, error: campsiteError },
+      { count: chargePointCount, error: chargePointError },
+      { count: pendingReportCount, error: pendingReportError },
+      usersResult,
+      qualityResult,
+      { count: savedRouteCount, error: savedRouteError },
+      { count: routesPlannedCount, error: routesPlannedError },
+      { count: routesPlanned30dCount },
+      { count: segmentExportCount },
+      { count: fullExportCount },
+      { data: lastOcmImportRows, error: lastOcmImportError },
+      { count: newChargePointCount },
+      { count: newCampsiteCount },
+      { data: activeUserRows7d },
+      { data: activeUserRows30d },
+      { count: pendingMissingStationCount },
+    ],
+    nationalImportResults,
   ] = await Promise.all([
-    supabase.schema("core").from("campsite").select("id", { count: "exact", head: true }),
-    supabase.schema("core").from("charge_point").select("id", { count: "exact", head: true }),
-    supabase.schema("enrich").from("trailer_report").select("id", { count: "exact", head: true }).eq("status", "pending"),
-    supabase.auth.admin.listUsers({ page: 1, perPage: 1000 }),
-    supabase.schema("core").rpc("run_quality_checks"),
-    supabase.from("saved_routes").select("id", { count: "exact", head: true }),
-    supabase.schema("core").from("app_usage_event").select("id", { count: "exact", head: true }).eq("event_type", "route_planned"),
-    supabase
-      .schema("core")
-      .from("app_usage_event")
-      .select("id", { count: "exact", head: true })
-      .eq("event_type", "route_planned")
-      .gte("created_at", daysAgoIso(30)),
-    supabase.schema("core").from("app_usage_event").select("id", { count: "exact", head: true }).eq("event_type", "route_segment_export"),
-    supabase.schema("core").from("app_usage_event").select("id", { count: "exact", head: true }).eq("event_type", "route_full_export"),
-    supabase.schema("core").rpc("last_ocm_import"),
-    // core.last_import() ist der generalisierte Nachfolger von
-    // core.last_ocm_import() (siehe
-    // supabase/migrations/20261015000000_last_bnetza_import_info.sql) --
-    // fuer BNetzA direkt mit source-Parameter statt einer eigenen
-    // last_bnetza_import()-Funktion.
-    supabase.schema("core").rpc("last_import", { p_source: "bundesnetzagentur" }),
-    supabase.schema("core").from("charge_point").select("id", { count: "exact", head: true }).gte("created_at", startOfWeekIso()),
-    supabase.schema("core").from("campsite").select("id", { count: "exact", head: true }).gte("created_at", startOfWeekIso()),
-    // "Aktive Nutzer" = eindeutige user_id mit mind. einem app_usage_event
-    // im Zeitraum -- einfache Engagement-Kennzahl aus dem ohnehin schon
-    // protokollierten Log, kein zusaetzliches Tracking noetig. Distinct
-    // count geht in Supabase-JS nicht direkt, deshalb user_id-Spalte laden
-    // und in JS dedupliezieren (unproblematisch bei der aktuellen Groesse).
-    supabase.schema("core").from("app_usage_event").select("user_id").gte("created_at", daysAgoIso(7)),
-    supabase.schema("core").from("app_usage_event").select("user_id").gte("created_at", daysAgoIso(30)),
-    supabase.schema("enrich").from("missing_station_report").select("id", { count: "exact", head: true }).eq("status", "pending"),
+    Promise.all([
+      supabase.schema("core").from("campsite").select("id", { count: "exact", head: true }),
+      supabase.schema("core").from("charge_point").select("id", { count: "exact", head: true }),
+      supabase.schema("enrich").from("trailer_report").select("id", { count: "exact", head: true }).eq("status", "pending"),
+      supabase.auth.admin.listUsers({ page: 1, perPage: 1000 }),
+      supabase.schema("core").rpc("run_quality_checks"),
+      supabase.from("saved_routes").select("id", { count: "exact", head: true }),
+      supabase.schema("core").from("app_usage_event").select("id", { count: "exact", head: true }).eq("event_type", "route_planned"),
+      supabase
+        .schema("core")
+        .from("app_usage_event")
+        .select("id", { count: "exact", head: true })
+        .eq("event_type", "route_planned")
+        .gte("created_at", daysAgoIso(30)),
+      supabase.schema("core").from("app_usage_event").select("id", { count: "exact", head: true }).eq("event_type", "route_segment_export"),
+      supabase.schema("core").from("app_usage_event").select("id", { count: "exact", head: true }).eq("event_type", "route_full_export"),
+      supabase.schema("core").rpc("last_ocm_import"),
+      supabase.schema("core").from("charge_point").select("id", { count: "exact", head: true }).gte("created_at", startOfWeekIso()),
+      supabase.schema("core").from("campsite").select("id", { count: "exact", head: true }).gte("created_at", startOfWeekIso()),
+      // "Aktive Nutzer" = eindeutige user_id mit mind. einem app_usage_event
+      // im Zeitraum -- einfache Engagement-Kennzahl aus dem ohnehin schon
+      // protokollierten Log, kein zusaetzliches Tracking noetig. Distinct
+      // count geht in Supabase-JS nicht direkt, deshalb user_id-Spalte laden
+      // und in JS dedupliezieren (unproblematisch bei der aktuellen Groesse).
+      supabase.schema("core").from("app_usage_event").select("user_id").gte("created_at", daysAgoIso(7)),
+      supabase.schema("core").from("app_usage_event").select("user_id").gte("created_at", daysAgoIso(30)),
+      supabase.schema("enrich").from("missing_station_report").select("id", { count: "exact", head: true }).eq("status", "pending"),
+    ]),
+    Promise.all(NATIONAL_SOURCES.map((s) => supabase.schema("core").rpc("last_import", { p_source: s.source }))),
   ]);
-  const lastOcmImport = lastOcmImportRows?.[0] as
-    | { scope: string; status: string; record_count: number | null; finished_at: string | null; started_at: string }
-    | undefined;
-  // Anders als OCM (taeglicher Vercel Cron) kann BNetzA in einer Umgebung
-  // noch NIE gelaufen sein (kein Cron, siehe Hinweistext unten) --
-  // lastBnetzaImport bleibt dann bewusst undefined statt eines
-  // Platzhalter-Laufs.
-  const lastBnetzaImport = lastBnetzaImportRows?.[0] as
-    | { scope: string; status: string; record_count: number | null; finished_at: string | null; started_at: string }
-    | undefined;
+
+  const lastOcmImport = lastOcmImportRows?.[0] as LastImportRow | undefined;
+  // Ein Quellenlauf kann in einer Umgebung noch NIE gelaufen sein (z. B.
+  // RIPREE erst kuerzlich angebunden) -- bleibt dann bewusst undefined statt
+  // eines Platzhalter-Laufs.
+  const nationalImports = NATIONAL_SOURCES.map((s, i) => ({
+    ...s,
+    lastImport: (nationalImportResults[i].data?.[0] as LastImportRow | undefined) ?? undefined,
+    error: nationalImportResults[i].error,
+  }));
+
+  // Fehler aus den Ueberblick-Abfragen sichtbar machen statt sie als
+  // irrefuehrende "0" zu zeigen (Audit-Befund 2026-09-22: "im Dashboard
+  // werden im Ueberblick keine oder falsche Zahlen gezeigt" -- keine der
+  // Abfragen oben pruefte bisher `.error`, ein fehlgeschlagener Request
+  // sah exakt so aus wie "0 Datensaetze").
+  const queryErrorEntries: [string, { message: string } | null | undefined][] = [
+    ["Campingplätze", campsiteError],
+    ["Ladestationen", chargePointError],
+    ["Offene Meldungen", pendingReportError],
+    ["Nutzer", usersResult.error],
+    ["Datenqualität", qualityResult.error],
+    ["Gespeicherte Routen", savedRouteError],
+    ["Routen geplant", routesPlannedError],
+    ["Letzter OCM-Import", lastOcmImportError],
+    ...nationalImports.map((n): [string, { message: string } | null | undefined] => [`Letzter ${n.label}-Import`, n.error]),
+  ];
+  const queryErrors = queryErrorEntries.filter(
+    (entry): entry is [string, { message: string }] => Boolean(entry[1])
+  );
 
   const userCount = usersResult.data?.users.length ?? 0;
   const weekStart = startOfWeekIso();
@@ -155,6 +190,23 @@ export default async function DashboardPage() {
         <p className="mt-1 text-sm text-text-muted">Überblick über charge2camp-Daten und Nutzer.</p>
       </div>
 
+      {queryErrors.length > 0 && (
+        <div className="rounded-md border border-status-down/40 bg-status-down/5 p-3 text-sm text-status-down">
+          <p className="font-medium">
+            {queryErrors.length === 1 ? "Eine Abfrage" : `${queryErrors.length} Abfragen`} für dieses Dashboard{" "}
+            {queryErrors.length === 1 ? "ist" : "sind"} fehlgeschlagen -- betroffene Zahlen unten zeigen 0 statt des
+            echten Werts, bis der Fehler behoben ist:
+          </p>
+          <ul className="mt-1 list-disc pl-5">
+            {queryErrors.map(([label, err]) => (
+              <li key={label}>
+                {label}: {err.message}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <Section title="Überblick">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <KpiCard label="Nutzer" value={userCount} href="/nutzer" />
@@ -168,7 +220,7 @@ export default async function DashboardPage() {
 
       <Section
         title="Ladenetz"
-        description="läuft täglich per Vercel Cron, rotiert wochentagsweise durch die Kernländer."
+        description="OCM läuft täglich per Vercel Cron. Nationale Register (BNetzA/IRVE/RIPREE) werden manuell über den Massenupload aktualisiert, siehe unten."
       >
         <p className="text-sm">
           Letzter OCM-Import:{" "}
@@ -182,25 +234,24 @@ export default async function DashboardPage() {
             "noch kein protokollierter Lauf"
           )}
         </p>
-        <p className="mt-2 text-sm">
-          Letzter BNetzA-Import:{" "}
-          {lastBnetzaImport ? (
-            <>
-              <span className="font-medium">{formatDateTime(lastBnetzaImport.finished_at)}</span> · {lastBnetzaImport.scope}
-              {lastBnetzaImport.status !== "ok" && <span className="text-status-down"> ({lastBnetzaImport.status})</span>}
-              {typeof lastBnetzaImport.record_count === "number" && ` · ${lastBnetzaImport.record_count} Ladepunkte`}
-            </>
-          ) : (
-            "noch nie importiert"
-          )}
-        </p>
-        {/* Kein Upload-UI/Cron fuer BNetzA (Nutzerentscheidung: eine
-            Datei-Upload-Flaeche mit Fortschrittsanzeige wuerde an Vercels
-            60s-Function-Timeout scheitern, siehe maxDuration in
-            src/app/api/cron/ocm-import/route.ts) -- nur ein Hinweis auf den
-            manuellen CLI-Befehl, bewusst unauffaellig statt als CTA. */}
-        <p className="mt-1 text-xs text-text-muted">
-          Reimport manuell via <code>ingest/import_bnetza.py --file &lt;pfad-zur-csv&gt;</code> (kein automatischer Cron).
+        {nationalImports.map((n) => (
+          <p key={n.source} className="mt-2 text-sm">
+            Letzter {n.label}-Import:{" "}
+            {n.lastImport ? (
+              <>
+                <span className="font-medium">{formatDateTime(n.lastImport.finished_at)}</span> · {n.lastImport.scope}
+                {n.lastImport.status !== "ok" && <span className="text-status-down"> ({n.lastImport.status})</span>}
+                {typeof n.lastImport.record_count === "number" && ` · ${n.lastImport.record_count} Ladepunkte`}
+              </>
+            ) : (
+              "noch nie importiert"
+            )}
+          </p>
+        ))}
+        <p className="mt-3 text-sm">
+          <Link href="/ladestationen/massenupload" className="text-action hover:underline">
+            Neue Datei hochladen (BNetzA/IRVE/RIPREE) →
+          </Link>
         </p>
       </Section>
 
