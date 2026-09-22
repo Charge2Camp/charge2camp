@@ -175,6 +175,33 @@ export async function GET(request: NextRequest) {
 
   const supabase = createAdminClient();
 
+  // Lauf wird SOFORT (vor der eigentlichen Arbeit) als 'running' protokolliert,
+  // nicht erst am Ende bei Erfolg -- sonst hinterlaesst ein harter Vercel-
+  // Timeout (60s auf dem Hobby-Plan, siehe maxDuration oben; grosse Laender
+  // wie DE/FR koennen das ueberschreiten) GAR KEINEN Eintrag: der Prozess
+  // wird beim Timeout abrupt gekillt, kein Code danach kann mehr laufen,
+  // auch kein try/catch faengt das ab. Ein haengender 'running'-Lauf ist
+  // im Dashboard/core.last_ocm_import() trotzdem sichtbar (sortiert nach
+  // started_at, nicht nach Status) statt komplett zu verschwinden (Audit-
+  // Befund 2026-09-22: 3 Tage ohne jeden Eintrag trotz taeglichem Cron).
+  const { data: runId, error: startRunError } = await supabase.schema("core").rpc("start_import_run", {
+    p_source: "ocm",
+    p_scope: `country:${country}`,
+  });
+  if (startRunError) {
+    return NextResponse.json({ error: `start_import_run: ${startRunError.message}`, country }, { status: 500 });
+  }
+
+  async function fail(message: string, status: number, partialCount = 0) {
+    await supabase.schema("core").rpc("finish_import_run", {
+      p_run_id: runId,
+      p_status: "error",
+      p_record_count: partialCount,
+      p_notes: message,
+    });
+    return NextResponse.json({ error: message, country }, { status });
+  }
+
   const ocmUrl = new URL("https://api.openchargemap.io/v3/poi");
   ocmUrl.searchParams.set("key", apiKey);
   ocmUrl.searchParams.set("countrycode", country);
@@ -184,7 +211,7 @@ export async function GET(request: NextRequest) {
 
   const ocmResponse = await fetch(ocmUrl, { signal: AbortSignal.timeout(120_000) });
   if (!ocmResponse.ok) {
-    return NextResponse.json({ error: `OCM-API-Fehler: ${ocmResponse.status}` }, { status: 502 });
+    return fail(`OCM-API-Fehler: ${ocmResponse.status}`, 502);
   }
   const pois = (await ocmResponse.json()) as OcmPoi[];
 
@@ -213,7 +240,7 @@ export async function GET(request: NextRequest) {
       p_payloads: payloads,
       p_source: "ocm",
     });
-    if (error) return NextResponse.json({ error: `charge_point upsert: ${error.message}`, country }, { status: 500 });
+    if (error) return fail(`charge_point upsert: ${error.message}`, 500, coreUpserted);
     for (const row of (data ?? []) as { external_key: string; id: string; manual_override: boolean }[]) {
       idByKey.set(row.external_key, row.id);
       manualOverrideByKey.set(row.external_key, row.manual_override);
@@ -231,7 +258,7 @@ export async function GET(request: NextRequest) {
     .map(([, id]) => id);
   for (const batch of chunk(chargePointIds, 100)) {
     const { error } = await supabase.schema("core").from("connector").delete().in("charge_point_id", batch);
-    if (error) return NextResponse.json({ error: `connector delete: ${error.message}`, country }, { status: 500 });
+    if (error) return fail(`connector delete: ${error.message}`, 500, coreUpserted);
   }
 
   const connectorRows = parsed.flatMap((p) => {
@@ -243,21 +270,20 @@ export async function GET(request: NextRequest) {
   let connectorsInserted = 0;
   for (const batch of chunk(connectorRows, 500)) {
     const { error } = await supabase.schema("core").from("connector").insert(batch);
-    if (error) return NextResponse.json({ error: `connector insert: ${error.message}`, country }, { status: 500 });
+    if (error) return fail(`connector insert: ${error.message}`, 500, coreUpserted);
     connectorsInserted += batch.length;
   }
 
   const { data: deactivatedCount, error: dedupError } = await supabase.schema("core").rpc("deactivate_new_ocm_near_manual");
-  if (dedupError) return NextResponse.json({ error: `dedup: ${dedupError.message}`, country }, { status: 500 });
+  if (dedupError) return fail(`dedup: ${dedupError.message}`, 500, coreUpserted);
 
   const { error: fillError } = await supabase.schema("core").rpc("fill_missing_trailer_suitability");
-  if (fillError) return NextResponse.json({ error: `fill_missing_trailer_suitability: ${fillError.message}`, country }, { status: 500 });
+  if (fillError) return fail(`fill_missing_trailer_suitability: ${fillError.message}`, 500, coreUpserted);
 
-  await supabase.schema("core").rpc("log_import_run", {
-    p_source: "ocm",
-    p_scope: `country:${country}`,
-    p_record_count: coreUpserted,
+  await supabase.schema("core").rpc("finish_import_run", {
+    p_run_id: runId,
     p_status: "ok",
+    p_record_count: coreUpserted,
     p_notes: "vercel-cron",
   });
 
