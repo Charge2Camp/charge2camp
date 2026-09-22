@@ -31,6 +31,13 @@ const TOUCH_MAP_QUERY = "(max-width: 767px), (pointer: coarse)";
 const LIST_NAV_STORAGE_KEY = "ladepunkte:list-nav";
 const MAP_VIEWPORT_STORAGE_KEY = "ladepunkte:map-viewport";
 const VIEWPORT_FETCH_DEBOUNCE_MS = 500;
+// Go-Live-Audit (Offline-/Netzstaerke-Verhalten): ohne Timeout haengt ein
+// Request bei schwachem statt komplett fehlendem Netz (der realistischere
+// Fall unterwegs) unbegrenzt in "Laedt...", ohne dass handleBoundsChange
+// je in den catch-Zweig faellt. 12s orientiert sich an mobilen
+// Timeout-Konventionen (z. B. iOS Safari), lang genug fuer 3G, kurz genug
+// um dem Nutzer zeitnah eine Rueckmeldung zu geben statt endlos zu warten.
+const VIEWPORT_FETCH_TIMEOUT_MS = 12000;
 
 // Deutschland-weiter Standard-Ausschnitt fuer die initiale Kartenzentrierung
 // ohne hinterlegte Zuhause-Adresse (Nutzerwunsch) -- entspricht MapView's
@@ -277,6 +284,13 @@ export function ChargingStationMapExplorer({
   // bleibt (siehe oben).
   const [stations, setStations] = useState<ChargingStationView[]>(initialStations);
   const [isFetchingViewport, setIsFetchingViewport] = useState(false);
+  // true, wenn der letzte Nachlade-Versuch fehlgeschlagen ist (Netzwerkfehler,
+  // Timeout, oder Server-Fehler) -- `stations` zeigt dann bewusst weiter die
+  // zuletzt erfolgreich geladenen Marker (siehe handleBoundsChange), der
+  // Nutzer muss aber erkennen koennen, dass die Karte NICHT den aktuellen
+  // Kartenausschnitt widerspiegelt (Go-Live-Audit, Offline-/Netzstaerke-
+  // Verhalten -- vorher gab es dafuer keinerlei Hinweis).
+  const [viewportFetchFailed, setViewportFetchFailed] = useState(false);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fetchSeqRef = useRef(0);
 
@@ -302,19 +316,28 @@ export function ChargingStationMapExplorer({
     debounceTimerRef.current = setTimeout(async () => {
       const seq = ++fetchSeqRef.current;
       setIsFetchingViewport(true);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), VIEWPORT_FETCH_TIMEOUT_MS);
       try {
         const qs = buildViewportQuery(filters, bounds);
-        const res = await fetch(`/api/charge-points/viewport?${qs}`);
-        if (!res.ok) return;
+        const res = await fetch(`/api/charge-points/viewport?${qs}`, { signal: controller.signal });
+        if (!res.ok) {
+          if (seq === fetchSeqRef.current) setViewportFetchFailed(true);
+          return;
+        }
         const data = (await res.json()) as { stations?: ChargingStationView[] };
         // Veraltete Antwort (z. B. wenn der Nutzer waehrend des Requests
         // weitergeschwenkt hat) verwerfen, sonst ueberschreibt eine
         // langsame, alte Antwort ein bereits aktuelleres Ergebnis.
         if (seq !== fetchSeqRef.current) return;
         setStations(data.stations ?? []);
+        setViewportFetchFailed(false);
       } catch {
-        // Netzwerkfehler: Karte behaelt die zuletzt bekannten Marker statt abzustuerzen.
+        // Netzwerkfehler/Timeout: Karte behaelt die zuletzt bekannten Marker
+        // statt abzustuerzen, zeigt aber einen Hinweis (viewportFetchFailed).
+        if (seq === fetchSeqRef.current) setViewportFetchFailed(true);
       } finally {
+        clearTimeout(timeoutId);
         if (seq === fetchSeqRef.current) setIsFetchingViewport(false);
       }
     }, VIEWPORT_FETCH_DEBOUNCE_MS);
@@ -463,8 +486,18 @@ export function ChargingStationMapExplorer({
               "Filter"/"Liste" ueberdecken (Nutzerfeedback). Gleiche Ebene
               wie Popups/MapLibres eigene Bedienelemente, siehe globals.css. */}
           <div className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-2 p-3 pt-[calc(0.75rem+var(--safe-top))] md:pt-3">
-            <span className="pointer-events-auto rounded-full bg-white/95 px-3 py-1.5 text-sm font-medium shadow-md dark:bg-neutral-900/95">
-              {isFetchingViewport ? "Lädt…" : `${stationCountLabel} Ladepunkte`}
+            <span
+              className={`pointer-events-auto rounded-full px-3 py-1.5 text-sm font-medium shadow-md ${
+                viewportFetchFailed && !isFetchingViewport
+                  ? "bg-amber-100 text-amber-900 dark:bg-amber-900/80 dark:text-amber-100"
+                  : "bg-white/95 dark:bg-neutral-900/95"
+              }`}
+            >
+              {isFetchingViewport
+                ? "Lädt…"
+                : viewportFetchFailed
+                  ? `${stationCountLabel} Ladepunkte (nicht aktuell -- keine Verbindung)`
+                  : `${stationCountLabel} Ladepunkte`}
             </span>
             <div className="pointer-events-auto flex gap-2">
               {FilterButton}

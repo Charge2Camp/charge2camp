@@ -16,6 +16,9 @@ import type { ChargingStationView } from "@/lib/charging-stations";
 import type { TrailerVerdict } from "@/types/database";
 
 const VIEWPORT_FETCH_DEBOUNCE_MS = 500;
+// Go-Live-Audit (Offline-/Netzstaerke-Verhalten): siehe gleichnamige
+// Konstante in charging-station-map-explorer.tsx.
+const VIEWPORT_FETCH_TIMEOUT_MS = 12000;
 const GERMANY_OVERVIEW_CENTER = { latitude: 51.1657, longitude: 10.4515 };
 const GERMANY_OVERVIEW_ZOOM = 4.5;
 
@@ -48,6 +51,14 @@ export function NearbyChargingModal({ open, onClose }: { open: boolean; onClose:
   const [filters, setFilters] = useState<QuickFilters>({ trailerVerdict: [], fastChargersOnly: false });
   const [stations, setStations] = useState<ChargingStationView[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  // true, wenn der letzte Nachlade-Versuch fehlgeschlagen ist (Netzwerkfehler,
+  // Timeout, oder Server-Fehler) -- ohne diese Unterscheidung zeigte die
+  // leere Trefferliste bei einem Netzwerkfehler faelschlich "Keine
+  // Ladepunkte im aktuellen Kartenausschnitt" statt eines ehrlichen
+  // Fehlerhinweises (Go-Live-Audit, Offline-/Netzstaerke-Verhalten --
+  // gerade in dieser Startseiten-Schnellsuche der irrefuehrendste Fall,
+  // da hier anders als auf /ladepunkte keine Server-Erstansicht existiert).
+  const [fetchFailed, setFetchFailed] = useState(false);
   const [requiresLogin, setRequiresLogin] = useState(false);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [locationDenied, setLocationDenied] = useState(false);
@@ -82,22 +93,32 @@ export function NearbyChargingModal({ open, onClose }: { open: boolean; onClose:
     debounceTimerRef.current = setTimeout(async () => {
       const seq = ++fetchSeqRef.current;
       setIsLoading(true);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), VIEWPORT_FETCH_TIMEOUT_MS);
       try {
         const qs = buildViewportQuery(activeFilters, bounds);
-        const res = await fetch(`/api/charge-points/viewport?${qs}`);
+        const res = await fetch(`/api/charge-points/viewport?${qs}`, { signal: controller.signal });
         if (seq !== fetchSeqRef.current) return;
         if (res.status === 401) {
           setRequiresLogin(true);
+          setFetchFailed(false);
           return;
         }
-        if (!res.ok) return;
         setRequiresLogin(false);
+        if (!res.ok) {
+          setFetchFailed(true);
+          return;
+        }
         const data = (await res.json()) as { stations?: ChargingStationView[] };
         if (seq !== fetchSeqRef.current) return;
         setStations(data.stations ?? []);
+        setFetchFailed(false);
       } catch {
-        // Netzwerkfehler: bisherige Ergebnisse bleiben stehen statt abzustuerzen.
+        // Netzwerkfehler/Timeout: bisherige Ergebnisse bleiben stehen statt
+        // abzustuerzen, aber als "nicht aktuell" markiert (siehe fetchFailed).
+        if (seq === fetchSeqRef.current) setFetchFailed(true);
       } finally {
+        clearTimeout(timeoutId);
         if (seq === fetchSeqRef.current) setIsLoading(false);
       }
     }, VIEWPORT_FETCH_DEBOUNCE_MS);
@@ -175,8 +196,14 @@ export function NearbyChargingModal({ open, onClose }: { open: boolean; onClose:
               initialZoom={userLocation ? 13 : GERMANY_OVERVIEW_ZOOM}
             />
             <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-2 p-3">
-              <span className="pointer-events-auto rounded-full bg-white/95 px-3 py-1.5 text-sm font-medium shadow-md dark:bg-neutral-900/95">
-                {isLoading ? "Lädt…" : `${stations.length} Ladepunkte`}
+              <span
+                className={`pointer-events-auto rounded-full px-3 py-1.5 text-sm font-medium shadow-md ${
+                  fetchFailed && !isLoading
+                    ? "bg-amber-100 text-amber-900 dark:bg-amber-900/80 dark:text-amber-100"
+                    : "bg-white/95 dark:bg-neutral-900/95"
+                }`}
+              >
+                {isLoading ? "Lädt…" : fetchFailed ? "Keine Verbindung" : `${stations.length} Ladepunkte`}
               </span>
             </div>
             {locationDenied && !userLocation && (
@@ -216,7 +243,11 @@ export function NearbyChargingModal({ open, onClose }: { open: boolean; onClose:
               </p>
             ) : sortedStations.length === 0 ? (
               <p className="text-sm text-black/50 dark:text-white/50">
-                {isLoading ? "Lädt…" : "Keine Ladepunkte im aktuellen Kartenausschnitt -- Karte verschieben oder Filter anpassen."}
+                {isLoading
+                  ? "Lädt…"
+                  : fetchFailed
+                    ? "Ladepunkte konnten nicht geladen werden -- Internetverbindung prüfen und Karte erneut verschieben."
+                    : "Keine Ladepunkte im aktuellen Kartenausschnitt -- Karte verschieben oder Filter anpassen."}
               </p>
             ) : (
               <ul className="flex flex-col gap-2">

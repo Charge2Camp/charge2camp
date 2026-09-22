@@ -96,8 +96,13 @@ export function StationBottomSheet({
     setExtras(null);
     setExtrasError(false);
     setExtrasLoadingRaw(true);
+    // Go-Live-Audit (Offline-/Netzstaerke-Verhalten): ohne Timeout haengt
+    // dieser Request bei schwachem statt komplett fehlendem Netz unbegrenzt
+    // in "Details werden geladen...", ohne je den catch-Zweig zu erreichen.
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
     try {
-      const res = await fetch(`/api/charge-points/${stationId}/detail`);
+      const res = await fetch(`/api/charge-points/${stationId}/detail`, { signal: controller.signal });
       if (!res.ok) throw new Error("Fehler beim Laden");
       const data = (await res.json()) as ChargingStationDetailExtras;
       if (seq !== fetchSeqRef.current) return;
@@ -106,6 +111,7 @@ export function StationBottomSheet({
       if (seq !== fetchSeqRef.current) return;
       setExtrasError(true);
     } finally {
+      clearTimeout(timeoutId);
       if (seq === fetchSeqRef.current) setExtrasLoadingRaw(false);
     }
   }
@@ -316,7 +322,20 @@ export function StationBottomSheet({
 
           {extrasLoading && <p className="text-sm text-black/50 dark:text-white/50">Details werden geladen…</p>}
           {extrasError && (
-            <p className="text-sm text-red-600">Bewertungen konnten nicht geladen werden -- erneut versuchen.</p>
+            // Go-Live-Audit: Text versprach bisher "erneut versuchen" ohne
+            // tatsaechliche Aktion dahinter -- gerade bei schwachem Netz
+            // unterwegs (haeufigster Ausloeser dieses Fehlers) ein echter
+            // Sackgassen-Zustand ohne das Sheet zu schliessen/neu zu oeffnen.
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-sm text-red-600">Bewertungen konnten nicht geladen werden.</p>
+              <button
+                type="button"
+                onClick={() => void loadExtras(station.id)}
+                className="min-h-11 shrink-0 rounded-md border border-red-600/30 px-3 text-sm font-medium text-red-600 hover:bg-red-600/10"
+              >
+                Erneut versuchen
+              </button>
+            </div>
           )}
 
           {extras && (
