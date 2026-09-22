@@ -12,7 +12,22 @@ export default async function CampsitesPage({ searchParams }: { searchParams: Pr
   let query = supabase.schema("core").from("campsite").select("id, name, city, country_code, is_active", { count: "exact" });
   if (q) query = query.ilike("name", `%${q}%`);
 
-  const { data, count } = await query.order("name").range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
+  const { data, count, error } = await query.order("name").range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
+
+  // Ungeprueft sah ein fehlgeschlagener Request bisher exakt so aus wie
+  // "0 Campingplaetze" (Audit-Befund 2026-09-22, gleiche Fehlerklasse wie
+  // im Dashboard -- siehe admin/app/(dashboard)/page.tsx).
+  if (error) {
+    return (
+      <div className="flex flex-col gap-4">
+        <h1 className="text-2xl font-semibold">Campingplätze</h1>
+        <p className="rounded-md border border-status-down/40 bg-status-down/5 p-3 text-sm text-status-down">
+          Liste konnte nicht geladen werden: {error.message}
+        </p>
+      </div>
+    );
+  }
+
   const campsites = (data ?? []) as Pick<Campsite, "id" | "name" | "city" | "country_code" | "is_active">[];
   const totalPages = Math.max(1, Math.ceil((count ?? 0) / PAGE_SIZE));
 

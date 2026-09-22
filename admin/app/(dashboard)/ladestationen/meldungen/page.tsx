@@ -6,12 +6,29 @@ import { moderateReport } from "./actions";
 export default async function TrailerReportsPage() {
   const supabase = createServiceClient();
 
-  const { data: reports } = await supabase
+  const { data: reports, error } = await supabase
     .schema("enrich")
     .from("trailer_report")
     .select("*")
     .eq("status", "pending")
     .order("created_at", { ascending: true });
+
+  // Ungeprueft sah ein fehlgeschlagener Request bisher exakt so aus wie
+  // "keine offenen Meldungen" (Audit-Befund 2026-09-22, gleiche
+  // Fehlerklasse wie im Dashboard -- siehe admin/app/(dashboard)/page.tsx) --
+  // besonders heikel bei einer Moderationswarteschlange, wo "leer" und
+  // "kaputt" sonst ununterscheidbar sind.
+  if (error) {
+    return (
+      <div className="flex flex-col gap-4">
+        <h1 className="text-2xl font-semibold">Meldungen</h1>
+        <p className="rounded-md border border-status-down/40 bg-status-down/5 p-3 text-sm text-status-down">
+          Meldungen konnten nicht geladen werden: {error.message}
+        </p>
+      </div>
+    );
+  }
+
   const pendingReports = (reports ?? []) as TrailerReport[];
 
   const keys = Array.from(new Set(pendingReports.map((r) => r.charge_point_key)));

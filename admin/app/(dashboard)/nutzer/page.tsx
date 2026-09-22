@@ -14,21 +14,35 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
   // erwarteten Nutzerumfang dieser App (MVP-Testphase) reicht es, bis zu
   // 1000 Nutzer zu laden und clientseitig (hier: serverseitig im Request)
   // nach E-Mail zu filtern, statt eine eigene Such-Infrastruktur zu bauen.
-  const { data } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
-  const { data: profiles } = await supabase.from("profiles").select("id, is_admin");
-  const isAdminById = new Map((profiles ?? []).map((p) => [p.id, p.is_admin]));
+  const [usersResult, profilesResult, usageEventsResult] = await Promise.all([
+    supabase.auth.admin.listUsers({ page: 1, perPage: 1000 }),
+    supabase.from("profiles").select("id, is_admin"),
+    // "Zuletzt aktiv" je Nutzer (juengstes app_usage_event) -- echte Nutzung
+    // statt nur last_sign_in_at (reiner Login-Zeitpunkt, siehe nutzer/[id]/
+    // page.tsx). Kein GROUP BY ueber Supabase-JS moeglich, deshalb absteigend
+    // sortiert laden und je user_id nur den ersten (juengsten) Treffer
+    // behalten -- bei der aktuellen MVP-Groessenordnung unproblematisch.
+    supabase.schema("core").from("app_usage_event").select("user_id, created_at").order("created_at", { ascending: false }).limit(5000),
+  ]);
 
-  // "Zuletzt aktiv" je Nutzer (juengstes app_usage_event) -- echte Nutzung
-  // statt nur last_sign_in_at (reiner Login-Zeitpunkt, siehe nutzer/[id]/
-  // page.tsx). Kein GROUP BY ueber Supabase-JS moeglich, deshalb absteigend
-  // sortiert laden und je user_id nur den ersten (juengsten) Treffer
-  // behalten -- bei der aktuellen MVP-Groessenordnung unproblematisch.
-  const { data: usageEvents } = await supabase
-    .schema("core")
-    .from("app_usage_event")
-    .select("user_id, created_at")
-    .order("created_at", { ascending: false })
-    .limit(5000);
+  // Ungeprueft sah ein fehlgeschlagener Request bisher exakt so aus wie
+  // "0 Nutzer" (Audit-Befund 2026-09-22, gleiche Fehlerklasse wie im
+  // Dashboard -- siehe admin/app/(dashboard)/page.tsx).
+  const queryError = usersResult.error ?? profilesResult.error ?? usageEventsResult.error;
+  if (queryError) {
+    return (
+      <div className="flex flex-col gap-4">
+        <h1 className="text-2xl font-semibold">Nutzer</h1>
+        <p className="rounded-md border border-status-down/40 bg-status-down/5 p-3 text-sm text-status-down">
+          Liste konnte nicht geladen werden: {queryError.message}
+        </p>
+      </div>
+    );
+  }
+
+  const { data } = usersResult;
+  const isAdminById = new Map((profilesResult.data ?? []).map((p) => [p.id, p.is_admin]));
+  const usageEvents = usageEventsResult.data;
   const lastActiveByUser = new Map<string, string>();
   for (const e of usageEvents ?? []) {
     if (e.user_id && !lastActiveByUser.has(e.user_id)) lastActiveByUser.set(e.user_id, e.created_at as string);

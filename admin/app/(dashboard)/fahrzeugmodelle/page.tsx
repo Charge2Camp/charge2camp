@@ -18,11 +18,25 @@ export default async function VehicleModelsPage({
     .select("id, manufacturer, model, variant, battery_capacity_kwh, range_km, verification_status", { count: "exact" });
   if (q) query = query.or(`manufacturer.ilike.%${q}%,model.ilike.%${q}%,variant.ilike.%${q}%`);
 
-  const { data, count } = await query
+  const { data, count, error } = await query
     .order("manufacturer")
     .order("model")
     .order("variant")
     .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
+
+  // Ungeprueft sah ein fehlgeschlagener Request bisher exakt so aus wie
+  // "0 Modelle" (Audit-Befund 2026-09-22, gleiche Fehlerklasse wie im
+  // Dashboard -- siehe admin/app/(dashboard)/page.tsx).
+  if (error) {
+    return (
+      <div className="flex flex-col gap-4">
+        <h1 className="text-2xl font-semibold">Fahrzeugmodelle</h1>
+        <p className="rounded-md border border-status-down/40 bg-status-down/5 p-3 text-sm text-status-down">
+          Liste konnte nicht geladen werden: {error.message}
+        </p>
+      </div>
+    );
+  }
 
   const models = (data ?? []) as Pick<
     VehicleModel,
