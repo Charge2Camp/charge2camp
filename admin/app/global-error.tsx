@@ -3,12 +3,10 @@
 import { useEffect } from "react";
 import * as Sentry from "@sentry/nextjs";
 
-/** Faengt Fehler ab, die aus dem ROOT-Layout selbst kommen (extrem selten --
- * error.tsx alleine deckt das NICHT ab, da es innerhalb des Layouts haengt).
- * Muss deshalb sein eigenes <html>/<body> mitbringen, da es das komplette
- * Layout ersetzt -- entsprechend bewusst schlicht gehalten (kein Header/
- * Footer/Bottom-Tab-Bar, die ja Teil des ausgefallenen Layouts sein
- * koennten). Siehe error.tsx fuer den normalen Fall (jede andere Route). */
+/** Faengt Fehler ab, die aus dem ROOT-Layout selbst kommen (analog
+ * src/app/global-error.tsx der Haupt-App) -- error.tsx allein deckt das
+ * nicht ab. Muss ein eigenes <html>/<body> mitbringen, da es das komplette
+ * Layout ersetzt. */
 export default function GlobalError({
   error,
   reset,

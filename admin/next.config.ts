@@ -1,5 +1,6 @@
 import path from "node:path";
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs/config";
 
 const nextConfig: NextConfig = {
   // admin/ ist eine eigenstaendige App im selben Repo wie die Haupt-App
@@ -13,4 +14,15 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// SENTRY_ORG/SENTRY_PROJECT/SENTRY_AUTH_TOKEN sind optional (siehe
+// .env.example) -- ohne SENTRY_AUTH_TOKEN wird der Source-Map-Upload beim
+// Build automatisch uebersprungen (kein Build-Fehler).
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  silent: true,
+  widenClientFileUpload: true,
+  sourcemaps: {
+    disable: !process.env.SENTRY_AUTH_TOKEN,
+  },
+});
