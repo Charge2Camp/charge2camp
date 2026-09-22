@@ -1,0 +1,18 @@
+-- Bugreport: /ladestationen (admin) mit Stadt-Filter (z.B. "Zusmarshausen")
+-- -- "canceling statement due to statement timeout". Gleiche Ursache wie
+-- 20261022080000 (core.charge_point_admin_list): core.charge_point.city hat
+-- keinen Index, der ein fuehrendes Wildcard-ILIKE
+-- ("cp.city ilike '%' || $2 || '%'") unterstuetzt -- Seq Scan ueber alle
+-- 137.776 Zeilen. Gemessen (EXPLAIN ANALYZE auf Produktion, Filter
+-- "Zusmarshausen", 3 Treffer): 8,97s -- ueber dem 8s-statement_timeout der
+-- PostgREST-authenticator-Rolle, daher der Timeout.
+--
+-- Trigram-GIN-Index analog zu idx_cp_name_trgm/idx_cp_operator_trgm.
+-- Getestet (zurueckgerollte Transaktion auf Produktion): "Zusmarshausen"
+-- (3 Treffer) 8,97s -> 9ms, Bitmap Heap Scan. Auch ein breiter Treffer wie
+-- "Berlin" (~3.564 Zeilen) bleibt bei 709ms (Planer waehlt dort einen
+-- Index Scan auf idx_cp_name statt des Trigram-Index, weil LIMIT 30 + ORDER
+-- BY name das fruehzeitig abbricht) -- anders als beim Namens-/
+-- Anbieter-Filter (20261022090000) ist hier KEIN zusaetzliches
+-- "set local enable_indexscan = off" noetig, der Standardplaner reicht.
+create index if not exists idx_cp_city_trgm on core.charge_point using gin (city gin_trgm_ops);
