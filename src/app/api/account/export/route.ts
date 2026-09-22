@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { requireApiUser } from "@/lib/api-guard";
 
 /**
  * DSGVO-Datenexport (§ "Export personenbezogener Daten", docs/privacy.md,
@@ -9,11 +10,13 @@ import { createClient } from "@/lib/supabase/server";
  * sorgen ohnehin dafuer, dass nur eigene Zeilen zurueckkommen.
  */
 export async function GET() {
+  // Sicherheits-Audit: acht Tabellen-Abfragen pro Aufruf -- Rate-Limit
+  // verhindert, dass dieser Endpunkt zum Denial-of-Service-Vektor wird.
+  const guard = await requireApiUser("account-export", { windowSeconds: 3600, maxRequests: 10 });
+  if ("response" in guard) return guard.response;
+  const { user } = guard;
+
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Nicht angemeldet." }, { status: 401 });
 
   const [profile, vehicles, caravans, favorites, campsiteReviews, chargingReviews, savedRoutes, blockedStations] =
     await Promise.all([

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { requireApiUser } from "@/lib/api-guard";
 
 /**
  * Auftrag D -- POST /api/enrich/charge-points/{key}/trailer (siehe
@@ -19,12 +20,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const { external_key: encodedKey } = await params;
   const externalKey = decodeURIComponent(encodedKey);
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Nicht angemeldet." }, { status: 401 });
+  // Sicherheits-Audit: oeffentlich erreichbares Schreib-Endpoint (jeder
+  // eingeloggte Nutzer), bisher ohne Rate-Limit -- hoechstes Spam-/
+  // Abuse-Risiko unter den Enrichment-Endpunkten. Fenster grosszuegig
+  // bemessen (echte Nutzer melden nur gelegentlich einen Ladepunkt).
+  const guard = await requireApiUser("trailer-report-submit", { windowSeconds: 3600, maxRequests: 20 });
+  if ("response" in guard) return guard.response;
+  const { user } = guard;
 
+  const supabase = await createClient();
   const body = await request.json().catch(() => null);
   if (!body || typeof body.verdict !== "string" || !VALID_VERDICTS.includes(body.verdict)) {
     return NextResponse.json(
