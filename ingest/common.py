@@ -91,6 +91,17 @@ def import_run(conn, source: str, scope: str | None, notes: str | None = None) -
                 "update core.source_registry set last_successful_import = now() where source_id = %s",
                 (source,),
             )
+            # Nutzervorgabe (2026-09-23): Ladepunkte, die wegen zu geringer
+            # Leistung deaktiviert wurden (core.
+            # deactivate_insufficient_charging_stations(), siehe Migration
+            # 20261024200000), sollen automatisch wieder aktiv werden,
+            # sobald ein Reimport bessere Anschlussdaten liefert (>=11kW,
+            # siehe 20261024210000). Zentral hier statt in jedem einzelnen
+            # Importer, da alle vier (OCM/BNetzA/IRVE/RIPREE) durch dieses
+            # import_run() laufen.
+            cur.execute(
+                "select core.reactivate_sufficiently_equipped_charge_points()",
+            )
         conn.commit()
 
 

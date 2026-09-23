@@ -118,7 +118,17 @@ export async function releaseManualOverride(chargePointId: string) {
 export async function setChargePointActive(chargePointId: string, isActive: boolean) {
   await requireAdmin();
   const supabase = createServiceClient();
-  const { error } = await supabase.schema("core").from("charge_point").update({ is_active: isActive }).eq("id", chargePointId);
+  // deactivated_by_rule=null: eine manuelle Admin-Entscheidung (in beide
+  // Richtungen) hat Vorrang vor core.
+  // reactivate_sufficiently_equipped_charge_points() -- ohne das Loeschen
+  // wuerde ein spaeterer Reimport eine bewusst deaktivierte Station mit
+  // (zufaellig) noch gesetztem Marker automatisch wieder aktivieren, siehe
+  // Migration 20261024220000.
+  const { error } = await supabase
+    .schema("core")
+    .from("charge_point")
+    .update({ is_active: isActive, deactivated_by_rule: null })
+    .eq("id", chargePointId);
   if (error) throw new Error(error.message);
   revalidatePath(`/ladestationen/${chargePointId}`);
   revalidatePath("/ladestationen");

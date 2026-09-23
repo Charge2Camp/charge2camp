@@ -280,6 +280,15 @@ export async function GET(request: NextRequest) {
   const { error: fillError } = await supabase.schema("core").rpc("fill_missing_trailer_suitability");
   if (fillError) return fail(`fill_missing_trailer_suitability: ${fillError.message}`, 500, coreUpserted);
 
+  // Nutzervorgabe (2026-09-23): wegen zu geringer Leistung deaktivierte
+  // Ladepunkte (core.deactivate_insufficient_charging_stations(), siehe
+  // Migration 20261024200000) automatisch wieder aktivieren, sobald dieser
+  // Reimport bessere Anschlussdaten liefert (siehe 20261024210000).
+  const { data: reactivatedCount, error: reactivateError } = await supabase
+    .schema("core")
+    .rpc("reactivate_sufficiently_equipped_charge_points");
+  if (reactivateError) return fail(`reactivate: ${reactivateError.message}`, 500, coreUpserted);
+
   await supabase.schema("core").rpc("finish_import_run", {
     p_run_id: runId,
     p_status: "ok",
@@ -294,5 +303,6 @@ export async function GET(request: NextRequest) {
     coreUpserted,
     connectorsInserted,
     deactivatedNearManual: deactivatedCount,
+    reactivatedSufficientlyEquipped: reactivatedCount,
   });
 }
