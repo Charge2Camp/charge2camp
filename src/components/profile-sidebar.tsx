@@ -80,6 +80,19 @@ export function ProfileSidebar({
           })}
         </nav>
 
+        {/* Impressum/Datenschutz muessen "staendig verfuegbar" sein (§5 DDG)
+            -- auf Mobile gibt es sonst keinen Footer (siehe site-footer.tsx,
+            md:block), diese Sidebar ist fuer eingeloggte Mobile-Nutzer der
+            einzige durchgaengig erreichbare Ort dafuer. */}
+        <div className="flex justify-center gap-4 border-t border-line px-2 py-2 text-xs text-text-muted">
+          <Link href="/impressum" onClick={onClose} className="hover:underline">
+            Impressum
+          </Link>
+          <Link href="/datenschutz" onClick={onClose} className="hover:underline">
+            Datenschutz
+          </Link>
+        </div>
+
         <div className="flex items-center gap-2 border-t border-line p-2">
           {isAdmin && <AdminButton />}
           <LogoutButton />

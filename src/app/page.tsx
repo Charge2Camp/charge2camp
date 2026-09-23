@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { HomeActions } from "@/components/home/home-actions";
 
 export default function HomePage() {
@@ -15,6 +16,19 @@ export default function HomePage() {
 
       <p className="pt-8 text-xs text-black/40 dark:text-white/40">
         MVP / Testversion &middot; Kartendaten und Ladepunkte teilweise als Demo-Daten gekennzeichnet.
+      </p>
+
+      {/* Auf Mobile gibt es weder Header noch Footer (siehe layout.tsx) --
+          Impressum/Datenschutz muessen trotzdem "staendig verfuegbar" sein
+          (§5 DDG), deshalb hier direkt im Seiteninhalt der oeffentlich ohne
+          Login erreichbaren Startseite verlinkt. */}
+      <p className="flex gap-4 text-xs text-black/40 dark:text-white/40">
+        <Link href="/impressum" className="hover:underline">
+          Impressum
+        </Link>
+        <Link href="/datenschutz" className="hover:underline">
+          Datenschutz
+        </Link>
       </p>
     </div>
   );
