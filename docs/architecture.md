@@ -338,12 +338,20 @@ nur fuer den Routenplaner:
 - **Aktions-Button-Reihen stapeln sich vertikal** auf schmalen Screens
   (`flex-col sm:flex-row`) statt sich nebeneinander zu quetschen.
 
-**Noch offen fuer eine echte App-Store-Veroeffentlichung** (bewusst noch
-nicht umgesetzt, da echte Design-Assets fehlen -- keine Platzhalter-Icons
-erfunden, siehe §39 "keine Scheindaten"): App-Icon-Set, Splashscreens,
-`manifest.json` fuer PWA-Installierbarkeit, Entscheidung fuer eine
-konkrete Wrapper-Technologie (Capacitor o. ae.), Push-Notification-
-Strategie, Store-Listing-Texte/Screenshots.
+**Bereits umgesetzt** (Stand 2026-09-23, unten ursprünglich als offen
+gelistet): App-Icon-Set ([src/app/icon.svg](../src/app/icon.svg),
+[src/app/apple-icon.tsx](../src/app/apple-icon.tsx) -- echtes Markenlogo,
+kein Platzhalter) sowie `manifest.ts` für PWA-Installierbarkeit
+([src/app/manifest.ts](../src/app/manifest.ts)).
+
+**Noch offen fuer eine echte App-Store-Veroeffentlichung**: Splashscreens,
+Entscheidung fuer eine konkrete Wrapper-Technologie (Capacitor o. ae. --
+noch kein natives Projekt im Repo), Push-Notification-Strategie,
+Store-Listing-Texte/Screenshots. Achtung: §50 "Nicht im MVP" schliesst
+"native iOS-/Android-Apps" weiterhin explizit aus -- dieser Widerspruch
+zur App-Store-Vorbereitung ist noch nicht aufgeloest und sollte bei der
+Wrapper-Entscheidung mit adressiert werden (§50 anpassen oder die
+App-Store-Absicht dort ausdruecklich als Ausnahme vermerken).
 
 ## Profil-Struktur (Phase 2, erweitert)
 

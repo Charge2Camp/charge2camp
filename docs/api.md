@@ -116,9 +116,6 @@ Alle vier Endpunkte validieren, dass der referenzierte Campingplatz/
 Ladepunkt in `core.*` existiert (404, keine verwaisten `enrich.*`-Zeilen —
 siehe `sql/90_quality_checks.sql` Check 5).
 
-Die Anreicherungs-Endpunkte (`POST /api/enrich/...`, Community-Meldungen zur
-Anhängertauglichkeit / Website-Recherche) sind noch nicht umgesetzt.
-
 ## Konventionen
 
 - Keine API-Keys im Code, ausschließlich über Environment Variables.
