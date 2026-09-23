@@ -1,0 +1,12 @@
+-- Fortsetzung von 20261024160000/20261024180000: derselbe Korrelations-
+-- Effekt, diesmal zwischen source und country_code -- source='irve'
+-- (Frankreich-Import, IRVE) ist praktisch ausschliesslich country_code='FR'.
+-- Bei sort=country_asc muss der Planer beim Scannen in alphabetischer
+-- Laender-Reihenfolge (AT, BE, CH, CZ, DE, FR, ...) erst durch AT+BE+CH+CZ+DE
+-- (~75.627 Zeilen) hindurch, bevor die ersten FR/irve-Treffer kommen.
+-- Gemessen: 11,8s statt der erwarteten <100ms. bundesnetzagentur (~100% DE)
+-- ist davon NICHT in gleichem Mass betroffen, da DE alphabetisch frueh genug
+-- liegt (nur AT+BE+CH+CZ, ~3.552 Zeilen, zu ueberspringen) -- aber ein
+-- zusammengesetzter Index deckt beide Faelle gleichermassen robust ab, ohne
+-- von der Position im Alphabet abzuhaengen.
+create index if not exists idx_cp_source_country on core.charge_point (source, country_code);

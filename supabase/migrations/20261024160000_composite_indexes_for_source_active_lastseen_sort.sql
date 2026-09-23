@@ -1,0 +1,30 @@
+-- Fortsetzung des systematischen Timeout-Nachtests (20261024140000): auch
+-- bei NICHT-selektiven Werten (die also bewusst NICHT ueber den
+-- CTE-Vorfilter-Trick laufen) gibt es ein Problem, wenn gleichzeitig nach
+-- "last_seen_desc" sortiert wird -- z.B. p_source='bundesnetzagentur'
+-- (44,8% aller Zeilen) + sort=last_seen_desc: gemessen >20s/Timeout. Ursache
+-- ist KEINE geringe Selektivitaet, sondern Korrelation: BNetzA-Importe
+-- aktualisieren last_seen_at batchweise fuer alle ihre Zeilen auf einmal --
+-- die Zeilen clustern deshalb stark in last_seen_at, obwohl sie insgesamt
+-- fast die Haelfte der Tabelle ausmachen. core.charge_point.is_active zeigt
+-- denselben Effekt schwaecher (3,0s statt <100ms, noch unter dem Timeout,
+-- aber unnoetig teuer und potenziell bei kaelterem Cache riskant).
+--
+-- Ein CTE-Vorfilter haette hier NICHT geholfen (getestet: Timeout auch mit
+-- materialisierter CTE, da die komplette gefilterte Menge trotzdem entweder
+-- sortiert oder heap-gelesen werden muss). Der eigentliche Fix: ein
+-- zusammengesetzter Index (source, last_seen_at) bzw. (is_active,
+-- last_seen_at), der Filter UND Sortierung gemeinsam abdeckt -- dann kann
+-- Postgres direkt an die passende Stelle springen und nach den ersten 30
+-- Treffern abbrechen, unabhaengig von Korrelation/Clusterung.
+--
+-- WICHTIG: "desc nulls last" MUSS explizit im Index stehen -- Postgres'
+-- Default fuer eine absteigende Spalte ist NULLS FIRST, das passt nicht zur
+-- Sortierung der Abfrage ("order by ... desc nulls last", siehe
+-- core.charge_point_admin_list) und der Index wird dafuer schlicht nicht in
+-- Betracht gezogen. Genau daran ist der erste Versuch dieses Fixes
+-- gescheitert (Index angelegt, aber vom Planer ignoriert), bis "desc nulls
+-- last" statt nur "desc" explizit gesetzt wurde -- danach: 10ms statt
+-- >20s/Timeout, verifiziert per EXPLAIN ANALYZE auf Produktion.
+create index if not exists idx_cp_source_lastseen on core.charge_point (source, last_seen_at desc nulls last);
+create index if not exists idx_cp_active_lastseen on core.charge_point (is_active, last_seen_at desc nulls last);

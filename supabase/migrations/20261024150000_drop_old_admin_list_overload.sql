@@ -1,0 +1,14 @@
+-- Fortsetzung von 20261024140000: "create or replace function" mit einer
+-- GEAENDERTEN Parameterliste (p_is_active/p_source neu angehaengt) legt in
+-- Postgres eine ZUSAETZLICHE Funktions-Ueberladung an statt die alte zu
+-- ersetzen (Funktionen werden ueber Name+Parametertypen identifiziert) --
+-- die alte 9-Parameter-Signatur blieb parallel bestehen. Jeder Aufruf, der
+-- nicht ALLE 11 Parameter per Name mitgibt (z.B. nur p_sort/p_limit/
+-- p_offset, alles andere per Default), wird dadurch mehrdeutig:
+-- "function core.charge_point_admin_list(...) is not unique" -- betraf
+-- konkret schon eigene Testaufrufe direkt nach dem Deploy. Die Next.js-App
+-- selbst (station-list-Seite) uebergibt zwar immer alle 11 benannten
+-- Parameter und war dadurch nicht betroffen, aber jeder andere/kuenftige
+-- Aufrufer mit weniger Parametern waere es gewesen. Alte Ueberladung
+-- entfernen, nur die neue (mit p_is_active/p_source) bleibt bestehen.
+drop function if exists core.charge_point_admin_list(text, text, text, text, numeric, text, integer, integer, text);
