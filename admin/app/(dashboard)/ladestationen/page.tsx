@@ -18,6 +18,17 @@ const SORT_OPTIONS = [
   { value: "last_seen_desc", label: "Zuletzt gesehen" },
 ] as const;
 
+// Werte von core.charge_point.source (siehe supabase/migrations/
+// 20261024140000_admin_list_status_and_source_filter.sql) -- kein
+// dynamisches Dropdown wie bei Land/Anbieter noetig, es gibt nur diese vier
+// festen Importquellen.
+const SOURCE_OPTIONS = [
+  { value: "bundesnetzagentur", label: "Bundesnetzagentur" },
+  { value: "ocm", label: "Open Charge Map" },
+  { value: "irve", label: "IRVE (Frankreich)" },
+  { value: "admin_manual", label: "Manuell (Admin)" },
+] as const;
+
 interface AdminListRow {
   id: string;
   external_key: string;
@@ -53,10 +64,24 @@ export default async function ChargingStationsPage({
     min_power?: string;
     sort?: string;
     page_size?: string;
+    status?: string;
+    source?: string;
   }>;
 }) {
-  const { q, city, page: pageParam, country, operator, verdict, min_power: minPower, sort, page_size: pageSizeParam } =
-    await searchParams;
+  const {
+    q,
+    city,
+    page: pageParam,
+    country,
+    operator,
+    verdict,
+    min_power: minPower,
+    sort,
+    page_size: pageSizeParam,
+    status,
+    source,
+  } = await searchParams;
+  const isActive = status === "active" ? true : status === "inactive" ? false : null;
   const page = Math.max(1, Number(pageParam) || 1);
   const activeSort = SORT_OPTIONS.some((o) => o.value === sort) ? sort! : "name_asc";
   const pageSize = PAGE_SIZE_OPTIONS.includes(Number(pageSizeParam) as (typeof PAGE_SIZE_OPTIONS)[number])
@@ -75,6 +100,8 @@ export default async function ChargingStationsPage({
       p_sort: activeSort,
       p_limit: pageSize,
       p_offset: (page - 1) * pageSize,
+      p_is_active: isActive,
+      p_source: source || null,
     }),
     supabase.schema("core").rpc("charge_point_filter_options"),
   ]);
@@ -107,6 +134,8 @@ export default async function ChargingStationsPage({
     min_power: minPower,
     sort: activeSort,
     page_size: String(pageSize),
+    status,
+    source,
   };
 
   return (
@@ -141,7 +170,7 @@ export default async function ChargingStationsPage({
             className="min-h-11 rounded-md border border-line px-3 py-2 text-base"
           />
         </div>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8">
           <select name="country" defaultValue={country ?? ""} className="min-h-11 rounded-md border border-line px-2 py-2 text-base">
             <option value="">Alle Länder</option>
             {(options.countries ?? []).map((c) => (
@@ -162,6 +191,19 @@ export default async function ChargingStationsPage({
             <option value="">Geprüft & ungeprüft</option>
             <option value="checked">Nur geprüft</option>
             <option value="unchecked">Nur ungeprüft</option>
+          </select>
+          <select name="status" defaultValue={status ?? ""} className="min-h-11 rounded-md border border-line px-2 py-2 text-base">
+            <option value="">Aktiv & deaktiviert</option>
+            <option value="active">Nur aktiv</option>
+            <option value="inactive">Nur deaktiviert</option>
+          </select>
+          <select name="source" defaultValue={source ?? ""} className="min-h-11 rounded-md border border-line px-2 py-2 text-base">
+            <option value="">Alle Datenquellen</option>
+            {SOURCE_OPTIONS.map((s) => (
+              <option key={s.value} value={s.value}>
+                {s.label}
+              </option>
+            ))}
           </select>
           <input
             type="number"
@@ -191,7 +233,7 @@ export default async function ChargingStationsPage({
           <button type="submit" className="min-h-11 rounded-md bg-action px-4 text-sm font-medium hover:bg-action-hover">
             Filtern
           </button>
-          {(q || city || country || operator || verdict || minPower || (sort && sort !== "name_asc")) && (
+          {(q || city || country || operator || verdict || minPower || status || source || (sort && sort !== "name_asc")) && (
             <Link
               href="/ladestationen"
               className="flex min-h-11 items-center rounded-md border border-line px-4 text-sm font-medium hover:bg-line/20"
