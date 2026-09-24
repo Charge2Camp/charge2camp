@@ -5,6 +5,43 @@ import type { TrailerSuitabilityRecord, TrailerVerdict } from "@/types/database"
  * haeufigste reale Fall. */
 export const TRAILER_VERDICT_VALUES: TrailerVerdict[] = ["yes", "unhitch", "no", "unknown"];
 
+/** Nutzerwunsch (2026-09-24, nach dem BNetzA-Import): Default-Zustand bei
+ * frischem Seitenaufruf/Kartenschwenk ist "Anhaengertauglich" ODER "evtl.
+ * abkoppeln noetig" -- die uebrigen zwei Zustaende ('no', 'unknown') bleiben
+ * ausgeblendet. Reduziert die auf der Karte geladene/gerenderte Menge massiv:
+ * von allen core.charge_point-Zeilen mit trailer_suitability-Eintrag hat laut
+ * 20261024120000_fix_checked_verdict_filter_timeout.sql nur ein Bruchteil
+ * (~2.245, ~1,6 %) ueberhaupt einen geprueften Verdict -- der weit
+ * ueberwiegende Rest stammt aus dem automatischen BNetzA-Import mit
+ * Platzhalter-Verdict 'unknown' (origin='auto', siehe getReviewState unten)
+ * und war bisher trotzdem auf der Karte sichtbar.
+ *
+ * Bewusst HIER (statt in charging-stations.ts) definiert: charging-stations.ts
+ * importiert server-only Code (next/headers ueber lib/supabase/server), ein
+ * Wert-Import von dort in eine "use client"-Komponente wie
+ * nearby-charging-modal.tsx zieht deshalb den kompletten Modulgraphen
+ * (inkl. next/headers) ins Client-Bundle -- Next.js bricht dann JEDE Seite
+ * mit "You're importing a module that depends on 'next/headers' ... in the
+ * Pages Router" ab, nicht nur die betroffene Komponente. trailer-verdict.ts
+ * hat keine server-only Abhaengigkeiten und ist bereits an beiden Stellen
+ * (Server: charging-stations.ts/ladepunkte/page.tsx: Client:
+ * nearby-charging-modal.tsx) im Einsatz. */
+export const DEFAULT_TRAILER_VERDICTS: TrailerVerdict[] = ["yes", "unhitch"];
+
+/** Ob `verdict` exakt dem Default-Zustand entspricht (unabhaengig davon, ob
+ * er aus dem Default stammt oder der Nutzer zufaellig genau dieselben zwei
+ * Haekchen selbst gesetzt hat) -- in beiden Faellen soll der Filter NICHT als
+ * "aktiv" gelten (Filter-Badge/activeFilterCount) und NICHT das groessere
+ * Server-Erstansicht-Limit ausloesen (siehe ladepunkte/page.tsx
+ * hasActiveFilters), exakt wie fastChargersOnly das bereits fuer "Nur
+ * Schnelllader" handhabt. */
+export function isDefaultTrailerVerdict(verdict: TrailerVerdict[]): boolean {
+  return (
+    verdict.length === DEFAULT_TRAILER_VERDICTS.length &&
+    DEFAULT_TRAILER_VERDICTS.every((v) => verdict.includes(v))
+  );
+}
+
 export const TRAILER_VERDICT_LABELS: Record<TrailerVerdict, string> = {
   yes: "Anhängertauglich bestätigt",
   unhitch: "Nur abgekoppelt erreichbar",

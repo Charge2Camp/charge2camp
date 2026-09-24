@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { CONNECTOR_CATEGORIES, connectorStandardMatchesAnyCategory } from "@/lib/connector-categories";
+import { DEFAULT_TRAILER_VERDICTS } from "@/lib/trailer-verdict";
 import type {
   CoreChargePointGeo,
   CoreConnector,
@@ -81,6 +82,14 @@ function resolveFastChargersOnly(fastParam: string | undefined, filtersSubmitted
   return fastParam === "1";
 }
 
+/** Default-Zustand ('yes'/'unhitch') + isDefaultTrailerVerdict() liegen in
+ * lib/trailer-verdict.ts -- siehe dortiger Kommentar, WARUM (next/headers-
+ * Client-Bundle-Fehler bei Wert-Import von hier aus "use client"-Code). */
+function resolveTrailerVerdict(selected: TrailerVerdict[], filtersSubmitted: boolean): TrailerVerdict[] {
+  if (!filtersSubmitted) return DEFAULT_TRAILER_VERDICTS;
+  return selected;
+}
+
 export function parseChargingStationFilters(
   searchParams: Record<string, string | string[] | undefined>
 ): ChargingStationFilters {
@@ -98,6 +107,7 @@ export function parseChargingStationFilters(
     return Array.isArray(v) ? v : [v];
   };
 
+  const filtersSubmitted = get("filters_submitted") === "1";
   const verdicts: TrailerVerdict[] = (["yes", "unhitch", "no", "unknown"] as const).filter(
     (v) => get(`trailer_${v}`) === "1"
   );
@@ -107,8 +117,8 @@ export function parseChargingStationFilters(
 
   return {
     q: get("q")?.trim() || undefined,
-    trailerVerdict: verdicts,
-    fastChargersOnly: resolveFastChargersOnly(get("fast"), get("filters_submitted") === "1"),
+    trailerVerdict: resolveTrailerVerdict(verdicts, filtersSubmitted),
+    fastChargersOnly: resolveFastChargersOnly(get("fast"), filtersSubmitted),
     connectorCategories,
     operators: getAll("operator"),
     favoritesOnly: get("favorites") === "1",
@@ -166,8 +176,12 @@ export interface MapBounds {
   north: number;
 }
 
-/** trailerVerdict/connectorCategories filtern erst NACH dem Laden (in JS) statt
- * in der SQL-Abfrage -- fuer den MVP-Datenumfang ausreichend.
+/** connectorCategories/operators filtern erst NACH dem Laden (in JS) statt in
+ * der SQL-Abfrage -- fuer den MVP-Datenumfang ausreichend. trailerVerdict
+ * filtert beim bbox-Pfad zusaetzlich schon VOR der Anreicherung in SQL (siehe
+ * p_trailer_verdicts unten) und danach zur Sicherheit nochmal identisch in
+ * JS -- beim nicht-bbox-Pfad (Server-Erstansicht ohne bekannten
+ * Kartenausschnitt) filtert weiterhin ausschliesslich JS.
  * `limit` bewusst ueberschreibbar: die kartenzentrierte Ladepunkte-Seite
  * laedt ohne aktiven Filter (Karten-Erstueberblick) eine kleinere Menge als
  * bei gezielter Filterung (siehe ladepunkte/page.tsx) -- ueber 18.000 echte
@@ -208,6 +222,20 @@ export async function fetchChargingStations(
       p_min_power_kw: filters.fastChargersOnly ? FAST_CHARGER_MIN_KW : null,
       p_q: filters.q ?? null,
       p_limit: limit,
+      // Filtert bereits VOR der Connector-/Trailer-Anreicherung (enrichStations
+      // unten) auf DB-Ebene, statt erst danach in JS (siehe Filterung weiter
+      // unten) -- seit dem BNetzA-Import hat der weit ueberwiegende Teil aller
+      // Ladepunkte gar keinen geprueften trailer_suitability-Verdict
+      // (~98,4 %, siehe DEFAULT_TRAILER_VERDICTS oben), enrichStations
+      // batcht aber unabhaengig vom spaeteren JS-Filter ueber ALLE per bbox
+      // gefundenen IDs (bis zu `limit`). Bei einem weit herausgezoomten
+      // Kartenausschnitt (z. B. Deutschland-Erstansicht) blieb dadurch selbst
+      // nach dem 20261023020000-Spatial-Index-Fix die Anreicherung teuer genug,
+      // um das PostgREST-Statement-Timeout zu reissen ("Laden fehlgeschlagen",
+      // Nutzermeldung nach dem BNetzA-Import). Mit dem Parameter reduziert
+      // core.charge_points_in_bbox() die Treffermenge selbst schon auf die
+      // ~1,6 % mit geprueftem Verdict, bevor enrichStations ueberhaupt startet.
+      p_trailer_verdicts: filters.trailerVerdict.length > 0 ? filters.trailerVerdict : null,
     }));
   } else {
     let query = supabase.schema("core").from("charge_point_geo").select("*");

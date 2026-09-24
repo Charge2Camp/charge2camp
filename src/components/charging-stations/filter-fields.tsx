@@ -40,7 +40,9 @@ export function ChargingStationFilterFields({
   return (
     <div className="flex flex-col gap-6 text-sm">
       <fieldset className="flex flex-col gap-2">
-        <legend className="mb-1 font-medium">Anhängertauglichkeit</legend>
+        <legend className="mb-1 font-medium">
+          Anhängertauglichkeit — standardmäßig nur „tauglich“ &amp; „abkoppeln nötig“
+        </legend>
         <div className="flex flex-wrap gap-x-5 gap-y-1">
           {TRAILER_VERDICT_VALUES.map((value) => (
             <label key={value} className="flex min-h-11 items-center gap-2">

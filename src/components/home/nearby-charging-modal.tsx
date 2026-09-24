@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { MapView, type MapBoundsBox } from "@/components/map/map-view";
 import {
+  DEFAULT_TRAILER_VERDICTS,
   TRAILER_PIN_COLORS,
   TRAILER_PIN_ICON_SRC,
   TRAILER_PIN_LABELS,
@@ -30,6 +31,13 @@ interface QuickFilters {
 function buildViewportQuery(filters: QuickFilters, bounds: MapBoundsBox): string {
   const params = new URLSearchParams();
   params.set("bbox", `${bounds.west},${bounds.south},${bounds.east},${bounds.north}`);
+  // Bugfix (2026-09-24): ohne dieses Feld ignoriert der Server (siehe
+  // resolveFastChargersOnly/resolveTrailerVerdict, charging-stations.ts)
+  // JEDE hier gesendete Filterauswahl und erzwingt stattdessen immer seine
+  // eigenen Defaults -- die Checkboxen unten in diesem Popup waren dadurch
+  // bisher rein kosmetisch (Symptom: "Nur Schnelllader" abgewaehlt, Karte
+  // zeigte trotzdem nur Schnelllader).
+  params.set("filters_submitted", "1");
   if (filters.fastChargersOnly) params.set("fast", "1");
   for (const v of filters.trailerVerdict) params.set(`trailer_${v}`, "1");
   return params.toString();
@@ -48,7 +56,15 @@ function buildViewportQuery(filters: QuickFilters, bounds: MapBoundsBox): string
  * require-user.ts/api-guard.ts) -- ohne Login zeigt dieses Popup deshalb
  * einen Login-Hinweis statt einer irrefuehrenden "keine Ladepunkte"-Meldung. */
 export function NearbyChargingModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const [filters, setFilters] = useState<QuickFilters>({ trailerVerdict: [], fastChargersOnly: false });
+  // Gleiche Defaults wie /ladepunkte (siehe DEFAULT_TRAILER_VERDICTS,
+  // resolveFastChargersOnly in charging-stations.ts) -- vorher zeigte dieses
+  // Popup lokal "false"/"[]" (Checkboxen unmarkiert) an, waehrend der Server
+  // mangels filters_submitted trotzdem IMMER die echten Defaults anwendete;
+  // die UI luegt also nicht mehr ueber den tatsaechlich aktiven Filter.
+  const [filters, setFilters] = useState<QuickFilters>({
+    trailerVerdict: DEFAULT_TRAILER_VERDICTS,
+    fastChargersOnly: true,
+  });
   const [stations, setStations] = useState<ChargingStationView[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   // true, wenn der letzte Nachlade-Versuch fehlgeschlagen ist (Netzwerkfehler,
@@ -159,6 +175,10 @@ export function NearbyChargingModal({ open, onClose }: { open: boolean; onClose:
     : stations;
 
   const fullSearchParams = new URLSearchParams();
+  // filters_submitted=1 auch hier (siehe buildViewportQuery oben) -- sonst
+  // wendet /ladepunkte beim Wechsel von diesem Popup zur vollen Seite seine
+  // eigenen Defaults an, statt der hier tatsaechlich gewaehlten Auswahl.
+  fullSearchParams.set("filters_submitted", "1");
   if (filters.fastChargersOnly) fullSearchParams.set("fast", "1");
   for (const v of filters.trailerVerdict) fullSearchParams.set(`trailer_${v}`, "1");
 

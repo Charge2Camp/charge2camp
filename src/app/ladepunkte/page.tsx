@@ -5,6 +5,7 @@ import {
   fetchFavoriteChargingStations,
   parseChargingStationFilters,
 } from "@/lib/charging-stations";
+import { isDefaultTrailerVerdict } from "@/lib/trailer-verdict";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/require-user";
 import { ChargingStationFilterFields } from "@/components/charging-stations/filter-fields";
@@ -62,11 +63,15 @@ export default async function ChargingStationsPage({
   // resolveFastChargersOnly in charging-stations.ts) und zaehlt deshalb
   // bewusst NICHT als "aktiver Filter" -- sonst wuerde die Badge/das
   // groessere Limit unten bei JEDEM Erstaufruf greifen, auch ohne dass der
-  // Nutzer irgendetwas veraendert hat.
+  // Nutzer irgendetwas veraendert hat. Gleiches gilt seit 2026-09-24 fuer den
+  // Anhaengertauglichkeits-Default (siehe DEFAULT_TRAILER_VERDICTS/
+  // isDefaultTrailerVerdict in charging-stations.ts) -- isDefaultTrailerVerdict
+  // ist deshalb hier (statt eines simplen .length > 0) noetig, um den
+  // Default-Zustand von einer bewussten Nutzerauswahl zu unterscheiden.
   const hasActiveFilters = Boolean(
     filters.q ||
       filters.connectorCategories.length > 0 ||
-      filters.trailerVerdict.length > 0 ||
+      !isDefaultTrailerVerdict(filters.trailerVerdict) ||
       filters.operators.length > 0
   );
   const stationLimit = hasActiveFilters ? 5000 : 300;
@@ -83,7 +88,7 @@ export default async function ChargingStationsPage({
   const activeFilterCount =
     (filters.q ? 1 : 0) +
     (filters.favoritesOnly ? 1 : 0) +
-    filters.trailerVerdict.length +
+    (isDefaultTrailerVerdict(filters.trailerVerdict) ? 0 : filters.trailerVerdict.length) +
     filters.connectorCategories.length +
     filters.operators.length;
 
