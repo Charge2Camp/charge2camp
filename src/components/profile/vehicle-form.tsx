@@ -45,6 +45,8 @@ export function VehicleForm({
   const [selectedId, setSelectedId] = useState(vehicle?.model_reference_id ?? "");
   const [form, setForm] = useState(vehicle ? vehicleToForm(vehicle) : EMPTY_FORM);
   const [error, setError] = useState<string | null>(null);
+  // UX-Audit (2026-09-24): kein Pending-Zustand -- Doppel-Tap-Schutz fehlte.
+  const [pending, setPending] = useState(false);
 
   const manufacturers = useMemo(
     () => Array.from(new Set(models.map((m) => m.manufacturer))).sort(),
@@ -91,18 +93,23 @@ export function VehicleForm({
     <form
       action={async (formData) => {
         setError(null);
-        const result = isEdit ? await updateVehicle(vehicle.id, formData) : await addVehicle(formData);
-        if (!result.ok) {
-          setError(result.error);
-          return;
+        setPending(true);
+        try {
+          const result = isEdit ? await updateVehicle(vehicle.id, formData) : await addVehicle(formData);
+          if (!result.ok) {
+            setError(result.error);
+            return;
+          }
+          if (isEdit) {
+            onSaved?.();
+            return;
+          }
+          setManufacturer("");
+          setSelectedId("");
+          setForm(EMPTY_FORM);
+        } finally {
+          setPending(false);
         }
-        if (isEdit) {
-          onSaved?.();
-          return;
-        }
-        setManufacturer("");
-        setSelectedId("");
-        setForm(EMPTY_FORM);
       }}
       className="flex flex-col gap-4"
     >
@@ -237,9 +244,10 @@ export function VehicleForm({
       <div>
         <button
           type="submit"
-          className="min-h-12 rounded-md bg-action px-4 py-3 font-medium text-base hover:bg-action-hover"
+          disabled={pending}
+          className="min-h-12 rounded-md bg-action px-4 py-3 font-medium text-base hover:bg-action-hover disabled:opacity-60"
         >
-          {isEdit ? "Speichern" : "Elektroauto hinzufügen"}
+          {pending ? "Wird gespeichert…" : isEdit ? "Speichern" : "Elektroauto hinzufügen"}
         </button>
       </div>
     </form>

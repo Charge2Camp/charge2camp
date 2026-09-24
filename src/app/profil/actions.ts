@@ -7,7 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { geocodeAddress } from "@/lib/providers/geocoding/nominatim";
 import { deriveCampsiteRating } from "@/lib/scoring/ev-camping-score";
 import { sanitizeProviderKeys } from "@/lib/charging-providers";
-import { actionErrorMessage, type ActionResult } from "@/lib/action-result";
+import { actionErrorMessage, translateErrorMessage, type ActionResult } from "@/lib/action-result";
 import { extractStationCandidateFromMapsLink } from "@/lib/maps-link";
 import { requireActionRateLimit } from "@/lib/api-guard";
 
@@ -509,7 +509,7 @@ export async function changePassword(
   if (reauthError) return { error: "Aktuelles Passwort ist falsch." };
 
   const { error } = await supabase.auth.updateUser({ password: newPassword });
-  if (error) return { error: error.message };
+  if (error) return { error: translateErrorMessage(error.message) };
 
   revalidatePath("/profil/daten");
   return { success: true };

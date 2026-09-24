@@ -11,17 +11,24 @@ import { changeEmail } from "@/app/profil/actions";
 export function ChangeEmailForm() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  // UX-Audit (2026-09-24): kein Pending-Zustand -- Doppel-Tap-Schutz fehlte.
+  const [pending, setPending] = useState(false);
 
   return (
     <form
       action={async (formData) => {
         setError(null);
         setSuccess(false);
-        const result = await changeEmail(formData);
-        if (result.ok) {
-          setSuccess(true);
-        } else {
-          setError(result.error);
+        setPending(true);
+        try {
+          const result = await changeEmail(formData);
+          if (result.ok) {
+            setSuccess(true);
+          } else {
+            setError(result.error);
+          }
+        } finally {
+          setPending(false);
         }
       }}
       className="mt-2 flex max-w-md flex-col gap-2 sm:flex-row sm:items-end"
@@ -44,9 +51,10 @@ export function ChangeEmailForm() {
       </label>
       <button
         type="submit"
-        className="min-h-11 rounded-md bg-action px-4 py-2 text-sm font-medium text-base hover:bg-action-hover"
+        disabled={pending}
+        className="min-h-11 rounded-md bg-action px-4 py-2 text-sm font-medium text-base hover:bg-action-hover disabled:opacity-60"
       >
-        Ändern
+        {pending ? "Wird geändert…" : "Ändern"}
       </button>
     </form>
   );

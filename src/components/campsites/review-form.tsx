@@ -11,13 +11,20 @@ export function CampsiteReviewForm({ campsiteId }: { campsiteId: string }) {
   const [chargingOnSite, setChargingOnSite] = useState<"yes" | "no" | "">("");
   const [chargingWalkable, setChargingWalkable] = useState<"yes" | "no" | "">("");
   const [error, setError] = useState<string | null>(null);
+  // UX-Audit (2026-09-24): kein Pending-Zustand -- Doppel-Tap-Schutz fehlte.
+  const [pending, setPending] = useState(false);
 
   return (
     <form
       action={async (formData) => {
         setError(null);
-        const result = await addCampsiteReview(formData);
-        if (!result.ok) setError(result.error);
+        setPending(true);
+        try {
+          const result = await addCampsiteReview(formData);
+          if (!result.ok) setError(result.error);
+        } finally {
+          setPending(false);
+        }
       }}
       className="flex flex-col gap-4 rounded-lg border border-black/10 p-4 dark:border-white/10"
     >
@@ -90,9 +97,10 @@ export function CampsiteReviewForm({ campsiteId }: { campsiteId: string }) {
 
       <button
         type="submit"
-        className="min-h-12 self-start rounded-md bg-action px-4 py-3 text-sm font-medium text-base hover:bg-action-hover"
+        disabled={pending}
+        className="min-h-12 self-start rounded-md bg-action px-4 py-3 text-sm font-medium text-base hover:bg-action-hover disabled:opacity-60"
       >
-        Bewertung abschicken
+        {pending ? "Wird gesendet…" : "Bewertung abschicken"}
       </button>
     </form>
   );

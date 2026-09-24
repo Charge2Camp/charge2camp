@@ -17,17 +17,26 @@ function EditForm({ review, onCancel }: { review: CampsiteReviewWithCampsite; on
   const [chargingOnSite, setChargingOnSite] = useState(review.charging_on_site);
   const [chargingWalkable, setChargingWalkable] = useState(review.charging_walkable);
   const [error, setError] = useState<string | null>(null);
+  // UX-Audit (2026-09-24): kein Pending-Zustand -- Doppel-Tap-Schutz fehlte
+  // (anders als der Loeschen-Button unten in CampsiteReviewList, der bereits
+  // pendingDeleteId korrekt nutzt).
+  const [pending, setPending] = useState(false);
 
   return (
     <form
       action={async (formData) => {
         setError(null);
-        const result = await updateCampsiteReview(formData);
-        if (!result.ok) {
-          setError(result.error);
-          return;
+        setPending(true);
+        try {
+          const result = await updateCampsiteReview(formData);
+          if (!result.ok) {
+            setError(result.error);
+            return;
+          }
+          onCancel();
+        } finally {
+          setPending(false);
         }
-        onCancel();
       }}
       className="flex flex-col gap-3"
     >
@@ -98,14 +107,16 @@ function EditForm({ review, onCancel }: { review: CampsiteReviewWithCampsite; on
       <div className="flex flex-col gap-2 sm:flex-row">
         <button
           type="submit"
-          className="min-h-11 rounded-md bg-action px-4 py-2 text-sm font-medium text-base hover:bg-action-hover"
+          disabled={pending}
+          className="min-h-11 rounded-md bg-action px-4 py-2 text-sm font-medium text-base hover:bg-action-hover disabled:opacity-60"
         >
-          Speichern
+          {pending ? "Wird gespeichert…" : "Speichern"}
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="min-h-11 rounded-md border border-black/10 px-4 py-2 text-sm dark:border-white/10"
+          disabled={pending}
+          className="min-h-11 rounded-md border border-black/10 px-4 py-2 text-sm disabled:opacity-60 dark:border-white/10"
         >
           Abbrechen
         </button>

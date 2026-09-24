@@ -15,13 +15,23 @@ export function HomeAddressForm({ initialAddress }: { initialAddress: string }) 
   // oder sogar weglaesst (Str./Hausnummer-Genauigkeit nicht immer in
   // Nominatims Adress-Suche vorhanden), siehe actions.ts.
   const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
+  // UX-Audit (2026-09-24): ohne Pending-Zustand blieb der Button bei
+  // langsamer Verbindung anklickbar -- ein zweiter Tap loeste einen zweiten,
+  // ueberfluessigen Speichervorgang aus, ohne dass der Nutzer sah, dass der
+  // erste noch laeuft.
+  const [pending, setPending] = useState(false);
 
   return (
     <form
       action={async (formData) => {
         setError(null);
-        const result = await setHomeAddress(formData);
-        if (!result.ok) setError(result.error);
+        setPending(true);
+        try {
+          const result = await setHomeAddress(formData);
+          if (!result.ok) setError(result.error);
+        } finally {
+          setPending(false);
+        }
       }}
       className="mt-2 flex max-w-md flex-col gap-2 sm:flex-row sm:items-end"
     >
@@ -45,9 +55,10 @@ export function HomeAddressForm({ initialAddress }: { initialAddress: string }) 
       </label>
       <button
         type="submit"
-        className="min-h-11 rounded-md bg-action px-4 py-2 text-sm font-medium text-base hover:bg-action-hover"
+        disabled={pending}
+        className="min-h-11 rounded-md bg-action px-4 py-2 text-sm font-medium text-base hover:bg-action-hover disabled:opacity-60"
       >
-        Speichern
+        {pending ? "Wird gespeichert…" : "Speichern"}
       </button>
     </form>
   );

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { translateErrorMessage } from "@/lib/action-result";
 
 /** Formular fuer den zweiten Schritt von "Passwort vergessen" -- erreichbar
  * nur ueber den Link aus der Reset-E-Mail (via /auth/callback, das den
@@ -44,7 +45,7 @@ export default function ResetPasswordPage() {
     setLoading(false);
 
     if (updateError) {
-      setError(updateError.message);
+      setError(translateErrorMessage(updateError.message));
       return;
     }
 

@@ -9,6 +9,8 @@ import { reportMissingStation } from "@/app/profil/actions";
 export function MissingStationReportForm() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  // UX-Audit (2026-09-24): kein Pending-Zustand -- Doppel-Tap-Schutz fehlte.
+  const [pending, setPending] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
   return (
@@ -16,12 +18,17 @@ export function MissingStationReportForm() {
       action={async (formData) => {
         setError(null);
         setSuccess(false);
-        const result = await reportMissingStation(formData);
-        if (result.ok) {
-          setSuccess(true);
-          formRef.current?.reset();
-        } else {
-          setError(result.error);
+        setPending(true);
+        try {
+          const result = await reportMissingStation(formData);
+          if (result.ok) {
+            setSuccess(true);
+            formRef.current?.reset();
+          } else {
+            setError(result.error);
+          }
+        } finally {
+          setPending(false);
         }
       }}
       ref={formRef}
@@ -50,9 +57,10 @@ export function MissingStationReportForm() {
       {success && <p className="text-sm text-route">Danke! Deine Meldung wird geprüft.</p>}
       <button
         type="submit"
-        className="min-h-11 self-start rounded-md bg-action px-4 py-2 text-sm font-medium text-base hover:bg-action-hover"
+        disabled={pending}
+        className="min-h-11 self-start rounded-md bg-action px-4 py-2 text-sm font-medium text-base hover:bg-action-hover disabled:opacity-60"
       >
-        Melden
+        {pending ? "Wird gemeldet…" : "Melden"}
       </button>
     </form>
   );
