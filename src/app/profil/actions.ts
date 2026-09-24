@@ -9,6 +9,7 @@ import { deriveCampsiteRating } from "@/lib/scoring/ev-camping-score";
 import { sanitizeProviderKeys } from "@/lib/charging-providers";
 import { actionErrorMessage, type ActionResult } from "@/lib/action-result";
 import { extractStationCandidateFromMapsLink } from "@/lib/maps-link";
+import { requireActionRateLimit } from "@/lib/api-guard";
 
 // Alle Aufrufer sind physische Groessen eines Fahrzeugs/Wohnwagens
 // (Batteriekapazitaet, Verbrauch, Ladeleistung, Reichweite, Laenge/Breite/
@@ -558,6 +559,9 @@ export async function setPreferredChargingProviders(formData: FormData): Promise
 export async function reportMissingStation(formData: FormData): Promise<ActionResult> {
   try {
     const { supabase, userId } = await requireUserId();
+    // Sicherheits-Audit: gleiches Limit wie das funktional analoge
+    // POST /api/enrich/charge-points/{key}/trailer (trailer-report-submit).
+    await requireActionRateLimit("report-missing-station", userId, { windowSeconds: 3600, maxRequests: 20 });
     const googleMapsUrl = requireString(formData.get("google_maps_url"));
     const notesRaw = formData.get("notes");
     const notes = typeof notesRaw === "string" && notesRaw.trim() ? notesRaw.trim() : null;

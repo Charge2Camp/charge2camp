@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { deriveCampsiteRating } from "@/lib/scoring/ev-camping-score";
 import { actionErrorMessage, type ActionResult } from "@/lib/action-result";
+import { requireActionRateLimit } from "@/lib/api-guard";
 
 export async function addCampsiteReview(formData: FormData): Promise<ActionResult> {
   try {
@@ -12,6 +13,9 @@ export async function addCampsiteReview(formData: FormData): Promise<ActionResul
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) throw new Error("Nicht angemeldet.");
+    // Sicherheits-Audit: gleiches Limit wie das funktional analoge
+    // POST /api/enrich/charge-points/{key}/trailer (trailer-report-submit).
+    await requireActionRateLimit("add-campsite-review", user.id, { windowSeconds: 3600, maxRequests: 20 });
 
     const campsiteId = formData.get("campsite_id");
     const chargingOnSite = formData.get("charging_on_site");
@@ -29,14 +33,24 @@ export async function addCampsiteReview(formData: FormData): Promise<ActionResul
     const chargingOnSiteBool = chargingOnSite === "yes";
     const chargingWalkableBool = chargingWalkable === "yes";
 
-    const { error } = await supabase.from("campsite_reviews").insert({
-      user_id: user.id,
-      campsite_id: campsiteId,
-      rating: deriveCampsiteRating(chargingOnSiteBool, chargingWalkableBool),
-      charging_on_site: chargingOnSiteBool,
-      charging_walkable: chargingWalkableBool,
-      comment: typeof comment === "string" && comment.trim() ? comment.trim() : null,
-    });
+    // upsert statt insert: campsite_reviews hat unique(user_id, campsite_id)
+    // (init_schema.sql) -- ein zweiter Bewertungsversuch (z. B. Doppel-Tap
+    // ohne Pending-Feedback am Button, siehe review-form.tsx) schlug bisher
+    // mit einer rohen, englischen Postgres-Constraint-Fehlermeldung fehl
+    // (actionErrorMessage reicht sie unuebersetzt durch) statt die
+    // bestehende Bewertung einfach zu aktualisieren -- das ist ohnehin das
+    // erwartbare Verhalten ("meine Bewertung aendern").
+    const { error } = await supabase.from("campsite_reviews").upsert(
+      {
+        user_id: user.id,
+        campsite_id: campsiteId,
+        rating: deriveCampsiteRating(chargingOnSiteBool, chargingWalkableBool),
+        charging_on_site: chargingOnSiteBool,
+        charging_walkable: chargingWalkableBool,
+        comment: typeof comment === "string" && comment.trim() ? comment.trim() : null,
+      },
+      { onConflict: "user_id,campsite_id" }
+    );
 
     if (error) throw new Error(error.message);
     revalidatePath(`/campingplaetze/${campsiteId}`);

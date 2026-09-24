@@ -50,6 +50,32 @@ export async function requireApiUser(
   return { user };
 }
 
+/** Wie requireApiUser()'s Rate-Limit-Teil, aber fuer "use server"-Aktionen
+ * (Server Actions, z. B. reportMissingStation/addChargingReview) statt
+ * Route Handlers -- die geben kein NextResponse zurueck, sondern werfen bei
+ * Ueberschreitung; die aufrufende Aktion faengt das in ihrem eigenen
+ * try/catch und liefert die Meldung ueber ActionResult (siehe
+ * action-result.ts), statt eines NextResponse-429 wie bei requireApiUser().
+ * Sicherheits-Audit (2026-09-24): Server Actions hatten bisher GAR KEIN
+ * Rate-Limiting, obwohl funktional identische API-Routen (z. B.
+ * POST /api/enrich/charge-points/{key}/trailer) es bereits hatten --
+ * Spam-anfaellige Formulare (Meldungen, Bewertungen) liefen dadurch
+ * ungebremst. */
+export async function requireActionRateLimit(
+  endpoint: string,
+  userId: string,
+  rateLimit: RateLimitConfig
+): Promise<void> {
+  const { data: allowed } = await createAdminClient()
+    .schema("core")
+    .rpc("check_rate_limit", {
+      p_key: `${endpoint}:${userId}`,
+      p_window_seconds: rateLimit.windowSeconds,
+      p_max_requests: rateLimit.maxRequests,
+    });
+  if (!allowed) throw new Error("Zu viele Anfragen, bitte kurz warten.");
+}
+
 /** Wie requireApiUser(), zusaetzlich mit profiles.is_admin-Pruefung --
  * fuer die Admin-/Moderations-Endpunkte (Sicherheits-Audit: diese Routen
  * pruefen Login+Admin bereits, hatten aber kein Rate-Limiting, obwohl

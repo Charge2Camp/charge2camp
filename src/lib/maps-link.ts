@@ -25,6 +25,28 @@ export interface ExtractedStationCandidate {
 
 const FETCH_TIMEOUT_MS = 5000;
 
+/** Sicherheits-Audit (2026-09-24): erlaubte Hosts fuer den Link-Aufloese-
+ * Fetch unten -- ohne diese Pruefung koennte ein eingeloggter Nutzer eine
+ * BELIEBIGE URL als "Google-Maps-Link" einreichen und den Server damit zu
+ * einem Server-Side-Request-Forgery-Fetch gegen ein beliebiges Ziel
+ * zwingen (internes Netz, Cloud-Metadata-Endpunkt wie 169.254.169.254,
+ * ...) -- die einzige bisherige Pruefung war `new URL(rawUrl)`, die nur
+ * die URL-Syntax validiert, nicht das Ziel. Nur echte Google-Maps-Hosts
+ * (inkl. Kurzlink-Domains) duerfen angefragt werden; jede andere URL wird
+ * abgelehnt, BEVOR ueberhaupt ein Netzwerk-Request stattfindet. */
+const ALLOWED_MAPS_LINK_HOSTS = /^(www\.|maps\.)?google\.[a-z.]{2,10}$|^maps\.app\.goo\.gl$|^goo\.gl$/i;
+
+function isAllowedMapsLinkUrl(rawUrl: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    return false;
+  }
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return false;
+  return ALLOWED_MAPS_LINK_HOSTS.test(parsed.hostname);
+}
+
 /** Rein (kein Netzwerkzugriff) -- separat exportiert, damit sie ohne
  * Netzwerk-Mock testbar ist. "!3d...!4d..." ist der exakte Marker-Punkt einer
  * Google-Maps-URL, praeziser als der Kartenausschnitt-Mittelpunkt
@@ -109,11 +131,7 @@ async function suggestAddress(latitude: number, longitude: number): Promise<Sugg
  * Timeout, Netzwerkfehler, unbekanntes Format) liefert null statt zu werfen
  * -- siehe reportMissingStation() in src/app/profil/actions.ts. */
 export async function extractStationCandidateFromMapsLink(rawUrl: string): Promise<ExtractedStationCandidate | null> {
-  try {
-    new URL(rawUrl);
-  } catch {
-    return null;
-  }
+  if (!isAllowedMapsLinkUrl(rawUrl)) return null;
 
   try {
     const controller = new AbortController();

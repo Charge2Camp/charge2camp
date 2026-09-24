@@ -28,12 +28,13 @@ export async function GET(request: NextRequest) {
   const sp = request.nextUrl.searchParams;
   const supabase = createAdminClient();
 
-  let query = supabase.schema("core").from("charge_point_geo").select("*");
-
   const bbox = sp.get("bbox");
   const near = sp.get("near");
   const radiusKm = sp.get("radius_km");
   let nearPoint: { lat: number; lon: number; radius: number } | null = null;
+  // West/Sued/Ost/Nord-Grenzen, sobald bbox ODER near+radius_km angegeben
+  // sind -- beide Faelle laufen unten ueber dieselbe RPC (siehe bounds).
+  let bounds: { west: number; south: number; east: number; north: number } | null = null;
 
   if (bbox) {
     const parts = bbox.split(",").map(Number);
@@ -41,7 +42,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "bbox muss 'minLon,minLat,maxLon,maxLat' sein." }, { status: 400 });
     }
     const [minLon, minLat, maxLon, maxLat] = parts;
-    query = query.gte("lon", minLon).lte("lon", maxLon).gte("lat", minLat).lte("lat", maxLat);
+    bounds = { west: minLon, south: minLat, east: maxLon, north: maxLat };
   } else if (near && radiusKm) {
     const [lat, lon] = near.split(",").map(Number);
     const radius = Number(radiusKm);
@@ -49,33 +50,62 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "near muss 'lat,lon' sein, radius_km eine Zahl." }, { status: 400 });
     }
     nearPoint = { lat, lon, radius };
-    // Grobe Bounding-Box aus near+radius_km als DB-seitiger Vorfilter (sonst
-    // holt die anschliessende Haversine-Filterung eine nach Namen sortierte
-    // Seite, die mit dem gesuchten Gebiet nichts zu tun hat -- core.charge_
-    // point_geo ist eine View ohne eigene GIST-Geospalte fuer einen exakten
-    // serverseitigen Umkreisfilter). Grad->km: 1 deg lat ~= 111 km.
+    // Grobe Bounding-Box aus near+radius_km als DB-seitiger Vorfilter, die
+    // anschliessende Haversine-Filterung unten grenzt sie auf den exakten
+    // Kreis ein. Grad->km: 1 deg lat ~= 111 km.
     const latDelta = radius / 111;
     const lonDelta = radius / (111 * Math.cos((lat * Math.PI) / 180) || 1);
-    query = query
-      .gte("lat", lat - latDelta)
-      .lte("lat", lat + latDelta)
-      .gte("lon", lon - lonDelta)
-      .lte("lon", lon + lonDelta);
+    bounds = { west: lon - lonDelta, south: lat - latDelta, east: lon + lonDelta, north: lat + latDelta };
   }
 
   const minPowerKw = sp.get("min_power_kw");
-  if (minPowerKw) query = query.gte("max_power_kw", Number(minPowerKw));
-
-  const operator = sp.get("operator");
-  if (operator) query = query.ilike("operator", `%${operator}%`);
+  const trailer = sp.get("trailer");
+  // Push-down fuer den bounds-Pfad (core.charge_points_in_bbox, siehe unten)
+  // -- reduziert die Kandidatenmenge VOR limit(2000) statt erst danach in
+  // JS (Filterung weiter unten bleibt zusaetzlich bestehen, u. a. fuer den
+  // Pfad ohne bounds).
+  const trailerVerdictsForSql =
+    trailer === "yes_or_unhitch" ? ["yes", "unhitch"] : trailer === FAST_CHARGER_TRAILER_YES ? ["yes"] : null;
 
   const limit = Math.min(Number(sp.get("limit") ?? "24") || 24, MAX_LIMIT);
   const offset = Number(sp.get("offset") ?? "0") || 0;
 
-  const { data, error } = await query.order("name").limit(2000);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  let stations: CoreChargePointGeo[];
+  if (bounds) {
+    // core.charge_point_geo.lat/lon sind berechnete Spalten -- Zahlen-
+    // vergleiche darauf (wie vorher hier: .gte("lat", ...) usw.) koennen den
+    // GiST-Index auf geom (idx_cp_geom) nicht nutzen und erzwingen einen
+    // Sequential Scan ueber alle ~234.000 Ladepunkte bei JEDER bbox/near-
+    // Anfrage -- exakt der Bug, der fuer die Ladepunkte-Karte bereits in
+    // core.charge_points_in_bbox() behoben wurde (siehe
+    // 20261023020000_charge_points_in_bbox_spatial_index.sql,
+    // src/lib/charging-stations.ts). Dieser Endpunkt nutzte bislang aber
+    // noch die alte, langsame Variante -- jetzt dieselbe RPC wie die Karte.
+    const { data, error } = await supabase.schema("core").rpc("charge_points_in_bbox", {
+      p_west: bounds.west,
+      p_south: bounds.south,
+      p_east: bounds.east,
+      p_north: bounds.north,
+      p_min_power_kw: minPowerKw ? Number(minPowerKw) : null,
+      p_q: null,
+      p_limit: 2000,
+      p_trailer_verdicts: trailerVerdictsForSql,
+    });
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    stations = (data as CoreChargePointGeo[]) ?? [];
+  } else {
+    let query = supabase.schema("core").from("charge_point_geo").select("*");
+    if (minPowerKw) query = query.gte("max_power_kw", Number(minPowerKw));
+    const { data, error } = await query.order("name").limit(2000);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    stations = (data as CoreChargePointGeo[]) ?? [];
+  }
 
-  let stations = (data as CoreChargePointGeo[]) ?? [];
+  const operator = sp.get("operator");
+  if (operator) {
+    const needle = operator.toLowerCase();
+    stations = stations.filter((s) => s.operator?.toLowerCase().includes(needle));
+  }
 
   if (nearPoint) {
     stations = stations.filter((s) => haversineKm(nearPoint.lat, nearPoint.lon, s.lat, s.lon) <= nearPoint.radius);
@@ -111,7 +141,6 @@ export async function GET(request: NextRequest) {
     stations = stations.filter((s) => (connectorsByChargePointId.get(s.id) ?? []).some((c) => c.standard === connector));
   }
 
-  const trailer = sp.get("trailer");
   if (trailer === "yes_or_unhitch") {
     stations = stations.filter((s) => {
       const verdict = trailerByKey.get(s.external_key)?.verdict;

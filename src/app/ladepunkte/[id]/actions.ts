@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { actionErrorMessage, type ActionResult } from "@/lib/action-result";
+import { requireActionRateLimit } from "@/lib/api-guard";
 
 function parseOptionalNumber(value: FormDataEntryValue | null): number | null {
   if (!value || typeof value !== "string" || value.trim() === "") return null;
@@ -27,6 +28,9 @@ export async function addChargingReview(formData: FormData): Promise<ActionResul
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) throw new Error("Nicht angemeldet.");
+    // Sicherheits-Audit: gleiches Limit wie das funktional analoge
+    // POST /api/enrich/charge-points/{key}/trailer (trailer-report-submit).
+    await requireActionRateLimit("add-charging-review", user.id, { windowSeconds: 3600, maxRequests: 20 });
 
     const stationId = formData.get("charging_station_id");
     const externalKey = formData.get("charge_point_external_key");
@@ -62,23 +66,32 @@ export async function addChargingReview(formData: FormData): Promise<ActionResul
       if (!data) throw new Error("Ungültiger Wohnwagen.");
     }
 
-    const { error } = await supabase.from("charging_reviews").insert({
-      user_id: user.id,
-      charging_station_id: stationId,
-      suitable,
-      vehicle_id: vehicleId,
-      caravan_id: caravanId,
-      decoupled_parking_possible:
-        suitable === "limited" ? parseOptionalBoolean(formData.get("decoupled_parking_possible")) : null,
-      enough_space_for_rig: parseOptionalBoolean(formData.get("enough_space_for_rig")),
-      unobstructed_access: parseOptionalBoolean(formData.get("unobstructed_access")),
-      no_barrier_or_garage: parseOptionalBoolean(formData.get("no_barrier_or_garage")),
-      side_mounted_charger: parseOptionalBoolean(formData.get("side_mounted_charger")),
-      trailer_length_m: parseOptionalNumber(formData.get("trailer_length_m")),
-      trailer_width_m: parseOptionalNumber(formData.get("trailer_width_m")),
-      caravan_model: typeof caravanModel === "string" && caravanModel.trim() ? caravanModel.trim() : null,
-      comment: typeof comment === "string" && comment.trim() ? comment.trim() : null,
-    });
+    // upsert statt insert: charging_reviews hat seit dem Sicherheits-Audit
+    // (2026-09-24) unique(user_id, charging_station_id) -- analog zu
+    // campsite_reviews (siehe addCampsiteReview) aktualisiert ein zweiter
+    // Bewertungsversuch fuer denselben Ladepunkt jetzt die bestehende
+    // Bewertung, statt mit einer rohen Postgres-Constraint-Fehlermeldung
+    // fehlzuschlagen.
+    const { error } = await supabase.from("charging_reviews").upsert(
+      {
+        user_id: user.id,
+        charging_station_id: stationId,
+        suitable,
+        vehicle_id: vehicleId,
+        caravan_id: caravanId,
+        decoupled_parking_possible:
+          suitable === "limited" ? parseOptionalBoolean(formData.get("decoupled_parking_possible")) : null,
+        enough_space_for_rig: parseOptionalBoolean(formData.get("enough_space_for_rig")),
+        unobstructed_access: parseOptionalBoolean(formData.get("unobstructed_access")),
+        no_barrier_or_garage: parseOptionalBoolean(formData.get("no_barrier_or_garage")),
+        side_mounted_charger: parseOptionalBoolean(formData.get("side_mounted_charger")),
+        trailer_length_m: parseOptionalNumber(formData.get("trailer_length_m")),
+        trailer_width_m: parseOptionalNumber(formData.get("trailer_width_m")),
+        caravan_model: typeof caravanModel === "string" && caravanModel.trim() ? caravanModel.trim() : null,
+        comment: typeof comment === "string" && comment.trim() ? comment.trim() : null,
+      },
+      { onConflict: "user_id,charging_station_id" }
+    );
 
     if (error) throw new Error(error.message);
 
