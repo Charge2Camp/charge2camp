@@ -69,6 +69,11 @@ export const viewport: Viewport = {
   // "cover" bleiben diese Variablen 0 und Inhalte koennten unter der Notch
   // oder Home-Indicator-Leiste liegen.
   viewportFit: "cover",
+  // App-Store-Audit (2026-09-24): manifest.ts' theme_color greift nur im
+  // installierten (display: "standalone")-Zustand -- im normalen Browser-
+  // Tab/der Android-Chrome-Adressleiste blieb die Farbe ohne dieses Meta
+  // auf dem Browser-Standard statt Markengruen.
+  themeColor: "#0F3B36",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

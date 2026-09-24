@@ -43,6 +43,29 @@ export default function manifest(): MetadataRoute.Manifest {
         sizes: "180x180",
         type: "image/png",
       },
+      // App-Store-Audit (2026-09-24): ohne echte PNG-Groessen inkl. einer
+      // maskable-Variante schlaegt Androids Installierbarkeitspruefung/die
+      // Play-Store-TWA-Verpackung (Bubblewrap/PWABuilder) fehl -- siehe
+      // icon-192.png/, icon-512.png/, maskable-icon-512.png/ (next/og
+      // ImageResponse-Routen, gleiches Motiv wie /apple-icon).
+      {
+        src: "/icon-192.png",
+        sizes: "192x192",
+        type: "image/png",
+        purpose: "any",
+      },
+      {
+        src: "/icon-512.png",
+        sizes: "512x512",
+        type: "image/png",
+        purpose: "any",
+      },
+      {
+        src: "/maskable-icon-512.png",
+        sizes: "512x512",
+        type: "image/png",
+        purpose: "maskable",
+      },
     ],
   };
 }
