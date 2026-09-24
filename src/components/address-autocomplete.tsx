@@ -56,6 +56,10 @@ export function AddressAutocomplete({
   onSelectCoordinates?: (coords: { latitude: number; longitude: number } | null) => void;
 }) {
   const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
+  // UX-Audit (2026-09-24): ein fehlgeschlagener Vorschlag-Abruf blieb bisher
+  // komplett unsichtbar (leere Liste, kein Hinweis) -- wirkte fuer den
+  // Nutzer wie "diese Adresse gibt es nicht", statt wie ein Netzwerkproblem.
+  const [suggestFailed, setSuggestFailed] = useState(false);
   const [open, setOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const requestIdRef = useRef(0);
@@ -85,16 +89,19 @@ export function AddressAutocomplete({
     const timeout = setTimeout(async () => {
       if (query.length < MIN_QUERY_LENGTH) {
         setSuggestions([]);
+        setSuggestFailed(false);
         return;
       }
       try {
         const results = await searchAddressSuggestions(query);
         if (requestIdRef.current !== requestId) return; // veraltete Antwort ignorieren
         setSuggestions(results);
+        setSuggestFailed(false);
         setHighlightedIndex(-1);
       } catch {
         if (requestIdRef.current !== requestId) return;
         setSuggestions([]);
+        setSuggestFailed(true);
       }
     }, DEBOUNCE_MS);
 
@@ -183,6 +190,11 @@ export function AddressAutocomplete({
         // voraussetzen muessen.
         className={`text-base ${className ?? ""}`}
       />
+      {open && suggestFailed && localMatches.length === 0 && (
+        <p className="mt-1 text-xs text-black/50 dark:text-white/50">
+          Adressvorschläge gerade nicht verfügbar -- Adresse kann trotzdem frei eingegeben werden.
+        </p>
+      )}
       {open && hasSuggestions && (
         <ul className="absolute z-20 mt-1 max-h-60 w-full overflow-y-auto rounded-md border border-black/15 bg-white text-sm shadow-lg dark:border-white/15 dark:bg-neutral-900">
           {combinedItems.map((item, i) => (
