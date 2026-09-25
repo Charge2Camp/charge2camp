@@ -119,7 +119,7 @@ export function VehicleForm({
           <select
             value={manufacturer}
             onChange={(e) => handleManufacturerSelect(e.target.value)}
-            className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+            className="min-h-11 rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
           >
             <option value="">Manuell eingeben…</option>
             {manufacturers.map((m) => (
@@ -136,7 +136,7 @@ export function VehicleForm({
             value={selectedId}
             onChange={(e) => handleModelSelect(e.target.value)}
             disabled={!manufacturer}
-            className="rounded-md border border-black/15 px-3 py-2 text-base disabled:opacity-50 dark:border-white/15 dark:bg-transparent"
+            className="min-h-11 rounded-md border border-black/15 px-3 py-2 text-base disabled:opacity-50 dark:border-white/15 dark:bg-transparent"
           >
             <option value="">Manuell eingeben…</option>
             {modelsForManufacturer.map((m) => (

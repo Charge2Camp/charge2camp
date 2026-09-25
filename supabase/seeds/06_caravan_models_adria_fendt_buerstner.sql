@@ -1,0 +1,63 @@
+-- Adria (Altea, Adora), Fendt (Tendenza, Bianco) und Buerstner (Averso, Premio)
+-- -- technische Daten von promobil.de (Herstellerangaben aufbereitet), gleiches
+-- Vorgehen wie Knaus (05_caravan_models_knaus.sql). Bewusst kein zGG-Feld mehr
+-- (siehe docs/data-sources.md). Nutzerwunsch 2026-09-25: weitere Wohnwagen-
+-- Marken ergaenzen (waren zuvor als "Research Required" vorgemerkt).
+insert into public.caravan_models
+  (manufacturer, model, series, length_m, width_m, height_m, source, verification_status, last_verified_at)
+values
+  ('Adria', '390 PS', 'Altea', 5.81, 2.07, 2.53, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Adria', '432 PX', 'Altea', 6.28, 2.30, 2.58, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Adria', '462 PS', 'Altea', 6.48, 2.30, 2.53, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Adria', '472 LU', 'Altea', 6.73, 2.30, 2.58, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Adria', '502 UL', 'Altea', 7.15, 2.30, 2.59, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Adria', '512 UP', 'Altea', 6.91, 2.30, 2.53, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Adria', '542 DT', 'Altea', 7.25, 2.30, 2.53, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Adria', '552 PK', 'Altea', 7.61, 2.30, 2.58, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Adria', '562 PK', 'Altea', 7.53, 2.30, 2.58, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Adria', '462 PS', 'Adora', 6.54, 2.29, 2.58, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Adria', '482 LU', 'Adora', 6.97, 2.30, 2.59, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Adria', '512 UP', 'Adora', 7.16, 2.28, 2.66, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Adria', '532 UL', 'Adora', 7.39, 2.30, 2.60, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Adria', '542 UL', 'Adora', 7.49, 2.30, 2.58, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Adria', '563 PT', 'Adora', 7.54, 2.45, 2.58, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Adria', '613 UL', 'Adora', 8.26, 2.45, 2.58, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Adria', '643 UT', 'Adora', 8.48, 2.45, 2.58, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Adria', '663 UT', 'Adora', 8.80, 2.46, 2.60, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+
+  ('Fendt', '465 SFB', 'Tendenza', 6.92, 2.30, 2.60, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Fendt', '465 TG', 'Tendenza', 6.95, 2.32, 2.63, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Fendt', '495 SF', 'Tendenza', 7.14, 2.32, 2.63, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Fendt', '515 SG', 'Tendenza', 7.51, 2.32, 2.63, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Fendt', '540 SG', 'Tendenza', 7.43, 2.32, 2.63, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Fendt', '650 SFD', 'Tendenza', 8.64, 2.50, 2.62, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Fendt', '390 FH', 'Bianco', 5.91, 2.30, 2.60, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Fendt', '420 QF', 'Bianco', 6.13, 2.20, 2.57, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Fendt', '445 FB', 'Bianco', 6.65, 2.30, 2.60, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Fendt', '465 SFB', 'Bianco', 6.92, 2.30, 2.60, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Fendt', '490 TF', 'Bianco', 6.85, 2.30, 2.57, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Fendt', '495 SF', 'Bianco', 7.22, 2.32, 2.63, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Fendt', '510 TG', 'Bianco', 7.03, 2.30, 2.57, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Fendt', '515 SG', 'Bianco', 7.51, 2.32, 2.63, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Fendt', '520 TG', 'Bianco', 7.03, 2.50, 2.57, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Fendt', '540 SG', 'Bianco', 7.43, 2.32, 2.63, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Fendt', '550 TG', 'Bianco', 7.52, 2.30, 2.57, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Fendt', '620 WGD', 'Bianco', 7.98, 2.50, 2.57, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+
+  ('Bürstner', '390 TS', 'Averso', 5.90, 2.30, 2.54, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Bürstner', '420 TS', 'Averso', 6.18, 2.30, 2.54, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Bürstner', '455 TS', 'Averso', 7.28, 2.30, 2.58, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Bürstner', '465 TS', 'Averso', 7.18, 2.30, 2.54, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Bürstner', '480 TK', 'Averso', 7.07, 2.30, 2.54, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Bürstner', '500 TS', 'Averso', 7.25, 2.30, 2.54, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Bürstner', '520 TK', 'Averso', 7.44, 2.30, 2.58, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Bürstner', '540 TL', 'Averso', 7.73, 2.30, 2.65, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Bürstner', '580 TK', 'Averso', 7.94, 2.30, 2.65, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Bürstner', '600 TK', 'Averso', 8.13, 2.50, 2.65, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Bürstner', '395 TS', 'Premio', 6.06, 2.30, 2.58, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Bürstner', '450 TS', 'Premio', 6.75, 2.30, 2.54, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Bürstner', '460 TL', 'Premio', 6.84, 2.32, 2.61, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Bürstner', '470 TS', 'Premio', 7.10, 2.32, 2.61, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Bürstner', '490 TK', 'Premio', 7.28, 2.30, 2.58, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Bürstner', '520 TK', 'Premio', 7.48, 2.50, 2.58, 'promobil.de (technische Daten)', 'unverified', '2026-09-25'),
+  ('Bürstner', '530 TL', 'Premio', 7.73, 2.30, 2.64, 'promobil.de (technische Daten)', 'unverified', '2026-09-25');

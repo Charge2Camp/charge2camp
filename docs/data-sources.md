@@ -302,13 +302,17 @@ werden.
 | Dethleffs (Preisliste Wohnwagen, offizielles Herstellerdokument) | https://www.dethleffs.de | öffentlich publizierte technische Daten, Referenzangabe der Quelle | 14 Modelle MJ2027 (Serien c'joy, c'go & c'go up, SUMMER EDITION) | 2027-02-01 |
 | Tabbert (Preisliste Wohnwagen, offizielles Herstellerdokument) | https://www.tabbert.com | öffentlich publizierte technische Daten, Referenzangabe der Quelle | 10 Modelle MJ2026-1 (Serie CAZADORA) | 2025-08-01 |
 | Knaus (technische Daten, aufbereitet von promobil.de aus Herstellerangaben) | https://www.promobil.de | öffentlich zugängliche Spezifikationsdaten | 23 Modelle (Serien SÜDWIND, SPORT) | 2026-09-05 |
+| Adria (technische Daten, aufbereitet von promobil.de aus Herstellerangaben) | https://www.promobil.de | öffentlich zugängliche Spezifikationsdaten | 18 Modelle (Serien Altea, Adora) | 2026-09-25 |
+| Fendt (technische Daten, aufbereitet von promobil.de aus Herstellerangaben) | https://www.promobil.de | öffentlich zugängliche Spezifikationsdaten | 18 Modelle (Serien Tendenza, Bianco) | 2026-09-25 |
+| Bürstner (technische Daten, aufbereitet von promobil.de aus Herstellerangaben) | https://www.promobil.de | öffentlich zugängliche Spezifikationsdaten | 17 Modelle (Serien Averso, Premio) | 2026-09-25 |
 
 Alle Einträge tragen `source` und `verification_status = 'unverified'` (bzw.
 `'verified'` bei Hobby/Dethleffs/Tabbert, da direkt aus offiziellen
 Herstellerdokumenten). Fahrzeuge ohne werksseitig genehmigte Anhängelast
-wurden bewusst nicht aufgenommen. Andere Wohnwagenmarken (Adria, Fendt,
-Bürstner, Weinsberg, LMC, …) sind als **Research Required** vorgemerkt und
-noch nicht enthalten. `caravan_models`/`caravans` tragen seit 2026-09-14
+wurden bewusst nicht aufgenommen. Adria, Fendt und Bürstner sind seit 2026-09-25 mit je einer kuratierten
+Auswahl aus zwei Serien ergänzt (siehe unten). Weitere Marken (Weinsberg,
+LMC, …) sind weiterhin als **Research Required** vorgemerkt und noch nicht
+enthalten. `caravan_models`/`caravans` tragen seit 2026-09-14
 (Nutzerentscheidung) kein Gewichtsfeld mehr — Gewicht hat keine Bedeutung
 für Reichweite, Abmessungen oder Anhängertauglichkeits-Kriterien einer
 Ladestation; die frühere Knaus-Lücke beim zulässigen Gesamtgewicht ist
