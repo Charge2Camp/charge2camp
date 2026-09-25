@@ -1,4 +1,4 @@
-import { TRAILER_PIN_COLORS, TRAILER_PIN_LABELS, type TrailerPinState } from "@/lib/trailer-verdict";
+import { TRAILER_PIN_COLORS, TRAILER_PIN_LABELS, TRAILER_PIN_TEXT_CLASS, type TrailerPinState } from "@/lib/trailer-verdict";
 
 const LEGEND_ORDER: TrailerPinState[] = [
   "drive_through",
@@ -39,13 +39,8 @@ export function TrustPreview() {
         <p className="mb-1 text-xs font-medium uppercase tracking-wide text-text-muted">Beispiel, keine echten Daten</p>
         <div className="flex items-center justify-between gap-3">
           <p className="text-sm font-medium text-text">Autobahnraststätte (Beispiel)</p>
-          {/* Lime traegt laut brand-guide.md §9 ausschliesslich dunklen Text,
-              nie hellen (Kontrastregel) -- anders als bestehende Badges an
-              anderer Stelle im Code (z. B. nearby-charging-modal.tsx), die
-              das nicht befolgen; hier bewusst korrekt, ohne die anderen
-              Stellen im Rahmen dieser Aenderung mitzuaendern. */}
           <span
-            className="shrink-0 rounded-full px-2 py-0.5 text-xs text-text"
+            className={`shrink-0 rounded-full px-2 py-0.5 text-xs ${TRAILER_PIN_TEXT_CLASS.drive_through}`}
             style={{ backgroundColor: TRAILER_PIN_COLORS.drive_through }}
           >
             {TRAILER_PIN_LABELS.drive_through}

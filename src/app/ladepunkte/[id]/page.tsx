@@ -10,7 +10,7 @@ import { StationCompatibilitySummary } from "@/components/charging-stations/stat
 import { RigLengthDistributionChart } from "@/components/charging-stations/rig-length-distribution";
 import { StationReviewsList } from "@/components/charging-stations/station-reviews-list";
 import { StationBlockSection } from "@/components/charging-stations/station-block-section";
-import { TRAILER_PIN_COLORS, TRAILER_PIN_ICON_SRC, TRAILER_PIN_LABELS, getTrailerPinState } from "@/lib/trailer-verdict";
+import { TRAILER_PIN_COLORS, TRAILER_PIN_ICON_SRC, TRAILER_PIN_LABELS, TRAILER_PIN_TEXT_CLASS, getTrailerPinState } from "@/lib/trailer-verdict";
 import { ReviewStateBadge } from "@/components/charging-stations/review-state-badge";
 import { ListNavigation } from "@/components/list-navigation";
 import { fetchChargingStationDetailExtras } from "@/lib/charging-station-detail";
@@ -70,7 +70,7 @@ export default async function ChargingStationDetailPage({
 
       <div className="mt-2 flex flex-wrap gap-2">
         <span
-          className="inline-block rounded-full px-3 py-1 text-sm text-white"
+          className={`inline-block rounded-full px-3 py-1 text-sm ${TRAILER_PIN_TEXT_CLASS[pinState]}`}
           style={{ backgroundColor: TRAILER_PIN_COLORS[pinState] }}
         >
           {TRAILER_PIN_LABELS[pinState]}

@@ -10,7 +10,7 @@ import { StationReviewsList } from "@/components/charging-stations/station-revie
 import { StationBlockSection } from "@/components/charging-stations/station-block-section";
 import { StationNearbyPoi } from "@/components/charging-stations/station-nearby-poi";
 import { ReviewStateBadge } from "@/components/charging-stations/review-state-badge";
-import { TRAILER_PIN_COLORS, TRAILER_PIN_LABELS, getTrailerPinState } from "@/lib/trailer-verdict";
+import { TRAILER_PIN_COLORS, TRAILER_PIN_LABELS, TRAILER_PIN_TEXT_CLASS, getTrailerPinState } from "@/lib/trailer-verdict";
 import {
   NEARBY_POI_CATEGORY_ICONS,
   NEARBY_POI_CATEGORY_LABELS,
@@ -270,7 +270,7 @@ export function StationBottomSheet({
             <p className="truncate text-lg font-semibold">{station.name ?? station.operator}</p>
             <div className="mt-1.5 flex flex-wrap gap-1.5">
               <span
-                className="inline-block rounded-full px-2 py-0.5 text-xs text-white"
+                className={`inline-block rounded-full px-2 py-0.5 text-xs ${TRAILER_PIN_TEXT_CLASS[pinState]}`}
                 style={{ backgroundColor: TRAILER_PIN_COLORS[pinState] }}
               >
                 {TRAILER_PIN_LABELS[pinState]}

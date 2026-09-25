@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { ChargingStopCandidate, TripPlan } from "@/lib/route-planning";
 import { buildRouteTimeline, type ManualWaypointWithDistance } from "@/lib/route-timeline";
-import { TRAILER_PIN_COLORS, TRAILER_PIN_LABELS } from "@/lib/trailer-verdict";
+import { TRAILER_PIN_COLORS, TRAILER_PIN_LABELS, TRAILER_PIN_TEXT_CLASS } from "@/lib/trailer-verdict";
 import { PERSONAL_COMPATIBILITY_LABELS } from "@/lib/scoring/trailer-compatibility";
 import { operatorMatchesAnyProvider } from "@/lib/charging-providers";
 
@@ -17,7 +17,7 @@ function SuitabilityBadges({ candidate }: { candidate: Pick<ChargingStopCandidat
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       <span
-        className="rounded-full px-2 py-0.5 text-xs text-white"
+        className={`rounded-full px-2 py-0.5 text-xs ${TRAILER_PIN_TEXT_CLASS[candidate.station.trailerPinState]}`}
         style={{ backgroundColor: TRAILER_PIN_COLORS[candidate.station.trailerPinState] }}
       >
         {TRAILER_PIN_LABELS[candidate.station.trailerPinState]}

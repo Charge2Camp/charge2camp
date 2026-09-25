@@ -31,7 +31,7 @@ import {
 import { buildRouteTimeline } from "@/lib/route-timeline";
 import { buildRouteSegments } from "@/lib/route-navigation";
 import { logRouteExportEvent } from "@/lib/analytics-actions";
-import { TRAILER_PIN_COLORS, TRAILER_PIN_ICON_SRC, TRAILER_PIN_LABELS } from "@/lib/trailer-verdict";
+import { TRAILER_PIN_COLORS, TRAILER_PIN_ICON_SRC, TRAILER_PIN_LABELS, TRAILER_PIN_TEXT_CLASS, TRAILER_PIN_TEXT_HEX } from "@/lib/trailer-verdict";
 import { CHARGING_PROVIDERS } from "@/lib/charging-providers";
 import type { CampsiteDestinationOption } from "@/lib/campsites";
 import type { FavoriteDestinationOption } from "@/lib/favorites";
@@ -140,6 +140,7 @@ function escapeHtml(value: string): string {
 function buildChargingStopPopupHtml(stop: RoutePlanResult["plan"]["chargingStops"][number], index: number): string {
   const name = escapeHtml(stop.station.name ?? stop.station.provider ?? "Ladepunkt");
   const badgeColor = TRAILER_PIN_COLORS[stop.station.trailerPinState];
+  const badgeTextColor = TRAILER_PIN_TEXT_HEX[stop.station.trailerPinState];
   const badgeLabel = escapeHtml(TRAILER_PIN_LABELS[stop.station.trailerPinState]);
   const confirmedLine = stop.lastConfirmedAt
     ? `Zuletzt von der Community bestätigt am ${new Date(stop.lastConfirmedAt).toLocaleDateString("de-DE")}`
@@ -148,7 +149,7 @@ function buildChargingStopPopupHtml(stop: RoutePlanResult["plan"]["chargingStops
   return `
     <div style="font-family: var(--font-ui, system-ui), sans-serif; font-size: 13px; line-height: 1.5; max-width: 240px;">
       <p style="font-weight: 600; margin: 0 0 4px;">${index + 1}. Ladestopp</p>
-      <span style="display: inline-block; background: ${badgeColor}; color: white; border-radius: 999px; padding: 1px 8px; font-size: 11px; margin-bottom: 6px;">${badgeLabel}</span>
+      <span style="display: inline-block; background: ${badgeColor}; color: ${badgeTextColor}; border-radius: 999px; padding: 1px 8px; font-size: 11px; margin-bottom: 6px;">${badgeLabel}</span>
       <p style="margin: 0 0 6px; font-weight: 500;">${name}</p>
       <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 2px; opacity: 0.8;">
         <li>Nach ${stop.distanceFromStartKm.toFixed(0)} km ab Start</li>
@@ -1334,7 +1335,7 @@ export function RoutePlannerForm({
                           ` · ca. ${formatDuration(point.chargingStop.chargingTimeMin)} laden (${point.chargingStop.socOnArrivalPercent.toFixed(0)}% → ${point.chargingStop.socAfterChargingPercent.toFixed(0)}%)`}
                       </p>
                       <span
-                        className="mt-1 inline-block rounded-full px-2 py-0.5 text-xs text-white"
+                        className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs ${TRAILER_PIN_TEXT_CLASS[point.chargingStop.station.trailerPinState]}`}
                         style={{ backgroundColor: TRAILER_PIN_COLORS[point.chargingStop.station.trailerPinState] }}
                       >
                         {TRAILER_PIN_LABELS[point.chargingStop.station.trailerPinState]}

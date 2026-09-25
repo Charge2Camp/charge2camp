@@ -7,6 +7,8 @@ import {
   TRAILER_PIN_COLORS,
   TRAILER_PIN_ICON_SRC,
   TRAILER_PIN_LABELS,
+  TRAILER_PIN_TEXT_CLASS,
+  TRAILER_PIN_TEXT_HEX,
   getTrailerPinState,
   getReviewState,
   REVIEW_STATE_COLORS,
@@ -106,7 +108,7 @@ function buildStationPopupHtml(station: ChargingStationView): string {
     <div style="font-family: system-ui, sans-serif; font-size: 13px; line-height: 1.5; max-width: 240px;">
       <p style="margin: 0 0 6px; font-weight: 600;">${name}</p>
       <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px;">
-        <span style="display: inline-block; padding: 2px 8px; border-radius: 999px; color: #fff; font-size: 11px; background: ${TRAILER_PIN_COLORS[pinState]};">${escapeHtml(TRAILER_PIN_LABELS[pinState])}</span>
+        <span style="display: inline-block; padding: 2px 8px; border-radius: 999px; color: ${TRAILER_PIN_TEXT_HEX[pinState]}; font-size: 11px; background: ${TRAILER_PIN_COLORS[pinState]};">${escapeHtml(TRAILER_PIN_LABELS[pinState])}</span>
         <span style="display: inline-block; padding: 2px 8px; border-radius: 999px; color: #fff; font-size: 11px; background: ${REVIEW_STATE_COLORS[reviewState]};">${escapeHtml(REVIEW_STATE_LABELS[reviewState])}</span>
       </div>
       <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 2px; opacity: 0.85;">
@@ -170,7 +172,7 @@ function ChargingStationCard({
 
       <div className="mt-2 flex flex-wrap gap-2 text-xs">
         <span
-          className="rounded-full px-2 py-0.5 text-white"
+          className={`rounded-full px-2 py-0.5 ${TRAILER_PIN_TEXT_CLASS[pinState]}`}
           style={{ backgroundColor: TRAILER_PIN_COLORS[pinState] }}
         >
           {TRAILER_PIN_LABELS[pinState]}

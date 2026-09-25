@@ -10,6 +10,48 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
 
 ---
 
+## Lime-Kontrast-Nebenbefund behoben: `TRAILER_PIN_TEXT_CLASS`/`_HEX`
+
+- **Decision:** Zwei neue zentrale Exports in `src/lib/trailer-verdict.ts`
+  (`TRAILER_PIN_TEXT_CLASS` für JSX-Badges, `TRAILER_PIN_TEXT_HEX` für
+  die per String gebauten Karten-Popups) mappen jeden Pin-Zustand auf
+  die laut brand-guide.md §9 korrekte Textfarbe — dunkel (`text-text`/
+  `#0F3B36`) nur für `drive_through` (Lime), hell (`text-white`/`#fff`)
+  für die übrigen vier Zustände. 9 Fundstellen (7 JSX-Badges, 2
+  HTML-String-Popups) darauf umgestellt.
+- **Reason:** In `docs/DESIGN_SYSTEM.md`/`ux-problems.md` als
+  Nebenbefund vermerkt: mehrere Lime-Badges (Drive-Through) im Code
+  verwendeten hellen statt dunklem Text — Verstoß gegen die explizite
+  Kontrastregel ("Lime trägt nur dunklen Text, nie hellen"). Statt jede
+  der 9 Stellen einzeln mit einer lokalen Bedingung zu patchen (Risiko:
+  nächste neue Badge-Stelle vergisst die Regel wieder, wie hier
+  offensichtlich bereits mehrfach passiert), eine zentrale,
+  wiederverwendete Quelle — passend zu `TRAILER_PIN_COLORS`/
+  `_LABELS`/`_ICON_SRC`, die bereits genauso zentral gehalten werden.
+- **Alternatives:** (1) pro Stelle einzeln `pinState === "drive_through"
+  ? "text-text" : "text-white"` inline schreiben (verworfen: exakt das
+  Muster, das zur Inkonsistenz geführt hat — sieben Kopien derselben
+  Bedingung statt einer Quelle); (2) nur die JSX-Stellen fixen, die
+  beiden HTML-String-Popups (Leaflet/MapLibre, kein Tailwind dort)
+  auslassen (verworfen: Nutzer sehen genau dort denselben
+  Kontrastfehler, kein Grund für eine Ausnahme).
+- **Impact:** `src/lib/trailer-verdict.ts` erweitert, 8 weitere Dateien
+  angepasst (`src/app/ladepunkte/[id]/page.tsx`,
+  `charging-station-map-explorer.tsx` [JSX + Popup-HTML],
+  `route-planner-form.tsx` [JSX + Popup-HTML], `station-bottom-sheet.tsx`,
+  `route-overview-panel.tsx`, `nearby-charging-modal.tsx`,
+  `trust-preview.tsx` [von lokaler Sonderlösung auf die neue zentrale
+  Quelle umgestellt]). Reine Farbklassen-/Farbwert-Änderung, keine
+  Logikänderung. Typecheck grün, `/legende` und `/` (Drive-Through-Badge)
+  visuell geprüft; die übrigen Stellen sind login-/datenpflichtig (echte
+  Ladestation/Routenergebnis nötig) und nicht einzeln live getestet —
+  identisches, mechanisch angewandtes Muster wie die geprüften Stellen,
+  Typecheck deckt Tippfehler in den Imports ab. Nebenbefund aus
+  `docs/DESIGN_SYSTEM.md`/`ux-problems.md` damit erledigt.
+- **Date:** 2026-09-25.
+
+---
+
 ## Phase 14 (Developer Handoff) gilt als erledigt ohne Figma-Export
 
 - **Decision:** Phase 14 des Design-Briefs ("Developer Handoff

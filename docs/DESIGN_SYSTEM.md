@@ -56,9 +56,10 @@ vollständige, verbindliche Rollentabelle. Kurzfassung:
 
 Zwei harte Regeln (brand-guide.md §3): Lime = "antippbar"/"Drive-Through",
 nie beides uneindeutig auf einem Screen; Farbe steht nie allein, immer mit
-Text/Symbol. **Bekannter Nebenbefund:** mehrere Lime-Badges im Code
-verwenden hellen statt vorgeschriebenem dunklem Text (Kontrastregel §9) —
-noch nicht behoben, s. `docs/DESIGN_DECISIONS.md`.
+Text/Symbol. Textfarbe auf Anhängertauglichkeits-Badges: zentral über
+`TRAILER_PIN_TEXT_CLASS`/`TRAILER_PIN_TEXT_HEX`
+(`src/lib/trailer-verdict.ts`) geregelt, nicht pro Stelle einzeln
+entscheiden (s. `docs/DESIGN_DECISIONS.md`).
 
 ## 3. Typografie
 
@@ -188,8 +189,8 @@ Kontrast mindestens 4.5:1 (bei der Opazitätsstufen-Migration in Phase 9
 aktiv geprüft, s. `docs/DESIGN_DECISIONS.md`), Farbe nie einziger
 Informationsträger, sichtbarer Fokusrahmen, `prefers-reduced-motion`
 respektiert, Icons mit `aria-label` oder als dekorativ markiert.
-**Bekannter Nebenbefund:** Lime-Badges mit falschem (hellem statt
-dunklem) Text an mehreren Stellen — noch offen, s. Abschnitt 2.
+Lime-Badge-Kontrast über `TRAILER_PIN_TEXT_CLASS`/`_HEX` sichergestellt
+(s. Abschnitt 2).
 
 ## 12. iOS / Android
 
@@ -213,8 +214,6 @@ s. Memory/vorherige Sitzungen — nicht weiter verfolgen).
   Button/Card/Badge/Input/Modal/Toast/…-Primitives existieren nicht,
   nur konsistente informelle Muster (s. Abschnitt 5). Eigener, größerer
   Folgeschritt.
-- **Lime-Kontrast-Verstoß** — mehrere Stellen mit hellem statt dunklem
-  Text auf Lime-Badges (s. Abschnitt 2/11).
 - **UX-05.1 Rest** — `text-black/70`, `bg-red-*`/`border-red-*`
   bewusst noch nicht migriert (s. `docs/design/ux-problems.md`).
 - **Figma (Phasen 10/11/13)** — MCP-Verbindung steht

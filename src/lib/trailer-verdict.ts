@@ -97,6 +97,30 @@ export const TRAILER_PIN_COLORS: Record<TrailerPinState, string> = {
   ungeprueft: "#8E9A94",
 };
 
+/** brand-guide.md §9: Lime (drive_through) traegt ausschliesslich
+ * dunklen Text, nie hellen (Kontrastregel) -- alle anderen Pin-Farben
+ * sind dunkel genug fuer hellen Text. Zentrale Stelle statt an jeder
+ * Badge-Stelle im Code einzeln (und teils falsch, s. docs/
+ * DESIGN_DECISIONS.md "Lime-Kontrast-Nebenbefund") zu entscheiden. Fuer
+ * JSX-Badges (Tailwind-Klasse) und fuer Karten-Popups (Leaflet/MapLibre
+ * bauen ihr HTML als String, kein Tailwind dort -- deshalb zusaetzlich
+ * als Hex). */
+export const TRAILER_PIN_TEXT_CLASS: Record<TrailerPinState, string> = {
+  nicht_tauglich: "text-white",
+  bedingt_tauglich: "text-white",
+  ohne_abkoppeln: "text-white",
+  drive_through: "text-text",
+  ungeprueft: "text-white",
+};
+
+export const TRAILER_PIN_TEXT_HEX: Record<TrailerPinState, string> = {
+  nicht_tauglich: "#fff",
+  bedingt_tauglich: "#fff",
+  ohne_abkoppeln: "#fff",
+  drive_through: "#0F3B36",
+  ungeprueft: "#fff",
+};
+
 export const TRAILER_PIN_ICON_SRC: Record<TrailerPinState, string> = {
   nicht_tauglich: "/pins/pin-nicht-tauglich.svg",
   bedingt_tauglich: "/pins/pin-bedingt-tauglich.svg",

@@ -8,6 +8,7 @@ import {
   TRAILER_PIN_COLORS,
   TRAILER_PIN_ICON_SRC,
   TRAILER_PIN_LABELS,
+  TRAILER_PIN_TEXT_CLASS,
   TRAILER_VERDICT_LABELS,
   TRAILER_VERDICT_VALUES,
   getTrailerPinState,
@@ -284,7 +285,7 @@ export function NearbyChargingModal({ open, onClose }: { open: boolean; onClose:
                         <div>
                           <p className="font-medium">{s.name ?? s.operator}</p>
                           <span
-                            className="mt-1 inline-block rounded-full px-2 py-0.5 text-xs text-white"
+                            className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs ${TRAILER_PIN_TEXT_CLASS[pinState]}`}
                             style={{ backgroundColor: TRAILER_PIN_COLORS[pinState] }}
                           >
                             {TRAILER_PIN_LABELS[pinState]}
