@@ -7,6 +7,7 @@ import {
   type PersonalCompatibility,
   type RigLengthDistribution,
 } from "@/lib/scoring/trailer-compatibility";
+import { fetchNearbyPoi, type NearbyPoiResult } from "@/lib/nearby-poi";
 import type { Caravan, ChargingReview, Vehicle } from "@/types/database";
 
 export interface ChargingStationDetailExtras {
@@ -19,25 +20,30 @@ export interface ChargingStationDetailExtras {
   rigLengthDistribution: RigLengthDistribution;
   personalCompatibility: PersonalCompatibility;
   ownReview: ChargingReview | undefined;
+  nearbyPoi: NearbyPoiResult;
 }
 
 /** Alles rund um einen Ladepunkt, was NICHT schon aus core.charge_point_geo
  * (Name, Betreiber, Connectoren, Anhaengertauglichkeit -- siehe
  * ChargingStationView in charging-stations.ts) kommt: Bewertungen,
- * Favorit/Blockiert-Status, eigene Fahrzeuge/Wohnwagen sowie die daraus
- * abgeleiteten Gespann-Kompatibilitaets-Auswertungen. Gemeinsam genutzt von
- * der Ladepunkt-Detailseite (ladepunkte/[id]/page.tsx, die Station/
- * Connectoren/Anhaengertauglichkeit selbst weiterhin separat laedt) UND vom
- * Kartenausschnitt-Bottom-Sheet (station-bottom-sheet.tsx via
- * /api/charge-points/[id]/detail) -- letzteres hat die Basisdaten bereits
- * aus dem angetippten Kartenmarker und braucht nur diesen Teil nachzuladen. */
+ * Favorit/Blockiert-Status, eigene Fahrzeuge/Wohnwagen, die daraus
+ * abgeleiteten Gespann-Kompatibilitaets-Auswertungen sowie "In der Naehe"
+ * (nearbyPoi, braucht `coords` -- ist NICHT Teil von core.charge_point_geo).
+ * Gemeinsam genutzt von der Ladepunkt-Detailseite (ladepunkte/[id]/page.tsx,
+ * die Station/Connectoren/Anhaengertauglichkeit selbst weiterhin separat
+ * laedt) UND vom Kartenausschnitt-Bottom-Sheet (station-bottom-sheet.tsx via
+ * /api/charge-points/[id]/detail, `coords` dort aus dem bereits geladenen
+ * Kartenmarker als Query-Parameter statt eines erneuten DB-Lookups) --
+ * letzteres hat die Basisdaten bereits aus dem angetippten Kartenmarker und
+ * braucht nur diesen Teil nachzuladen. */
 export async function fetchChargingStationDetailExtras(
   stationId: string,
-  userId: string | undefined
+  userId: string | undefined,
+  coords: { latitude: number; longitude: number }
 ): Promise<ChargingStationDetailExtras> {
   const supabase = await createClient();
 
-  const [{ data: reviews }, favoriteResult, blockedResult] = await Promise.all([
+  const [{ data: reviews }, favoriteResult, blockedResult, nearbyPoi] = await Promise.all([
     supabase
       .from("charging_reviews")
       .select("*")
@@ -60,6 +66,7 @@ export async function fetchChargingStationDetailExtras(
           .eq("charging_station_id", stationId)
           .maybeSingle()
       : Promise.resolve({ data: null }),
+    fetchNearbyPoi(coords),
   ]);
 
   const allReviews = (reviews as ChargingReview[]) ?? [];
@@ -95,5 +102,6 @@ export async function fetchChargingStationDetailExtras(
     rigLengthDistribution,
     personalCompatibility,
     ownReview,
+    nearbyPoi,
   };
 }

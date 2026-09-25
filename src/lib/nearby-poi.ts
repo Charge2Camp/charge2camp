@@ -4,6 +4,25 @@ import type { NearbyPoi, NearbyPoiCategory } from "@/lib/providers/nearby-poi/ty
 const RADIUS_M = 1000;
 const MAX_PER_CATEGORY = 5;
 
+// Anzeige-Reihenfolge/-Texte, zentral hier statt in jeder Komponente einzeln
+// (station-nearby-poi.tsx UND die Ausstattungs-Chip-Zeile im Bottom-Sheet
+// nutzen beide dieselben Labels/Icons).
+export const NEARBY_POI_CATEGORY_ORDER: NearbyPoiCategory[] = ["toilets", "restaurant", "camping_shop", "campsite"];
+
+export const NEARBY_POI_CATEGORY_LABELS: Record<NearbyPoiCategory, string> = {
+  toilets: "Toilette",
+  restaurant: "Restaurant",
+  camping_shop: "Campingfachmarkt",
+  campsite: "Campingplatz",
+};
+
+export const NEARBY_POI_CATEGORY_ICONS: Record<NearbyPoiCategory, string> = {
+  toilets: "🚻",
+  restaurant: "🍽️",
+  camping_shop: "🏪",
+  campsite: "⛺",
+};
+
 export type NearbyPoiByCategory = Record<NearbyPoiCategory, NearbyPoi[]>;
 
 export type NearbyPoiResult =

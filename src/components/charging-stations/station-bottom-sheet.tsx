@@ -8,8 +8,14 @@ import { StationCompatibilitySummary } from "@/components/charging-stations/stat
 import { RigLengthDistributionChart } from "@/components/charging-stations/rig-length-distribution";
 import { StationReviewsList } from "@/components/charging-stations/station-reviews-list";
 import { StationBlockSection } from "@/components/charging-stations/station-block-section";
+import { StationNearbyPoi } from "@/components/charging-stations/station-nearby-poi";
 import { ReviewStateBadge } from "@/components/charging-stations/review-state-badge";
 import { TRAILER_PIN_COLORS, TRAILER_PIN_LABELS, getTrailerPinState } from "@/lib/trailer-verdict";
+import {
+  NEARBY_POI_CATEGORY_ICONS,
+  NEARBY_POI_CATEGORY_LABELS,
+  NEARBY_POI_CATEGORY_ORDER,
+} from "@/lib/nearby-poi";
 import { useDelayedLoading } from "@/lib/use-delayed-loading";
 import { useMediaQuery } from "@/lib/use-media-query";
 import type { ChargingStationView } from "@/lib/charging-stations";
@@ -91,7 +97,7 @@ export function StationBottomSheet({
     prevStationIdRef.current = station?.id ?? null;
   }, [station]);
 
-  async function loadExtras(stationId: string) {
+  async function loadExtras(stationId: string, lat: number, lon: number) {
     const seq = ++fetchSeqRef.current;
     setExtras(null);
     setExtrasError(false);
@@ -102,7 +108,9 @@ export function StationBottomSheet({
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 12000);
     try {
-      const res = await fetch(`/api/charge-points/${stationId}/detail`, { signal: controller.signal });
+      const res = await fetch(`/api/charge-points/${stationId}/detail?lat=${lat}&lon=${lon}`, {
+        signal: controller.signal,
+      });
       if (!res.ok) throw new Error("Fehler beim Laden");
       const data = (await res.json()) as ChargingStationDetailExtras;
       if (seq !== fetchSeqRef.current) return;
@@ -119,12 +127,13 @@ export function StationBottomSheet({
   useEffect(() => {
     if (!station) return;
     const stationId = station.id;
+    const { lat, lon } = station;
     // Wie setStations(initialStations) in charging-station-map-explorer.tsx:
     // ueber einen Mikrotask entkoppelt, damit das anfaengliche setState
     // (Ladezustand setzen) nicht synchron im Effect-Body passiert (siehe
     // react-hooks/set-state-in-effect).
     void Promise.resolve().then(() => {
-      void loadExtras(stationId);
+      void loadExtras(stationId, lat, lon);
     });
     // Bewusst nur an die ID gekoppelt, nicht an das ganze `station`-Objekt --
     // sonst wuerde jedes Kartenschwenken (neues Snapshot-Objekt derselben
@@ -273,6 +282,25 @@ export function StationBottomSheet({
                 </span>
               )}
             </div>
+            {/* Ausstattungs-Icons schon im Peek-Zustand sichtbar (Nutzerwunsch
+                "alle Infos direkt einsehbar, ohne weitere Seite", an ABRP
+                orientiert) -- nur Kategorien mit mind. einem Treffer im
+                1-km-Umkreis, siehe lib/nearby-poi.ts. Erscheint erst, sobald
+                `extras` geladen ist (kurze Verzoegerung nach dem Antippen). */}
+            {extras?.nearbyPoi.status === "ok" && (
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {NEARBY_POI_CATEGORY_ORDER.filter((c) => extras.nearbyPoi.status === "ok" && extras.nearbyPoi.byCategory[c].length > 0).map(
+                  (c) => (
+                    <span
+                      key={c}
+                      className="rounded-full border border-black/10 px-2 py-0.5 text-xs dark:border-white/10"
+                    >
+                      {NEARBY_POI_CATEGORY_ICONS[c]} {NEARBY_POI_CATEGORY_LABELS[c]}
+                    </span>
+                  )
+                )}
+              </div>
+            )}
           </div>
           {/* Explizite Tastatur-/Screenreader-Bedienung fuers Ein-/
               Ausklappen (Antippen der Kopfzeile reicht dafuer nur mit
@@ -330,7 +358,7 @@ export function StationBottomSheet({
               <p className="text-sm text-red-600">Bewertungen konnten nicht geladen werden.</p>
               <button
                 type="button"
-                onClick={() => void loadExtras(station.id)}
+                onClick={() => void loadExtras(station.id, station.lat, station.lon)}
                 className="min-h-11 shrink-0 rounded-md border border-red-600/30 px-3 text-sm font-medium text-red-600 hover:bg-red-600/10"
               >
                 Erneut versuchen
@@ -351,6 +379,7 @@ export function StationBottomSheet({
                   <RigLengthDistributionChart distribution={extras.rigLengthDistribution} />
                 </div>
               </section>
+              <StationNearbyPoi result={extras.nearbyPoi} />
               <StationReviewsList
                 reviews={extras.reviews}
                 isLoggedIn={isLoggedIn}
@@ -359,7 +388,7 @@ export function StationBottomSheet({
                 externalKey={station.external_key}
                 vehicles={extras.ownVehicles}
                 caravans={extras.ownCaravans}
-                onReviewSubmitted={() => loadExtras(station.id)}
+                onReviewSubmitted={() => loadExtras(station.id, station.lat, station.lon)}
               />
               {isLoggedIn && <StationBlockSection stationId={station.id} isBlocked={extras.isBlocked} />}
             </>

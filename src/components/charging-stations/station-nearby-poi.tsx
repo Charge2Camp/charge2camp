@@ -1,14 +1,9 @@
-import type { NearbyPoiByCategory } from "@/lib/nearby-poi";
-import type { NearbyPoi, NearbyPoiCategory } from "@/lib/providers/nearby-poi/types";
-
-const CATEGORY_LABELS: Record<NearbyPoiCategory, string> = {
-  toilets: "Toilette",
-  restaurant: "Restaurant",
-  camping_shop: "Campingfachmarkt",
-  campsite: "Campingplatz",
-};
-
-const CATEGORY_ORDER: NearbyPoiCategory[] = ["toilets", "restaurant", "camping_shop", "campsite"];
+import {
+  NEARBY_POI_CATEGORY_LABELS as CATEGORY_LABELS,
+  NEARBY_POI_CATEGORY_ORDER as CATEGORY_ORDER,
+  type NearbyPoiByCategory,
+} from "@/lib/nearby-poi";
+import type { NearbyPoi } from "@/lib/providers/nearby-poi/types";
 
 function formatDistance(distanceM: number): string {
   return distanceM < 1000 ? `${Math.round(distanceM / 10) * 10} m` : `${(distanceM / 1000).toFixed(1)} km`;
@@ -25,7 +20,7 @@ export function StationNearbyPoi({
 }) {
   if (result.status === "unavailable") {
     return (
-      <section className="mt-8">
+      <section>
         <h2 className="font-semibold">In der Nähe</h2>
         <p className="mt-2 text-sm text-black/50 dark:text-white/50">
           Umgebungsinfos gerade nicht verfügbar -- bitte später erneut versuchen.
@@ -37,7 +32,7 @@ export function StationNearbyPoi({
   const categoriesWithHits = CATEGORY_ORDER.filter((c) => result.byCategory[c].length > 0);
   if (categoriesWithHits.length === 0) {
     return (
-      <section className="mt-8">
+      <section>
         <h2 className="font-semibold">In der Nähe</h2>
         <p className="mt-2 text-sm text-black/50 dark:text-white/50">
           Keine Toilette, kein Restaurant, Campingfachmarkt oder Campingplatz im Umkreis von 1 km auf OpenStreetMap
@@ -48,7 +43,7 @@ export function StationNearbyPoi({
   }
 
   return (
-    <section className="mt-8">
+    <section>
       <h2 className="font-semibold">In der Nähe</h2>
       <p className="mt-1 text-xs text-black/40 dark:text-white/40">
         Umkreis 1 km, Datenquelle OpenStreetMap -- Vollständigkeit nicht garantiert.
