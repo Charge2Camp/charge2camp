@@ -219,5 +219,10 @@ s. Memory/vorherige Sitzungen — nicht weiter verfolgen).
   bewusst noch nicht migriert (s. `docs/design/ux-problems.md`).
 - **Figma (Phasen 10/11/13)** — MCP-Verbindung steht
   (`docs/design/figma-integration.md`), Datei selbst noch nicht angelegt.
+  Phase 14 (Developer Handoff) gilt davon abweichend als erledigt: der
+  eigentliche Zweck (maschinenlesbare, verbindliche Spezifikation für
+  Entwickler/Claude Code) ist bereits durch `tokens.json`, dieses
+  Dokument und CLAUDE.md Prinzip 9 erfüllt, auch ohne Figma-Export —
+  s. `docs/DESIGN_DECISIONS.md`.
 - **Echte Meldestatus-Benachrichtigung (UX-05.7)** — aktuell nur
   ehrlicher Hinweis statt echter Push/E-Mail-Funktion.

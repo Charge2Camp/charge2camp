@@ -10,6 +10,40 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
 
 ---
 
+## Phase 14 (Developer Handoff) gilt als erledigt ohne Figma-Export
+
+- **Decision:** Phase 14 des Design-Briefs ("Developer Handoff
+  vorbereiten") gilt inhaltlich als erfüllt durch die bereits
+  vorhandenen `docs/design/tokens.json`, `docs/DESIGN_SYSTEM.md` und
+  CLAUDE.md Prinzip 9 (Phase 15) — kein zusätzlicher Schritt jetzt nötig.
+- **Reason:** Der Brief konzipiert "Developer Handoff" konkret als
+  Figma-Seite 13 (§24: Redlines/Specs, aus Figma exportiert für
+  Entwickler). Ohne angelegte Figma-Datei (s. `docs/design/
+  figma-integration.md`) ist dieser wörtliche Weg blockiert — wie bei
+  Phase 11/13. Der eigentliche *Zweck* von Developer Handoff (Entwickler
+  bzw. hier Claude Code haben eine maschinenlesbare, verbindliche
+  Spezifikation, statt raten zu müssen) ist aber bereits durch
+  `tokens.json` (maschinenlesbare Werte), `DESIGN_SYSTEM.md`
+  (konsolidierte Referenz) und CLAUDE.md Prinzip 9 (verbindliche
+  Berücksichtigungspflicht + Konfliktmeldepflicht) erfüllt — nur eben
+  code-nativ statt über einen Figma-Export.
+- **Alternatives:** (1) wie Phase 11/13 explizit vertagen, kein
+  Ersatz (verworfen: im Unterschied zu Phase 11/13 — echtes
+  Figma-Design-System bauen bzw. Flows in Figma prototypisieren, beides
+  ohne Figma-Datei technisch unmöglich — lässt sich der *Zweck* von
+  Developer Handoff hier bereits ohne Figma erreichen, "warten" hätte
+  keinen Mehrwert); (2) ein zusätzliches, separates
+  Handoff-Dokument erstellen (verworfen: würde `tokens.json`/
+  `DESIGN_SYSTEM.md` inhaltlich duplizieren, ohne neuen Nutzen).
+- **Impact:** keine neuen Dateien, reine Einordnung. Sobald eine
+  Figma-Datei existiert, kann eine eigene Figma-Seite "13 Developer
+  Handoff" ergänzt werden (verlustfrei, da die zugrunde liegenden Werte
+  bereits vollständig in `tokens.json` stehen, s.
+  `docs/design/figma-integration.md`).
+- **Date:** 2026-09-25 (Phase 14).
+
+---
+
 ## Phase 9 Rest: weitere Opazitätsstufen migriert, `--c-line-strong` neu (UX-05.1)
 
 - **Decision:** `text-black/40` und `text-black/60` (jeweils mit
