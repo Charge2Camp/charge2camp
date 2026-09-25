@@ -27,7 +27,7 @@ export default function ImpressumPage() {
           <br />
           Deutschland
         </p>
-        <p className="mt-2 text-xs text-black/50 dark:text-white/50">Einzelunternehmen / Kleingewerbe</p>
+        <p className="mt-2 text-xs text-text-muted">Einzelunternehmen / Kleingewerbe</p>
       </section>
 
       <section>
@@ -85,7 +85,7 @@ export default function ImpressumPage() {
         </p>
       </section>
 
-      <p className="text-sm text-black/50 dark:text-white/50">
+      <p className="text-sm text-text-muted">
         Siehe auch: <Link href="/datenschutz" className="text-route hover:underline">Datenschutzerklärung</Link>
       </p>
     </div>

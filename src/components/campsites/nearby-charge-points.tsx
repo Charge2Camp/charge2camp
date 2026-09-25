@@ -37,7 +37,7 @@ export function NearbyChargePointsList({ points }: { points: LinkedChargePoint[]
                 </p>
                 <ReviewStateBadge origin={point.trailerOrigin} className="mt-1" />
               </div>
-              <span className="shrink-0 pl-3 text-right text-black/50 dark:text-white/50">
+              <span className="shrink-0 pl-3 text-right text-text-muted">
                 {!point.walkable ? (
                   <>
                     <span className="block rounded-full bg-black/10 px-2 py-0.5 text-xs font-medium text-black/70 dark:bg-white/10 dark:text-white/70">

@@ -67,7 +67,7 @@ export function VehicleEditDialog({
           <div className="mt-6 border-t border-black/10 pt-4 dark:border-white/10">
             {confirmingDelete ? (
               <div className="flex flex-wrap items-center gap-3">
-                <span className="text-sm text-red-600">Elektroauto wirklich aus dem Profil löschen?</span>
+                <span className="text-sm text-error">Elektroauto wirklich aus dem Profil löschen?</span>
                 <button
                   type="button"
                   disabled={deleting}
@@ -89,12 +89,12 @@ export function VehicleEditDialog({
               <button
                 type="button"
                 onClick={() => setConfirmingDelete(true)}
-                className="min-h-11 text-sm font-medium text-red-600 hover:underline"
+                className="min-h-11 text-sm font-medium text-error hover:underline"
               >
                 Elektroauto aus dem Profil löschen
               </button>
             )}
-            {deleteError && <p className="mt-2 text-sm text-red-600">{deleteError}</p>}
+            {deleteError && <p className="mt-2 text-sm text-error">{deleteError}</p>}
           </div>
         </div>
       </div>

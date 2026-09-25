@@ -48,7 +48,7 @@ export function ChangePasswordForm() {
         />
       </label>
 
-      {state.error && <p className="text-sm text-red-600">{state.error}</p>}
+      {state.error && <p className="text-sm text-error">{state.error}</p>}
       {state.success && <p className="text-sm text-route">Passwort geändert.</p>}
 
       <button

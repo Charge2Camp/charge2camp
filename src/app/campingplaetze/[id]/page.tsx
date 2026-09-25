@@ -182,7 +182,7 @@ export default async function CampsiteDetailPage({
     <div className="mx-auto max-w-4xl px-4 py-10">
       <ListNavigation storageKey="campingplaetze:list-nav" detailPathPrefix="/campingplaetze/" currentId={site.id} />
 
-      <p className="text-sm text-black/50 dark:text-white/50">
+      <p className="text-sm text-text-muted">
         {[site.city, site.country_code].filter(Boolean).join(", ")}
       </p>
       <h1 className="text-3xl font-bold">{site.name}</h1>
@@ -217,19 +217,19 @@ export default async function CampsiteDetailPage({
           <dl className="mt-2 space-y-1 text-sm">
             {site.address && (
               <div>
-                <dt className="inline text-black/50 dark:text-white/50">Adresse: </dt>
+                <dt className="inline text-text-muted">Adresse: </dt>
                 <dd className="inline">{site.address}</dd>
               </div>
             )}
             {site.phone && (
               <div>
-                <dt className="inline text-black/50 dark:text-white/50">Telefon: </dt>
+                <dt className="inline text-text-muted">Telefon: </dt>
                 <dd className="inline">{site.phone}</dd>
               </div>
             )}
             {site.website && (
               <div>
-                <dt className="inline text-black/50 dark:text-white/50">Website: </dt>
+                <dt className="inline text-text-muted">Website: </dt>
                 <dd className="inline">
                   <a
                     href={site.website}
@@ -256,7 +256,7 @@ export default async function CampsiteDetailPage({
       </Link>
 
       {search && (
-        <div className="mt-6 h-[400px] overflow-hidden rounded-lg border border-black/10 dark:border-white/10">
+        <div className="mt-6 h-[400px] overflow-hidden rounded-lg border border-line">
           <MapView
             markers={[
               { id: site.id, latitude: search.lat, longitude: search.lon, label: site.name, iconSrc: CAMPSITE_PIN_ICON_SRC },
@@ -282,7 +282,7 @@ export default async function CampsiteDetailPage({
       <section className="mt-6">
         <h2 className="font-semibold">Ausstattung</h2>
         {activeAmenities.length === 0 ? (
-          <p className="mt-2 text-sm text-black/50 dark:text-white/50">Keine Angaben.</p>
+          <p className="mt-2 text-sm text-text-muted">Keine Angaben.</p>
         ) : (
           <ul className="mt-2 flex flex-wrap gap-2 text-sm">
             {activeAmenities.map((key) => (
@@ -321,7 +321,7 @@ export default async function CampsiteDetailPage({
       <section className="mt-8">
         <h2 className="font-semibold">Bewertungen</h2>
         {allReviews.length === 0 ? (
-          <p className="mt-2 text-sm text-black/50 dark:text-white/50">
+          <p className="mt-2 text-sm text-text-muted">
             Noch keine Bewertungen vorhanden.
           </p>
         ) : (
@@ -345,14 +345,14 @@ export default async function CampsiteDetailPage({
 
         <div className="mt-4">
           {!user ? (
-            <p className="text-sm text-black/50 dark:text-white/50">
+            <p className="text-sm text-text-muted">
               <Link href="/login" className="text-route hover:underline">
                 Anmelden
               </Link>{" "}
               um eine Bewertung abzugeben.
             </p>
           ) : ownReview ? (
-            <p className="text-sm text-black/50 dark:text-white/50">
+            <p className="text-sm text-text-muted">
               Du hast diesen Campingplatz bereits bewertet (★ {ownReview.rating}/5).
             </p>
           ) : (

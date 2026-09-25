@@ -998,7 +998,7 @@ export function RoutePlannerForm({
             {providersOpen && (
               <div className="mt-2 rounded-md border border-black/15 p-3 dark:border-white/15">
                 {(initialPreferredProviders.length > 0 || initialAvoidedProviders.length > 0) && (
-                  <p className="mb-2 text-xs text-black/50 dark:text-white/50">
+                  <p className="mb-2 text-xs text-text-muted">
                     Vorausgewählt aus deinem Profil (&quot;Mein Gespann&quot;) -- du kannst die Auswahl hier für
                     diese Route anpassen. Vermiedene Anbieter werden nie als Ladestopp vorgeschlagen.
                   </p>
@@ -1023,7 +1023,7 @@ export function RoutePlannerForm({
                           />
                           Bevorzugen
                         </label>
-                        <label className="flex min-h-11 items-center gap-1.5 text-sm text-red-600">
+                        <label className="flex min-h-11 items-center gap-1.5 text-sm text-error">
                           <input
                             type="checkbox"
                             name="avoided_providers"
@@ -1166,14 +1166,14 @@ export function RoutePlannerForm({
           </div>
 
           {showLoadingIndicator && <FullscreenLoader text="Route wird berechnet…" />}
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p className="text-sm text-error">{error}</p>}
         </form>
       )}
 
       {/* ---------- Tab 2: Routenübersicht ---------- */}
       {activeStep === 2 && result && (
         <div ref={tab2TopRef} className="flex flex-col gap-6">
-          <div className="h-[350px] overflow-hidden rounded-lg border border-black/10 dark:border-white/10">
+          <div className="h-[350px] overflow-hidden rounded-lg border border-line">
             <MapView
               markers={[
                 { id: "start", latitude: result.start.latitude, longitude: result.start.longitude, label: "Start" },
@@ -1200,21 +1200,21 @@ export function RoutePlannerForm({
 
           <div className="grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
             <div>
-              <p className="text-black/50 dark:text-white/50">Strecke</p>
+              <p className="text-text-muted">Strecke</p>
               <p className="text-lg font-semibold">{result.mapDistanceKm.toFixed(0)} km</p>
             </div>
             <div>
-              <p className="text-black/50 dark:text-white/50">Reisezeit</p>
+              <p className="text-text-muted">Reisezeit</p>
               <p className="text-lg font-semibold">{formatDuration(result.travelTimeMin)}</p>
             </div>
             <div>
-              <p className="text-black/50 dark:text-white/50">Verbrauch</p>
+              <p className="text-text-muted">Verbrauch</p>
               <p className="text-lg font-semibold">
                 {result.plan.effectiveConsumptionKwhPer100km.toFixed(1)} kWh/100km
               </p>
             </div>
             <div>
-              <p className="text-black/50 dark:text-white/50">Reichweite (Gespann)</p>
+              <p className="text-text-muted">Reichweite (Gespann)</p>
               <p className="text-lg font-semibold">{result.plan.effectiveRangeKm.toFixed(0)} km</p>
             </div>
           </div>
@@ -1234,7 +1234,7 @@ export function RoutePlannerForm({
             </p>
           )}
 
-          {replanError && <p className="text-sm text-red-600">{replanError}</p>}
+          {replanError && <p className="text-sm text-error">{replanError}</p>}
 
           {!result.plan.chargingStopsRequired && result.manualWaypoints.length === 0 ? (
             <p className="rounded-md border border-route/30 bg-route/5 p-3 text-sm text-route">
@@ -1281,19 +1281,19 @@ export function RoutePlannerForm({
         <div className="flex flex-col gap-6">
           <div className="grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
             <div>
-              <p className="text-black/50 dark:text-white/50">Strecke</p>
+              <p className="text-text-muted">Strecke</p>
               <p className="text-lg font-semibold">{result.mapDistanceKm.toFixed(0)} km</p>
             </div>
             <div>
-              <p className="text-black/50 dark:text-white/50">Reisezeit</p>
+              <p className="text-text-muted">Reisezeit</p>
               <p className="text-lg font-semibold">{formatDuration(result.travelTimeMin)}</p>
             </div>
             <div>
-              <p className="text-black/50 dark:text-white/50">Ladestopps</p>
+              <p className="text-text-muted">Ladestopps</p>
               <p className="text-lg font-semibold">{result.plan.chargingStops.length}</p>
             </div>
             <div>
-              <p className="text-black/50 dark:text-white/50">Anteil Ladezeit</p>
+              <p className="text-text-muted">Anteil Ladezeit</p>
               <p className="text-lg font-semibold">
                 {totalChargingTimeMin > 0
                   ? `${formatDuration(totalChargingTimeMin)} (${chargingTimeSharePercent.toFixed(0)}%)`
@@ -1316,7 +1316,7 @@ export function RoutePlannerForm({
                       ? "border-route/30 bg-route/5"
                       : point.kind === "manual"
                         ? "border-blue-500/30 bg-blue-500/5"
-                        : "border-black/10 dark:border-white/10"
+                        : "border-line"
                   }`}
                 >
                   <p className="font-medium">
@@ -1328,7 +1328,7 @@ export function RoutePlannerForm({
                   </p>
                   {point.kind === "charging" && point.chargingStop && (
                     <>
-                      <p className="text-xs text-black/50 dark:text-white/50">
+                      <p className="text-xs text-text-muted">
                         {point.chargingStop.station.power_kw ? `${point.chargingStop.station.power_kw} kW` : "Leistung unbekannt"}
                         {point.chargingStop.chargingTimeMin !== null &&
                           ` · ca. ${formatDuration(point.chargingStop.chargingTimeMin)} laden (${point.chargingStop.socOnArrivalPercent.toFixed(0)}% → ${point.chargingStop.socAfterChargingPercent.toFixed(0)}%)`}
@@ -1375,7 +1375,7 @@ export function RoutePlannerForm({
                 .
               </p>
             )}
-            {saveError && <p className="w-full text-sm text-red-600">{saveError}</p>}
+            {saveError && <p className="w-full text-sm text-error">{saveError}</p>}
           </div>
 
           {routeSegments && (
@@ -1389,7 +1389,7 @@ export function RoutePlannerForm({
               </NavigationLink>
               {routeSegments.segments.length > 1 && (
                 <div>
-                  <p className="text-xs text-black/50 dark:text-white/50">Oder nur eine einzelne Etappe navigieren:</p>
+                  <p className="text-xs text-text-muted">Oder nur eine einzelne Etappe navigieren:</p>
                   <div className="mt-1 flex flex-wrap gap-2">
                     {routeSegments.segments.map((segment) => (
                       <NavigationLink

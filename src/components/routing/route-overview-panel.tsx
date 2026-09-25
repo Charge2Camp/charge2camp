@@ -53,11 +53,11 @@ function AlternativeRow({
       <div className="flex flex-col gap-1">
         <span className="font-medium">{alternative.station.name ?? alternative.station.provider}</span>
         <SuitabilityBadges candidate={alternative} />
-        <span className="text-xs text-black/50 dark:text-white/50">
+        <span className="text-xs text-text-muted">
           {alternative.station.power_kw ? `${alternative.station.power_kw} kW` : "Ladeleistung unbekannt"} · ca.{" "}
           {alternative.corridorDistanceKm.toFixed(0)} km Umweg von der Route
         </span>
-        <span className="text-xs text-black/50 dark:text-white/50">{lastConfirmedLabel(alternative.lastConfirmedAt)}</span>
+        <span className="text-xs text-text-muted">{lastConfirmedLabel(alternative.lastConfirmedAt)}</span>
       </div>
       <div className="flex flex-col gap-2 sm:items-end">
         <button
@@ -164,13 +164,13 @@ export function RouteOverviewPanel({
         if (point.kind === "manual") {
           return (
             <div key={`manual-${point.label}-${point.distanceFromStartKm}`} className="contents">
-              <li className="flex items-center gap-2 pl-2 text-xs text-black/50 dark:text-white/50">
+              <li className="flex items-center gap-2 pl-2 text-xs text-text-muted">
                 <span>↓ {legDistanceKm.toFixed(0)} km</span>
                 <span>· ca. {formatDuration(legDurationMin)}</span>
               </li>
               <li className="rounded-lg border border-blue-500/30 bg-blue-500/5 p-3">
                 <p className="font-medium">Zwischenstopp: {point.label}</p>
-                <p className="text-xs text-black/50 dark:text-white/50">
+                <p className="text-xs text-text-muted">
                   Manuell hinzugefügt, unabhängig von der Ladeplanung -- änderbar über das
                   Routenplaner-Formular.
                 </p>
@@ -187,7 +187,7 @@ export function RouteOverviewPanel({
 
         return (
           <div key={stop.station.id} className="contents">
-            <li className="flex items-center gap-2 pl-2 text-xs text-black/50 dark:text-white/50">
+            <li className="flex items-center gap-2 pl-2 text-xs text-text-muted">
               <span>↓ {legDistanceKm.toFixed(0)} km</span>
               <span>· ca. {formatDuration(legDurationMin)}</span>
             </li>
@@ -231,7 +231,7 @@ export function RouteOverviewPanel({
 
               {stop.alternatives.length > 0 && (
                 <div className="mt-3">
-                  <p className="text-xs text-black/50 dark:text-white/50">
+                  <p className="text-xs text-text-muted">
                     Passt diese Ladesäule nicht? Wähle stattdessen eine der Alternativen:
                   </p>
                   <button
@@ -287,7 +287,7 @@ export function RouteOverviewPanel({
         const legDistanceKm = legEndKm[lastIndex] - legStartKm[lastIndex];
         const legDurationMin = (legDistanceKm / plan.distanceKm) * travelTimeMin;
         return (
-          <li className="flex items-center gap-2 pl-2 text-xs text-black/50 dark:text-white/50">
+          <li className="flex items-center gap-2 pl-2 text-xs text-text-muted">
             <span>↓ {legDistanceKm.toFixed(0)} km</span>
             <span>· ca. {formatDuration(legDurationMin)}</span>
           </li>

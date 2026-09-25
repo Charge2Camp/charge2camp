@@ -53,7 +53,7 @@ export function MissingStationReportForm() {
           className="w-full rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
         />
       </label>
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-error">{error}</p>}
       {success && <p className="text-sm text-route">Danke! Deine Meldung wird geprüft.</p>}
       <button
         type="submit"

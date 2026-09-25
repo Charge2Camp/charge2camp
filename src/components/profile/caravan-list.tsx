@@ -15,7 +15,7 @@ export function CaravanList({ caravans, models }: { caravans: Caravan[]; models:
   const editingCaravan = items.find((c) => c.id === editingId) ?? null;
 
   if (items.length === 0) {
-    return <p className="text-sm text-black/50 dark:text-white/50">Noch kein Wohnwagen hinterlegt.</p>;
+    return <p className="text-sm text-text-muted">Noch kein Wohnwagen hinterlegt.</p>;
   }
 
   return (

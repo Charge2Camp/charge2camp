@@ -47,7 +47,7 @@ export default async function SavedRoutesPage() {
       <h2 className="text-lg font-semibold">Meine Routen</h2>
 
       {rows.length === 0 ? (
-        <p className="mt-4 text-sm text-black/50 dark:text-white/50">
+        <p className="mt-4 text-sm text-text-muted">
           Noch keine Route gespeichert. Im{" "}
           <a href="/routenplaner" className="underline">
             Routenplaner
@@ -109,7 +109,7 @@ export default async function SavedRoutesPage() {
                           </NavigationLink>
                           {segments.length > 1 && (
                             <div>
-                              <p className="text-xs text-black/50 dark:text-white/50">
+                              <p className="text-xs text-text-muted">
                                 Oder nur eine einzelne Etappe navigieren:
                               </p>
                               <div className="mt-1 flex flex-wrap gap-2">

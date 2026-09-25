@@ -35,7 +35,7 @@ export function EvScoreBadge({
         EV-Camping-Score
       </p>
       <p className="text-3xl font-bold">{displayScore}/100</p>
-      {overrideScore != null && <p className="mt-1 text-xs text-black/50 dark:text-white/50">Manuell festgelegt</p>}
+      {overrideScore != null && <p className="mt-1 text-xs text-text-muted">Manuell festgelegt</p>}
       {reasons.length > 0 && (
         <ul className="mt-2 list-inside list-disc text-sm text-black/60 dark:text-white/60">
           {reasons.map((r) => (

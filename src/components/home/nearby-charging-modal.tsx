@@ -255,14 +255,14 @@ export function NearbyChargingModal({ open, onClose }: { open: boolean; onClose:
 
           <div className="flex-1 overflow-y-auto p-4">
             {requiresLogin ? (
-              <p className="text-sm text-black/50 dark:text-white/50">
+              <p className="text-sm text-text-muted">
                 <Link href="/login?redirect=/ladepunkte" className="text-route hover:underline" onClick={onClose}>
                   Anmelden
                 </Link>{" "}
                 um Ladepunkte zu sehen.
               </p>
             ) : sortedStations.length === 0 ? (
-              <p className="text-sm text-black/50 dark:text-white/50">
+              <p className="text-sm text-text-muted">
                 {isLoading
                   ? "Lädt…"
                   : fetchFailed
@@ -290,7 +290,7 @@ export function NearbyChargingModal({ open, onClose }: { open: boolean; onClose:
                             {TRAILER_PIN_LABELS[pinState]}
                           </span>
                         </div>
-                        {km !== null && <span className="shrink-0 text-sm text-black/50 dark:text-white/50">{km.toFixed(1)} km</span>}
+                        {km !== null && <span className="shrink-0 text-sm text-text-muted">{km.toFixed(1)} km</span>}
                       </Link>
                     </li>
                   );

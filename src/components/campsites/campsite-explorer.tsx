@@ -50,7 +50,7 @@ function CampsiteCard({
       <p className="text-sm text-black/60 dark:text-white/60">
         {[campsite.city, campsite.country_code].filter(Boolean).join(", ")}
       </p>
-      <div className="mt-2 flex flex-wrap gap-2 text-xs text-black/50 dark:text-white/50">
+      <div className="mt-2 flex flex-wrap gap-2 text-xs text-text-muted">
         {campsite.charging_on_site && (
           <span className="rounded bg-route/10 px-2 py-0.5 text-route">
             Ladepunkt auf dem Platz
@@ -146,7 +146,7 @@ export function CampsiteExplorer({
           className={`min-h-11 flex-1 rounded-md border px-3 py-2 text-sm ${
             mobileTab === "list"
               ? "border-route bg-route text-white"
-              : "border-black/10 dark:border-white/10"
+              : "border-line"
           }`}
         >
           Liste
@@ -156,7 +156,7 @@ export function CampsiteExplorer({
           className={`min-h-11 flex-1 rounded-md border px-3 py-2 text-sm ${
             mobileTab === "map"
               ? "border-route bg-route text-white"
-              : "border-black/10 dark:border-white/10"
+              : "border-line"
           }`}
         >
           Karte
@@ -166,7 +166,7 @@ export function CampsiteExplorer({
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div className={`flex flex-col gap-3 ${mobileTab === "map" ? "hidden md:flex" : ""}`}>
           {campsites.length === 0 ? (
-            <p className="text-sm text-black/50 dark:text-white/50">{emptyMessage}</p>
+            <p className="text-sm text-text-muted">{emptyMessage}</p>
           ) : (
             <>
               {visibleCampsites.map((c) => (
@@ -193,7 +193,7 @@ export function CampsiteExplorer({
         </div>
 
         <div
-          className={`h-[400px] overflow-hidden rounded-lg border border-black/10 dark:border-white/10 md:sticky md:top-4 md:h-[600px] ${
+          className={`h-[400px] overflow-hidden rounded-lg border border-line md:sticky md:top-4 md:h-[600px] ${
             mobileTab === "list" ? "hidden md:block" : ""
           }`}
         >

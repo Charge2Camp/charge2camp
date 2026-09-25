@@ -19,7 +19,7 @@ export function VehicleList({ vehicles, models }: { vehicles: Vehicle[]; models:
   const editingVehicle = items.find((v) => v.id === editingId) ?? null;
 
   if (items.length === 0) {
-    return <p className="text-sm text-black/50 dark:text-white/50">Noch kein Elektroauto hinterlegt.</p>;
+    return <p className="text-sm text-text-muted">Noch kein Elektroauto hinterlegt.</p>;
   }
 
   return (

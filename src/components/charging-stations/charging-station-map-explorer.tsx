@@ -557,16 +557,16 @@ export function ChargingStationMapExplorer({
                 </select>
               </label>
               {sortOption === "distance" && locationLoading && (
-                <p className="text-xs text-black/50 dark:text-white/50">Standort wird ermittelt…</p>
+                <p className="text-xs text-text-muted">Standort wird ermittelt…</p>
               )}
               {sortOption === "distance" && locationError && (
-                <p className="text-xs text-red-600">{locationError}</p>
+                <p className="text-xs text-error">{locationError}</p>
               )}
             </div>
           )}
 
           {stations.length === 0 ? (
-            <p className="text-sm text-black/50 dark:text-white/50">{emptyMessage}</p>
+            <p className="text-sm text-text-muted">{emptyMessage}</p>
           ) : (
             <>
               <ul className="flex flex-col gap-3">

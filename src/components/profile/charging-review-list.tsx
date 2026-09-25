@@ -185,7 +185,7 @@ function EditForm({
         className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
       />
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-error">{error}</p>}
 
       <div className="flex flex-col gap-2 sm:flex-row">
         <button
@@ -238,7 +238,7 @@ export function ChargingReviewList({ reviews }: { reviews: ChargingReviewWithSta
 
   if (items.length === 0) {
     return (
-      <p className="text-sm text-black/50 dark:text-white/50">
+      <p className="text-sm text-text-muted">
         Noch keine Ladepunkt-Bewertungen abgegeben.
       </p>
     );
@@ -291,13 +291,13 @@ export function ChargingReviewList({ reviews }: { reviews: ChargingReviewWithSta
                   type="button"
                   onClick={() => handleDelete(review)}
                   disabled={pendingDeleteId === review.id}
-                  className="flex min-h-11 items-center px-2 -mx-2 text-red-600 hover:underline disabled:opacity-50"
+                  className="flex min-h-11 items-center px-2 -mx-2 text-error hover:underline disabled:opacity-50"
                 >
                   Löschen
                 </button>
               </div>
               {deleteErrorById[review.id] && (
-                <p className="mt-1 text-xs text-red-600">{deleteErrorById[review.id]}</p>
+                <p className="mt-1 text-xs text-error">{deleteErrorById[review.id]}</p>
               )}
             </>
           )}

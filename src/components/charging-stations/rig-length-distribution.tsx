@@ -14,7 +14,7 @@ export function RigLengthDistributionChart({
 }) {
   if (distribution.reviewsWithLength === 0) {
     return (
-      <p className="text-sm text-black/50 dark:text-white/50">
+      <p className="text-sm text-text-muted">
         Noch keine Bewertungen mit Gespannlänge vorhanden.
       </p>
     );
@@ -22,7 +22,7 @@ export function RigLengthDistributionChart({
 
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-xs text-black/50 dark:text-white/50">
+      <p className="text-xs text-text-muted">
         Verteilung der {distribution.reviewsWithLength} Bewertungen mit bekannter Gespannlänge
         (Zugfahrzeug + Wohnwagen) und wie tauglich der Ladepunkt in dieser Klasse eingeschätzt wird.
       </p>
@@ -49,10 +49,10 @@ export function RigLengthDistributionChart({
               <div className="h-full w-full rounded-full opacity-40" style={{ backgroundColor: suitabilityColor(bucket.positiveRatio) }} />
             )}
           </div>
-          <span className="w-8 shrink-0 text-right text-black/50 dark:text-white/50 sm:w-10">
+          <span className="w-8 shrink-0 text-right text-text-muted sm:w-10">
             {bucket.sharePercent}%
           </span>
-          <span className="w-20 shrink-0 truncate text-right text-xs text-black/50 dark:text-white/50 sm:w-32">
+          <span className="w-20 shrink-0 truncate text-right text-xs text-text-muted sm:w-32">
             {bucket.count === 0 && !bucket.inferredOnly
               ? "keine Bewertungen"
               : bucket.reliable && bucket.positiveRatio !== null

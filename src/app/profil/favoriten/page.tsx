@@ -42,7 +42,7 @@ export default async function FavoritenPage() {
       <h2 className="text-lg font-semibold">Favoriten</h2>
 
       {favoriteList.length === 0 ? (
-        <p className="mt-4 text-sm text-black/50 dark:text-white/50">Noch keine Favoriten gemerkt.</p>
+        <p className="mt-4 text-sm text-text-muted">Noch keine Favoriten gemerkt.</p>
       ) : (
         <ul className="mt-4 flex flex-col gap-3">
           {favoriteList.map((favorite) => {
@@ -64,7 +64,7 @@ export default async function FavoritenPage() {
                       {campsite.name}
                     </Link>
                   ) : (
-                    <span className="text-black/50 dark:text-white/50">Campingplatz nicht mehr verfügbar</span>
+                    <span className="text-text-muted">Campingplatz nicht mehr verfügbar</span>
                   )}
                 </li>
               );
@@ -86,7 +86,7 @@ export default async function FavoritenPage() {
                     {station.name ?? station.operator}
                   </Link>
                 ) : (
-                  <span className="text-black/50 dark:text-white/50">Ladepunkt nicht mehr verfügbar</span>
+                  <span className="text-text-muted">Ladepunkt nicht mehr verfügbar</span>
                 )}
               </li>
             );
@@ -94,7 +94,7 @@ export default async function FavoritenPage() {
         </ul>
       )}
 
-      <p className="mt-6 text-sm text-black/50 dark:text-white/50">
+      <p className="mt-6 text-sm text-text-muted">
         Campingplätze und Ladepunkte lassen sich über das Herz-Symbol auf ihrer jeweiligen
         Detailseite merken.
       </p>

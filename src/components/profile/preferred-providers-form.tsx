@@ -79,7 +79,7 @@ export function PreferredProvidersForm({
                 />
                 Bevorzugen
               </label>
-              <label className="flex min-h-11 items-center gap-1.5 text-sm text-red-600">
+              <label className="flex min-h-11 items-center gap-1.5 text-sm text-error">
                 <input
                   type="checkbox"
                   name="avoided_providers"
@@ -102,7 +102,7 @@ export function PreferredProvidersForm({
           Speichern
         </button>
         {saved && <span className="text-sm text-route">Gespeichert.</span>}
-        {error && <span className="text-sm text-red-600">{error}</span>}
+        {error && <span className="text-sm text-error">{error}</span>}
       </div>
     </form>
   );

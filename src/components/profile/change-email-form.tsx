@@ -42,7 +42,7 @@ export function ChangeEmailForm() {
           placeholder="neue@adresse.de"
           className="w-full rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
         />
-        {error && <span className="text-sm text-red-600">{error}</span>}
+        {error && <span className="text-sm text-error">{error}</span>}
         {success && (
           <span className="text-sm text-route">
             Bestätigungslink wurde verschickt -- bitte E-Mail(s) prüfen.

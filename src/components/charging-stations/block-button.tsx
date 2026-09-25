@@ -40,7 +40,7 @@ export function ChargingStationBlockButton({
       aria-pressed={isBlocked}
       className={`flex min-h-11 items-center gap-1.5 rounded-md border px-4 py-2 text-sm font-medium disabled:opacity-50 ${
         isBlocked
-          ? "border-red-600 bg-red-600/10 text-red-600"
+          ? "border-red-600 bg-red-600/10 text-error"
           : "border-black/15 text-black/60 dark:border-white/15 dark:text-white/60"
       }`}
     >

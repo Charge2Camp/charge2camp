@@ -22,7 +22,7 @@ export function StationNearbyPoi({
     return (
       <section>
         <h2 className="font-semibold">In der Nähe</h2>
-        <p className="mt-2 text-sm text-black/50 dark:text-white/50">
+        <p className="mt-2 text-sm text-text-muted">
           Umgebungsinfos gerade nicht verfügbar -- bitte später erneut versuchen.
         </p>
       </section>
@@ -34,7 +34,7 @@ export function StationNearbyPoi({
     return (
       <section>
         <h2 className="font-semibold">In der Nähe</h2>
-        <p className="mt-2 text-sm text-black/50 dark:text-white/50">
+        <p className="mt-2 text-sm text-text-muted">
           Keine Toilette, kein Restaurant, Campingfachmarkt oder Campingplatz im Umkreis von 1 km auf OpenStreetMap
           gefunden.
         </p>
@@ -56,7 +56,7 @@ export function StationNearbyPoi({
               {result.byCategory[category].map((poi: NearbyPoi) => (
                 <li key={poi.id} className="flex items-baseline justify-between gap-2">
                   <span className="truncate">{poi.name ?? CATEGORY_LABELS[category]}</span>
-                  <span className="shrink-0 text-xs text-black/50 dark:text-white/50">
+                  <span className="shrink-0 text-xs text-text-muted">
                     {formatDistance(poi.distanceM)}
                   </span>
                 </li>

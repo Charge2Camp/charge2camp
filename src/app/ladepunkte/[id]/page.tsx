@@ -65,7 +65,7 @@ export default async function ChargingStationDetailPage({
         disableFallback={returnTo === "routenplaner"}
       />
 
-      <p className="text-sm text-black/50 dark:text-white/50">{s.operator}</p>
+      <p className="text-sm text-text-muted">{s.operator}</p>
       <h1 className="text-3xl font-bold">{s.name ?? s.operator}</h1>
 
       <div className="mt-2 flex flex-wrap gap-2">
@@ -95,7 +95,7 @@ export default async function ChargingStationDetailPage({
         />
       )}
 
-      <div className="mt-6 h-[320px] overflow-hidden rounded-lg border border-black/10 dark:border-white/10">
+      <div className="mt-6 h-[320px] overflow-hidden rounded-lg border border-line">
         <MapView
           markers={[
             {

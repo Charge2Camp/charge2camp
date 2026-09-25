@@ -49,7 +49,7 @@ export function DefaultGespannPicker({
           save(vehicleId, id);
         }}
       />
-      <p className="text-xs text-black/50 dark:text-white/50" aria-live="polite">
+      <p className="text-xs text-text-muted" aria-live="polite">
         {error ?? (isPending ? "Wird gespeichert…" : "Wird als Standard für den Routenplaner übernommen.")}
       </p>
     </div>

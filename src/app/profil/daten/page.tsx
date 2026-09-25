@@ -28,12 +28,12 @@ export default async function MeineDatenPage() {
       <h2 className="text-lg font-semibold">Meine Daten</h2>
       <dl className="mt-4 space-y-3 text-sm">
         <div>
-          <dt className="text-black/50 dark:text-white/50">E-Mail-Adresse</dt>
+          <dt className="text-text-muted">E-Mail-Adresse</dt>
           <dd className="mt-0.5">{user.email}</dd>
         </div>
         {user.created_at && (
           <div>
-            <dt className="text-black/50 dark:text-white/50">Konto erstellt am</dt>
+            <dt className="text-text-muted">Konto erstellt am</dt>
             <dd className="mt-0.5">{formatDate(user.created_at)}</dd>
           </div>
         )}
@@ -41,7 +41,7 @@ export default async function MeineDatenPage() {
 
       <div className="mt-6">
         <h3 className="font-medium">Zuhause-Adresse</h3>
-        <p className="mt-1 text-xs text-black/50 dark:text-white/50">
+        <p className="mt-1 text-xs text-text-muted">
           Ermöglicht im Routenplaner den Button &bdquo;Zuhause verwenden&ldquo; für Start oder
           Ziel. Leer lassen und speichern, um die Adresse wieder zu entfernen.
         </p>
@@ -50,7 +50,7 @@ export default async function MeineDatenPage() {
 
       <div className="mt-6">
         <h3 className="font-medium">E-Mail-Adresse ändern</h3>
-        <p className="mt-1 text-xs text-black/50 dark:text-white/50">
+        <p className="mt-1 text-xs text-text-muted">
           Je nach Einstellung muss der Wechsel per Bestätigungslink (an die neue, ggf. auch die
           alte Adresse) bestätigt werden, bevor er wirksam wird.
         </p>
@@ -59,7 +59,7 @@ export default async function MeineDatenPage() {
 
       <div className="mt-8">
         <h3 className="font-medium">Passwort ändern</h3>
-        <p className="mt-1 text-xs text-black/50 dark:text-white/50">
+        <p className="mt-1 text-xs text-text-muted">
           Zur Sicherheit wird das aktuelle Passwort erneut abgefragt.
         </p>
         <ChangePasswordForm />
@@ -67,7 +67,7 @@ export default async function MeineDatenPage() {
 
       <div className="mt-8">
         <h3 className="font-medium">Meine Daten herunterladen</h3>
-        <p className="mt-1 text-xs text-black/50 dark:text-white/50">
+        <p className="mt-1 text-xs text-text-muted">
           Lädt alle bei uns über dich gespeicherten Daten (Profil, Fahrzeuge/Wohnwagen,
           Favoriten, Bewertungen, gespeicherte Routen) als JSON-Datei herunter.
         </p>
@@ -80,8 +80,8 @@ export default async function MeineDatenPage() {
       </div>
 
       <div className="mt-8 rounded-md border border-red-600/30 p-4">
-        <h3 className="font-medium text-red-600">Konto löschen</h3>
-        <p className="mt-1 text-xs text-black/50 dark:text-white/50">
+        <h3 className="font-medium text-error">Konto löschen</h3>
+        <p className="mt-1 text-xs text-text-muted">
           Löscht dein Konto und alle zugehörigen Daten (Fahrzeuge, Wohnwagen, Favoriten,
           Bewertungen, gespeicherte Routen) unwiderruflich.
         </p>

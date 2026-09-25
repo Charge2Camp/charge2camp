@@ -24,7 +24,7 @@ export default function DatenschutzPage() {
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-8 px-4 py-16">
       <h1 className="text-2xl font-semibold">Datenschutzerklärung</h1>
-      <p className="text-xs text-black/50 dark:text-white/50">Stand: September 2026</p>
+      <p className="text-xs text-text-muted">Stand: September 2026</p>
 
       <Section title="1. Verantwortlicher">
         <p>

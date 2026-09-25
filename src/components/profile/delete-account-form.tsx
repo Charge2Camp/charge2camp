@@ -42,7 +42,7 @@ export function DeleteAccountForm({ email }: { email: string }) {
           autoComplete="off"
         />
       </label>
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-error">{error}</p>}
       <button
         type="submit"
         disabled={!confirmed || pending}

@@ -46,7 +46,7 @@ export function StationReviewsList({
     <section className="mt-8">
       <h2 className="font-semibold">Bewertungen</h2>
       {reviews.length === 0 ? (
-        <p className="mt-2 text-sm text-black/50 dark:text-white/50">Noch keine Bewertungen vorhanden.</p>
+        <p className="mt-2 text-sm text-text-muted">Noch keine Bewertungen vorhanden.</p>
       ) : (
         <ul className="mt-2 flex flex-col gap-3">
           {reviews.map((review) => (
@@ -94,14 +94,14 @@ export function StationReviewsList({
 
       <div className="mt-4">
         {!isLoggedIn ? (
-          <p className="text-sm text-black/50 dark:text-white/50">
+          <p className="text-sm text-text-muted">
             <Link href="/login" className="text-route hover:underline">
               Anmelden
             </Link>{" "}
             um eine Bewertung abzugeben.
           </p>
         ) : ownReview ? (
-          <p className="text-sm text-black/50 dark:text-white/50">
+          <p className="text-sm text-text-muted">
             Du hast diesen Ladepunkt bereits bewertet ({SUITABLE_LABELS[ownReview.suitable]}).
           </p>
         ) : (

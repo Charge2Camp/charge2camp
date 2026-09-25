@@ -191,7 +191,7 @@ export function AddressAutocomplete({
         className={`text-base ${className ?? ""}`}
       />
       {open && suggestFailed && localMatches.length === 0 && (
-        <p className="mt-1 text-xs text-black/50 dark:text-white/50">
+        <p className="mt-1 text-xs text-text-muted">
           Adressvorschläge gerade nicht verfügbar -- Adresse kann trotzdem frei eingegeben werden.
         </p>
       )}

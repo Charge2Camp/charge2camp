@@ -91,7 +91,7 @@ export function FavoritesPickerDialog({
               </button>
             </div>
           ) : favorites.length === 0 ? (
-            <p className="text-sm text-black/50 dark:text-white/50">
+            <p className="text-sm text-text-muted">
               Noch keine Favoriten gemerkt -- über das Herz-Symbol auf einer Campingplatz- oder
               Ladepunkt-Detailseite hinzufügen.
             </p>

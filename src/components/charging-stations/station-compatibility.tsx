@@ -27,7 +27,7 @@ export function StationCompatibilitySummary({
       <h2 className="font-semibold">Gespann-Kompatibilität</h2>
       <p className="mt-2 text-sm">{communitySummary.summary}</p>
       {communitySummary.overallPositiveRatio !== null && (
-        <p className="mt-1 text-xs text-black/50 dark:text-white/50">
+        <p className="mt-1 text-xs text-text-muted">
           {Math.round(communitySummary.overallPositiveRatio * 100)}% positive Rückmeldungen ·{" "}
           {communitySummary.reviewCount} Bewertungen
         </p>
@@ -36,7 +36,7 @@ export function StationCompatibilitySummary({
       <div className="mt-4 rounded-lg border border-route/30 bg-route/5 p-3 text-sm font-medium text-route">
         {PERSONAL_COMPATIBILITY_LABELS[personalCompatibility]}
         {personalCompatibility === "keine_daten" && !isLoggedIn && (
-          <span className="mt-1 block text-xs font-normal text-black/50 dark:text-white/50">
+          <span className="mt-1 block text-xs font-normal text-text-muted">
             <Link href="/login" className="text-route hover:underline">
               Anmelden
             </Link>{" "}

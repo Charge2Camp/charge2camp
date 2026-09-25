@@ -51,7 +51,7 @@ export function SavedRoutePickerDialog({
 
         <div className="flex-1 overflow-y-auto p-4 pb-[calc(1rem+var(--safe-bottom))]">
           {savedRoutes.length === 0 ? (
-            <p className="text-sm text-black/50 dark:text-white/50">
+            <p className="text-sm text-text-muted">
               Noch keine Route gespeichert -- berechne unten eine Route und speichere sie in Tab 3
               &quot;Fertig&quot;.
             </p>
@@ -66,7 +66,7 @@ export function SavedRoutePickerDialog({
                     className="flex w-full flex-col gap-0.5 rounded-md border border-black/10 px-3 py-2 text-left text-sm hover:bg-black/5 disabled:opacity-50 dark:border-white/10 dark:hover:bg-white/10"
                   >
                     <span className="font-medium">{route.name}</span>
-                    <span className="text-xs text-black/50 dark:text-white/50">
+                    <span className="text-xs text-text-muted">
                       {route.startDisplayName} → {route.endDisplayName}
                     </span>
                     <span className="text-xs text-black/40 dark:text-white/40">

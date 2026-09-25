@@ -109,7 +109,7 @@ export default async function CommunityPage() {
       </p>
 
       {activity.length === 0 ? (
-        <p className="mt-8 text-sm text-black/50 dark:text-white/50">
+        <p className="mt-8 text-sm text-text-muted">
           Noch keine Community-Aktivität vorhanden.
         </p>
       ) : (

@@ -51,7 +51,7 @@ export function HomeAddressForm({ initialAddress }: { initialAddress: string }) 
             <input type="hidden" name="home_longitude" value={coords.longitude} />
           </>
         )}
-        {error && <span className="text-sm text-red-600">{error}</span>}
+        {error && <span className="text-sm text-error">{error}</span>}
       </label>
       <button
         type="submit"

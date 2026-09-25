@@ -44,7 +44,7 @@ export function BlockedStationsList({ stations }: { stations: BlockedStationOpti
 
   if (items.length === 0) {
     return (
-      <p className="text-sm text-black/50 dark:text-white/50">
+      <p className="text-sm text-text-muted">
         Keine Ladepunkte blockiert.
       </p>
     );
@@ -70,7 +70,7 @@ export function BlockedStationsList({ stations }: { stations: BlockedStationOpti
               Wieder freigeben
             </button>
           </div>
-          {errorById[station.id] && <p className="text-xs text-red-600">{errorById[station.id]}</p>}
+          {errorById[station.id] && <p className="text-xs text-error">{errorById[station.id]}</p>}
         </li>
       ))}
     </ul>
