@@ -16,7 +16,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
   // nach E-Mail zu filtern, statt eine eigene Such-Infrastruktur zu bauen.
   const [usersResult, profilesResult, usageEventsResult] = await Promise.all([
     supabase.auth.admin.listUsers({ page: 1, perPage: 1000 }),
-    supabase.from("profiles").select("id, is_admin"),
+    supabase.from("profiles").select("id, is_admin, reviews_blocked"),
     // "Zuletzt aktiv" je Nutzer (juengstes app_usage_event) -- echte Nutzung
     // statt nur last_sign_in_at (reiner Login-Zeitpunkt, siehe nutzer/[id]/
     // page.tsx). Kein GROUP BY ueber Supabase-JS moeglich, deshalb absteigend
@@ -42,6 +42,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
 
   const { data } = usersResult;
   const isAdminById = new Map((profilesResult.data ?? []).map((p) => [p.id, p.is_admin]));
+  const reviewsBlockedById = new Map((profilesResult.data ?? []).map((p) => [p.id, p.reviews_blocked]));
   const usageEvents = usageEventsResult.data;
   const lastActiveByUser = new Map<string, string>();
   for (const e of usageEvents ?? []) {
@@ -93,6 +94,11 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
               {isAdminById.get(u.id) && <span className="rounded-full bg-route/10 px-2 py-0.5 text-xs text-route">Admin</span>}
               {u.banned_until && new Date(u.banned_until) > new Date() && (
                 <span className="rounded-full bg-status-down/10 px-2 py-0.5 text-xs text-status-down">Gesperrt</span>
+              )}
+              {reviewsBlockedById.get(u.id) && (
+                <span className="rounded-full bg-status-down/10 px-2 py-0.5 text-xs text-status-down">
+                  Bewertungen gesperrt
+                </span>
               )}
             </div>
           </Link>

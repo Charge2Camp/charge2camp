@@ -118,6 +118,9 @@ export interface Profile {
   id: string;
   email: string;
   is_admin: boolean;
+  // Missbrauchsschutz (siehe supabase/migrations/20261025050000_reviews_blocked_flag.sql):
+  // true verhindert neue/geaenderte charging_reviews/campsite_reviews per RLS.
+  reviews_blocked: boolean;
   created_at: string;
 }
 

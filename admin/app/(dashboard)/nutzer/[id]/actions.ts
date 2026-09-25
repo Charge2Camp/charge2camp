@@ -31,6 +31,21 @@ export async function setIsAdmin(userId: string, isAdmin: boolean) {
   revalidatePath("/nutzer");
 }
 
+/** Missbrauchsschutz (Nutzerwunsch): verhindert per RLS (siehe Migration
+ * 20261025050000) neue/geaenderte charging_reviews/campsite_reviews dieses
+ * Nutzers, ohne das ganze Konto zu sperren (setBanned) -- betrifft nur
+ * kuenftige Bewertungen, bestehende bleiben unangetastet, jederzeit
+ * reversibel. */
+export async function setReviewsBlocked(userId: string, blocked: boolean) {
+  await requireAdmin();
+  const supabase = createServiceClient();
+
+  const { error } = await supabase.from("profiles").update({ reviews_blocked: blocked }).eq("id", userId);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/nutzer/${userId}`);
+  revalidatePath("/nutzer");
+}
+
 /** Loescht das Konto vollstaendig (auth.users, cascadiert per FK auf
  * profiles/vehicles/caravans/favorites/... -- siehe "on delete cascade" in
  * supabase/migrations/20260904210000_init_schema.sql). Unwiderruflich. */
