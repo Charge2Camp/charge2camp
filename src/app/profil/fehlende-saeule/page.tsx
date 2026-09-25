@@ -39,6 +39,14 @@ export default async function MissingStationPage() {
       {reports && reports.length > 0 && (
         <section className="mt-10">
           <h3 className="font-semibold">Meine Meldungen</h3>
+          {/* UX-05.7: kein Push/E-Mail bei Statusaenderung -- der Status
+              hier aktualisiert sich nur, wenn diese Seite erneut besucht
+              wird. Ehrlich benannt statt stillschweigend so zu tun, als
+              kaeme automatisch eine Rueckmeldung. */}
+          <p className="mt-1 text-xs text-text-muted">
+            Der Status aktualisiert sich, sobald du diese Seite erneut besuchst -- es gibt noch keine
+            Benachrichtigung per E-Mail oder Push.
+          </p>
           <div className="mt-4 flex flex-col gap-2">
             {reports.map((r) => (
               <div key={r.id} className="rounded-md border border-black/10 p-3 text-sm dark:border-white/10">

@@ -206,6 +206,18 @@ Phase geprüft:
 - Bereits in Phase 4 dokumentiert: Status ändert sich nur sichtbar bei
   erneutem Besuch der Seite, kein Push/E-Mail. Niedrige Priorität
   (Meldefunktion ist ein Nebenpfad, kein Kernflow).
+- **Teilweise erledigt (Phase 12, 2026-09-25):** Eine echte Push-/
+  E-Mail-Benachrichtigung wäre Infrastruktur-Arbeit (Supabase-E-Mail-
+  Versand oder eigener Edge-Function-Trigger bei Statuswechsel im
+  Admin-Backend) — zu groß für diesen Design-Schritt und nicht Kern
+  dieser Phase ("Screens gestalten"). Stattdessen minimal-invasiv
+  gelöst: sowohl bei der Erfolgsmeldung nach dem Melden
+  (`missing-station-report-form.tsx`) als auch bei der Liste "Meine
+  Meldungen" (`fehlende-saeule/page.tsx`) steht jetzt explizit, dass es
+  keine Benachrichtigung gibt und der Status nur beim erneuten
+  Seitenbesuch aktuell ist — ehrlich statt stillschweigend (§8
+  brand-guide.md). Die eigentliche Benachrichtigungsfunktion bleibt ein
+  offener, größerer Folgeschritt (nicht Teil dieser Änderung).
 
 ---
 

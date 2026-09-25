@@ -10,6 +10,47 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
 
 ---
 
+## Ehrlicher Hinweis statt Benachrichtigung bei Meldestatus (UX-05.7)
+
+- **Decision:** In `missing-station-report-form.tsx` (Erfolgsmeldung
+  nach dem Melden) und `profil/fehlende-saeule/page.tsx` (Liste "Meine
+  Meldungen") jeweils einen Satz ergänzt, der explizit sagt: keine
+  Benachrichtigung per E-Mail/Push, Status nur beim erneuten
+  Seitenbesuch aktuell.
+- **Reason:** Die eigentliche, vollständige Lösung von UX-05.7 (eine
+  echte Benachrichtigung) verlangt Infrastruktur, die es noch nicht
+  gibt — Supabase-Transaktions-E-Mail oder ein Edge-Function-Trigger,
+  der bei `moderate_missing_station_report`-artigen Statuswechseln im
+  Admin-Backend auslöst. Das ist zu groß für "Screens gestalten"
+  (Phase 12) und laut Priorisierungstabelle ohnehin niedrigste
+  Dringlichkeit ("Meldefunktion ist ein Nebenpfad, kein Kernflow"). Statt
+  nichts zu tun oder eine unpassend große Änderung anzufangen: das
+  eigentliche UX-Problem ist nicht nur "es gibt keine Benachrichtigung",
+  sondern "niemand sagt das" — Nutzer könnten sonst annehmen, es käme
+  noch eine Rückmeldung, die nie kommt. brand-guide.md §8 ("Fehler sagen,
+  was passiert ist und was zu tun ist") gilt sinngemäß auch hier: ehrlich
+  über die Grenze der Funktion statt Stille.
+- **Alternatives:** (1) volle Benachrichtigungsfunktion jetzt umsetzen
+  (verworfen: Aufwand "mittel" laut eigener Priorisierung, unverhältnismäßig
+  für einen Nebenpfad, zusätzlich neue Kosten/Komplexität ohne klar
+  nachgewiesenen Nutzerbedarf, vgl. CLAUDE.md Prinzip 4
+  Kostenoptimierung); (2) nichts tun, Punkt als "akzeptiertes Risiko"
+  auf niedriger Priorität stehen lassen (verworfen: eine Zwei-Satz-
+  Ergänzung ist so gering im Aufwand, dass "nichts tun" keinen
+  Vorteil hätte); (3) Hinweis nur an einer der beiden Stellen
+  (verworfen: die Erfolgsmeldung erreicht nur den Moment des Meldens,
+  die Listenansicht nur bei Rückkehr -- unterschiedliche Momente,
+  beide relevant).
+- **Impact:** 2 Dateien, reine Textergänzung, keine Logik-/Datenänderung.
+  Typecheck grün. Kein Live-Test (login-pflichtig, DB-Schreibzugriff
+  beim Melden, kein Test-Account in dieser Umgebung) — bei reinem
+  Text ohne neue Bedingungen/Zustände vertretbar. Die eigentliche
+  Benachrichtigungsfunktion bleibt offen für einen späteren,
+  eigenständigen Schritt (s. `docs/design/ux-problems.md`).
+- **Date:** 2026-09-25 (Phase 12, Screens gestalten).
+
+---
+
 ## Verknüpfungshinweis Profil-Gespann im Ladepunkt-Bewertungsformular (UX-05.4)
 
 - **Decision:** In `src/components/charging-stations/review-form.tsx`

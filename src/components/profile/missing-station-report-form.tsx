@@ -54,7 +54,16 @@ export function MissingStationReportForm() {
         />
       </label>
       {error && <p className="text-sm text-error">{error}</p>}
-      {success && <p className="text-sm text-route">Danke! Deine Meldung wird geprüft.</p>}
+      {success && (
+        // UX-05.7 (docs/design/ux-problems.md): keine Push-/E-Mail-
+        // Benachrichtigung bei Statusaenderung -- ehrlich statt still
+        // ("Fehler sagen, was passiert ist", brand-guide.md §8), damit
+        // niemand auf eine Rueckmeldung wartet, die nie kommt.
+        <p className="text-sm text-route">
+          Danke! Deine Meldung wird geprüft. Den Status siehst du weiter unten, sobald du diese Seite
+          erneut besuchst -- es gibt noch keine Benachrichtigung per E-Mail oder Push.
+        </p>
+      )}
       <button
         type="submit"
         disabled={pending}
