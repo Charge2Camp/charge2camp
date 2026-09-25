@@ -10,6 +10,40 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
 
 ---
 
+## Verknüpfungshinweis Profil-Gespann im Ladepunkt-Bewertungsformular (UX-05.4)
+
+- **Decision:** In `src/components/charging-stations/review-form.tsx`
+  einen Hinweis ergänzt ("Trag dein Gespann unter Mein Gespann ein,
+  dann musst du Länge und Breite nicht jedes Mal von Hand eingeben."),
+  sichtbar wenn weder Fahrzeug noch Wohnwagen im Profil hinterlegt sind.
+- **Reason:** UX-05.4 — an der Freitext-Eingabestelle fehlte bislang
+  jeder Hinweis auf den Komfortgewinn eines hinterlegten Gespanns. Beim
+  Nachprüfen des zweiten in der Doku genannten Orts
+  (`route-planner-form.tsx`) zeigte sich: dort existierte der Hinweis
+  bereits (nicht Teil dieser Änderung) — die ursprüngliche
+  Audit-Annahme "an keiner der beiden Stellen" war für den Routenplaner
+  nicht mehr zutreffend. Das Campingplatz-Bewertungsformular hat kein
+  Gespann-Feld und ist von UX-05.4 nicht betroffen.
+- **Alternatives:** (1) Hinweis nur bei Fahrzeug ODER nur bei Wohnwagen
+  fehlend zeigen (verworfen: die "Sonstiges / manuell"-Option gilt für
+  beide Dropdowns unabhängig, ein Hinweis nur bei vollständigem Fehlen
+  beider vermeidet, bei jedem einzelnen Freitext-Feld zu nerven, wenn
+  z. B. nur der Wohnwagen bewusst nicht hinterlegt werden soll); (2)
+  hartcodiertes Amber wie im Routenplaner-Hinweis übernehmen (verworfen:
+  seit Phase 8 existiert der Token `--c-warning`/`text-warning` genau
+  für diesen Zweck, neuer Code nutzt ihn direkt statt die bereits als
+  Nebenbefund dokumentierte Inkonsistenz zu wiederholen).
+- **Impact:** `src/components/charging-stations/review-form.tsx`
+  erweitert, keine Logikänderung sonst. Typecheck grün. Kein Live-Test
+  im Browser (Komponente ist login-pflichtig, kein Test-Account in
+  dieser Umgebung) — Typsicherheit und Props-Kette
+  (`station-reviews-list.tsx` übergibt `vehicles`/`caravans` immer als
+  Array, nie `undefined`) geprüft. UX-05.4 damit erledigt (s.
+  `docs/design/ux-problems.md`).
+- **Date:** 2026-09-25 (Phase 12, Screens gestalten).
+
+---
+
 ## `/profil/legende` → `/legende`, ohne Login (UX-05.5)
 
 - **Decision:** Seite von `src/app/profil/legende/page.tsx` nach

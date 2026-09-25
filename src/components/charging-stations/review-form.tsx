@@ -216,6 +216,20 @@ export function ChargingReviewForm({
       </div>
 
       <p className="text-sm font-medium">Mit welchem Gespann warst du hier?</p>
+      {vehicles.length === 0 && caravans.length === 0 && (
+        // UX-05.4 (docs/design/ux-problems.md): ohne hinterlegtes Gespann
+        // faellt diese Auswahl sonst kommentarlos auf "Sonstiges / manuell"
+        // zurueck -- der Komfortgewinn eines hinterlegten Gespanns
+        // (automatische Laengen-/Breitenberechnung unten, s. recompute())
+        // blieb dadurch unentdeckt.
+        <p className="text-sm text-warning">
+          Trag dein Gespann unter{" "}
+          <a href="/profil/gespann" className="underline">
+            Mein Gespann
+          </a>{" "}
+          ein, dann musst du Länge und Breite nicht jedes Mal von Hand eingeben.
+        </p>
+      )}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <label className="flex flex-col gap-1 text-sm">
           Auto (aus deinem Profil)

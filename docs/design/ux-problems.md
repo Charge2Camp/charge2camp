@@ -152,6 +152,20 @@ Phase geprüft:
 - **Technische Konsequenzen:** minimal (bedingtes UI-Element, kein neuer
   Datenzugriff — die Information "kein Fahrzeug/Wohnwagen hinterlegt"
   liegt an beiden Stellen bereits vor).
+- **Präzisiert beim genauen Code-Lesen (Phase 12, 2026-09-25):** Der
+  Routenplaner (`route-planner-form.tsx`) hatte diesen Hinweis bereits
+  ("Du hast noch kein Elektroauto im Profil hinterlegt. Bitte zuerst
+  unter Mein Gespann ergänzen.", mit Link) — die ursprüngliche Annahme
+  "an keiner der beiden Stellen" traf dort nicht (mehr) zu. Nur das
+  Bewertungsformular für Ladepunkte (`charging-stations/review-form.tsx`)
+  hatte tatsächlich keinen Hinweis. Das Campingplatz-Bewertungsformular
+  (`campsites/review-form.tsx`) hat gar kein Gespann-Feld, betrifft
+  UX-05.4 nicht.
+- **Erledigt (Phase 12, 2026-09-25):** Hinweis in
+  `charging-stations/review-form.tsx` ergänzt (zeigt bei
+  `vehicles.length === 0 && caravans.length === 0`), Link zu
+  `/profil/gespann`, `text-warning`-Token statt hartcodiertem Amber.
+  Details s. `docs/DESIGN_DECISIONS.md`.
 
 ### UX-05.5 — IA-Bruch bei `/profil/legende` und `/profil/fehlende-saeule` (B, aus information-architecture.md übernommen)
 
