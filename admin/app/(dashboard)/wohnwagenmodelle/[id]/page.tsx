@@ -21,7 +21,7 @@ export default async function CaravanModelDetailPage({ params }: { params: Promi
           ← Wohnwagenmodelle
         </Link>
         <h1 className="mt-1 text-2xl font-semibold">
-          {caravan.manufacturer} {caravan.model} {caravan.series ? `(${caravan.series})` : ""}
+          {caravan.manufacturer} {caravan.model}
         </h1>
       </div>
 

@@ -89,7 +89,7 @@ export default async function CaravanModelsPage({
           >
             <div>
               <p className="font-medium">
-                {m.manufacturer} {m.model} {m.series ? `(${m.series})` : ""}
+                {m.manufacturer} {m.model}
               </p>
               <p className="text-text-muted">{m.length_m} m lang</p>
             </div>

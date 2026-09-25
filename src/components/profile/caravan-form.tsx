@@ -68,7 +68,7 @@ export function CaravanForm({
     if (!m) return;
     setForm({
       manufacturer: m.manufacturer,
-      model: m.series ? `${m.model} (${m.series})` : m.model,
+      model: m.model,
       length_m: m.length_m.toString(),
       width_m: m.width_m.toString(),
       height_m: m.height_m.toString(),
@@ -126,7 +126,7 @@ export function CaravanForm({
             <option value="">Manuell eingeben…</option>
             {modelsForManufacturer.map((m) => (
               <option key={m.id} value={m.id}>
-                {m.model} {m.series ? `(${m.series})` : ""}
+                {m.model}
               </option>
             ))}
           </select>

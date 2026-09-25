@@ -324,7 +324,7 @@ export default async function WeeklyChangesPage() {
               className="flex items-center justify-between rounded-md border border-line bg-card p-3 text-sm hover:bg-line/20"
             >
               <p className="font-medium">
-                {m.manufacturer} {m.model} {m.series ? `(${m.series})` : ""}
+                {m.manufacturer} {m.model}
               </p>
               <p className="whitespace-nowrap text-xs text-text-muted">
                 {new Date(m.created_at).toLocaleDateString("de-DE", { dateStyle: "medium" })}
