@@ -38,6 +38,36 @@ volle Produkt- und Architekturspezifikation.
    Navigation über Adapter kapseln (§3). Details und Begründung in
    [docs/architecture.md](docs/architecture.md), Abschnitt
    "Mobile/Touch-Design & Vorbereitung auf native Apps".
+9. **Charge2Camp Design System ist bindend, nicht optional.** Jede
+   UI-Aufgabe (neue Komponente, neuer Screen, Änderung an bestehendem
+   Markup/Styling) berücksichtigt automatisch:
+   - [docs/design/brand-guide.md](docs/design/brand-guide.md) — Logo,
+     Farbe, Typografie, Icons, Sprache, Kartenpins, Ladeanimation.
+   - [docs/design/tokens.json](docs/design/tokens.json) /
+     `src/app/globals.css` (`--c-*`-Variablen) — Design Tokens. Farben nie
+     hart codieren (kein `text-red-600`, `text-black/40` o. Ä.), immer
+     den passenden Tailwind-Token (`text-error`, `text-text-muted`,
+     `border-line-strong`, …) verwenden oder — falls die bestehenden
+     Tokens die benötigte Rolle nicht abdecken — einen neuen Token
+     ergänzen und in `brand-guide.md`/`tokens.json` dokumentieren, statt
+     eine Opazitäts-/Hex-Variante direkt im Code zu erfinden.
+   - [docs/design/information-architecture.md](docs/design/information-architecture.md)
+     und [docs/design/user-flows.md](docs/design/user-flows.md) —
+     bestehende Seitenstruktur, Navigation und Kernflows nicht
+     stillschweigend ändern.
+   - [docs/design/ux-problems.md](docs/design/ux-problems.md) und
+     [docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md) — bereits
+     identifizierte UX-Probleme und der Grund hinter bisherigen
+     Design-/Architekturentscheidungen (Decision/Reason/Alternatives/
+     Impact/Date je Eintrag).
+
+   **Widerspricht eine Aufgabe dem bestehenden Designsystem, wird der
+   Konflikt benannt, bevor eine neue individuelle Lösung gebaut wird** —
+   nicht stillschweigend etwas Abweichendes implementieren. Jede neue,
+   nicht triviale Design-/Architekturentscheidung wird in
+   `docs/DESIGN_DECISIONS.md` ergänzt (Format: Decision/Reason/
+   Alternatives/Impact/Date), damit spätere Arbeit nachvollziehen kann,
+   *warum* etwas so entschieden wurde.
 
 ## Stack
 
@@ -64,3 +94,29 @@ aktualisieren (Standardwerte sind bereits für lokale Entwicklung vorbelegt).
 - [docs/data-sources.md](docs/data-sources.md) — externe Datenquellen & Lizenzen
 - [docs/privacy.md](docs/privacy.md) — Datenschutz/DSGVO
 - [supabase/migrations/](supabase/migrations/) — DB-Schema
+
+### Charge2Camp Product Design System (verbindlich, s. Prinzip 9)
+
+- [docs/DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md) — konsolidierte
+  Übersicht (Prinzipien, Farben, Typografie, Tokens, Komponenten,
+  Navigation, Maps, Charging, Camping, Routing, Accessibility,
+  iOS/Android) — bester Einstiegspunkt, verlinkt auf die Details unten
+- [docs/design/brand-guide.md](docs/design/brand-guide.md) — Logo, Farbe,
+  Typografie, Icons, Sprache, Kartenpins, Ladeanimation
+- [docs/design/tokens.json](docs/design/tokens.json) — Design Tokens
+  maschinenlesbar (Quelle für `src/app/globals.css`)
+- [docs/design/information-architecture.md](docs/design/information-architecture.md)
+  — Sitemap, Navigationsmodell, Seiteninventar
+- [docs/design/user-flows.md](docs/design/user-flows.md) — dokumentierte
+  Kernflows (Auslöser → Schritte → Entscheidungspunkte → Fehler-/
+  Leerzustände → Ergebnis)
+- [docs/design/ux-problems.md](docs/design/ux-problems.md) — bekannte
+  UX-Probleme, kategorisiert (A technisch/B UX/C Design/D
+  Produktentscheidung) und priorisiert
+- [docs/design/design-strategy.md](docs/design/design-strategy.md) —
+  Leitplanken für Design-/UI-Arbeit
+- [docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md) — laufendes
+  Entscheidungslog (Decision/Reason/Alternatives/Impact/Date), bei jeder
+  nicht-trivialen Design-/Architekturentscheidung fortzuschreiben
+- [docs/PRODUCT_AUDIT.md](docs/PRODUCT_AUDIT.md) — Ist-Zustand-Audit
+  (Ausgangspunkt des Design-Prozesses)
