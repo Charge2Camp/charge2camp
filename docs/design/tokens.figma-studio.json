@@ -1,0 +1,54 @@
+{
+  "global": {
+    "color": {
+      "base": { "value": "#0F3B36", "type": "color" },
+      "baseDeep": { "value": "#0A2A26", "type": "color" },
+      "baseSoft": { "value": "#1A5049", "type": "color" },
+      "action": { "value": "#C6F24E", "type": "color" },
+      "actionHover": { "value": "#B2DE3A", "type": "color" },
+      "route": { "value": "#1D9E75", "type": "color" },
+      "surface": { "value": "#F2F0E8", "type": "color" },
+      "card": { "value": "#FDFCF9", "type": "color" },
+      "line": { "value": "#E0DED4", "type": "color" },
+      "tintTrailer": { "value": "#E8F5C0", "type": "color" },
+      "text": { "value": "#0F3B36", "type": "color" },
+      "textMuted": { "value": "#5C6B66", "type": "color" },
+      "textInverse": { "value": "#F2F0E8", "type": "color" },
+      "textInverseMuted": { "value": "#8FA8A0", "type": "color" },
+      "statusFree": { "value": "#1D9E75", "type": "color" },
+      "statusBusy": { "value": "#E8A33D", "type": "color" },
+      "statusDown": { "value": "#B4443A", "type": "color" },
+      "statusUnknown": { "value": "#8E9A94", "type": "color" },
+      "error": { "value": "#B4443A", "type": "color" },
+      "warning": { "value": "#E8A33D", "type": "color" }
+    },
+    "spacing": {
+      "1": { "value": "4", "type": "spacing" },
+      "2": { "value": "8", "type": "spacing" },
+      "3": { "value": "12", "type": "spacing" },
+      "4": { "value": "16", "type": "spacing" },
+      "6": { "value": "24", "type": "spacing" },
+      "8": { "value": "32", "type": "spacing" },
+      "12": { "value": "48", "type": "spacing" },
+      "16": { "value": "64", "type": "spacing" }
+    },
+    "radius": {
+      "control": { "value": "10", "type": "borderRadius" },
+      "card": { "value": "12", "type": "borderRadius" },
+      "pill": { "value": "999", "type": "borderRadius" }
+    },
+    "fontSize": {
+      "display": { "value": "36", "type": "fontSizes" },
+      "h1": { "value": "26", "type": "fontSizes" },
+      "h2": { "value": "20", "type": "fontSizes" },
+      "body": { "value": "15", "type": "fontSizes" },
+      "small": { "value": "13", "type": "fontSizes" },
+      "label": { "value": "12", "type": "fontSizes" }
+    },
+    "tapTargetMin": { "value": "44", "type": "sizing" }
+  },
+  "$themes": [],
+  "$metadata": {
+    "tokenSetOrder": ["global"]
+  }
+}
