@@ -388,6 +388,20 @@ export function RoutePlannerForm({
     [result]
   );
 
+  // Summe der geplanten Ladezeiten (chargingTimeMin ist pro Stopp null, wenn
+  // die Ladeleistung nicht ermittelbar war -- dann zaehlt der Stopp hier mit
+  // 0 min, taucht aber ueber "Ladestopps" oben trotzdem in der Anzahl auf).
+  // Anteil Ladezeit bezieht sich auf die GESAMTE Reisezeit (Fahrzeit +
+  // Ladezeit), nicht nur auf die reine Fahrzeit (result.travelTimeMin) --
+  // sonst waere der Anteil irrefuehrend hoch.
+  const totalChargingTimeMin = result
+    ? result.plan.chargingStops.reduce((sum, stop) => sum + (stop.chargingTimeMin ?? 0), 0)
+    : 0;
+  const chargingTimeSharePercent =
+    result && totalChargingTimeMin > 0
+      ? (totalChargingTimeMin / (result.travelTimeMin + totalChargingTimeMin)) * 100
+      : 0;
+
   // Laedt eine gespeicherte Route und belegt alle Formularfelder + das
   // Ergebnis damit vor -- gemeinsam genutzt vom Mount-Effect unten
   // (?savedRouteId=... aus dem Link "Öffnen" im Profil) und vom
@@ -1265,7 +1279,7 @@ export function RoutePlannerForm({
       {/* ---------- Tab 3: Fertig ---------- */}
       {activeStep === 3 && result && (
         <div className="flex flex-col gap-6">
-          <div className="grid grid-cols-2 gap-4 text-sm">
+          <div className="grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
             <div>
               <p className="text-black/50 dark:text-white/50">Strecke</p>
               <p className="text-lg font-semibold">{result.mapDistanceKm.toFixed(0)} km</p>
@@ -1273,6 +1287,18 @@ export function RoutePlannerForm({
             <div>
               <p className="text-black/50 dark:text-white/50">Reisezeit</p>
               <p className="text-lg font-semibold">{formatDuration(result.travelTimeMin)}</p>
+            </div>
+            <div>
+              <p className="text-black/50 dark:text-white/50">Ladestopps</p>
+              <p className="text-lg font-semibold">{result.plan.chargingStops.length}</p>
+            </div>
+            <div>
+              <p className="text-black/50 dark:text-white/50">Anteil Ladezeit</p>
+              <p className="text-lg font-semibold">
+                {totalChargingTimeMin > 0
+                  ? `${formatDuration(totalChargingTimeMin)} (${chargingTimeSharePercent.toFixed(0)}%)`
+                  : "–"}
+              </p>
             </div>
           </div>
 
@@ -1301,11 +1327,19 @@ export function RoutePlannerForm({
                       `${point.label}: ${point.chargingStop?.station.name ?? point.chargingStop?.station.provider}`}
                   </p>
                   {point.kind === "charging" && point.chargingStop && (
-                    <p className="text-xs text-black/50 dark:text-white/50">
-                      {point.chargingStop.station.power_kw ? `${point.chargingStop.station.power_kw} kW` : "Leistung unbekannt"}
-                      {point.chargingStop.chargingTimeMin !== null &&
-                        ` · ca. ${formatDuration(point.chargingStop.chargingTimeMin)} laden (${point.chargingStop.socOnArrivalPercent.toFixed(0)}% → ${point.chargingStop.socAfterChargingPercent.toFixed(0)}%)`}
-                    </p>
+                    <>
+                      <p className="text-xs text-black/50 dark:text-white/50">
+                        {point.chargingStop.station.power_kw ? `${point.chargingStop.station.power_kw} kW` : "Leistung unbekannt"}
+                        {point.chargingStop.chargingTimeMin !== null &&
+                          ` · ca. ${formatDuration(point.chargingStop.chargingTimeMin)} laden (${point.chargingStop.socOnArrivalPercent.toFixed(0)}% → ${point.chargingStop.socAfterChargingPercent.toFixed(0)}%)`}
+                      </p>
+                      <span
+                        className="mt-1 inline-block rounded-full px-2 py-0.5 text-xs text-white"
+                        style={{ backgroundColor: TRAILER_PIN_COLORS[point.chargingStop.station.trailerPinState] }}
+                      >
+                        {TRAILER_PIN_LABELS[point.chargingStop.station.trailerPinState]}
+                      </span>
+                    </>
                   )}
                 </div>
               </li>
