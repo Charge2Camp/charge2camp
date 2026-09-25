@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { LegalFooterLinks } from "@/components/legal-footer-links";
 
 /** "Passwort vergessen"-Formular (Nutzerwunsch: bisher gab es KEINE
  * Moeglichkeit, das Passwort selbst zurueckzusetzen -- wer es vergessen
@@ -68,6 +69,8 @@ export default function ForgotPasswordPage() {
           Zurück zur Anmeldung
         </Link>
       </p>
+
+      <LegalFooterLinks />
     </div>
   );
 }

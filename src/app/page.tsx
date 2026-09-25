@@ -1,5 +1,6 @@
-import Link from "next/link";
 import { HomeActions } from "@/components/home/home-actions";
+import { TrustPreview } from "@/components/home/trust-preview";
+import { LegalFooterLinks } from "@/components/legal-footer-links";
 
 export default function HomePage() {
   return (
@@ -14,22 +15,15 @@ export default function HomePage() {
 
       <HomeActions />
 
-      <p className="pt-8 text-xs text-black/40 dark:text-white/40">
+      <div className="w-full max-w-sm pt-4">
+        <TrustPreview />
+      </div>
+
+      <p className="pt-4 text-xs text-black/40 dark:text-white/40">
         MVP / Testversion &middot; Kartendaten und Ladepunkte teilweise als Demo-Daten gekennzeichnet.
       </p>
 
-      {/* Auf Mobile gibt es weder Header noch Footer (siehe layout.tsx) --
-          Impressum/Datenschutz muessen trotzdem "staendig verfuegbar" sein
-          (§5 DDG), deshalb hier direkt im Seiteninhalt der oeffentlich ohne
-          Login erreichbaren Startseite verlinkt. */}
-      <p className="flex gap-4 text-xs text-black/40 dark:text-white/40">
-        <Link href="/impressum" className="hover:underline">
-          Impressum
-        </Link>
-        <Link href="/datenschutz" className="hover:underline">
-          Datenschutz
-        </Link>
-      </p>
+      <LegalFooterLinks />
     </div>
   );
 }

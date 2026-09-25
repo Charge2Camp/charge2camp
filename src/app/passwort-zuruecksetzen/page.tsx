@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { translateErrorMessage } from "@/lib/action-result";
+import { LegalFooterLinks } from "@/components/legal-footer-links";
 
 /** Formular fuer den zweiten Schritt von "Passwort vergessen" -- erreichbar
  * nur ueber den Link aus der Reset-E-Mail (via /auth/callback, das den
@@ -68,6 +69,7 @@ export default function ResetPasswordPage() {
         <Link href="/passwort-vergessen" className="text-sm text-route hover:underline">
           Neuen Link anfordern
         </Link>
+        <LegalFooterLinks />
       </div>
     );
   }
@@ -104,7 +106,7 @@ export default function ResetPasswordPage() {
             />
           </label>
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p className="text-sm text-error">{error}</p>}
 
           <button
             type="submit"
@@ -115,6 +117,8 @@ export default function ResetPasswordPage() {
           </button>
         </form>
       )}
+
+      <LegalFooterLinks />
     </div>
   );
 }

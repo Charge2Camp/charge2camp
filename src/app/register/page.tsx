@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { translateErrorMessage } from "@/lib/action-result";
+import { LegalFooterLinks } from "@/components/legal-footer-links";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -71,7 +72,7 @@ export default function RegisterPage() {
           />
         </label>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-error">{error}</p>}
         {message && <p className="text-sm text-route">{message}</p>}
 
         <button
@@ -89,6 +90,8 @@ export default function RegisterPage() {
           Anmelden
         </Link>
       </p>
+
+      <LegalFooterLinks />
     </div>
   );
 }

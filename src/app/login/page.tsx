@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { translateErrorMessage } from "@/lib/action-result";
+import { LegalFooterLinks } from "@/components/legal-footer-links";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -74,7 +75,7 @@ export default function LoginPage() {
           Passwort vergessen?
         </Link>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-error">{error}</p>}
 
         <button
           type="submit"
@@ -91,6 +92,8 @@ export default function LoginPage() {
           Registrieren
         </Link>
       </p>
+
+      <LegalFooterLinks />
     </div>
   );
 }

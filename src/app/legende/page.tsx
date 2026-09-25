@@ -1,6 +1,4 @@
-import { redirect } from "next/navigation";
 import Image from "next/image";
-import { createClient } from "@/lib/supabase/server";
 import {
   CAMPSITE_PIN_ICON_SRC,
   REVIEW_STATE_COLORS,
@@ -94,14 +92,15 @@ function SectionHeading({ title, subtitle }: { title: string; subtitle?: string 
   );
 }
 
-export default async function LegendePage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) redirect("/login");
-
+// Bewusst OHNE Login-Pflicht (anders als der Rest des Produkts, s.
+// require-user.ts): rein referenzieller Inhalt ohne jeden Account-Bezug
+// (keine Nutzerdaten, keine DB-Abfrage) -- lag zuvor unter /profil/legende
+// und war dadurch trotz fehlendem Account-Bezug login-pflichtig, ein
+// dokumentierter IA-Bruch (UX-05.5, docs/design/ux-problems.md). Bleibt
+// zusaetzlich in der Profil-Navigation verlinkt (profile-sidebar.tsx,
+// profile-sub-nav.tsx, profil/page.tsx), jetzt aber auch ohne Login direkt
+// unter /legende erreichbar.
+export default function LegendePage() {
   return (
     <div className="flex flex-col gap-10">
       <section>
@@ -241,7 +240,7 @@ export default async function LegendePage() {
         <div className="flex flex-col gap-3">
           <div className="flex items-start gap-3 rounded-lg border border-black/10 p-3 dark:border-white/10">
             <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-black/15 text-xl leading-none dark:border-white/15">
-              <span className="text-red-600">♥</span>
+              <span className="text-error">♥</span>
             </span>
             <p className="mt-1.5 text-sm text-black/60 dark:text-white/60">
               Favorit -- zum Merken eines Ladepunkts oder Campingplatzes (♡ = nicht gemerkt, ♥ =
