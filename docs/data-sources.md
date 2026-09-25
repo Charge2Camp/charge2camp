@@ -305,6 +305,7 @@ werden.
 | Adria (technische Daten, aufbereitet von promobil.de aus Herstellerangaben) | https://www.promobil.de | öffentlich zugängliche Spezifikationsdaten | 18 Modelle (Serien Altea, Adora) | 2026-09-25 |
 | Fendt (technische Daten, aufbereitet von promobil.de aus Herstellerangaben) | https://www.promobil.de | öffentlich zugängliche Spezifikationsdaten | 18 Modelle (Serien Tendenza, Bianco) | 2026-09-25 |
 | Bürstner (technische Daten, aufbereitet von promobil.de aus Herstellerangaben) | https://www.promobil.de | öffentlich zugängliche Spezifikationsdaten | 17 Modelle (Serien Averso, Premio) | 2026-09-25 |
+| ev-database.org Anhängelast-Cheatsheet (Markenabgleich) | https://ev-database.org/de/cheatsheet/anhaengelast-elektroauto | öffentlich zugängliche Vergleichsdaten, Referenzangabe der Quelle | 13 zuvor fehlende Marken ergänzt (Land Rover, Lotus, NIO, VinFast, Smart, Lynk&Co, Mini, Subaru, DS Automobiles, Jeep, Mitsubishi, Maserati, Alpine) -- je 1 Modell, `vehicle_models` deckt damit 52 Marken ab | 2026-09-25 |
 
 Alle Einträge tragen `source` und `verification_status = 'unverified'` (bzw.
 `'verified'` bei Hobby/Dethleffs/Tabbert, da direkt aus offiziellen
