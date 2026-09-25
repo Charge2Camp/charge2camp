@@ -172,6 +172,43 @@ export interface CaravanModel {
   created_at: string;
 }
 
+export interface VehicleModelSuggestion {
+  id: number;
+  user_id: string;
+  manufacturer: string;
+  model: string;
+  variant: string | null;
+  battery_capacity_kwh: number | null;
+  consumption_kwh_per_100km: number | null;
+  charging_power_kw: number | null;
+  range_km: number | null;
+  max_towing_weight_braked_kg: number | null;
+  length_m: number | null;
+  notes: string | null;
+  status: "pending" | "approved" | "rejected";
+  created_model_id: string | null;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
+  created_at: string;
+}
+
+export interface CaravanModelSuggestion {
+  id: number;
+  user_id: string;
+  manufacturer: string;
+  model: string;
+  series: string | null;
+  length_m: number | null;
+  width_m: number | null;
+  height_m: number | null;
+  notes: string | null;
+  status: "pending" | "approved" | "rejected";
+  created_model_id: string | null;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
+  created_at: string;
+}
+
 export interface MissingStationReport {
   id: number;
   user_id: string;

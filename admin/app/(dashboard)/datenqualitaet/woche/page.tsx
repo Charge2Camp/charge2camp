@@ -38,6 +38,36 @@ interface CampsiteRow {
   updated_at: string;
 }
 
+interface VehicleModelRow {
+  id: string;
+  manufacturer: string;
+  model: string;
+  variant: string;
+  created_at: string;
+}
+
+interface CaravanModelRow {
+  id: string;
+  manufacturer: string;
+  model: string;
+  series: string | null;
+  created_at: string;
+}
+
+interface VehicleModelSuggestionRow {
+  id: number;
+  manufacturer: string;
+  model: string;
+  created_at: string;
+}
+
+interface CaravanModelSuggestionRow {
+  id: number;
+  manufacturer: string;
+  model: string;
+  created_at: string;
+}
+
 export default async function WeeklyChangesPage() {
   const supabase = createServiceClient();
   const weekStart = startOfWeekIso();
@@ -48,6 +78,10 @@ export default async function WeeklyChangesPage() {
     { data: newCampsites, error: newCsError },
     { data: changedCampsites, error: changedCsError },
     usersResult,
+    { data: newVehicleModels, error: newVmError },
+    { data: newCaravanModels, error: newCmError },
+    { data: pendingVehicleSuggestions, error: pendingVsError },
+    { data: pendingCaravanSuggestions, error: pendingCsSuggError },
   ] = await Promise.all([
     supabase
       .schema("core")
@@ -82,9 +116,49 @@ export default async function WeeklyChangesPage() {
       .order("updated_at", { ascending: false })
       .limit(200),
     supabase.auth.admin.listUsers({ page: 1, perPage: 1000 }),
+    // Neue Referenzkatalog-Eintraege diese Woche (manuell von Admins
+    // angelegt oder aus Vorschlaegen unten uebernommen) -- Nutzerwunsch:
+    // woechentlicher Ueberblick "gibt es neue Modelle/Akku-Versionen, die
+    // uns fehlen" (siehe Migration 20261025060000 fuer die Begruendung,
+    // warum das kein automatischer externer Abgleich ist).
+    supabase
+      .from("vehicle_models")
+      .select("id, manufacturer, model, variant, created_at")
+      .gte("created_at", weekStart)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("caravan_models")
+      .select("id, manufacturer, model, series, created_at")
+      .gte("created_at", weekStart)
+      .order("created_at", { ascending: false }),
+    // Offene Nutzer-Vorschlaege bewusst NICHT auf diese Woche eingegrenzt
+    // (anders als oben) -- die Warteschlange soll immer vollstaendig
+    // sichtbar sein, unabhaengig davon, wann ein Vorschlag eingegangen ist.
+    supabase
+      .schema("enrich")
+      .from("vehicle_model_suggestion")
+      .select("id, manufacturer, model, created_at")
+      .eq("status", "pending")
+      .order("created_at", { ascending: true }),
+    supabase
+      .schema("enrich")
+      .from("caravan_model_suggestion")
+      .select("id, manufacturer, model, created_at")
+      .eq("status", "pending")
+      .order("created_at", { ascending: true }),
   ]);
 
-  const errors = [newCpError, changedCpError, newCsError, changedCsError, usersResult.error].filter(Boolean);
+  const errors = [
+    newCpError,
+    changedCpError,
+    newCsError,
+    changedCsError,
+    usersResult.error,
+    newVmError,
+    newCmError,
+    pendingVsError,
+    pendingCsSuggError,
+  ].filter(Boolean);
   if (errors.length > 0) {
     return (
       <div className="flex flex-col gap-4">
@@ -103,6 +177,10 @@ export default async function WeeklyChangesPage() {
   const newCampsiteRows = (newCampsites ?? []) as CampsiteRow[];
   const changedCampsiteRows = (changedCampsites ?? []) as CampsiteRow[];
   const newUsers = (usersResult.data?.users ?? []).filter((u) => u.created_at >= weekStart);
+  const newVehicleModelRows = (newVehicleModels ?? []) as VehicleModelRow[];
+  const newCaravanModelRows = (newCaravanModels ?? []) as CaravanModelRow[];
+  const pendingVehicleSuggestionRows = (pendingVehicleSuggestions ?? []) as VehicleModelSuggestionRow[];
+  const pendingCaravanSuggestionRows = (pendingCaravanSuggestions ?? []) as CaravanModelSuggestionRow[];
 
   return (
     <div className="flex flex-col gap-8">
@@ -210,6 +288,93 @@ export default async function WeeklyChangesPage() {
             </Link>
           ))}
           {changedCampsiteRows.length === 0 && <p className="text-sm text-text-muted">Keine geänderten Campingplätze diese Woche.</p>}
+        </div>
+      </section>
+
+      <section>
+        <h2 className="text-lg font-semibold">Neue Fahrzeugmodelle ({newVehicleModelRows.length})</h2>
+        <div className="mt-3 flex flex-col gap-2">
+          {newVehicleModelRows.map((m) => (
+            <Link
+              key={m.id}
+              href={`/fahrzeugmodelle/${m.id}`}
+              className="flex items-center justify-between rounded-md border border-line bg-card p-3 text-sm hover:bg-line/20"
+            >
+              <p className="font-medium">
+                {m.manufacturer} {m.model} {m.variant}
+              </p>
+              <p className="whitespace-nowrap text-xs text-text-muted">
+                {new Date(m.created_at).toLocaleDateString("de-DE", { dateStyle: "medium" })}
+              </p>
+            </Link>
+          ))}
+          {newVehicleModelRows.length === 0 && (
+            <p className="text-sm text-text-muted">Keine neuen Fahrzeugmodelle diese Woche.</p>
+          )}
+        </div>
+      </section>
+
+      <section>
+        <h2 className="text-lg font-semibold">Neue Wohnwagenmodelle ({newCaravanModelRows.length})</h2>
+        <div className="mt-3 flex flex-col gap-2">
+          {newCaravanModelRows.map((m) => (
+            <Link
+              key={m.id}
+              href={`/wohnwagenmodelle/${m.id}`}
+              className="flex items-center justify-between rounded-md border border-line bg-card p-3 text-sm hover:bg-line/20"
+            >
+              <p className="font-medium">
+                {m.manufacturer} {m.model} {m.series ? `(${m.series})` : ""}
+              </p>
+              <p className="whitespace-nowrap text-xs text-text-muted">
+                {new Date(m.created_at).toLocaleDateString("de-DE", { dateStyle: "medium" })}
+              </p>
+            </Link>
+          ))}
+          {newCaravanModelRows.length === 0 && (
+            <p className="text-sm text-text-muted">Keine neuen Wohnwagenmodelle diese Woche.</p>
+          )}
+        </div>
+      </section>
+
+      <section>
+        <h2 className="text-lg font-semibold">Offene Modellvorschläge von Nutzern ({pendingVehicleSuggestionRows.length + pendingCaravanSuggestionRows.length})</h2>
+        <p className="mt-1 text-sm text-text-muted">
+          Manuell in &quot;Mein Gespann&quot; eingetragene Fahrzeuge/Wohnwagen ohne Katalog-Treffer, die Nutzer als
+          neues Modell vorgeschlagen haben -- wartet auf Prüfung, unabhängig vom Zeitraum dieser Woche.
+        </p>
+        <div className="mt-3 flex flex-col gap-2">
+          {pendingVehicleSuggestionRows.map((s) => (
+            <Link
+              key={`v-${s.id}`}
+              href={`/fahrzeugmodelle/vorschlaege/${s.id}`}
+              className="flex items-center justify-between rounded-md border border-line bg-card p-3 text-sm hover:bg-line/20"
+            >
+              <p className="font-medium">
+                {s.manufacturer} {s.model} <span className="text-text-muted">(Fahrzeug)</span>
+              </p>
+              <p className="whitespace-nowrap text-xs text-text-muted">
+                {new Date(s.created_at).toLocaleDateString("de-DE", { dateStyle: "medium" })}
+              </p>
+            </Link>
+          ))}
+          {pendingCaravanSuggestionRows.map((s) => (
+            <Link
+              key={`c-${s.id}`}
+              href={`/wohnwagenmodelle/vorschlaege/${s.id}`}
+              className="flex items-center justify-between rounded-md border border-line bg-card p-3 text-sm hover:bg-line/20"
+            >
+              <p className="font-medium">
+                {s.manufacturer} {s.model} <span className="text-text-muted">(Wohnwagen)</span>
+              </p>
+              <p className="whitespace-nowrap text-xs text-text-muted">
+                {new Date(s.created_at).toLocaleDateString("de-DE", { dateStyle: "medium" })}
+              </p>
+            </Link>
+          ))}
+          {pendingVehicleSuggestionRows.length === 0 && pendingCaravanSuggestionRows.length === 0 && (
+            <p className="text-sm text-text-muted">Keine offenen Modellvorschläge.</p>
+          )}
         </div>
       </section>
 

@@ -31,7 +31,9 @@ const NAV_GROUPS = [
     label: "Referenzkataloge",
     items: [
       { href: "/fahrzeugmodelle", label: "Fahrzeugmodelle" },
+      { href: "/fahrzeugmodelle/vorschlaege", label: "Fahrzeug-Vorschläge" },
       { href: "/wohnwagenmodelle", label: "Wohnwagenmodelle" },
+      { href: "/wohnwagenmodelle/vorschlaege", label: "Wohnwagen-Vorschläge" },
     ],
   },
   {

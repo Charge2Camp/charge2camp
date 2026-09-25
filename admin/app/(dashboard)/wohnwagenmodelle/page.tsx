@@ -46,14 +46,22 @@ export default async function CaravanModelsPage({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <h1 className="text-2xl font-semibold">Wohnwagenmodelle</h1>
-        <Link
-          href="/wohnwagenmodelle/neu"
-          className="min-h-11 rounded-md bg-action px-4 py-2 text-sm font-medium hover:bg-action-hover"
-        >
-          + Modell hinzufügen
-        </Link>
+        <div className="flex gap-2">
+          <Link
+            href="/wohnwagenmodelle/vorschlaege"
+            className="min-h-11 rounded-md border border-line px-4 py-2 text-sm font-medium hover:bg-line/20"
+          >
+            Vorschläge von Nutzern
+          </Link>
+          <Link
+            href="/wohnwagenmodelle/neu"
+            className="min-h-11 rounded-md bg-action px-4 py-2 text-sm font-medium hover:bg-action-hover"
+          >
+            + Modell hinzufügen
+          </Link>
+        </div>
       </div>
       <p className="text-sm text-text-muted">
         {count ?? 0} Modelle im Katalog -- Grundlage für die Autofill-Auswahl im Routenplaner-Profil der Haupt-App.

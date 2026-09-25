@@ -314,6 +314,34 @@ für Reichweite, Abmessungen oder Anhängertauglichkeits-Kriterien einer
 Ladestation; die frühere Knaus-Lücke beim zulässigen Gesamtgewicht ist
 dadurch gegenstandslos.
 
+### Laufende Erweiterung: Nutzer-Vorschläge statt automatischem externem Check
+
+Nutzerwunsch (2026-09-25): 1x/Woche prüfen, ob neue Fahrzeug-/Wohnwagenmodelle
+oder Akku-Versionen fehlen, sichtbar im Admin-Dashboard unter
+"Neu & geändert diese Woche". Recherche (2026-09-25) ergab **keine
+kostenlose, zuverlässige externe API** für diesen Zweck:
+
+| Anbieter | URL | Ergebnis |
+|---|---|---|
+| API Ninjas Electric Vehicle API | https://api-ninjas.com/api/electricvehicle | Kostenloser Tier vorhanden, aber Batteriekapazität/Reichweite/Top-Speed sind Premium-Felder (kostenpflichtig) |
+| EV Database Data Services | https://ev-database.org/data-services-api | Kostenpflichtiger Export/API |
+| vehicledatabases.com, car2db.com, carapi.app | — | Kostenpflichtig, ohne Wohnwagen-Abdeckung |
+| Wohnwagen (Caravan-Abmessungen) | — | Keine offene/kostenlose API gefunden, nur die oben gelisteten statischen Herstellerquellen |
+
+Gemäß CLAUDE.md Grundsatz 4 (kostenoptimiert, keine kostenpflichtige API bei
+fehlender kostenloser Alternative) und Grundsatz 2 (keine Scheindaten) wird
+daher **kein automatischer externer Abgleich** gebaut. Stattdessen: Nutzer,
+die in "Mein Gespann" ein Fahrzeug/Wohnwagen ohne Katalog-Treffer manuell
+eintragen, können es optional als neues Modell vorschlagen (Checkbox in
+`vehicle-form.tsx`/`caravan-form.tsx`). Landet in
+`enrich.vehicle_model_suggestion`/`enrich.caravan_model_suggestion`
+(Migration `20261025060000`), Admin prüft/übernimmt über
+`/fahrzeugmodelle/vorschlaege` bzw. `/wohnwagenmodelle/vorschlaege`. Die
+wöchentliche Übersicht (`/datenqualitaet/woche`) zeigt sowohl neu
+angelegte Katalogeinträge dieser Woche als auch offene Vorschläge. Diese
+Einschätzung sollte neu geprüft werden, falls künftig eine kostenlose EV-
+oder Caravan-Daten-API verfügbar wird.
+
 ## Ausdrücklich NICHT als Quelle verwendet (§34)
 
 Google Maps, PiNCAMP, camping.info sowie andere kommerzielle

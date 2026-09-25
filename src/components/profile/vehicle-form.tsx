@@ -239,6 +239,16 @@ export function VehicleForm({
         </label>
       </div>
 
+      {!isEdit && !selectedId && (
+        <label className="flex items-start gap-2 text-sm">
+          <input type="checkbox" name="suggest_new_model" className="mt-1 h-4 w-4" />
+          <span>
+            Dieses Modell fehlt noch in unserer Liste? Als neues Modell vorschlagen, damit wir es prüfen und für
+            andere Nutzer ergänzen.
+          </span>
+        </label>
+      )}
+
       {error && <p className="text-sm text-red-600">{error}</p>}
 
       <div>

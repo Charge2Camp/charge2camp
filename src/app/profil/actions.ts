@@ -73,11 +73,44 @@ export async function addVehicle(formData: FormData): Promise<ActionResult> {
     });
 
     if (error) throw new Error(error.message);
+    await maybeSuggestVehicleModel(supabase, userId, formData);
     revalidatePath("/profil");
     revalidatePath("/profil/gespann");
     return { ok: true, data: undefined };
   } catch (err) {
     return { ok: false, error: actionErrorMessage(err, "Elektroauto konnte nicht gespeichert werden.") };
+  }
+}
+
+/** Nutzerwunsch: ein manuell (ohne Katalog-Treffer) eingetragenes Fahrzeug
+ * soll optional als neues Modell fuer den Referenzkatalog vorgeschlagen
+ * werden koennen ("Als neues Modell vorschlagen"-Checkbox in
+ * vehicle-form.tsx), damit andere Nutzer es kuenftig per Autofill finden.
+ * Landet in enrich.vehicle_model_suggestion, status='pending', bis ein
+ * Admin sie prueft (siehe admin/.../fahrzeugmodelle/vorschlaege) --
+ * absichtlich EIGENER try/catch, damit ein Fehler beim Vorschlag nie das
+ * bereits erfolgreiche Speichern des Fahrzeugs selbst scheitern laesst. */
+async function maybeSuggestVehicleModel(
+  supabase: Awaited<ReturnType<typeof requireUserId>>["supabase"],
+  userId: string,
+  formData: FormData
+) {
+  if (formData.get("suggest_new_model") !== "on") return;
+  if (formData.get("model_reference_id")) return; // bereits ein Katalog-Modell gewaehlt
+  try {
+    await requireActionRateLimit("suggest-vehicle-model", userId, { windowSeconds: 3600, maxRequests: 20 });
+    await supabase.schema("enrich").from("vehicle_model_suggestion").insert({
+      user_id: userId,
+      manufacturer: requireString(formData.get("manufacturer")),
+      model: requireString(formData.get("model")),
+      battery_capacity_kwh: parseOptionalNumber(formData.get("battery_capacity_kwh")),
+      consumption_kwh_per_100km: parseOptionalNumber(formData.get("consumption_kwh_per_100km")),
+      charging_power_kw: parseOptionalNumber(formData.get("charging_power_kw")),
+      range_km: parseOptionalNumber(formData.get("range_km")),
+      length_m: parseOptionalNumber(formData.get("length_m")),
+    });
+  } catch {
+    // Best-effort -- das Fahrzeug selbst ist bereits gespeichert.
   }
 }
 
@@ -143,11 +176,35 @@ export async function addCaravan(formData: FormData): Promise<ActionResult> {
     });
 
     if (error) throw new Error(error.message);
+    await maybeSuggestCaravanModel(supabase, userId, formData);
     revalidatePath("/profil");
     revalidatePath("/profil/gespann");
     return { ok: true, data: undefined };
   } catch (err) {
     return { ok: false, error: actionErrorMessage(err, "Wohnwagen konnte nicht gespeichert werden.") };
+  }
+}
+
+/** Siehe maybeSuggestVehicleModel -- gleiches Prinzip fuer Wohnwagen. */
+async function maybeSuggestCaravanModel(
+  supabase: Awaited<ReturnType<typeof requireUserId>>["supabase"],
+  userId: string,
+  formData: FormData
+) {
+  if (formData.get("suggest_new_model") !== "on") return;
+  if (formData.get("model_reference_id")) return;
+  try {
+    await requireActionRateLimit("suggest-caravan-model", userId, { windowSeconds: 3600, maxRequests: 20 });
+    await supabase.schema("enrich").from("caravan_model_suggestion").insert({
+      user_id: userId,
+      manufacturer: requireString(formData.get("manufacturer")),
+      model: requireString(formData.get("model")),
+      length_m: parseOptionalNumber(formData.get("length_m")),
+      width_m: parseOptionalNumber(formData.get("width_m")),
+      height_m: parseOptionalNumber(formData.get("height_m")),
+    });
+  } catch {
+    // Best-effort -- der Wohnwagen selbst ist bereits gespeichert.
   }
 }
 
