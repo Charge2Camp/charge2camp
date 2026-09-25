@@ -252,6 +252,16 @@ OSM-Tag-Abdeckung ist lückenhaft — die Prüfung ist eine Best-Effort-Warnung,
 keine verlässliche Vollständigkeitsgarantie, und ersetzt keine
 Beschilderung vor Ort.
 
+**Hinweis Overpass API ("In der Nähe", Ladepunkt-Detailseite):** Zweite
+Nutzung derselben, bereits freigegebenen Datenquelle über
+[src/lib/providers/nearby-poi/overpass.ts](../src/lib/providers/nearby-poi/overpass.ts):
+zeigt Toilette/Restaurant/Campingfachmarkt/Campingplatz im 1-km-Umkreis
+einer Ladesäule. Ein kombinierter Request pro Seitenaufruf statt vier
+Einzelanfragen, Ergebnis serverseitig 7 Tage gecacht (`next.revalidate`) aus
+Rücksicht auf den geteilten Dienst. Schlägt die Anfrage fehl, wird das
+ehrlich als "nicht verfügbar" angezeigt statt eine leere Liste
+vorzutäuschen.
+
 ## Geocoding
 
 | Anbieter | URL | Lizenz | Kosten | Status |

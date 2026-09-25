@@ -15,6 +15,8 @@ import { ReviewStateBadge } from "@/components/charging-stations/review-state-ba
 import { ListNavigation } from "@/components/list-navigation";
 import { fetchChargingStationDetailExtras } from "@/lib/charging-station-detail";
 import type { ChargingStationView } from "@/lib/charging-stations";
+import { fetchNearbyPoi } from "@/lib/nearby-poi";
+import { StationNearbyPoi } from "@/components/charging-stations/station-nearby-poi";
 
 export default async function ChargingStationDetailPage({
   params,
@@ -53,7 +55,10 @@ export default async function ChargingStationDetailPage({
   const pinState = getTrailerPinState(trailer);
   const stationView: ChargingStationView = { ...s, connectors: stationConnectors, trailer };
 
-  const extras = await fetchChargingStationDetailExtras(id, user?.id);
+  const [extras, nearbyPoi] = await Promise.all([
+    fetchChargingStationDetailExtras(id, user?.id),
+    fetchNearbyPoi({ latitude: s.lat, longitude: s.lon }),
+  ]);
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
@@ -123,6 +128,8 @@ export default async function ChargingStationDetailPage({
           <RigLengthDistributionChart distribution={extras.rigLengthDistribution} />
         </div>
       </section>
+
+      <StationNearbyPoi result={nearbyPoi} />
 
       <StationReviewsList
         reviews={extras.reviews}
