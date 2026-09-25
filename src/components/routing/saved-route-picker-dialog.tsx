@@ -69,7 +69,7 @@ export function SavedRoutePickerDialog({
                     <span className="text-xs text-text-muted">
                       {route.startDisplayName} → {route.endDisplayName}
                     </span>
-                    <span className="text-xs text-black/40 dark:text-white/40">
+                    <span className="text-xs text-text-muted">
                       Gespeichert am {formatDate(route.createdAt)}
                     </span>
                   </button>

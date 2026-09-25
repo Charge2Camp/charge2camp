@@ -768,7 +768,7 @@ export function RoutePlannerForm({
         <button
           type="button"
           onClick={handleNewPlanning}
-          className="min-h-11 w-fit rounded-md border border-black/15 px-4 py-2 text-sm font-medium hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/5"
+          className="min-h-11 w-fit rounded-md border border-line-strong px-4 py-2 text-sm font-medium hover:bg-black/5 dark:hover:bg-white/5"
         >
           Neue Routenplanung
         </button>
@@ -776,7 +776,7 @@ export function RoutePlannerForm({
         <button
           type="button"
           onClick={() => setSavedRouteDialogOpen(true)}
-          className="min-h-11 w-fit rounded-md border border-black/15 px-4 py-2 text-sm font-medium hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/5"
+          className="min-h-11 w-fit rounded-md border border-line-strong px-4 py-2 text-sm font-medium hover:bg-black/5 dark:hover:bg-white/5"
         >
           Gespeicherte Route öffnen
         </button>
@@ -839,7 +839,7 @@ export function RoutePlannerForm({
             <button
               type="button"
               onClick={() => setFavoritesDialogOpen(true)}
-              className="min-h-11 rounded-md border border-black/15 px-4 py-2 text-sm hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/5"
+              className="min-h-11 rounded-md border border-line-strong px-4 py-2 text-sm hover:bg-black/5 dark:hover:bg-white/5"
             >
               ♥ Aus Favoriten wählen
             </button>
@@ -847,7 +847,7 @@ export function RoutePlannerForm({
               <button
                 type="button"
                 onClick={() => setHomeDialogOpen(true)}
-                className="min-h-11 rounded-md border border-black/15 px-4 py-2 text-sm hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/5"
+                className="min-h-11 rounded-md border border-line-strong px-4 py-2 text-sm hover:bg-black/5 dark:hover:bg-white/5"
               >
                 🏠 Zuhause verwenden
               </button>
@@ -863,7 +863,7 @@ export function RoutePlannerForm({
               onChange={setStart}
               onSelectCoordinates={setStartCoords}
               placeholder="z. B. München"
-              className="w-full rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+              className="w-full rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
             />
             {startCoords && (
               <>
@@ -881,7 +881,7 @@ export function RoutePlannerForm({
               value={end}
               onChange={setEnd}
               placeholder="z. B. Porec, Kroatien"
-              className="w-full rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+              className="w-full rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
               localSuggestions={campsiteSuggestions}
               onSelectCoordinates={setEndCoords}
             />
@@ -929,7 +929,7 @@ export function RoutePlannerForm({
                 min="0"
                 value={consumption}
                 onChange={(e) => setConsumption(e.target.value)}
-                className="w-24 rounded-md border border-black/15 px-2 py-2 text-base dark:border-white/15 dark:bg-transparent"
+                className="w-24 rounded-md border border-line-strong px-2 py-2 text-base dark:bg-transparent"
               />
             </label>
 
@@ -943,7 +943,7 @@ export function RoutePlannerForm({
                 min="0"
                 value={minPowerKw}
                 onChange={(e) => setMinPowerKw(e.target.value)}
-                className="w-24 rounded-md border border-black/15 px-2 py-2 text-base dark:border-white/15 dark:bg-transparent"
+                className="w-24 rounded-md border border-line-strong px-2 py-2 text-base dark:bg-transparent"
               />
             </label>
           </div>
@@ -956,7 +956,7 @@ export function RoutePlannerForm({
             <button
               type="button"
               onClick={() => setProvidersOpen((o) => !o)}
-              className="mt-1 flex min-h-11 w-full items-center justify-between rounded-md border border-black/15 px-3 py-2 text-left font-medium dark:border-white/15"
+              className="mt-1 flex min-h-11 w-full items-center justify-between rounded-md border border-line-strong px-3 py-2 text-left font-medium"
             >
               <span>
                 {preferredProviders.length === 0 && avoidedProviders.length === 0
@@ -996,7 +996,7 @@ export function RoutePlannerForm({
             )}
 
             {providersOpen && (
-              <div className="mt-2 rounded-md border border-black/15 p-3 dark:border-white/15">
+              <div className="mt-2 rounded-md border border-line-strong p-3">
                 {(initialPreferredProviders.length > 0 || initialAvoidedProviders.length > 0) && (
                   <p className="mb-2 text-xs text-text-muted">
                     Vorausgewählt aus deinem Profil (&quot;Mein Gespann&quot;) -- du kannst die Auswahl hier für
@@ -1048,7 +1048,7 @@ export function RoutePlannerForm({
 
           <div className="flex flex-col gap-2 sm:col-span-2">
             <p className="text-sm font-medium">Manuelle Zwischenstopps (optional)</p>
-            <p className="-mt-1 text-xs text-black/40 dark:text-white/40">
+            <p className="-mt-1 text-xs text-text-muted">
               Orte, die die Route zwingend durchfahren soll (z. B. ein Campingplatz oder eine
               Sehenswürdigkeit) -- unabhängig davon, ob dort geladen werden muss.
             </p>
@@ -1064,14 +1064,14 @@ export function RoutePlannerForm({
                       setManualStopQueries(next);
                     }}
                     placeholder="z. B. Camping Seeblick, Prien am Chiemsee"
-                    className="w-full rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+                    className="w-full rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
                   />
                 </div>
                 <button
                   type="button"
                   onClick={() => setManualStopQueries(manualStopQueries.filter((_, i) => i !== index))}
                   aria-label="Zwischenstopp entfernen"
-                  className="flex min-h-11 min-w-11 items-center justify-center rounded-md border border-black/15 text-base hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/5"
+                  className="flex min-h-11 min-w-11 items-center justify-center rounded-md border border-line-strong text-base hover:bg-black/5 dark:hover:bg-white/5"
                 >
                   ✕
                 </button>
@@ -1080,7 +1080,7 @@ export function RoutePlannerForm({
             <button
               type="button"
               onClick={() => setManualStopQueries([...manualStopQueries, ""])}
-              className="w-fit min-h-11 rounded-md border border-black/15 px-4 py-2 text-sm hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/5"
+              className="w-fit min-h-11 rounded-md border border-line-strong px-4 py-2 text-sm hover:bg-black/5 dark:hover:bg-white/5"
             >
               + Zwischenstopp hinzufügen
             </button>
@@ -1122,7 +1122,7 @@ export function RoutePlannerForm({
                   unit=" km"
                   max={MAX_DETOUR_TOLERANCE_KM}
                 />
-                <p className="mt-1 text-xs text-black/40 dark:text-white/40">
+                <p className="mt-1 text-xs text-text-muted">
                   Wie viele km Umweg bist du bereit zu fahren, um statt des nächstgelegenen einen
                   anhängertauglicheren Ladepunkt anzusteuern?
                 </p>
@@ -1219,12 +1219,12 @@ export function RoutePlannerForm({
             </div>
           </div>
 
-          <p className="text-sm text-black/60 dark:text-white/60">
+          <p className="text-sm text-text-muted">
             {result.vehicle.manufacturer} {result.vehicle.model}
             {result.caravan && ` + ${result.caravan.manufacturer} ${result.caravan.model}`} ·{" "}
             {result.start.displayName} → {result.end.displayName}
           </p>
-          <p className="-mt-4 text-xs text-black/40 dark:text-white/40">
+          <p className="-mt-4 text-xs text-text-muted">
             Verbrauch {CONSUMPTION_SOURCE_LABELS[result.consumptionSource]}.
           </p>
 
@@ -1261,7 +1261,7 @@ export function RoutePlannerForm({
             <button
               type="button"
               onClick={() => setActiveStep(1)}
-              className="min-h-12 rounded-md border border-black/15 px-5 py-3 font-medium hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/5"
+              className="min-h-12 rounded-md border border-line-strong px-5 py-3 font-medium hover:bg-black/5 dark:hover:bg-white/5"
             >
               ← Daten anpassen
             </button>
@@ -1306,7 +1306,7 @@ export function RoutePlannerForm({
             {timeline.map((point, i) => (
               <li key={`${point.kind}-${point.distanceFromStartKm}-${i}`}>
                 {i > 0 && (
-                  <p className="pl-1 text-xs text-black/40 dark:text-white/40">
+                  <p className="pl-1 text-xs text-text-muted">
                     ↓ {(point.distanceFromStartKm - timeline[i - 1].distanceFromStartKm).toFixed(0)} km
                   </p>
                 )}
@@ -1355,14 +1355,14 @@ export function RoutePlannerForm({
                   setSaveRouteName(e.target.value);
                   setSaveSuccess(false);
                 }}
-                className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+                className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
               />
             </label>
             <button
               type="button"
               onClick={handleSaveRoute}
               disabled={savingRoute}
-              className="min-h-12 rounded-md border border-black/15 px-4 py-3 text-sm font-medium hover:bg-black/5 disabled:opacity-50 dark:border-white/15 dark:hover:bg-white/5"
+              className="min-h-12 rounded-md border border-line-strong px-4 py-3 text-sm font-medium hover:bg-black/5 disabled:opacity-50 dark:hover:bg-white/5"
             >
               {savingRoute ? "Wird gespeichert…" : "Im Profil speichern"}
             </button>
@@ -1396,7 +1396,7 @@ export function RoutePlannerForm({
                         key={segment.label}
                         href={segment.url}
                         onNavigate={() => void logRouteExportEvent("route_segment_export")}
-                        className="min-h-11 rounded-md border border-black/15 px-3 py-2.5 text-sm hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/5"
+                        className="min-h-11 rounded-md border border-line-strong px-3 py-2.5 text-sm hover:bg-black/5 dark:hover:bg-white/5"
                       >
                         {segment.label}
                       </NavigationLink>

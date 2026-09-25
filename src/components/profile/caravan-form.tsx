@@ -104,7 +104,7 @@ export function CaravanForm({
           <select
             value={manufacturer}
             onChange={(e) => handleManufacturerSelect(e.target.value)}
-            className="min-h-11 rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+            className="min-h-11 rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
           >
             <option value="">Manuell eingeben…</option>
             {manufacturers.map((m) => (
@@ -121,7 +121,7 @@ export function CaravanForm({
             value={selectedId}
             onChange={(e) => handleModelSelect(e.target.value)}
             disabled={!manufacturer}
-            className="min-h-11 rounded-md border border-black/15 px-3 py-2 text-base disabled:opacity-50 dark:border-white/15 dark:bg-transparent"
+            className="min-h-11 rounded-md border border-line-strong px-3 py-2 text-base disabled:opacity-50 dark:bg-transparent"
           >
             <option value="">Manuell eingeben…</option>
             {modelsForManufacturer.map((m) => (
@@ -142,7 +142,7 @@ export function CaravanForm({
             required
             value={form.manufacturer}
             onChange={(e) => updateField("manufacturer", e.target.value)}
-            className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+            className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
           />
         </label>
 
@@ -153,7 +153,7 @@ export function CaravanForm({
             required
             value={form.model}
             onChange={(e) => updateField("model", e.target.value)}
-            className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+            className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
           />
         </label>
 
@@ -167,7 +167,7 @@ export function CaravanForm({
             required
             value={form.length_m}
             onChange={(e) => updateField("length_m", e.target.value)}
-            className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+            className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
           />
         </label>
 
@@ -181,7 +181,7 @@ export function CaravanForm({
             required
             value={form.width_m}
             onChange={(e) => updateField("width_m", e.target.value)}
-            className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+            className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
           />
         </label>
 
@@ -195,7 +195,7 @@ export function CaravanForm({
             required
             value={form.height_m}
             onChange={(e) => updateField("height_m", e.target.value)}
-            className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+            className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
           />
         </label>
       </div>

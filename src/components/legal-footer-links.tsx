@@ -8,7 +8,7 @@ import Link from "next/link";
  * direkt im Seiteninhalt jeder dieser Seiten eingebunden. */
 export function LegalFooterLinks() {
   return (
-    <p className="flex gap-4 text-xs text-black/40 dark:text-white/40">
+    <p className="flex gap-4 text-xs text-text-muted">
       <Link href="/impressum" className="hover:underline">
         Impressum
       </Link>

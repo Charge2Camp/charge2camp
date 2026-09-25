@@ -31,9 +31,9 @@ export function ChargingStationFavoriteButton({
       disabled={pending}
       aria-label={isFavorite ? "Aus Favoriten entfernen" : "Zu Favoriten hinzufügen"}
       aria-pressed={isFavorite}
-      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-black/15 text-xl leading-none disabled:opacity-50 dark:border-white/15"
+      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-line-strong text-xl leading-none disabled:opacity-50"
     >
-      <span className={isFavorite ? "text-error" : "text-black/40 dark:text-white/40"}>
+      <span className={isFavorite ? "text-error" : "text-text-muted"}>
         {isFavorite ? "♥" : "♡"}
       </span>
     </button>

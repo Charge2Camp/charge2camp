@@ -25,7 +25,7 @@ export function CollapsibleFormSection({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="mt-6 flex min-h-11 items-center gap-2 rounded-md border border-black/15 px-4 text-sm font-medium hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/5"
+        className="mt-6 flex min-h-11 items-center gap-2 rounded-md border border-line-strong px-4 text-sm font-medium hover:bg-black/5 dark:hover:bg-white/5"
       >
         + {addLabel}
       </button>

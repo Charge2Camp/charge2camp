@@ -61,7 +61,7 @@ export default async function SavedRoutesPage() {
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <p className="font-medium">{route.name}</p>
-                  <p className="text-xs text-black/40 dark:text-white/40">
+                  <p className="text-xs text-text-muted">
                     Gespeichert am {formatDate(route.created_at)}
                   </p>
                 </div>
@@ -118,7 +118,7 @@ export default async function SavedRoutesPage() {
                                     key={segment.label}
                                     href={segment.url}
                                     onNavigate={logRouteExportEvent.bind(null, "route_segment_export")}
-                                    className="min-h-11 rounded-md border border-black/15 px-3 py-2.5 text-sm hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/5"
+                                    className="min-h-11 rounded-md border border-line-strong px-3 py-2.5 text-sm hover:bg-black/5 dark:hover:bg-white/5"
                                   >
                                     {segment.label}
                                   </NavigationLink>

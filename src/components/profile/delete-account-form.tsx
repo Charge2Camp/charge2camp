@@ -38,7 +38,7 @@ export function DeleteAccountForm({ email }: { email: string }) {
           value={confirmation}
           onChange={(e) => setConfirmation(e.target.value)}
           placeholder={email}
-          className="w-full rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+          className="w-full rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
           autoComplete="off"
         />
       </label>

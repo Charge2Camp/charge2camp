@@ -137,7 +137,7 @@ export default async function RoutePlannerPage({
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
       <h1 className="text-2xl font-semibold">Routenplaner</h1>
-      <p className="mt-1 text-sm text-black/60 dark:text-white/60">
+      <p className="mt-1 text-sm text-text-muted">
         Route mit anhängertauglichen Ladestopps für dein Gespann planen.
       </p>
 

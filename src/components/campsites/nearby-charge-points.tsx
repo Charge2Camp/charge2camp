@@ -28,7 +28,7 @@ export function NearbyChargePointsList({ points }: { points: LinkedChargePoint[]
             >
               <div>
                 <p className="font-medium">{point.name ?? point.operator}</p>
-                <p className="text-black/60 dark:text-white/60">
+                <p className="text-text-muted">
                   {point.max_power_kw ? `${point.max_power_kw} kW` : ""}
                   {" · "}
                   <span style={{ color: TRAILER_VERDICT_COLORS[point.trailerVerdict] }}>

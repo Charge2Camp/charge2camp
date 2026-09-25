@@ -197,7 +197,7 @@ export default function DatenschutzPage() {
         </p>
       </Section>
 
-      <p className="text-xs text-black/40 dark:text-white/40">
+      <p className="text-xs text-text-muted">
         Diese Erklärung beschreibt den technischen Ist-Zustand der App (Stand siehe oben) und
         ersetzt keine anwaltliche Beratung. Siehe auch:{" "}
         <Link href="/impressum" className="text-route hover:underline">

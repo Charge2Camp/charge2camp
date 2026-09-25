@@ -120,6 +120,9 @@ Immer Satzanfang groß, nie Versalien. Zeilenlänge höchstens 72 Zeichen.
 - Abstände auf 4er-Raster: 4, 8, 12, 16, 24, 32, 48, 64.
 - Keine Schatten, keine Verläufe. Tiefe entsteht durch den Wechsel von Fläche und Karte.
 - Trennlinien 1 px in `--c-line`.
+- Formular-/Bedienelement-Rahmen (Eingabefelder, Buttons mit Rahmen, Dropdowns) 1 px in
+  `--c-line-strong` — kräftiger als reine Trennlinien, damit Eingabefelder auf `--c-surface`
+  und `--c-card` als solche erkennbar bleiben.
 - Tap-Ziele mindestens 44 px. Die App wird im Auto und bei Wind bedient.
 
 ---

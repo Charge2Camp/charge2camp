@@ -117,7 +117,7 @@ export function ChargingStationFilterFields({
           defaultValue={filters.q}
           placeholder="Name des Ladepunkts"
           options={nameOptions}
-          className="w-full rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+          className="w-full rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
         />
       </label>
 

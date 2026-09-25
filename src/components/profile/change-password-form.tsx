@@ -22,7 +22,7 @@ export function ChangePasswordForm() {
           name="current_password"
           required
           autoComplete="current-password"
-          className="w-full rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+          className="w-full rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
         />
       </label>
       <label className="flex flex-col gap-1 text-sm">
@@ -33,7 +33,7 @@ export function ChangePasswordForm() {
           required
           minLength={6}
           autoComplete="new-password"
-          className="w-full rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+          className="w-full rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
         />
       </label>
       <label className="flex flex-col gap-1 text-sm">
@@ -44,7 +44,7 @@ export function ChangePasswordForm() {
           required
           minLength={6}
           autoComplete="new-password"
-          className="w-full rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+          className="w-full rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
         />
       </label>
 

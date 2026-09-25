@@ -45,7 +45,7 @@ export function StationNearbyPoi({
   return (
     <section>
       <h2 className="font-semibold">In der Nähe</h2>
-      <p className="mt-1 text-xs text-black/40 dark:text-white/40">
+      <p className="mt-1 text-xs text-text-muted">
         Umkreis 1 km, Datenquelle OpenStreetMap -- Vollständigkeit nicht garantiert.
       </p>
       <div className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2">

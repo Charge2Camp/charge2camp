@@ -79,6 +79,41 @@ Phase geprüft:
   "stark gedämpft") abbilden oder selbst Teil der Inkonsistenz sind — das
   ist erst zu klären (ggf. weitere abgestufte Tokens nötig), bevor eine
   Massenersetzung erfolgt.
+- **Geklärt und migriert (Phase 12, 2026-09-25):**
+  - `text-black/40` und `/60` (jeweils mit `dark:text-white/*`-Pendant,
+    61 Fundstellen zusammen) waren beides reine Fließtext-Abstufungen
+    ohne erkennbare eigene Bedeutung (Fine-Print/Zeitstempel bzw.
+    Sekundärtext) — beide auf Kontrast geprüft: `/40` lag unterhalb des
+    bereits migrierten `/50`-Tons (heller, also *weniger* Kontrast als
+    `text-text-muted`), Migration dorthin ist also eine
+    Kontrast-*Verbesserung*, kein Risiko. `/60` liegt knapp über
+    `text-text-muted`, bleibt nach Migration weiterhin über der
+    4.5:1-Mindestanforderung (brand-guide.md §9). Beide auf
+    `text-text-muted` migriert.
+  - `text-black/70` (22×) bewusst **nicht** migriert: mindestens eine
+    Stelle (`route-wizard-tabs.tsx`) nutzt `/70` nachweislich als
+    bewusste dritte Stufe eines Tab-Zustandssystems (aktiv → `/70`
+    "erreichbar" → `/30` "nicht erreichbar", jeweils mit passendem
+    `border-black/25`/`border-black/10`) — hier liegt tatsächlich eine
+    beabsichtigte Hierarchie vor, keine Inkonsistenz. Die übrigen
+    `/70`-Stellen (Rechtstexte, Bewertungs-Zitate, Startseiten-Subline)
+    sind zudem die am wenigsten gedämpfte, kontrastreichste Stufe —
+    eine Migration auf den helleren `text-text-muted`-Ton wäre hier das
+    einzige Risiko einer echten Kontrast-*Verschlechterung* gewesen.
+    Bleibt offen für eine spätere, gezielte Einzelfallprüfung.
+  - `border-black/15` (85×) stellte sich beim genauen Hinsehen NICHT als
+    Variante von `border-line` heraus, sondern als eigenständiges,
+    durchgängiges Muster: der De-facto-Standardrahmen für praktisch
+    jedes Formularfeld/jeden umrandeten Button app-weit, klar
+    unterscheidbar von `border-line` (reine Trennlinien). Dafür neuer
+    Token `--c-line-strong` (`border-line-strong`), s.
+    `docs/DESIGN_DECISIONS.md`.
+  - `border-black/25` (1×, `route-wizard-tabs.tsx`) bewusst nicht
+    angefasst — Teil desselben bewussten Tab-Zustandssystems wie oben.
+  - `text-black/30` (2×) bewusst nicht angefasst: eine Stelle ist Teil
+    desselben Tab-Zustandssystems, die andere (`gespann-panel.tsx`) ein
+    rein dekoratives, `aria-hidden`-Trennzeichen ohne Textbedeutung —
+    beide unkritisch, kein Konsolidierungsbedarf.
 
 ### UX-07.1 — Formularfehler ohne Token und ohne begleitendes Symbol (C, aus ci-branding-audit.md übernommen)
 

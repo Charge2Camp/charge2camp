@@ -64,6 +64,16 @@
   --c-surface: #F2F0E8;
   --c-card: #FDFCF9;
   --c-line: #E0DED4;
+  /* Phase 9 Token-Migration Rest (docs/design/ux-problems.md UX-05.1):
+     border-black/15 dark:border-white/15 war app-weit (85 Fundstellen)
+     der de-facto Standard-Rahmen fuer Formularfelder/Buttons -- klar
+     unterscheidbar von --c-line (reine Trennlinien zwischen Inhalten,
+     border-black/10). Kein Zusammenlegen mit --c-line, da Eingabefelder
+     sonst kaum noch als solche erkennbar waeren (zu geringer Kontrast zu
+     --c-surface/--c-card). Eigener Wert statt Alpha-Ueberlagerung, damit
+     der Rahmen unabhaengig vom Hintergrund (Flaeche vs. Karte) gleich
+     aussieht. */
+  --c-line-strong: #CFCCC0;
   --c-tint-trailer: #E8F5C0;
 
   --c-text: #0F3B36;
@@ -111,6 +121,7 @@
   --color-surface: var(--c-surface);
   --color-card: var(--c-card);
   --color-line: var(--c-line);
+  --color-line-strong: var(--c-line-strong);
   --color-tint-trailer: var(--c-tint-trailer);
 
   --color-text: var(--c-text);

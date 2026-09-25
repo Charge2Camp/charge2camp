@@ -30,7 +30,7 @@ export function CaravanList({ caravans, models }: { caravans: Caravan[]; models:
               <p className="font-medium">
                 {caravan.manufacturer} {caravan.model}
               </p>
-              <p className="text-black/60 dark:text-white/60">
+              <p className="text-text-muted">
                 {caravan.length_m} × {caravan.width_m} × {caravan.height_m} m
               </p>
             </div>

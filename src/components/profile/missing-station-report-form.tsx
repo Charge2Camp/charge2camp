@@ -41,7 +41,7 @@ export function MissingStationReportForm() {
           name="google_maps_url"
           required
           placeholder="https://maps.app.goo.gl/…"
-          className="w-full rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+          className="w-full rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
         />
       </label>
       <label className="flex flex-col gap-1 text-sm">
@@ -50,7 +50,7 @@ export function MissingStationReportForm() {
           name="notes"
           rows={3}
           placeholder="z. B. Name/Betreiber, wie man hinkommt, ob Anhänger durchfahren kann…"
-          className="w-full rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+          className="w-full rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
         />
       </label>
       {error && <p className="text-sm text-error">{error}</p>}

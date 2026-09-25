@@ -72,7 +72,7 @@ export function NameSuggestField({
         className={`text-base ${className ?? ""}`}
       />
       {open && suggestions.length > 0 && (
-        <ul className="absolute z-20 mt-1 max-h-60 w-full overflow-y-auto rounded-md border border-black/15 bg-white text-sm shadow-lg dark:border-white/15 dark:bg-neutral-900">
+        <ul className="absolute z-20 mt-1 max-h-60 w-full overflow-y-auto rounded-md border border-line-strong bg-white text-sm shadow-lg dark:bg-neutral-900">
           {suggestions.map((s) => (
             <li key={s}>
               <button

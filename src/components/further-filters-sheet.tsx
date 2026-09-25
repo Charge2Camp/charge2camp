@@ -22,7 +22,7 @@ export function FurtherFiltersSheet({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex min-h-11 items-center gap-2 rounded-md border border-black/15 px-4 text-sm font-medium dark:border-white/15"
+        className="flex min-h-11 items-center gap-2 rounded-md border border-line-strong px-4 text-sm font-medium"
       >
         Weitere Filter
         {activeFilterCount > 0 && (

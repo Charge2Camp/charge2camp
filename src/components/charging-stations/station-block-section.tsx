@@ -8,7 +8,7 @@ export function StationBlockSection({ stationId, isBlocked }: { stationId: strin
   return (
     <section className="mt-8 border-t border-black/10 pt-6 dark:border-white/10">
       <h2 className="font-semibold">Routenplanung</h2>
-      <p className="mt-1 text-sm text-black/60 dark:text-white/60">
+      <p className="mt-1 text-sm text-text-muted">
         Soll dieser Ladepunkt nie mehr als Ladestopp vorgeschlagen werden -- z. B. weil er
         unzuverlässig oder für dein Gespann ungeeignet ist? Blockierte Ladepunkte bleiben
         normal auffindbar, werden aber bei der Routenplanung übersprungen. Verwaltung aller

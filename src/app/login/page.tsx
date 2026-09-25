@@ -53,7 +53,7 @@ export default function LoginPage() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+            className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
           />
         </label>
 
@@ -64,7 +64,7 @@ export default function LoginPage() {
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+            className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
           />
         </label>
 
@@ -86,7 +86,7 @@ export default function LoginPage() {
         </button>
       </form>
 
-      <p className="text-sm text-black/60 dark:text-white/60">
+      <p className="text-sm text-text-muted">
         Noch kein Konto?{" "}
         <Link href="/register" className="text-route hover:underline">
           Registrieren

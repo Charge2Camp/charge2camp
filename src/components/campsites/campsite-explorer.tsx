@@ -47,7 +47,7 @@ function CampsiteCard({
       }`}
     >
       <p className="font-medium">{campsite.name}</p>
-      <p className="text-sm text-black/60 dark:text-white/60">
+      <p className="text-sm text-text-muted">
         {[campsite.city, campsite.country_code].filter(Boolean).join(", ")}
       </p>
       <div className="mt-2 flex flex-wrap gap-2 text-xs text-text-muted">
@@ -183,7 +183,7 @@ export function CampsiteExplorer({
                 <button
                   type="button"
                   onClick={() => setVisibleCount((n) => n + PAGE_SIZE)}
-                  className="min-h-11 rounded-md border border-black/15 px-4 py-2 text-sm font-medium hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/5"
+                  className="min-h-11 rounded-md border border-line-strong px-4 py-2 text-sm font-medium hover:bg-black/5 dark:hover:bg-white/5"
                 >
                   Weitere anzeigen ({visibleCampsites.length} von {campsites.length})
                 </button>

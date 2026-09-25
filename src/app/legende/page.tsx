@@ -87,7 +87,7 @@ function SectionHeading({ title, subtitle }: { title: string; subtitle?: string 
   return (
     <div>
       <h2 className="text-lg font-semibold">{title}</h2>
-      {subtitle && <p className="mt-1 text-sm text-black/60 dark:text-white/60">{subtitle}</p>}
+      {subtitle && <p className="mt-1 text-sm text-text-muted">{subtitle}</p>}
     </div>
   );
 }
@@ -105,7 +105,7 @@ export default function LegendePage() {
     <div className="flex flex-col gap-10">
       <section>
         <h2 className="text-lg font-semibold">Symbole &amp; Begriffe</h2>
-        <p className="mt-2 text-sm text-black/60 dark:text-white/60">
+        <p className="mt-2 text-sm text-text-muted">
           Diese Übersicht erklärt alle Symbole, Farben und Begriffe, die dir in charge2camp
           begegnen -- vor allem rund ums Laden mit Wohnwagen im Schlepp. So verstehst du auf
           einen Blick, worauf es bei einem Ladepunkt ankommt, bevor du hinfährst.
@@ -132,7 +132,7 @@ export default function LegendePage() {
                   />
                   {TRAILER_PIN_LABELS[state]}
                 </p>
-                <p className="mt-1 text-sm text-black/60 dark:text-white/60">{TRAILER_PIN_DESCRIPTIONS[state]}</p>
+                <p className="mt-1 text-sm text-text-muted">{TRAILER_PIN_DESCRIPTIONS[state]}</p>
               </div>
             </div>
           ))}
@@ -141,7 +141,7 @@ export default function LegendePage() {
             <Image src={CAMPSITE_PIN_ICON_SRC} alt="" width={36} height={44} className="mt-0.5 shrink-0" />
             <div>
               <p className="font-medium">Campingplatz</p>
-              <p className="mt-1 text-sm text-black/60 dark:text-white/60">
+              <p className="mt-1 text-sm text-text-muted">
                 Bewusst andersfarbig (dunkelgrün mit Zelt) -- auf derselben Karte klar von den
                 Ladepunkt-Pins unterscheidbar.
               </p>
@@ -164,7 +164,7 @@ export default function LegendePage() {
               >
                 {REVIEW_STATE_LABELS[state]}
               </span>
-              <p className="text-sm text-black/60 dark:text-white/60">{REVIEW_STATE_DESCRIPTIONS[state]}</p>
+              <p className="text-sm text-text-muted">{REVIEW_STATE_DESCRIPTIONS[state]}</p>
             </div>
           ))}
         </div>
@@ -182,7 +182,7 @@ export default function LegendePage() {
               className="rounded-lg border border-route/30 bg-route/5 p-3 text-sm font-medium text-route"
             >
               {PERSONAL_COMPATIBILITY_LABELS[state]}
-              <p className="mt-1 text-sm font-normal text-black/60 dark:text-white/60">
+              <p className="mt-1 text-sm font-normal text-text-muted">
                 {PERSONAL_COMPATIBILITY_DESCRIPTIONS[state]}
               </p>
             </div>
@@ -195,7 +195,7 @@ export default function LegendePage() {
           title="Eignung nach Gespannlänge"
           subtitle="Auf jeder Ladepunkt-Detailseite: wie die Community den Ladepunkt in verschiedenen Längenklassen einschätzt."
         />
-        <p className="text-sm text-black/60 dark:text-white/60">
+        <p className="text-sm text-text-muted">
           Bewertungen werden in fünf Längenklassen einsortiert:{" "}
           {RIG_LENGTH_BUCKETS.map((b) => b.label).join(" · ")}. Eine positive Bewertung eines
           größeren Gespanns zählt automatisch auch für alle kürzeren Klassen mit -- wer mit 13 m
@@ -229,7 +229,7 @@ export default function LegendePage() {
               <p className="flex items-center gap-1.5 font-medium">
                 <span className="text-route">✓</span> {c.label}
               </p>
-              <p className="mt-1 text-sm text-black/60 dark:text-white/60">{c.description}</p>
+              <p className="mt-1 text-sm text-text-muted">{c.description}</p>
             </div>
           ))}
         </div>
@@ -239,17 +239,17 @@ export default function LegendePage() {
         <SectionHeading title="Weitere Symbole" />
         <div className="flex flex-col gap-3">
           <div className="flex items-start gap-3 rounded-lg border border-black/10 p-3 dark:border-white/10">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-black/15 text-xl leading-none dark:border-white/15">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-line-strong text-xl leading-none">
               <span className="text-error">♥</span>
             </span>
-            <p className="mt-1.5 text-sm text-black/60 dark:text-white/60">
+            <p className="mt-1.5 text-sm text-text-muted">
               Favorit -- zum Merken eines Ladepunkts oder Campingplatzes (♡ = nicht gemerkt, ♥ =
               gemerkt). Zu finden unter „Favoriten“ in deinem Profil.
             </p>
           </div>
           <div className="flex items-start gap-3 rounded-lg border border-amber-700/30 bg-amber-700/5 p-3">
             <span className="text-xl">⚠</span>
-            <p className="text-sm text-black/60 dark:text-white/60">
+            <p className="text-sm text-text-muted">
               „Laut Quelle aktuell nicht betriebsbereit gemeldet“ -- die zuletzt bekannte
               Betriebsstatus-Meldung der Datenquelle. Kein Live-Status: Vor Ort kann sich das
               geändert haben.

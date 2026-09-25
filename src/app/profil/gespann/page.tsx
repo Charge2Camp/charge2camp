@@ -87,7 +87,7 @@ export default async function GespannPage() {
 
         <section>
           <h3 className="font-semibold">Anbieter priorisieren oder ausschließen</h3>
-          <p className="-mt-1 text-sm text-black/60 dark:text-white/60">
+          <p className="-mt-1 text-sm text-text-muted">
             Wird im Routenplaner als Standardauswahl für den Anbieter-Filter verwendet. Bevorzugte
             Anbieter werden vorgezogen, vermiedene Anbieter werden nie als Ladestopp vorgeschlagen.
           </p>

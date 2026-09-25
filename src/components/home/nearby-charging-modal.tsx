@@ -228,7 +228,7 @@ export function NearbyChargingModal({ open, onClose }: { open: boolean; onClose:
             </div>
             {locationDenied && !userLocation && (
               <div className="pointer-events-none absolute inset-x-3 bottom-3 z-10">
-                <p className="pointer-events-auto rounded-md bg-white/95 px-3 py-2 text-xs text-black/60 shadow-md dark:bg-neutral-900/95 dark:text-white/60">
+                <p className="pointer-events-auto rounded-md bg-white/95 px-3 py-2 text-xs text-text-muted shadow-md dark:bg-neutral-900/95">
                   Standort konnte nicht ermittelt werden -- über den Standort-Button oben rechts in der Karte
                   erneut versuchen, oder einfach zum gewünschten Bereich schwenken.
                 </p>
@@ -303,7 +303,7 @@ export function NearbyChargingModal({ open, onClose }: { open: boolean; onClose:
             <Link
               href={`/ladepunkte${fullSearchParams.toString() ? `?${fullSearchParams.toString()}` : ""}`}
               onClick={onClose}
-              className="flex min-h-12 w-full items-center justify-center rounded-md border border-black/15 px-4 text-sm font-medium hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/10"
+              className="flex min-h-12 w-full items-center justify-center rounded-md border border-line-strong px-4 text-sm font-medium hover:bg-black/5 dark:hover:bg-white/10"
             >
               Alle Ergebnisse & weitere Filter ansehen →
             </Link>

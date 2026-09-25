@@ -163,7 +163,7 @@ function ChargingStationCard({
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="font-medium">{station.name ?? station.operator}</p>
-          <p className="text-sm text-black/60 dark:text-white/60">{station.operator}</p>
+          <p className="text-sm text-text-muted">{station.operator}</p>
         </div>
         <OperationalBadge isOperational={station.is_operational} />
       </div>
@@ -533,7 +533,7 @@ export function ChargingStationMapExplorer({
             <button
               type="button"
               onClick={() => setViewMode("map")}
-              className="flex min-h-11 items-center gap-1.5 rounded-md border border-black/15 px-4 text-sm font-medium hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/10"
+              className="flex min-h-11 items-center gap-1.5 rounded-md border border-line-strong px-4 text-sm font-medium hover:bg-black/5 dark:hover:bg-white/10"
             >
               ← Zur Karte
             </button>
@@ -547,7 +547,7 @@ export function ChargingStationMapExplorer({
                 <select
                   value={sortOption}
                   onChange={(e) => handleSortChange(e.target.value as SortOption)}
-                  className="min-h-11 rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+                  className="min-h-11 rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
                 >
                   {(Object.keys(SORT_LABELS) as SortOption[]).map((option) => (
                     <option key={option} value={option}>
@@ -585,7 +585,7 @@ export function ChargingStationMapExplorer({
                 <button
                   type="button"
                   onClick={() => setVisibleCount((n) => n + PAGE_SIZE)}
-                  className="mt-3 min-h-11 w-full rounded-md border border-black/15 px-4 text-sm font-medium hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/5"
+                  className="mt-3 min-h-11 w-full rounded-md border border-line-strong px-4 text-sm font-medium hover:bg-black/5 dark:hover:bg-white/5"
                 >
                   Weitere anzeigen ({Math.min(visibleCount, sortedStations.length)} von {sortedStations.length})
                 </button>

@@ -119,7 +119,7 @@ export function VehicleForm({
           <select
             value={manufacturer}
             onChange={(e) => handleManufacturerSelect(e.target.value)}
-            className="min-h-11 rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+            className="min-h-11 rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
           >
             <option value="">Manuell eingeben…</option>
             {manufacturers.map((m) => (
@@ -136,7 +136,7 @@ export function VehicleForm({
             value={selectedId}
             onChange={(e) => handleModelSelect(e.target.value)}
             disabled={!manufacturer}
-            className="min-h-11 rounded-md border border-black/15 px-3 py-2 text-base disabled:opacity-50 dark:border-white/15 dark:bg-transparent"
+            className="min-h-11 rounded-md border border-line-strong px-3 py-2 text-base disabled:opacity-50 dark:bg-transparent"
           >
             <option value="">Manuell eingeben…</option>
             {modelsForManufacturer.map((m) => (
@@ -157,7 +157,7 @@ export function VehicleForm({
             required
             value={form.manufacturer}
             onChange={(e) => updateField("manufacturer", e.target.value)}
-            className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+            className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
           />
         </label>
 
@@ -168,7 +168,7 @@ export function VehicleForm({
             required
             value={form.model}
             onChange={(e) => updateField("model", e.target.value)}
-            className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+            className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
           />
         </label>
 
@@ -182,7 +182,7 @@ export function VehicleForm({
             required
             value={form.battery_capacity_kwh}
             onChange={(e) => updateField("battery_capacity_kwh", e.target.value)}
-            className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+            className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
           />
         </label>
 
@@ -195,7 +195,7 @@ export function VehicleForm({
             min="0"
             value={form.consumption_kwh_per_100km}
             onChange={(e) => updateField("consumption_kwh_per_100km", e.target.value)}
-            className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+            className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
           />
         </label>
 
@@ -208,7 +208,7 @@ export function VehicleForm({
             min="0"
             value={form.charging_power_kw}
             onChange={(e) => updateField("charging_power_kw", e.target.value)}
-            className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+            className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
           />
         </label>
 
@@ -221,7 +221,7 @@ export function VehicleForm({
             min="0"
             value={form.range_km}
             onChange={(e) => updateField("range_km", e.target.value)}
-            className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+            className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
           />
         </label>
 
@@ -234,7 +234,7 @@ export function VehicleForm({
             min="0"
             value={form.length_m}
             onChange={(e) => updateField("length_m", e.target.value)}
-            className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+            className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
           />
         </label>
       </div>

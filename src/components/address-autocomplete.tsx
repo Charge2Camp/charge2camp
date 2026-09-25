@@ -196,7 +196,7 @@ export function AddressAutocomplete({
         </p>
       )}
       {open && hasSuggestions && (
-        <ul className="absolute z-20 mt-1 max-h-60 w-full overflow-y-auto rounded-md border border-black/15 bg-white text-sm shadow-lg dark:border-white/15 dark:bg-neutral-900">
+        <ul className="absolute z-20 mt-1 max-h-60 w-full overflow-y-auto rounded-md border border-line-strong bg-white text-sm shadow-lg dark:bg-neutral-900">
           {combinedItems.map((item, i) => (
             <li key={item.type === "local" ? `local-${item.suggestion.id}` : `remote-${i}`}>
               <button

@@ -85,7 +85,7 @@ export function FavoritesPickerDialog({
               <button
                 type="button"
                 onClick={() => setSelected(null)}
-                className="min-h-11 self-start text-sm text-black/60 hover:underline dark:text-white/60"
+                className="min-h-11 self-start text-sm text-text-muted hover:underline"
               >
                 ← Zurück zur Liste
               </button>

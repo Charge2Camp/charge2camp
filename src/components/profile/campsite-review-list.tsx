@@ -99,7 +99,7 @@ function EditForm({ review, onCancel }: { review: CampsiteReviewWithCampsite; on
         name="comment"
         rows={2}
         defaultValue={review.comment ?? ""}
-        className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+        className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
       />
 
       {error && <p className="text-sm text-error">{error}</p>}
@@ -186,7 +186,7 @@ export function CampsiteReviewList({ reviews }: { reviews: CampsiteReviewWithCam
                 </Link>
                 <span>★ {review.rating}/5</span>
               </div>
-              <p className="text-xs text-black/40 dark:text-white/40">{formatReviewMonth(review.created_at)}</p>
+              <p className="text-xs text-text-muted">{formatReviewMonth(review.created_at)}</p>
               <p className="mt-1 text-xs text-text-muted">
                 Laden auf dem Platz: {review.charging_on_site ? "ja" : "nein"} · Fußläufig nutzbar:{" "}
                 {review.charging_walkable ? "ja" : "nein"}

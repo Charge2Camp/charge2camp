@@ -312,7 +312,7 @@ export default async function CampsiteDetailPage({
           <NearbyChargePointsList points={nearbyListChargePoints} />
         </section>
       ) : (
-        <p className="mt-8 text-xs text-black/40 dark:text-white/40">
+        <p className="mt-8 text-xs text-text-muted">
           Keine Ladepunkte innerhalb von 15 Gehminuten bekannt (oder noch keine Fußweg-Verknüpfung für diesen
           Campingplatz berechnet).
         </p>
@@ -333,7 +333,7 @@ export default async function CampsiteDetailPage({
               >
                 <div className="flex items-baseline justify-between gap-2">
                   <p className="font-medium">★ {review.rating}/5</p>
-                  <span className="shrink-0 text-xs text-black/40 dark:text-white/40">
+                  <span className="shrink-0 text-xs text-text-muted">
                     {formatReviewMonth(review.created_at)}
                   </span>
                 </div>

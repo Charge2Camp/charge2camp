@@ -104,7 +104,7 @@ export default async function CommunityPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
       <h1 className="text-2xl font-semibold">Community</h1>
-      <p className="mt-1 text-sm text-black/60 dark:text-white/60">
+      <p className="mt-1 text-sm text-text-muted">
         Neueste Bewertungen von Campingplätzen und Ladepunkten.
       </p>
 
@@ -120,7 +120,7 @@ export default async function CommunityPage() {
               className="rounded-md border border-black/10 p-3 text-sm dark:border-white/10"
             >
               {entry.node}
-              <p className="mt-1 text-xs text-black/40 dark:text-white/40">
+              <p className="mt-1 text-xs text-text-muted">
                 {new Date(entry.createdAt).toLocaleDateString("de-DE")}
               </p>
             </li>

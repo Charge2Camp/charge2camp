@@ -60,7 +60,7 @@ export function GespannPanel({
             <span className="h-px flex-1 bg-current" />
             <span className="text-xs leading-none">→</span>
           </div>
-          <p className="text-xs text-black/60 dark:text-white/60">
+          <p className="text-xs text-text-muted">
             Gesamt-Gespannlänge: {totalLengthM.toLocaleString("de-DE", { maximumFractionDigits: 2 })} m
           </p>
         </div>
@@ -74,7 +74,7 @@ export function GespannPanel({
             required={vehicleRequired}
             value={vehicleId}
             onChange={(e) => onVehicleChange(e.target.value)}
-            className="w-full min-w-0 rounded-md border border-black/15 bg-card px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+            className="w-full min-w-0 rounded-md border border-line-strong bg-card px-3 py-2 text-base dark:bg-transparent"
           >
             <option value="">Bitte wählen…</option>
             {vehicles.map((v) => (
@@ -91,7 +91,7 @@ export function GespannPanel({
             name="caravan_id"
             value={caravanId}
             onChange={(e) => onCaravanChange(e.target.value)}
-            className="w-full min-w-0 rounded-md border border-black/15 bg-card px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+            className="w-full min-w-0 rounded-md border border-line-strong bg-card px-3 py-2 text-base dark:bg-transparent"
           >
             <option value="">Kein Wohnwagen</option>
             {caravans.map((c) => (

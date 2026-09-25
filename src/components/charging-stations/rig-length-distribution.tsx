@@ -63,7 +63,7 @@ export function RigLengthDistributionChart({
       ))}
 
       {distribution.reviewsWithoutLength > 0 && (
-        <p className="text-xs text-black/40 dark:text-white/40">
+        <p className="text-xs text-text-muted">
           {distribution.reviewsWithoutLength} weitere Bewertung(en) ohne Angabe zur Gespannlänge.
         </p>
       )}

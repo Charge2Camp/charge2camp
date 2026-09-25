@@ -31,7 +31,7 @@ export function CampsiteQuickFilters({
           <select
             name="country"
             defaultValue={filters.country ?? ""}
-            className="min-h-12 rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+            className="min-h-12 rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
           >
             <option value="">Alle</option>
             {countries.map((c) => (
@@ -47,7 +47,7 @@ export function CampsiteQuickFilters({
           <select
             name="charging"
             defaultValue={filters.charging ?? ""}
-            className="min-h-12 rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+            className="min-h-12 rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
           >
             <option value="">Egal</option>
             <option value="on_site">Auf dem Platz</option>

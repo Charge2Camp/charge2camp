@@ -37,7 +37,7 @@ export function EvScoreBadge({
       <p className="text-3xl font-bold">{displayScore}/100</p>
       {overrideScore != null && <p className="mt-1 text-xs text-text-muted">Manuell festgelegt</p>}
       {reasons.length > 0 && (
-        <ul className="mt-2 list-inside list-disc text-sm text-black/60 dark:text-white/60">
+        <ul className="mt-2 list-inside list-disc text-sm text-text-muted">
           {reasons.map((r) => (
             <li key={r}>{r}</li>
           ))}

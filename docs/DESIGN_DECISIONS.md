@@ -10,6 +10,74 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
 
 ---
 
+## Phase 9 Rest: weitere Opazitätsstufen migriert, `--c-line-strong` neu (UX-05.1)
+
+- **Decision:** `text-black/40` und `text-black/60` (jeweils mit
+  `dark:text-white/*`) auf `text-text-muted` migriert (61 Fundstellen).
+  Neuer Token `--c-line-strong` (#CFCCC0, `border-line-strong`) für
+  `border-black/15` (85 Fundstellen) — nicht auf `border-line`
+  migriert, sondern eigener Token. `text-black/70`, `text-black/30`
+  und `border-black/25` bewusst unangetastet gelassen.
+- **Reason:** Die in Phase 9 offen gelassene Frage ("bildet die
+  Opazitätsabstufung eine beabsichtigte Hierarchie ab oder ist sie
+  selbst Teil der Inkonsistenz?") lässt sich pro Fall beantworten:
+  - `/40`/`/60`: keine erkennbare eigene Bedeutung, reine
+    Fließtext-Abstufung. Kontrast-Rechnung (Alpha-Overlay auf
+    `--c-surface`/`--c-card`) zeigt: `/40` ist heller/kontrastärmer als
+    das bereits migrierte `/50`, eine Migration auf `text-text-muted`
+    ist dort eine Kontrast-*Verbesserung*. `/60` bleibt nach Migration
+    weiterhin über der 4.5:1-Mindestanforderung (brand-guide.md §9).
+    Beide sicher konsolidierbar.
+  - `border-black/15`: beim Durchsehen aller 85 Fundstellen zeigt sich
+    ein durchgängiges, konsistentes Muster — der Standardrahmen für
+    praktisch jedes Formularfeld und jeden umrandeten Button app-weit,
+    erkennbar getrennt von `border-line` (reine Inhalts-Trennlinien,
+    `border-black/10`). Ein Zusammenlegen mit `border-line` hätte
+    Eingabefelder auf `--c-surface`/`--c-card` kaum noch als solche
+    erkennbar gemacht (zu geringer Kontrast) — echtes Usability-Risiko,
+    kein reines Konsistenzthema. Verdient einen eigenen Token, nicht
+    Wiederverwendung eines bestehenden mit anderer Rolle (§3
+    brand-guide.md: "Jede Farbe hat genau eine Rolle").
+  - `text-black/70`: mindestens eine Stelle (`route-wizard-tabs.tsx`,
+    Zeile ~49/60) nutzt `/70` nachweislich als bewusste mittlere Stufe
+    eines 3-Zustands-Systems für Wizard-Tabs (aktiv/`route` →
+    erreichbar/`/70`+`border-black/25` → nicht erreichbar/`/30`+
+    `border-black/10`) — eine tatsächlich beabsichtigte Hierarchie,
+    keine Inkonsistenz. Die übrigen `/70`-Stellen (Rechtstexte in
+    `impressum`/`datenschutz`, Bewertungs-Zitate, Startseiten-Subline)
+    sind zudem die kontrastreichste der vier Stufen — eine Migration
+    auf den helleren `text-text-muted`-Ton wäre das einzige Risiko
+    einer echten Kontrast-*Verschlechterung* unter den vier Stufen
+    gewesen, gerade bei rechtlich vorgeschriebenem Text unerwünscht.
+    Bleibt offen.
+- **Alternatives:** (1) alle vier Text-Opazitätsstufen undifferenziert
+  auf `text-text-muted` reduzieren (verworfen: hätte das
+  Tab-Zustandssystem in `route-wizard-tabs.tsx` zerstört und Rechtstexte
+  kontrastärmer gemacht, ohne belegten Vorteil); (2) `border-black/15`
+  ebenfalls auf `border-line` migrieren, um keinen neuen Token
+  einzuführen (verworfen: hätte alle Formularfelder der App sichtbar
+  unauffälliger/schwerer erkennbar gemacht — ein echtes
+  Usability-Risiko für einen rein kosmetischen Konsistenzgewinn); (3)
+  eigenen Token auch für `/70` einführen, um "fertig" migriert zu sein
+  (verworfen: `/70` ist teils eine bewusste Komponenten-lokale
+  Zustandssemantik, kein wiederkehrendes globales Muster wie `/40`,
+  `/60` oder `border-black/15` — eine Tokenisierung wäre verfrüht ohne
+  weitere Einzelfallprüfung, §34 des Briefs: inkrementell).
+- **Impact:** `src/app/globals.css`, `docs/design/tokens.json`,
+  `docs/design/brand-guide.md` (neuer Token + §5-Ergänzung). ~60 Dateien
+  per Skript migriert (reine Klassennamen-Ersetzung, zweistufig: Farbklasse
+  und `dark:`-Pendant separat ersetzt, da beide im Code meist durch
+  andere Utility-Klassen getrennt standen, nicht direkt benachbart wie
+  beim ersten Migrationsschritt in Phase 9). Typecheck grün, keine
+  doppelten Leerzeichen durch die Ersetzung, visuell auf `/login`
+  (Formularfelder) und `/` (Legende-Box) im Browser geprüft. `/40`,
+  `/60`, `border-black/15` aus UX-05.1 damit vollständig erledigt;
+  `/70`, `/30`, `border-black/25` bleiben bewusst offen, jeweils
+  begründet (s. `docs/design/ux-problems.md`).
+- **Date:** 2026-09-25 (Phase 12, Fortsetzung Phase 9).
+
+---
+
 ## Ehrlicher Hinweis statt Benachrichtigung bei Meldestatus (UX-05.7)
 
 - **Decision:** In `missing-station-report-form.tsx` (Erfolgsmeldung

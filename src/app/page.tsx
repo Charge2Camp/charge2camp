@@ -19,7 +19,7 @@ export default function HomePage() {
         <TrustPreview />
       </div>
 
-      <p className="pt-4 text-xs text-black/40 dark:text-white/40">
+      <p className="pt-4 text-xs text-text-muted">
         MVP / Testversion &middot; Kartendaten und Ladepunkte teilweise als Demo-Daten gekennzeichnet.
       </p>
 

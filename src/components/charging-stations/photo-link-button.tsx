@@ -17,12 +17,12 @@ export function PhotoLinkButton({ link, externalKey }: { link: GoogleMapsPhotoLi
         onClick={() => {
           void logPhotoButtonClick(externalKey, link.tier);
         }}
-        className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-black/15 px-4 py-2 text-sm font-medium hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/5"
+        className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-line-strong px-4 py-2 text-sm font-medium hover:bg-black/5 dark:hover:bg-white/5"
       >
         {link.label}
         <span aria-hidden="true">↗</span>
       </a>
-      {link.hint && <p className="text-xs text-black/40 dark:text-white/40">{link.hint}</p>}
+      {link.hint && <p className="text-xs text-text-muted">{link.hint}</p>}
     </div>
   );
 }

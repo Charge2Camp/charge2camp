@@ -23,7 +23,7 @@ function SuitabilityBadges({ candidate }: { candidate: Pick<ChargingStopCandidat
         {TRAILER_PIN_LABELS[candidate.station.trailerPinState]}
       </span>
       {candidate.personalCompatibility && candidate.personalCompatibility !== "keine_daten" && (
-        <span className="rounded-full border border-black/15 px-2 py-0.5 text-xs text-black/70 dark:border-white/20 dark:text-white/70">
+        <span className="rounded-full border border-line-strong px-2 py-0.5 text-xs text-black/70 dark:border-white/20 dark:text-white/70">
           {PERSONAL_COMPATIBILITY_LABELS[candidate.personalCompatibility]}
         </span>
       )}
@@ -71,7 +71,7 @@ function AlternativeRow({
         <button
           type="button"
           onClick={onViewDetails}
-          className="min-h-11 whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium text-black/60 hover:underline dark:text-white/60"
+          className="min-h-11 whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium text-text-muted hover:underline"
         >
           Details ansehen
         </button>
@@ -154,7 +154,7 @@ export function RouteOverviewPanel({
     <ol className="flex flex-col gap-3">
       <li className="rounded-lg border border-route/30 bg-route/5 p-3">
         <p className="font-medium">Start: {start.displayName}</p>
-        <p className="text-sm text-black/60 dark:text-white/60">Ladestand bei Abfahrt: {plan.departureSocPercent}%</p>
+        <p className="text-sm text-text-muted">Ladestand bei Abfahrt: {plan.departureSocPercent}%</p>
       </li>
 
       {middlePoints.map((point, i) => {
@@ -199,11 +199,11 @@ export function RouteOverviewPanel({
                     {index + 1}. Ladestopp: {stop.station.name ?? stop.station.provider}
                   </p>
                   <SuitabilityBadges candidate={stop} />
-                  <p className="text-sm text-black/60 dark:text-white/60">
+                  <p className="text-sm text-text-muted">
                     {stop.station.power_kw ? `${stop.station.power_kw} kW` : "Ladeleistung unbekannt"}
                     {" · "}ca. {stop.corridorDistanceKm.toFixed(0)} km Umweg von der Route
                   </p>
-                  <ul className="text-sm text-black/60 dark:text-white/60">
+                  <ul className="text-sm text-text-muted">
                     <li>Ladestand bei Ankunft: {stop.socOnArrivalPercent.toFixed(0)}%</li>
                     <li>Geplant wird bis: {stop.socAfterChargingPercent.toFixed(0)}%</li>
                     {stop.chargingTimeMin !== null && (
@@ -222,7 +222,7 @@ export function RouteOverviewPanel({
                   <button
                     type="button"
                     onClick={() => onViewDetails(stop.station.id)}
-                    className="min-h-11 whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium text-black/60 hover:underline dark:text-white/60"
+                    className="min-h-11 whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium text-text-muted hover:underline"
                   >
                     Details ansehen
                   </button>
@@ -273,7 +273,7 @@ export function RouteOverviewPanel({
                 type="button"
                 disabled={busy}
                 onClick={() => onDeleteStop(index, stop.station.id)}
-                className="mt-2 flex min-h-11 items-center text-left text-xs text-black/40 hover:underline disabled:opacity-50 dark:text-white/40"
+                className="mt-2 flex min-h-11 items-center text-left text-xs text-text-muted hover:underline disabled:opacity-50"
               >
                 Keine der Alternativen passend? Diese Ladesäule ausschließen und automatisch neu planen
               </button>
@@ -303,7 +303,7 @@ export function RouteOverviewPanel({
       <li className="rounded-lg border border-route/30 bg-route/5 p-3">
         <p className="font-medium">Ziel: {end.displayName}</p>
         {plan.arrivalSocPercent !== null && (
-          <p className="text-sm text-black/60 dark:text-white/60">
+          <p className="text-sm text-text-muted">
             Voraussichtlicher Ladestand am Ziel: {plan.arrivalSocPercent.toFixed(0)}%
           </p>
         )}

@@ -34,7 +34,7 @@ export function VehicleList({ vehicles, models }: { vehicles: Vehicle[]; models:
               <p className="font-medium">
                 {vehicle.manufacturer} {vehicle.model}
               </p>
-              <p className="text-black/60 dark:text-white/60">
+              <p className="text-text-muted">
                 {vehicle.battery_capacity_kwh} kWh
                 {vehicle.consumption_kwh_per_100km ? ` · ${vehicle.consumption_kwh_per_100km} kWh/100km` : ""}
                 {vehicle.charging_power_kw ? ` · ${vehicle.charging_power_kw} kW Ladeleistung` : ""}

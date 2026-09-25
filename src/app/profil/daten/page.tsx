@@ -73,7 +73,7 @@ export default async function MeineDatenPage() {
         </p>
         <a
           href="/api/account/export"
-          className="mt-2 inline-flex min-h-11 items-center rounded-md border border-black/15 px-4 py-2 text-sm font-medium hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/5"
+          className="mt-2 inline-flex min-h-11 items-center rounded-md border border-line-strong px-4 py-2 text-sm font-medium hover:bg-black/5 dark:hover:bg-white/5"
         >
           Daten herunterladen
         </a>

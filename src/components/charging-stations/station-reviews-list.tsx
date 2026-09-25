@@ -53,17 +53,17 @@ export function StationReviewsList({
             <li key={review.id} className="rounded-md border border-black/10 p-3 text-sm dark:border-white/10">
               <div className="flex items-baseline justify-between gap-2">
                 <p className="font-medium">Anhängertauglich: {SUITABLE_LABELS[review.suitable]}</p>
-                <span className="shrink-0 text-xs text-black/40 dark:text-white/40">
+                <span className="shrink-0 text-xs text-text-muted">
                   {formatReviewMonth(review.created_at)}
                 </span>
               </div>
-              <p className="text-black/60 dark:text-white/60">
+              <p className="text-text-muted">
                 {review.trailer_length_m && `${review.trailer_length_m} m`}
                 {review.trailer_width_m && ` × ${review.trailer_width_m} m`}
                 {review.caravan_model && ` · ${review.caravan_model}`}
               </p>
               {review.suitable === "limited" && review.decoupled_parking_possible !== null && (
-                <p className="text-black/60 dark:text-white/60">
+                <p className="text-text-muted">
                   Wohnwagen abkoppeln &amp; in der Nähe parken:{" "}
                   {review.decoupled_parking_possible ? "möglich" : "nicht möglich"}
                 </p>

@@ -80,7 +80,7 @@ export function VehicleEditDialog({
                   type="button"
                   disabled={deleting}
                   onClick={() => setConfirmingDelete(false)}
-                  className="min-h-11 rounded-md px-4 py-2 text-sm font-medium text-black/60 hover:underline disabled:opacity-50 dark:text-white/60"
+                  className="min-h-11 rounded-md px-4 py-2 text-sm font-medium text-text-muted hover:underline disabled:opacity-50"
                 >
                   Abbrechen
                 </button>

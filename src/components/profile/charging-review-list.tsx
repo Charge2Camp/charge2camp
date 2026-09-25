@@ -153,7 +153,7 @@ function EditForm({
             step="0.01"
             min="0"
             defaultValue={review.trailer_length_m ?? ""}
-            className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+            className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
           />
         </label>
         <label className="flex flex-col gap-1 text-sm">
@@ -164,7 +164,7 @@ function EditForm({
             step="0.01"
             min="0"
             defaultValue={review.trailer_width_m ?? ""}
-            className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+            className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
           />
         </label>
       </div>
@@ -174,7 +174,7 @@ function EditForm({
         <input
           name="caravan_model"
           defaultValue={review.caravan_model ?? ""}
-          className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+          className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
         />
       </label>
 
@@ -182,7 +182,7 @@ function EditForm({
         name="comment"
         rows={2}
         defaultValue={review.comment ?? ""}
-        className="rounded-md border border-black/15 px-3 py-2 text-base dark:border-white/15 dark:bg-transparent"
+        className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
       />
 
       {error && <p className="text-sm text-error">{error}</p>}
@@ -264,14 +264,14 @@ export function ChargingReviewList({ reviews }: { reviews: ChargingReviewWithSta
                 </Link>
                 <span>Anhängertauglich: {SUITABLE_LABELS[review.suitable]}</span>
               </div>
-              <p className="text-xs text-black/40 dark:text-white/40">{formatReviewMonth(review.created_at)}</p>
-              <p className="mt-1 text-black/60 dark:text-white/60">
+              <p className="text-xs text-text-muted">{formatReviewMonth(review.created_at)}</p>
+              <p className="mt-1 text-text-muted">
                 {review.trailer_length_m && `${review.trailer_length_m} m`}
                 {review.trailer_width_m && ` × ${review.trailer_width_m} m`}
                 {review.caravan_model && ` · ${review.caravan_model}`}
               </p>
               {review.suitable === "limited" && review.decoupled_parking_possible !== null && (
-                <p className="mt-1 text-black/60 dark:text-white/60">
+                <p className="mt-1 text-text-muted">
                   Wohnwagen abkoppeln &amp; in der Nähe parken:{" "}
                   {review.decoupled_parking_possible ? "möglich" : "nicht möglich"}
                 </p>

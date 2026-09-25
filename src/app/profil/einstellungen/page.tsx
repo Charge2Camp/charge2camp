@@ -32,14 +32,14 @@ export default async function EinstellungenPage() {
   return (
     <section>
       <h2 className="text-lg font-semibold">Einstellungen</h2>
-      <p className="mt-4 text-sm text-black/60 dark:text-white/60">
+      <p className="mt-4 text-sm text-text-muted">
         Es gibt aktuell noch keine App-Einstellungen (z. B. Sprache, Benachrichtigungen). Diese
         Seite folgt in einer späteren Phase.
       </p>
 
       <div className="mt-10">
         <h3 className="font-semibold">Blockierte Ladepunkte</h3>
-        <p className="mt-1 text-sm text-black/60 dark:text-white/60">
+        <p className="mt-1 text-sm text-text-muted">
           Diese Ladepunkte werden bei der Routenplanung nie als Ladestopp vorgeschlagen. Blockieren
           lässt sich ein Ladepunkt über &quot;Zukünftig nicht berücksichtigen&quot; auf seiner
           Detailseite.

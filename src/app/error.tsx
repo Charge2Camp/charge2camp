@@ -32,7 +32,7 @@ export default function Error({
         ⚠️
       </p>
       <h1 className="text-xl font-semibold">Etwas ist schiefgelaufen</h1>
-      <p className="text-sm text-black/60 dark:text-white/60">
+      <p className="text-sm text-text-muted">
         Es gab einen unerwarteten Fehler. Bitte versuche es erneut oder geh zur Startseite zurück.
       </p>
       <div className="flex flex-col gap-2 sm:flex-row">
@@ -45,7 +45,7 @@ export default function Error({
         </button>
         <Link
           href="/"
-          className="flex min-h-11 items-center justify-center rounded-md border border-black/15 px-4 py-2 text-sm dark:border-white/15"
+          className="flex min-h-11 items-center justify-center rounded-md border border-line-strong px-4 py-2 text-sm"
         >
           Zur Startseite
         </Link>
