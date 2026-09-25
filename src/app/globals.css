@@ -76,6 +76,14 @@
   --c-status-down: #B4443A;
   --c-status-unknown: #8E9A94;
 
+  /* Allgemeine Formular-/Systemfeedback-Farben (docs/design/ci-branding-audit.md
+     Abschnitt 4, UX-07.1) -- bewusst dieselben Hex-Werte wie status-down/
+     status-busy (Rot = Gefahr, Amber = Vorsicht ist in beiden Rollen
+     dieselbe Bedeutung), aber als eigene Tokens, damit Formularfehler nicht
+     an die Ladepunkt-Status-Semantik gekoppelt sind. */
+  --c-error: #B4443A;
+  --c-warning: #E8A33D;
+
   /* --font-display/--font-ui werden von next/font ueber die className am
      <html>-Tag gesetzt (layout.tsx), nicht hier -- next/font hostet die
      Schriftdateien selbst statt sie ueber Google Fonts nachzuladen. */
@@ -114,6 +122,9 @@
   --color-status-busy: var(--c-status-busy);
   --color-status-down: var(--c-status-down);
   --color-status-unknown: var(--c-status-unknown);
+
+  --color-error: var(--c-error);
+  --color-warning: var(--c-warning);
 
   --font-display: var(--font-display);
   --font-sans: var(--font-ui);

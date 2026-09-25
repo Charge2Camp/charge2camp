@@ -59,6 +59,22 @@ Jede Farbe hat genau eine Rolle. Wer eine Farbe zweckentfremdet, zerstört ihre 
 | `--c-card` | #FDFCF9 | Karten und Listeneinträge auf der Fläche |
 | `--c-tint-trailer` | #E8F5C0 | Hinweisflächen zu Gespann-Themen |
 
+### Formular-/Systemfeedback
+
+Für allgemeine Rückmeldungen (Formularfehler, Warnhinweise) — unabhängig
+von der Ladepunkt-Status-Semantik unten, auch wenn die Hex-Werte
+übereinstimmen (Rot = Gefahr, Amber = Vorsicht ist in beiden Rollen
+dieselbe Bedeutung, aber die Zielgruppe ist eine andere).
+
+| Token | Hex | Rolle |
+|---|---|---|
+| `--c-error` | #B4443A | Formularfehler, blockierende Systemmeldungen |
+| `--c-warning` | #E8A33D | Warnhinweise, nicht-blockierend |
+
+Wie jede Statusfarbe (Regel 2 oben) steht auch Fehler-/Warnfarbe nie
+allein — immer mit Text und/oder Symbol, nie nur als roter/oranger Rahmen
+oder Text ohne Erklärung.
+
 ### Statusfarben
 
 Ausschließlich für Ladepunkte, nie dekorativ.
