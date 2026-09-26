@@ -105,9 +105,10 @@ einmal:
 - **`Card`** (`src/components/ui/card.tsx`) — Varianten `default`
   (`rounded-md border-line p-3`), `emphasis` (`rounded-lg p-4`),
   `tint-route`/`tint-warning` (getönte Hinweisflächen). Nutzt
-  `border-line`, nicht das im Bestandscode noch verbreitete
-  hartcodierte `border-black/10` (64 verbliebene Fundstellen, s.
-  `docs/DESIGN_DECISIONS.md` — Massenmigration bleibt offen).
+  `border-line`, nicht das ursprünglich verbreitete hartcodierte
+  `border-black/10` — mittlerweile bis auf eine bewusste Ausnahme
+  (`route-wizard-tabs.tsx`, eigenes Zustandssystem) vollständig
+  migriert, s. `docs/DESIGN_DECISIONS.md`.
 - **`Badge`** (`src/components/ui/badge.tsx`) — generische Varianten
   `outline`/`filled`/`route`/`error`. Deckt NICHT die
   Anhängertauglichkeits-Pins (`TRAILER_PIN_COLORS`/`_LABELS`/
@@ -133,9 +134,8 @@ Bearbeitung), `route-planner-form.tsx` (größte Einzeldatei), sowie fünf
 Dialoge auf `Modal` umgestellt. Bewusst offen bleiben: Toast, Bottom
 Sheet als eigene Komponente, Slider, Progress, Toggle, Checkbox,
 Empty/Error State, eine `route`-farbige Button-Outline-Variante
-(bisher Einzelfall), sowie ein Rest an `border-black/10`-Fundstellen
-und den beiden `rounded-full`-Icon-Button-Varianten in
-`station-bottom-sheet.tsx`.
+(bisher Einzelfall), sowie die beiden `rounded-full`-Icon-Button-
+Varianten in `station-bottom-sheet.tsx`.
 - **Gespann-Panel:** wiederverwendete Komponente
   `src/components/gespann-panel.tsx` (Fahrzeug+Wohnwagen-Auswahl,
   identisch im Routenplaner und auf `/profil/gespann`) — bereits vor
