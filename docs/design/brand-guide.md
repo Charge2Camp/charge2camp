@@ -69,7 +69,8 @@ dieselbe Bedeutung, aber die Zielgruppe ist eine andere).
 | Token | Hex | Rolle |
 |---|---|---|
 | `--c-error` | #B4443A | Formularfehler, blockierende Systemmeldungen |
-| `--c-warning` | #E8A33D | Warnhinweise, nicht-blockierend |
+| `--c-warning` | #E8A33D | Warnhinweise, nicht-blockierend (Flächen: Badges, Pins) |
+| `--c-warning-text` | #B45309 | Warnhinweise als Fließtext — `--c-warning` ist zu hell für 4.5:1-Kontrast als Textfarbe |
 
 Wie jede Statusfarbe (Regel 2 oben) steht auch Fehler-/Warnfarbe nie
 allein — immer mit Text und/oder Symbol, nie nur als roter/oranger Rahmen

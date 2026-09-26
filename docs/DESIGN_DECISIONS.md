@@ -10,6 +10,48 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
 
 ---
 
+## Neuer Token `--c-warning-text`: 11 hartcodierte `text-amber-*`-Stellen migriert
+
+- **Decision:** Neuer Token `--c-warning-text` (#B45309) in
+  `globals.css`/`tokens.json`/`brand-guide.md` ergänzt. Alle 11
+  hartcodierten `text-amber-*`/`bg-amber-*`/`border-amber-*`-Fundstellen
+  (9 Dateien) darauf bzw. auf `border-warning/30 bg-warning/5`
+  (Warnboxen) und `bg-warning/15 text-warning-text` (Status-Pills)
+  migriert.
+- **Reason:** Beim vorigen Schritt (UX-05.1/UX-07.1 Rest) entdeckt: exakt
+  dasselbe Muster wie bei `bg-red-*` — hartcodierte Farbe statt
+  vorhandenem Rollen-Token. Anders als bei Error genügte hier aber kein
+  reiner Klassentausch: `--c-warning` (#E8A33D, seit Phase 8) ist bewusst
+  als helle Flächenfarbe für Badges/Pins gewählt (brand-guide.md §3) und
+  hat als Fließtextfarbe auf `--c-surface`/`--c-card` keinen
+  ausreichenden Kontrast. Der bestehende Code behalf sich pragmatisch
+  bereits mit einem dunkleren Ton (`text-amber-700`, #B45309) — dieser
+  Wert wird jetzt exakt als Token übernommen (keine neue Designentscheidung,
+  nur die Quelle wird verbindlich), damit sich am Erscheinungsbild nichts
+  ändert.
+- **Alternatives:** (1) `--c-warning` selbst dunkler machen (verworfen:
+  würde die Flächenrolle — Kartenpins, Status-Badges — verändern, für
+  die #E8A33D bereits als bewusste Markenentscheidung dokumentiert ist,
+  s. Phase 8); (2) `text-warning-text` einfach mit reduzierter Opazität
+  aus `--c-warning` ableiten statt eigenem Hex (verworfen: Opazität auf
+  einer bereits hellen Farbe macht sie heller, nicht dunkler — löst das
+  Kontrastproblem nicht); (3) den Amber-Fund unmigriert lassen, wie
+  zunächst zurückgestellt (verworfen: Nutzer hat sich für sofortige
+  Migration entschieden, nachdem der Fund transparent benannt wurde).
+- **Impact:** `src/app/globals.css`, `docs/design/tokens.json`,
+  `docs/design/brand-guide.md` (neuer Token), 9 weitere Dateien migriert.
+  Reine Farbklassen-/Farbwert-Änderung, keine Logikänderung (Zielwert
+  identisch zum vorherigen hartcodierten Wert). Typecheck grün. Auf
+  `/legende` (öffentlich erreichbar) per `getComputedStyle` verifiziert:
+  `--c-warning-text` löst korrekt zu `#b45309` auf, die
+  Opazitäts-Modifier (`border-warning/30`, `bg-warning/5`) greifen
+  korrekt. Übrige Stellen login-/datenpflichtig, nicht einzeln live
+  getestet. UX-07.1 damit bis auf das fehlende Symbol bei
+  Fehlermeldungen vollständig erledigt.
+- **Date:** 2026-09-26 (Phase 16).
+
+---
+
 ## UX-05.1/UX-07.1 Rest: `bg-red-*`/`border-red-*` und `text-black/70` einzeln migriert
 
 - **Decision:** Alle verbliebenen `bg-red-*`/`border-red-*`/`text-red-*`-

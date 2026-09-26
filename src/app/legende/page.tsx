@@ -247,7 +247,7 @@ export default function LegendePage() {
               gemerkt). Zu finden unter „Favoriten“ in deinem Profil.
             </p>
           </div>
-          <div className="flex items-start gap-3 rounded-lg border border-amber-700/30 bg-amber-700/5 p-3">
+          <div className="flex items-start gap-3 rounded-lg border border-warning/30 bg-warning/5 p-3">
             <span className="text-xl">⚠</span>
             <p className="text-sm text-text-muted">
               „Laut Quelle aktuell nicht betriebsbereit gemeldet“ -- die zuletzt bekannte

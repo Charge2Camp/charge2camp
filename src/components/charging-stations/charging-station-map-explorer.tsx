@@ -491,7 +491,7 @@ export function ChargingStationMapExplorer({
             <span
               className={`pointer-events-auto rounded-full px-3 py-1.5 text-sm font-medium shadow-md ${
                 viewportFetchFailed && !isFetchingViewport
-                  ? "bg-amber-100 text-amber-900 dark:bg-amber-900/80 dark:text-amber-100"
+                  ? "bg-warning/15 text-warning-text"
                   : "bg-white/95 dark:bg-neutral-900/95"
               }`}
             >

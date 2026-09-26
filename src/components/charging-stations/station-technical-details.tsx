@@ -54,7 +54,7 @@ export function StationTechnicalDetails({ station }: { station: ChargingStationV
         <PhotoLinkButton link={photoLink} externalKey={station.external_key} />
       </div>
       {!station.is_operational && (
-        <p className="mt-3 text-xs text-amber-700 dark:text-amber-400">
+        <p className="mt-3 text-xs text-warning-text">
           Laut Quelle aktuell nicht betriebsbereit gemeldet.
         </p>
       )}

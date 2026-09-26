@@ -118,7 +118,7 @@ export function ChargingReviewForm({
       </fieldset>
 
       {suitable === "limited" && (
-        <fieldset className="flex flex-col gap-1 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-sm">
+        <fieldset className="flex flex-col gap-1 rounded-md border border-warning/30 bg-warning/5 p-3 text-sm">
           <legend className="mb-1 font-medium">
             Kannst du den Wohnwagen abkoppeln und bequem in unmittelbarer Nähe der Ladesäule
             parken, während das Zugfahrzeug lädt?

@@ -1143,7 +1143,7 @@ export function RoutePlannerForm({
           </div>
 
           {vehicles.length === 0 && (
-            <p className="text-sm text-amber-700 dark:text-amber-400 sm:col-span-2">
+            <p className="text-sm text-warning-text sm:col-span-2">
               Du hast noch kein Elektroauto im Profil hinterlegt. Bitte zuerst unter{" "}
               <a href="/profil/gespann" className="underline">
                 Mein Gespann
@@ -1230,7 +1230,7 @@ export function RoutePlannerForm({
           </p>
 
           {result.plan.warning && (
-            <p className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-amber-700 dark:text-amber-400">
+            <p className="rounded-md border border-warning/30 bg-warning/5 p-3 text-sm text-warning-text">
               {result.plan.warning}
             </p>
           )}

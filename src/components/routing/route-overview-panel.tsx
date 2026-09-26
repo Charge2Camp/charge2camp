@@ -212,7 +212,7 @@ export function RouteOverviewPanel({
                     <li>{lastConfirmedLabel(stop.lastConfirmedAt)}</li>
                   </ul>
                   {missesPreferredProvider && (
-                    <p className="text-xs text-amber-700 dark:text-amber-400">
+                    <p className="text-xs text-warning-text">
                       Kein Ladepunkt eines bevorzugten Anbieters in der Nähe verfügbar -- diese Station wurde
                       stattdessen vorgeschlagen.
                     </p>
@@ -295,7 +295,7 @@ export function RouteOverviewPanel({
       })()}
 
       {plan.chargingStopsRequired && plan.arrivalSocPercent === null && (
-        <li className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-amber-700 dark:text-amber-400">
+        <li className="rounded-lg border border-warning/30 bg-warning/5 p-3 text-sm text-warning-text">
           {plan.warning}
         </li>
       )}

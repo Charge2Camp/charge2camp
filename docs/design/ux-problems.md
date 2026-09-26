@@ -128,6 +128,17 @@ Phase geprüft:
 
 ### UX-07.1 — Formularfehler ohne Token und ohne begleitendes Symbol (C, aus ci-branding-audit.md übernommen)
 
+- **Amber-Fund erledigt (Phase 16, 2026-09-26):** Beim Migrieren von
+  `text-black/70` zusätzlich entdeckt und mit neuem Token gelöst — 11
+  hartcodierte `text-amber-*`/`bg-amber-*`/`border-amber-*`-Fundstellen
+  in 9 Dateien (Routenrestriktionswarnungen, "nicht betriebsbereit"-
+  Hinweise, Formular-Warnboxen). Neuer Token `--c-warning-text` (#B45309,
+  identisch zum bisherigen hartcodierten Tailwind-Wert, damit sich am
+  Erscheinungsbild nichts ändert) ergänzt `brand-guide.md`/`tokens.json`
+  — `--c-warning` (#E8A33D) ist als Flächenfarbe zu hell für
+  4.5:1-Fließtext-Kontrast, deshalb kein reiner Klassentausch möglich.
+  Details s. `docs/DESIGN_DECISIONS.md`.
+
 - **Zustand:** Ursprünglich 27 Dateien mit hart codiertem `text-red-600`
   statt eines Tokens.
 - **Problem:** Verstößt gegen §10 des Design-Briefs (keine hart codierten

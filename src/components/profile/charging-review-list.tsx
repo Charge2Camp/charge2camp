@@ -89,7 +89,7 @@ function EditForm({
       </fieldset>
 
       {suitable === "limited" && (
-        <fieldset className="flex flex-col gap-1 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-sm">
+        <fieldset className="flex flex-col gap-1 rounded-md border border-warning/30 bg-warning/5 p-3 text-sm">
           <legend className="mb-1">
             Wohnwagen abkoppelbar &amp; bequem in der Nähe parkbar während des Ladens?
           </legend>

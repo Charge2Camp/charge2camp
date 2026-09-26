@@ -77,7 +77,7 @@ export default async function SavedRoutesPage() {
               </div>
 
               {error ? (
-                <p className="mt-3 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-amber-700 dark:text-amber-400">
+                <p className="mt-3 rounded-md border border-warning/30 bg-warning/5 p-3 text-sm text-warning-text">
                   {error}
                 </p>
               ) : (

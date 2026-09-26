@@ -93,6 +93,14 @@
      an die Ladepunkt-Status-Semantik gekoppelt sind. */
   --c-error: #B4443A;
   --c-warning: #E8A33D;
+  /* --c-warning ist als Flaechenfarbe gedacht (Badges, Pins) -- zu hell
+     fuer 4.5:1-Fliesstext-Kontrast auf --c-surface/--c-card. Eigener,
+     dunklerer Ton fuer Warntext (Routenrestriktionen, Formularhinweise),
+     analog zu --c-error, das als dunkles Rot beide Rollen (Flaeche UND
+     Text) bereits abdeckt. Wert = bisheriges hartcodiertes Tailwind
+     amber-700, damit sich am Erscheinungsbild nichts aendert, nur die
+     Quelle (docs/DESIGN_DECISIONS.md, "UX-05.1/UX-07.1 Rest"). */
+  --c-warning-text: #B45309;
 
   /* --font-display/--font-ui werden von next/font ueber die className am
      <html>-Tag gesetzt (layout.tsx), nicht hier -- next/font hostet die
@@ -136,6 +144,7 @@
 
   --color-error: var(--c-error);
   --color-warning: var(--c-warning);
+  --color-warning-text: var(--c-warning-text);
 
   --font-display: var(--font-display);
   --font-sans: var(--font-ui);

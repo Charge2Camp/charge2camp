@@ -52,7 +52,8 @@ vollständige, verbindliche Rollentabelle. Kurzfassung:
 | Formular-/Bedienelement-Rahmen | `--c-line-strong` | #CFCCC0 |
 | Gedämpfter Text | `--c-text-muted` | #5C6B66 |
 | Formularfehler | `--c-error` | #B4443A |
-| Warnhinweis | `--c-warning` | #E8A33D |
+| Warnhinweis (Fläche) | `--c-warning` | #E8A33D |
+| Warnhinweis (Fließtext) | `--c-warning-text` | #B45309 |
 
 Zwei harte Regeln (brand-guide.md §3): Lime = "antippbar"/"Drive-Through",
 nie beides uneindeutig auf einem Screen; Farbe steht nie allein, immer mit
