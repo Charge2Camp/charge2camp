@@ -4,6 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { LegalFooterLinks } from "@/components/legal-footer-links";
+import { Field, Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 /** "Passwort vergessen"-Formular (Nutzerwunsch: bisher gab es KEINE
  * Moeglichkeit, das Passwort selbst zurueckzusetzen -- wer es vergessen
@@ -43,24 +45,18 @@ export default function ForgotPasswordPage() {
         </p>
       ) : (
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <label className="flex flex-col gap-1 text-sm">
-            E-Mail
-            <input
+          <Field label="E-Mail">
+            <Input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
             />
-          </label>
+          </Field>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="min-h-12 rounded-md bg-action px-4 py-3 font-medium text-base hover:bg-action-hover disabled:opacity-50"
-          >
+          <Button type="submit" size="md" disabled={loading}>
             {loading ? "Wird gesendet…" : "Link zum Zurücksetzen senden"}
-          </button>
+          </Button>
         </form>
       )}
 

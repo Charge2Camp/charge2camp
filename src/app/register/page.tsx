@@ -7,6 +7,8 @@ import { createClient } from "@/lib/supabase/client";
 import { translateErrorMessage } from "@/lib/action-result";
 import { LegalFooterLinks } from "@/components/legal-footer-links";
 import { FormError } from "@/components/form-error";
+import { Field, Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -50,39 +52,31 @@ export default function RegisterPage() {
       <h1 className="text-2xl font-semibold">Konto erstellen</h1>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <label className="flex flex-col gap-1 text-sm">
-          E-Mail
-          <input
+        <Field label="E-Mail">
+          <Input
             type="email"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
           />
-        </label>
+        </Field>
 
-        <label className="flex flex-col gap-1 text-sm">
-          Passwort
-          <input
+        <Field label="Passwort">
+          <Input
             type="password"
             required
             minLength={8}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
           />
-        </label>
+        </Field>
 
         {error && <FormError className="text-sm">{error}</FormError>}
         {message && <p className="text-sm text-route">{message}</p>}
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="min-h-12 rounded-md bg-action px-4 py-3 font-medium text-base hover:bg-action-hover disabled:opacity-50"
-        >
+        <Button type="submit" size="md" disabled={loading}>
           {loading ? "Wird erstellt…" : "Registrieren"}
-        </button>
+        </Button>
       </form>
 
       <p className="text-sm text-text-muted">

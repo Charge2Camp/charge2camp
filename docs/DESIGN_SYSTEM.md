@@ -87,29 +87,45 @@ direkt im Code erfinden.
 
 ## 5. Komponenten & States
 
-**Ehrlicher Ist-Zustand (kein Wunschbild):** Der Design-Brief (§14)
-verlangt eine formale, wiederverwendbare UI-Komponentenbibliothek
-(Button, Icon Button, Card, Badge, Input, Select, Toggle, Modal, Toast,
-Empty State, Error State, …). Diese existiert **noch nicht** als
-extrahierte Primitives — Komponenten sind aktuell überwiegend
-Datei-lokal mit Tailwind-Utility-Klassen gestylt (Token-Disziplin seit
-Phase 9 weitgehend hergestellt, s. `docs/design/ux-problems.md`
-UX-05.1, aber keine gemeinsame `<Button>`/`<Card>`/`<Badge>`-Komponente).
-Das ist eine offene Lücke, kein Versäumnis dieser Phase — eine echte
-Komponentenbibliothek ist ein eigener, größerer Folgeschritt.
+**Ehrlicher Ist-Zustand:** Der Design-Brief (§14) verlangt eine formale,
+wiederverwendbare UI-Komponentenbibliothek (Button, Icon Button, Card,
+Badge, Input, Select, Toggle, Modal, Toast, Empty State, Error State,
+…). Seit Phase 16 gibt es einen ersten Satz echter Primitives in
+`src/components/ui/` — bewusst mit der kleinen, hochfrequenten Basis
+begonnen (§34 des Briefs: inkrementell), nicht alle ~20 Typen auf
+einmal:
 
-Wiederkehrende, bereits konsistente Muster (informell, nicht als
-Komponente extrahiert):
+- **`Button`** (`src/components/ui/button.tsx`) — Varianten `primary`
+  (`bg-action`), `secondary` (`border-line-strong`), `destructive`
+  (`bg-error`, gefüllt), `destructive-outline` (`border-error/30`,
+  Text), `plain` (nur `hover:underline`, Textfarbe kommt vom Aufrufer).
+  Größen `sm`/`md`. `iconOnly` für quadratische 44×44px-Icon-Buttons.
+  `type="button"` als sicherer Default (`type="submit"` explizit
+  angeben).
+- **`Card`** (`src/components/ui/card.tsx`) — Varianten `default`
+  (`rounded-md border-line p-3`), `emphasis` (`rounded-lg p-4`),
+  `tint-route`/`tint-warning` (getönte Hinweisflächen). Nutzt
+  `border-line`, nicht das im Bestandscode noch verbreitete
+  hartcodierte `border-black/10` (64 verbliebene Fundstellen, s.
+  `docs/DESIGN_DECISIONS.md` — Massenmigration bleibt offen).
+- **`Badge`** (`src/components/ui/badge.tsx`) — generische Varianten
+  `outline`/`filled`/`route`/`error`. Deckt NICHT die
+  Anhängertauglichkeits-Pins (`TRAILER_PIN_COLORS`/`_LABELS`/
+  `_TEXT_CLASS`, `src/lib/trailer-verdict.ts`) oder `ReviewStateBadge`
+  ab — die haben eigene, feste Domänen-Semantik und bleiben bewusst
+  eigenständig (§3 brand-guide.md: "Jede Farbe hat genau eine Rolle").
+- **`Input`/`Select`/`Textarea`/`Field`** (`src/components/ui/input.tsx`)
+  — das mit Abstand konsistenteste Altmuster im Code (ein Klassenstring
+  an ~50 Stellen identisch wiederholt), jetzt eine echte Komponente.
+  `Field` kapselt den Label-Wrapper (`flex flex-col gap-1 text-sm`).
 
-- **Buttons:** primär (`bg-action`, dunkler Text, nie heller — Kontrast),
-  sekundär (`border-line-strong`, transparenter Hintergrund),
-  min-height 44px (`min-h-11`/`min-h-12`).
-- **Formularfelder:** `border-line-strong`, `text-base` (kein
-  iOS-Auto-Zoom), Fehlermeldung darunter in `text-error`.
-- **Badges/Status-Pins:** feste Farbe + Symbol, nie Farbe allein
-  (`TRAILER_PIN_COLORS`/`TRAILER_PIN_LABELS`, `REVIEW_STATE_COLORS`, s.
-  `src/lib/trailer-verdict.ts` — zentrale, bereits wiederverwendete
-  Quelle für alle Anhängertauglichkeits-Zustände).
+Erstmigriert (Vorher/Nachher-Nachweis, s. `docs/DESIGN_DECISIONS.md`):
+`/login`, `/register`, `/passwort-vergessen`, `/passwort-zuruecksetzen`,
+`trust-preview.tsx`. Die übrigen ~45 Input- und ~45 Button-Fundstellen
+sowie Modal/Toast/Bottom Sheet/Slider/Progress/Toggle/Checkbox/Empty
+State bleiben offen für weitere, bereichsweise Schritte — nicht in
+einem Rutsch, um das Risiko eines unkontrollierten Diffs zu vermeiden
+(§34 des Briefs).
 - **Gespann-Panel:** wiederverwendete Komponente
   `src/components/gespann-panel.tsx` (Fahrzeug+Wohnwagen-Auswahl,
   identisch im Routenplaner und auf `/profil/gespann`) — einziges

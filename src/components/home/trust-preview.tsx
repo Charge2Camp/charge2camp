@@ -1,4 +1,5 @@
 import { TRAILER_PIN_COLORS, TRAILER_PIN_LABELS, TRAILER_PIN_TEXT_CLASS, type TrailerPinState } from "@/lib/trailer-verdict";
+import { Card } from "@/components/ui/card";
 
 const LEGEND_ORDER: TrailerPinState[] = [
   "drive_through",
@@ -19,7 +20,7 @@ const LEGEND_ORDER: TrailerPinState[] = [
  * Scheindaten ohne eindeutige Kennzeichnung). */
 export function TrustPreview() {
   return (
-    <div className="flex w-full flex-col gap-4 rounded-card border border-line bg-card p-5 text-left">
+    <Card variant="emphasis" className="flex w-full flex-col gap-4 bg-card text-left">
       <p className="text-sm font-medium text-text">So zeigt dir charge2camp, ob dein Gespann passt:</p>
 
       <ul className="flex flex-col gap-2">
@@ -35,7 +36,7 @@ export function TrustPreview() {
         ))}
       </ul>
 
-      <div className="rounded-md border border-line bg-surface p-3">
+      <Card className="bg-surface">
         <p className="mb-1 text-xs font-medium uppercase tracking-wide text-text-muted">Beispiel, keine echten Daten</p>
         <div className="flex items-center justify-between gap-3">
           <p className="text-sm font-medium text-text">Autobahnraststätte (Beispiel)</p>
@@ -46,7 +47,7 @@ export function TrustPreview() {
             {TRAILER_PIN_LABELS.drive_through}
           </span>
         </div>
-      </div>
-    </div>
+      </Card>
+    </Card>
   );
 }

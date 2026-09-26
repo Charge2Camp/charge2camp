@@ -7,6 +7,8 @@ import { createClient } from "@/lib/supabase/client";
 import { translateErrorMessage } from "@/lib/action-result";
 import { LegalFooterLinks } from "@/components/legal-footer-links";
 import { FormError } from "@/components/form-error";
+import { Field, Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 /** Formular fuer den zweiten Schritt von "Passwort vergessen" -- erreichbar
  * nur ueber den Link aus der Reset-E-Mail (via /auth/callback, das den
@@ -83,39 +85,31 @@ export default function ResetPasswordPage() {
         <p className="text-sm text-route">Passwort geändert. Du wirst weitergeleitet…</p>
       ) : (
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <label className="flex flex-col gap-1 text-sm">
-            Neues Passwort
-            <input
+          <Field label="Neues Passwort">
+            <Input
               type="password"
               required
               minLength={8}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
             />
-          </label>
+          </Field>
 
-          <label className="flex flex-col gap-1 text-sm">
-            Neues Passwort bestätigen
-            <input
+          <Field label="Neues Passwort bestätigen">
+            <Input
               type="password"
               required
               minLength={8}
               value={passwordConfirm}
               onChange={(e) => setPasswordConfirm(e.target.value)}
-              className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
             />
-          </label>
+          </Field>
 
           {error && <FormError className="text-sm">{error}</FormError>}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="min-h-12 rounded-md bg-action px-4 py-3 font-medium text-base hover:bg-action-hover disabled:opacity-50"
-          >
+          <Button type="submit" size="md" disabled={loading}>
             {loading ? "Wird gespeichert…" : "Passwort speichern"}
-          </button>
+          </Button>
         </form>
       )}
 

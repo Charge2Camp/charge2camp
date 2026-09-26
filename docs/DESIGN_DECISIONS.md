@@ -10,6 +10,66 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
 
 ---
 
+## §14 UI Component Library: erste Primitives (Button, Card, Badge, Input)
+
+- **Decision:** Neue `src/components/ui/`-Ordner mit vier Primitives:
+  `Button`, `Card`, `Badge`, `Input`/`Select`/`Textarea`/`Field`. Auf
+  `/login`, `/register`, `/passwort-vergessen`,
+  `/passwort-zuruecksetzen` und `trust-preview.tsx` bereits eingesetzt
+  (Vorher/Nachher-Nachweis). Dabei nebenbei einen echten Bug behoben:
+  `trust-preview.tsx` nutzte `rounded-card`, eine nicht existierende
+  Tailwind-Klasse (kein `--radius-card`-Token je definiert) — wirkungslos
+  seit der ersten Version dieser Komponente, der Rahmen war nie
+  gerundet. Per `getComputedStyle` verifiziert: jetzt korrekt 8px
+  (`rounded-lg`).
+- **Reason:** §14 des Design-Briefs verlangt eine formale
+  Komponentenbibliothek (~20 Typen: Button, Card, Badge, Input, Modal,
+  Toast, Empty/Error State, …) — bisher nur informelle, wiederholte
+  Tailwind-Klassenketten pro Datei (s. `docs/DESIGN_SYSTEM.md`
+  Abschnitt 5, vor dieser Änderung als offene Lücke benannt). Auf
+  Nutzerwunsch mit der kleinen, hochfrequenten Basis begonnen (Button,
+  Card, Badge, Input — die mit Abstand am häufigsten wiederholten
+  Muster laut Code-Survey) statt aller ~20 Typen auf einmal, entspricht
+  §34 des Briefs ("nicht alles auf einmal umschreiben").
+- **Alternatives:** (1) alle ~20 Komponententypen aus §14 sofort
+  anlegen (verworfen: Nutzerentscheidung explizit gegen diesen Umfang,
+  hohes Risiko eines unkontrollierten Diffs); (2) bestehende
+  Klassenketten 1:1 in die neuen Komponenten übernehmen, ohne den
+  Code-Survey zur Konsolidierung zu nutzen (verworfen: der Survey zeigte
+  reale Varianz — z. B. `border-black/10` vs. `border-line` bei Cards,
+  `bg-action` vs. hellere/dunklere Abstufungen bei Buttons —, blinde
+  Übernahme hätte die Inkonsistenz nur in eine Komponente verlagert
+  statt sie zu lösen); (3) eine Utility-Library wie `tailwind-merge` für
+  sauberes ClassName-Overriding einführen (verworfen: neue Abhängigkeit
+  für ein Problem, das sich durch bewusste Variant-Gestaltung [Padding
+  nicht separat von Variant trennen] und punktuelles Nachjustieren beim
+  Einsatz vermeiden lässt, §32 Kostenoptimierung/Einfachheit).
+- **Was bewusst NICHT übernommen wurde:** `TRAILER_PIN_COLORS`-basierte
+  Badges und `ReviewStateBadge` bleiben eigenständig (feste
+  Domänen-Semantik, keine generische Badge-Farbe angemessen, §3
+  brand-guide.md). Card-Radius nutzt bewusst Tailwinds `rounded-lg`
+  (8px, dem tatsächlich im Code dominanten Wert laut Survey) statt des
+  in `tokens.json` dokumentierten `radius.card = 12` (Tailwind
+  `rounded-xl`) — eine Diskrepanz zwischen Doku und gelebter Praxis, die
+  hier bewusst nicht im selben Schritt aufgelöst wurde (eigene
+  Entscheidung: Token an Praxis anpassen oder Praxis an Token
+  angleichen), sondern unten als offener Punkt vermerkt.
+- **Offener Punkt (neu entdeckt, nicht in dieser Änderung gelöst):**
+  `tokens.json` `radius.card = 12` stimmt nicht mit der tatsächlich
+  verwendeten Kartenrundung (`rounded-lg` = 8px) überein. Muss geklärt
+  werden, bevor `Card` als "fertig" gilt.
+- **Impact:** 4 neue Dateien (`src/components/ui/button.tsx`,
+  `card.tsx`, `badge.tsx`, `input.tsx`), 5 Dateien auf die neuen
+  Komponenten umgestellt. Typecheck grün. Live geprüft: `/` (Card-Radius
+  jetzt korrekt via `getComputedStyle`), `/login` (Formularfelder,
+  Button `type="submit"` korrekt gesetzt, visuell unverändert gegenüber
+  vorher). Restliche ~45 Input- und ~45 Button-Fundstellen sowie die
+  übrigen ~16 Komponententypen aus §14 bleiben offen für weitere
+  Schritte, s. `docs/DESIGN_SYSTEM.md` Abschnitt 5.
+- **Date:** 2026-09-26 (Phase 16).
+
+---
+
 ## Ladepunkte-Filter: Sofort-anwendende Chips statt Formular-Submit
 
 - **Decision:** Das komplette Filter-Panel auf `/ladepunkte`
