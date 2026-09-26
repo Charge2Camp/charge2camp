@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { addCampsiteReview } from "@/app/campingplaetze/[id]/actions";
 import { FormError } from "@/components/form-error";
+import { Field, Textarea } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 /** Campingplatz-Bewertungen fragen bewusst nur die Lademoeglichkeit ab
  * (kein freier Sterne-Picker) -- die daraus abgeleitete Sternebewertung
@@ -27,7 +29,7 @@ export function CampsiteReviewForm({ campsiteId }: { campsiteId: string }) {
           setPending(false);
         }
       }}
-      className="flex flex-col gap-4 rounded-lg border border-black/10 p-4 dark:border-white/10"
+      className="flex flex-col gap-4 rounded-lg border border-line p-4"
     >
       <input type="hidden" name="campsite_id" value={campsiteId} />
 
@@ -85,24 +87,15 @@ export function CampsiteReviewForm({ campsiteId }: { campsiteId: string }) {
         </div>
       </fieldset>
 
-      <label className="flex flex-col gap-1 text-sm">
-        Kommentar (optional)
-        <textarea
-          name="comment"
-          rows={3}
-          className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
-        />
-      </label>
+      <Field label="Kommentar (optional)">
+        <Textarea name="comment" rows={3} />
+      </Field>
 
       {error && <FormError className="text-sm">{error}</FormError>}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="min-h-12 self-start rounded-md bg-action px-4 py-3 text-sm font-medium text-base hover:bg-action-hover disabled:opacity-60"
-      >
+      <Button type="submit" size="md" disabled={pending} className="self-start">
         {pending ? "Wird gesendet…" : "Bewertung abschicken"}
-      </button>
+      </Button>
     </form>
   );
 }

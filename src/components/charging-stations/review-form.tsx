@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import { addChargingReview } from "@/app/ladepunkte/[id]/actions";
 import { CriterionField } from "@/components/charging-stations/criterion-field";
 import { FormError } from "@/components/form-error";
+import { Field, Input, Select, Textarea } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import type { Caravan, Vehicle } from "@/types/database";
 
 export function ChargingReviewForm({
@@ -74,7 +76,7 @@ export function ChargingReviewForm({
           setPending(false);
         }
       }}
-      className="flex flex-col gap-3 rounded-lg border border-black/10 p-4 dark:border-white/10"
+      className="flex flex-col gap-3 rounded-lg border border-line p-4"
     >
       <input type="hidden" name="charging_station_id" value={stationId} />
       <input type="hidden" name="charge_point_external_key" value={externalKey} />
@@ -148,7 +150,7 @@ export function ChargingReviewForm({
       )}
 
       {suitable === "yes" && (
-        <fieldset className="flex flex-col gap-1 rounded-md border border-black/10 p-3 text-sm dark:border-white/10">
+        <fieldset className="flex flex-col gap-1 rounded-md border border-line p-3 text-sm">
           <legend className="mb-1 font-medium">
             Konntest du mit dem Gespann durchfahren, ohne rangieren oder rückwärtsfahren zu
             müssen (Drive-Through)?
@@ -186,7 +188,7 @@ export function ChargingReviewForm({
         </fieldset>
       )}
 
-      <div className="flex flex-col gap-3 rounded-md border border-black/10 p-3 dark:border-white/10">
+      <div className="flex flex-col gap-3 rounded-md border border-line p-3">
         <p className="text-sm font-medium">
           Details zur Durchfahrt (optional, hilft anderen bei der Einschätzung)
         </p>
@@ -232,15 +234,13 @@ export function ChargingReviewForm({
         </p>
       )}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <label className="flex flex-col gap-1 text-sm">
-          Auto (aus deinem Profil)
-          <select
+        <Field label="Auto (aus deinem Profil)">
+          <Select
             value={vehicleId}
             onChange={(e) => {
               setVehicleId(e.target.value);
               recompute(e.target.value, caravanId);
             }}
-            className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
           >
             <option value="">Sonstiges / manuell</option>
             {vehicles.map((v) => (
@@ -248,18 +248,16 @@ export function ChargingReviewForm({
                 {v.manufacturer} {v.model}
               </option>
             ))}
-          </select>
-        </label>
+          </Select>
+        </Field>
 
-        <label className="flex flex-col gap-1 text-sm">
-          Wohnwagen (aus deinem Profil)
-          <select
+        <Field label="Wohnwagen (aus deinem Profil)">
+          <Select
             value={caravanId}
             onChange={(e) => {
               setCaravanId(e.target.value);
               recompute(vehicleId, e.target.value);
             }}
-            className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
           >
             <option value="">Sonstiges / manuell</option>
             {caravans.map((c) => (
@@ -267,69 +265,50 @@ export function ChargingReviewForm({
                 {c.manufacturer} {c.model}
               </option>
             ))}
-          </select>
-        </label>
+          </Select>
+        </Field>
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <label className="flex flex-col gap-1 text-sm">
-          Gespannlänge gesamt (m)
-          <input
+        <Field label="Gespannlänge gesamt (m)">
+          <Input
             name="trailer_length_m"
             type="number"
             step="0.01"
             min="0"
             value={trailerLengthM}
             onChange={(e) => setTrailerLengthM(e.target.value)}
-            className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
           />
-        </label>
-        <label className="flex flex-col gap-1 text-sm">
-          Gespannbreite (m)
-          <input
+        </Field>
+        <Field label="Gespannbreite (m)">
+          <Input
             name="trailer_width_m"
             type="number"
             step="0.01"
             min="0"
             value={trailerWidthM}
             onChange={(e) => setTrailerWidthM(e.target.value)}
-            className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
           />
-        </label>
+        </Field>
       </div>
       <p className="-mt-2 text-xs text-text-muted">
         Bei Auswahl von Auto + Wohnwagen automatisch berechnet (Fahrzeuglänge + Wohnwagenlänge),
         bei Bedarf anpassbar.
       </p>
 
-      <label className="flex flex-col gap-1 text-sm">
-        Wohnwagenmodell (optional)
-        <input
-          name="caravan_model"
-          value={caravanModel}
-          onChange={(e) => setCaravanModel(e.target.value)}
-          className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
-        />
-      </label>
+      <Field label="Wohnwagenmodell (optional)">
+        <Input name="caravan_model" value={caravanModel} onChange={(e) => setCaravanModel(e.target.value)} />
+      </Field>
 
-      <label className="flex flex-col gap-1 text-sm">
-        Kommentar (optional)
-        <textarea
-          name="comment"
-          rows={3}
-          className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
-        />
-      </label>
+      <Field label="Kommentar (optional)">
+        <Textarea name="comment" rows={3} />
+      </Field>
 
       {error && <FormError className="text-sm">{error}</FormError>}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="min-h-12 self-start rounded-md bg-action px-4 py-3 text-sm font-medium text-base hover:bg-action-hover disabled:opacity-60"
-      >
+      <Button type="submit" size="md" disabled={pending} className="self-start">
         {pending ? "Wird gesendet…" : "Bewertung abschicken"}
-      </button>
+      </Button>
     </form>
   );
 }

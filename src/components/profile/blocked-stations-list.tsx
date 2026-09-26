@@ -56,7 +56,7 @@ export function BlockedStationsList({ stations }: { stations: BlockedStationOpti
       {items.map((station) => (
         <li
           key={station.id}
-          className="flex flex-col gap-1 rounded-md border border-black/10 px-4 py-3 text-sm dark:border-white/10"
+          className="flex flex-col gap-1 rounded-md border border-line px-4 py-3 text-sm"
         >
           <div className="flex items-center justify-between gap-4">
             <Link href={`/ladepunkte/${station.id}`} className="flex min-h-11 items-center hover:underline">

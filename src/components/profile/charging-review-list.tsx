@@ -5,6 +5,8 @@ import Link from "next/link";
 import { deleteChargingReview, updateChargingReview } from "@/app/profil/actions";
 import { CriterionField } from "@/components/charging-stations/criterion-field";
 import { FormError } from "@/components/form-error";
+import { Field, Input, Textarea } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import type { ChargingReview } from "@/types/database";
 
 export type ChargingReviewWithStation = ChargingReview & {
@@ -146,62 +148,39 @@ function EditForm({
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <label className="flex flex-col gap-1 text-sm">
-          Gespannlänge (m)
-          <input
+        <Field label="Gespannlänge (m)">
+          <Input
             name="trailer_length_m"
             type="number"
             step="0.01"
             min="0"
             defaultValue={review.trailer_length_m ?? ""}
-            className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
           />
-        </label>
-        <label className="flex flex-col gap-1 text-sm">
-          Gespannbreite (m)
-          <input
+        </Field>
+        <Field label="Gespannbreite (m)">
+          <Input
             name="trailer_width_m"
             type="number"
             step="0.01"
             min="0"
             defaultValue={review.trailer_width_m ?? ""}
-            className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
           />
-        </label>
+        </Field>
       </div>
 
-      <label className="flex flex-col gap-1 text-sm">
-        Wohnwagenmodell
-        <input
-          name="caravan_model"
-          defaultValue={review.caravan_model ?? ""}
-          className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
-        />
-      </label>
+      <Field label="Wohnwagenmodell">
+        <Input name="caravan_model" defaultValue={review.caravan_model ?? ""} />
+      </Field>
 
-      <textarea
-        name="comment"
-        rows={2}
-        defaultValue={review.comment ?? ""}
-        className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
-      />
+      <Textarea name="comment" rows={2} defaultValue={review.comment ?? ""} />
 
       {error && <FormError className="text-sm">{error}</FormError>}
 
       <div className="flex flex-col gap-2 sm:flex-row">
-        <button
-          type="submit"
-          className="min-h-11 rounded-md bg-action px-4 py-2 text-sm font-medium text-base hover:bg-action-hover"
-        >
-          Speichern
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="min-h-11 rounded-md border border-black/10 px-4 py-2 text-sm dark:border-white/10"
-        >
+        <Button type="submit">Speichern</Button>
+        <Button type="button" variant="secondary" onClick={onCancel}>
           Abbrechen
-        </button>
+        </Button>
       </div>
     </form>
   );

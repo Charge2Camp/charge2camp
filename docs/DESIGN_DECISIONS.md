@@ -10,6 +10,36 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
 
 ---
 
+## Button/Input-Migration Runde 3: Bewertungsformulare
+
+- **Decision:** Weitere 5 Dateien migriert:
+  `campsite-review-list.tsx` und `charging-review-list.tsx`
+  (Inline-Bearbeitungsformulare, `Textarea`/`Field`/`Input`/`Button`),
+  `campsites/review-form.tsx` und `charging-stations/review-form.tsx`
+  (vollständig, inkl. `Select` für Fahrzeug/Wohnwagen-Auswahl),
+  `blocked-stations-list.tsx` (nur Card-Rahmen `border-line` statt
+  `border-black/10`, kein Input-Inhalt).
+- **Reason:** Fortsetzung der bereichsweisen §14-Migration (Runde 3
+  nach Auth-Seiten und Profil-Formularen).
+- **Was bewusst NICHT migriert wurde:** Reine "Bearbeiten"/"Löschen"/
+  "Wieder freigeben"-Link-Buttons (`flex min-h-11 items-center px-2
+  -mx-2 ... hover:underline`, mehrfach in `campsite-review-list.tsx`,
+  `charging-review-list.tsx`, `blocked-stations-list.tsx`) — ihr
+  Padding-Muster passt zu keiner der `Button`-Größen (`sm`/`md`), ein
+  Erzwingen per `className` hätte denselben Tailwind-Klassenkonflikt
+  riskiert wie bereits bei Runde 2 vermieden. Bleibt offen für eine
+  eigene `Button`-Größe/-Variante ("link"?) in einem späteren Schritt,
+  statt hier eine schlecht passende Lösung zu erzwingen.
+- **Impact:** 5 Dateien geändert, dabei nebenbei drei weitere
+  `border-black/10`-Fundstellen (Teil der 64 aus Runde 1) auf
+  `border-line` migriert. Reine Wrapper-Ersetzung, keine
+  Logikänderung. Typecheck grün. Login-gated, nicht live getestet
+  (kein Test-Account) — Server-Build ohne Fehler (`preview_logs`),
+  identisches, bereits verifiziertes Muster.
+- **Date:** 2026-09-26 (Phase 16).
+
+---
+
 ## Button/Input-Migration Runde 2: Profil-Formulare
 
 - **Decision:** Weitere 8 Formulardateien auf `Button`/`Field`/`Input`/

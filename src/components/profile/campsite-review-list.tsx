@@ -4,6 +4,8 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { deleteCampsiteReview, updateCampsiteReview } from "@/app/profil/actions";
 import { FormError } from "@/components/form-error";
+import { Textarea } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import type { CampsiteReview } from "@/types/database";
 
 export type CampsiteReviewWithCampsite = CampsiteReview & {
@@ -96,31 +98,17 @@ function EditForm({ review, onCancel }: { review: CampsiteReviewWithCampsite; on
         </div>
       </fieldset>
 
-      <textarea
-        name="comment"
-        rows={2}
-        defaultValue={review.comment ?? ""}
-        className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
-      />
+      <Textarea name="comment" rows={2} defaultValue={review.comment ?? ""} />
 
       {error && <FormError className="text-sm">{error}</FormError>}
 
       <div className="flex flex-col gap-2 sm:flex-row">
-        <button
-          type="submit"
-          disabled={pending}
-          className="min-h-11 rounded-md bg-action px-4 py-2 text-sm font-medium text-base hover:bg-action-hover disabled:opacity-60"
-        >
+        <Button type="submit" disabled={pending}>
           {pending ? "Wird gespeichert…" : "Speichern"}
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          disabled={pending}
-          className="min-h-11 rounded-md border border-black/10 px-4 py-2 text-sm disabled:opacity-60 dark:border-white/10"
-        >
+        </Button>
+        <Button type="button" variant="secondary" onClick={onCancel} disabled={pending}>
           Abbrechen
-        </button>
+        </Button>
       </div>
     </form>
   );
