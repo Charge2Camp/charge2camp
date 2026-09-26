@@ -10,6 +10,46 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
 
 ---
 
+## Neue Komponente `Modal`, 5 Dialoge migriert
+
+- **Decision:** Neue Komponente `src/components/ui/modal.tsx` fasst das
+  bisher in mehreren Dialogen identisch duplizierte Wrapper-Markup
+  zusammen (Sheet auf Mobile, zentriertes Panel ab `sm:`, Kopfzeile mit
+  Titel + `Button variant="ghost" iconOnly`-Schließen-Button,
+  scrollbarer Inhaltsbereich mit Safe-Area-Padding). Nutzt `bg-card`/
+  `border-line` statt der zuvor hartcodierten `bg-white dark:bg-
+  neutral-900`/`border-black/10`. 5 Dialoge migriert:
+  `caravan-edit-dialog.tsx`, `vehicle-edit-dialog.tsx`,
+  `favorites-picker-dialog.tsx`, `home-address-picker-dialog.tsx`,
+  `saved-route-picker-dialog.tsx`. Dabei nebenbei weitere
+  `border-black/10`-Fundstellen (Listeneinträge in
+  `favorites-picker-dialog.tsx`/`saved-route-picker-dialog.tsx`) auf
+  `border-line` migriert und einige der bereits identifizierten
+  "Als Ziel verwenden"-Buttons auf `Button` umgestellt.
+- **Reason:** Deckt "Modal" aus §14 des Design-Briefs ab — der erste der
+  bisher fehlenden ~16 weiteren Komponententypen. Die 5 migrierten
+  Dialoge hatten praktisch identisches Wrapper-Markup, eine klare
+  Konsolidierungs-Gelegenheit.
+- **Was bewusst NICHT migriert wurde:** `nearby-charging-modal.tsx`
+  braucht eine abweichende feste Höhe (Kartenausschnitt,
+  `sm:h-[85vh] sm:max-h-[720px]`), die mit `Modal`s fest verdrahteter
+  `sm:h-auto`-Annahme kollidieren würde — dort bleibt das Markup
+  bewusst eigenständig (im Komponentenkommentar dokumentiert, damit das
+  nicht wie ein übersehener Fall wirkt). "Als Start verwenden"
+  (route-farbiger Outline-Button, `border-route text-route
+  hover:bg-route/10`) hat noch keine passende `Button`-Variante —
+  bewusst nicht erzwungen, ein Einzelfall bisher, keine eigene Variante
+  gerechtfertigt.
+- **Impact:** 6 Dateien geändert (5 Migrationen + `modal.tsx`).
+  Typecheck grün, Server-Build ohne Fehler, `/routenplaner` leitet
+  korrekt zu `/login` weiter (kein Compile-/Runtime-Fehler). Die
+  migrierten Dialoge sind login-gated, nicht einzeln live getestet —
+  das Muster wurde bereits am `NearbyChargingModal`-Schließen-Button
+  (Runde 6) live verifiziert.
+- **Date:** 2026-09-26 (Phase 16).
+
+---
+
 ## Button-Variante `ghost` ergänzt, Icon-Only-Schließen-Buttons migriert
 
 - **Decision:** Neue `ButtonVariant` `"ghost"` (`text-text-muted
