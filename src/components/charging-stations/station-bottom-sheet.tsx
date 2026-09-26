@@ -12,6 +12,7 @@ import { StationNearbyPoi } from "@/components/charging-stations/station-nearby-
 import { ReviewStateBadge } from "@/components/charging-stations/review-state-badge";
 import { SectionCard } from "@/components/charging-stations/section-card";
 import { FormError } from "@/components/form-error";
+import { Button } from "@/components/ui/button";
 import { TRAILER_PIN_COLORS, TRAILER_PIN_LABELS, TRAILER_PIN_TEXT_CLASS, getTrailerPinState } from "@/lib/trailer-verdict";
 import {
   NEARBY_POI_CATEGORY_ICONS,
@@ -309,24 +310,26 @@ export function StationBottomSheet({
               Zeigegeraet/Touch, siehe oben) -- stopPropagation, sonst
               wuerde das umschliessende onPointerDown/Up die Zieh-Geste
               startet und cycleSnap zusaetzlich ein zweites Mal ausloesen. */}
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            iconOnly
+            iconShape="circle"
             onPointerDown={(e) => e.stopPropagation()}
             onClick={cycleSnap}
             aria-label="Ansicht vergrößern oder verkleinern"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-lg text-black/50 hover:bg-black/5 dark:text-white/50 dark:hover:bg-white/10"
           >
             ⌃
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="ghost"
+            iconOnly
+            iconShape="circle"
             onPointerDown={(e) => e.stopPropagation()}
             onClick={onClose}
             aria-label="Schließen"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-xl text-black/50 hover:bg-black/5 dark:text-white/50 dark:hover:bg-white/10"
           >
             ×
-          </button>
+          </Button>
         </div>
 
         {/* Favorit + Gespann-Kompatibilitaets-Hinweis ganz oben statt des

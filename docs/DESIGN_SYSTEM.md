@@ -98,10 +98,14 @@ einmal:
 - **`Button`** (`src/components/ui/button.tsx`) — Varianten `primary`
   (`bg-action`), `secondary` (`border-line-strong`), `destructive`
   (`bg-error`, gefüllt), `destructive-outline` (`border-error/30`,
-  Text), `plain` (nur `hover:underline`, Textfarbe kommt vom Aufrufer).
-  Größen `sm`/`md`. `iconOnly` für quadratische 44×44px-Icon-Buttons.
-  `type="button"` als sicherer Default (`type="submit"` explizit
-  angeben).
+  Text), `route-outline` (`border-route`, Text), `plain` (nur
+  `hover:underline`, Textfarbe kommt vom Aufrufer), `ghost`
+  (`text-text-muted hover:bg-black/5`, für Icon-Only-Buttons ohne
+  Rahmen). Größen `sm`/`md`/`link`. `iconOnly` für 44×44px-Icon-Buttons,
+  `iconShape` `"square"` (Standard, `rounded-md`) oder `"circle"`
+  (`rounded-full`, für freischwebende Bedienelemente über Karten/
+  Bottom-Sheets). `type="button"` als sicherer Default (`type="submit"`
+  explizit angeben).
 - **`Card`** (`src/components/ui/card.tsx`) — Varianten `default`
   (`rounded-md border-line p-3`), `emphasis` (`rounded-lg p-4`),
   `tint-route`/`tint-warning` (getönte Hinweisflächen). Nutzt
@@ -130,12 +134,12 @@ einmal:
 Über mehrere Runden migriert (Details je Runde in
 `docs/DESIGN_DECISIONS.md`): alle fünf öffentlichen Auth-/Startseiten,
 die meisten Profil-Formulare, die Bewertungsformulare (inkl. Inline-
-Bearbeitung), `route-planner-form.tsx` (größte Einzeldatei), sowie fünf
-Dialoge auf `Modal` umgestellt. Bewusst offen bleiben: Toast, Bottom
+Bearbeitung), `route-planner-form.tsx` (größte Einzeldatei), fünf
+Dialoge auf `Modal` umgestellt, alle bekannten Icon-Only-Button-
+Fundstellen (`square`/`circle`). Bewusst offen bleiben nur noch
+eigenständige, bisher unangefragte Komponententypen: Toast, Bottom
 Sheet als eigene Komponente, Slider, Progress, Toggle, Checkbox,
-Empty/Error State, eine `route`-farbige Button-Outline-Variante
-(bisher Einzelfall), sowie die beiden `rounded-full`-Icon-Button-
-Varianten in `station-bottom-sheet.tsx`.
+Empty/Error State.
 - **Gespann-Panel:** wiederverwendete Komponente
   `src/components/gespann-panel.tsx` (Fahrzeug+Wohnwagen-Auswahl,
   identisch im Routenplaner und auf `/profil/gespann`) — bereits vor

@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { TRAILER_VERDICT_COLORS, TRAILER_VERDICT_LABELS } from "@/lib/trailer-verdict";
 import { ReviewStateBadge } from "@/components/charging-stations/review-state-badge";
+import { Button } from "@/components/ui/button";
 import type { LinkedChargePoint } from "@/lib/campsite-charging-links";
 
 /** "Ladepunkte in der Naehe" -- Klick auf einen Eintrag oeffnet die Details
@@ -67,14 +68,9 @@ export function NearbyChargePointsList({ points }: { points: LinkedChargePoint[]
           >
             <div className="flex items-start justify-between gap-3">
               <p className="text-lg font-semibold">{selected.name ?? selected.operator}</p>
-              <button
-                type="button"
-                onClick={() => setSelectedId(null)}
-                aria-label="Schließen"
-                className="flex h-11 w-11 shrink-0 items-center justify-center text-xl leading-none text-black/50 hover:bg-black/5 dark:text-white/50 dark:hover:bg-white/10"
-              >
+              <Button variant="ghost" iconOnly onClick={() => setSelectedId(null)} aria-label="Schließen">
                 ×
-              </button>
+              </Button>
             </div>
             <span
               className="mt-2 inline-block rounded-full px-3 py-1 text-sm text-white"

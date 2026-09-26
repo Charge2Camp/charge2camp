@@ -55,13 +55,9 @@ export function FavoritesPickerDialog({
                 {selected.name}
               </p>
               <div className="flex flex-col gap-3 sm:flex-row">
-                <button
-                  type="button"
-                  onClick={() => handlePick("start")}
-                  className="min-h-12 flex-1 rounded-md border border-route px-4 py-3 text-sm font-medium text-route hover:bg-route/10"
-                >
+                <Button variant="route-outline" size="md" onClick={() => handlePick("start")} className="flex-1">
                   Als Start verwenden
-                </button>
+                </Button>
                 <Button size="md" onClick={() => handlePick("end")} className="flex-1">
                   Als Ziel verwenden
                 </Button>

@@ -10,6 +10,35 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
 
 ---
 
+## Letzte offene Button-Lücken: `route-outline`-Variante, `iconShape`
+
+- **Decision:** Neue `ButtonVariant` `"route-outline"` (`border-route
+  text-route hover:bg-route/10`) für die 2 identischen "Als Start
+  verwenden"-Buttons (`favorites-picker-dialog.tsx`,
+  `home-address-picker-dialog.tsx`). Neue `iconOnly`-Option
+  `iconShape="circle"` (`rounded-full` statt `rounded-md`) für
+  freischwebende Bedienelemente über Karten/Bottom-Sheets — damit die 2
+  `rounded-full`-Icon-Buttons in `station-bottom-sheet.tsx` sowie der
+  kantenlose Close-Button in `nearby-charge-points.tsx` (auf den
+  `square`-Standard vereinheitlicht) migriert.
+- **Reason:** Schließt die beiden zuletzt in `DESIGN_SYSTEM.md`
+  benannten Lücken. Statt sie weiter offen zu lassen: `route-outline`
+  hatte bereits 2 identische Fundstellen (Schwelle für eine eigene
+  Variante analog zu den bisherigen Entscheidungen), `iconShape` ist
+  eine kleine, in sich konsistente Erweiterung von `iconOnly` statt
+  einer komplett neuen Komponente für einen Formfaktor-Unterschied.
+- **Impact:** 4 Dateien geändert (2 Migrationen + `button.tsx` +
+  `nearby-charge-points.tsx`). Typecheck grün, Server-Build ohne
+  Fehler, `/` live geprüft (kein Compile-/Runtime-Fehler). Damit sind
+  aus den zuletzt in `DESIGN_SYSTEM.md` "Bewusst offen"
+  gelisteten Punkten nur noch Toast, Bottom Sheet als eigene
+  Komponente, Slider, Progress, Toggle, Checkbox und Empty/Error State
+  unangefasst — alles eigenständige, noch nicht angefragte
+  Komponententypen, kein Nacharbeiten bestehender Entscheidungen mehr.
+- **Date:** 2026-09-26 (Phase 16).
+
+---
+
 ## Große `border-black/10`-Aufräumrunde
 
 - **Decision:** Alle verbliebenen `border-black/10`/`divide-black/10`-
