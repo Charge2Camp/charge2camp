@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import type { FavoriteDestinationOption } from "@/lib/favorites";
 
 const ENTITY_LABELS: Record<FavoriteDestinationOption["entityType"], string> = {
@@ -47,14 +48,9 @@ export function FavoritesPickerDialog({
           <h2 className="text-lg font-semibold">
             {selected ? "Als Start oder Ziel verwenden?" : "Aus Favoriten wählen"}
           </h2>
-          <button
-            type="button"
-            onClick={handleClose}
-            aria-label="Schließen"
-            className="flex h-11 w-11 items-center justify-center rounded-md text-xl text-black/50 hover:bg-black/5 dark:text-white/50 dark:hover:bg-white/10"
-          >
+          <Button variant="ghost" iconOnly onClick={handleClose} aria-label="Schließen">
             ✕
-          </button>
+          </Button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 pb-[calc(1rem+var(--safe-bottom))]">

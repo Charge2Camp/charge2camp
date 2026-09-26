@@ -9,7 +9,7 @@ import type { ButtonHTMLAttributes } from "react";
  * Tap-Ziele kommen ausschliesslich aus bestehenden Tokens
  * (docs/design/tokens.json) -- kein neuer visueller Stil. */
 
-export type ButtonVariant = "primary" | "secondary" | "destructive" | "destructive-outline" | "plain";
+export type ButtonVariant = "primary" | "secondary" | "destructive" | "destructive-outline" | "plain" | "ghost";
 export type ButtonSize = "sm" | "md" | "link";
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
@@ -22,6 +22,11 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   // aus dieser Komponente (variiert je Kontext: text-error, text-route,
   // text-text-muted), sondern aus der uebergebenen className des Aufrufers.
   plain: "font-medium hover:underline disabled:opacity-50",
+  // "ghost": rahmenlose Buttons mit Hover-Flaeche statt Hover-Unterstreichung
+  // -- v. a. Schliessen-Icons in Dialogen/Overlays (haeufigstes Muster laut
+  // Code-Survey, 10 Fundstellen, 9 davon bisher mit hartcodiertem
+  // text-black/50 statt --c-text-muted).
+  ghost: "text-text-muted hover:bg-black/5 disabled:opacity-50 dark:hover:bg-white/10",
 };
 
 const SIZE_CLASSES: Record<ButtonSize, string> = {

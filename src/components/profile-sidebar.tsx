@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogoutButton } from "@/components/logout-button";
 import { AdminButton } from "@/components/admin-button";
+import { Button } from "@/components/ui/button";
 
 const TABS = [
   { href: "/profil", label: "Übersicht" },
@@ -49,14 +50,9 @@ export function ProfileSidebar({
       <div className="absolute inset-y-0 right-0 flex w-72 max-w-[80vw] flex-col bg-card pt-[var(--safe-top)] pb-[var(--safe-bottom)] shadow-xl">
         <div className="flex items-center justify-between border-b border-line p-4">
           <h2 className="font-display text-lg font-bold">Mein Profil</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Schließen"
-            className="flex h-11 w-11 items-center justify-center rounded-md text-xl text-text-muted hover:bg-black/5"
-          >
+          <Button variant="ghost" iconOnly onClick={onClose} aria-label="Schließen">
             ✕
-          </button>
+          </Button>
         </div>
 
         <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-2">

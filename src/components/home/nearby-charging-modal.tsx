@@ -14,6 +14,7 @@ import {
   getTrailerPinState,
 } from "@/lib/trailer-verdict";
 import { distanceKm } from "@/lib/geo";
+import { Button } from "@/components/ui/button";
 import type { ChargingStationView } from "@/lib/charging-stations";
 import type { TrailerVerdict } from "@/types/database";
 
@@ -196,14 +197,9 @@ export function NearbyChargingModal({ open, onClose }: { open: boolean; onClose:
       <div className="flex h-full w-full flex-col overflow-hidden bg-white dark:bg-neutral-900 sm:h-[85vh] sm:max-h-[720px] sm:w-full sm:max-w-2xl sm:rounded-lg">
         <div className="flex items-center justify-between border-b border-black/10 p-4 pt-[calc(1rem+var(--safe-top))] dark:border-white/10 sm:pt-4">
           <h2 className="text-lg font-semibold">Ladesäule in der Nähe suchen</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Schließen"
-            className="flex h-11 w-11 items-center justify-center rounded-md text-xl text-black/50 hover:bg-black/5 dark:text-white/50 dark:hover:bg-white/10"
-          >
+          <Button variant="ghost" iconOnly onClick={onClose} aria-label="Schließen">
             ✕
-          </button>
+          </Button>
         </div>
 
         <div className="flex flex-1 flex-col overflow-hidden">

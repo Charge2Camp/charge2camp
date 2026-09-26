@@ -10,6 +10,38 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
 
 ---
 
+## Button-Variante `ghost` ergänzt, Icon-Only-Schließen-Buttons migriert
+
+- **Decision:** Neue `ButtonVariant` `"ghost"` (`text-text-muted
+  hover:bg-black/5 disabled:opacity-50 dark:hover:bg-white/10`, ohne
+  Rahmen/Fläche) in `src/components/ui/button.tsx`. Damit 7 der 10
+  gefundenen Icon-Only-Schließen-Buttons migriert (`variant="ghost"
+  iconOnly`): `caravan-edit-dialog.tsx`, `vehicle-edit-dialog.tsx`,
+  `favorites-picker-dialog.tsx`, `home-address-picker-dialog.tsx`,
+  `saved-route-picker-dialog.tsx`, `nearby-charging-modal.tsx`,
+  `profile-sidebar.tsx`. Dabei zugleich das in Runde 4 notierte
+  `text-black/50`-statt-`text-text-muted`-Problem an 6 dieser 7 Stellen
+  behoben (der Token kommt jetzt zentral aus der Komponente, nicht mehr
+  hartcodiert).
+- **Reason:** Schließt die in Runde 4 dokumentierte Lücke. 10
+  Fundstellen mit praktisch identischem Muster rechtfertigen eine
+  eigene Variante (kein Einzelfall).
+- **Was bewusst NICHT migriert wurde:** 2 Stellen in
+  `station-bottom-sheet.tsx` nutzen `rounded-full` statt `rounded-md`
+  (rundes statt eckiges Icon, vermutlich bewusst für den Kontext dort)
+  sowie 1 Stelle in `nearby-charge-points.tsx`, der das `rounded-md`
+  gänzlich fehlt (eckige statt jeder Ecken-Rundung) — beides eigene
+  Formvarianten, kein 1:1-Match zu `iconOnly`, hier nicht ungeprüft
+  vereinheitlicht.
+- **Impact:** 8 Dateien geändert (7 Migrationen + `button.tsx`). Reine
+  Wrapper-/Farbklassen-Ersetzung. Typecheck grün, Server-Build ohne
+  Fehler, live auf `/` getestet (öffentlich erreichbar über "Ladesäule
+  in der Nähe suchen"): Modal öffnet, Ghost-Button rendert korrekt,
+  Schließen-Funktion arbeitet.
+- **Date:** 2026-09-26 (Phase 16).
+
+---
+
 ## Button/Input-Migration Runde 5: `route-planner-form.tsx` (größte Einzeldatei)
 
 - **Decision:** Die zuvor als "größte verbliebene Einzeldatei" benannte

@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+
 /** Fragt (ohne Zwischenschritt, da nur ein Ort) direkt "Als Start oder Ziel
  * verwenden?" fuer die im Profil hinterlegte Zuhause-Adresse -- analog zum
  * zweiten Schritt von favorites-picker-dialog.tsx. */
@@ -21,14 +23,9 @@ export function HomeAddressPickerDialog({
       <div className="flex h-full w-full flex-col overflow-hidden bg-white dark:bg-neutral-900 sm:h-auto sm:max-h-[85vh] sm:w-full sm:max-w-md sm:rounded-lg">
         <div className="flex items-center justify-between border-b border-black/10 p-4 pt-[calc(1rem+var(--safe-top))] dark:border-white/10 sm:pt-4">
           <h2 className="text-lg font-semibold">Als Start oder Ziel verwenden?</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Schließen"
-            className="flex h-11 w-11 items-center justify-center rounded-md text-xl text-black/50 hover:bg-black/5 dark:text-white/50 dark:hover:bg-white/10"
-          >
+          <Button variant="ghost" iconOnly onClick={onClose} aria-label="Schließen">
             ✕
-          </button>
+          </Button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 pb-[calc(1rem+var(--safe-bottom))]">
