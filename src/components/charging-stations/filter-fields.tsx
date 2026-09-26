@@ -1,33 +1,37 @@
+"use client";
+
+import { useState } from "react";
 import { NameSuggestField } from "@/components/name-suggest-field";
+import { FilterChip } from "@/components/charging-stations/filter-chip";
 import type { ChargingStationFilters, ChargingStationOperatorOption } from "@/lib/charging-stations";
 import { CONNECTOR_CATEGORIES } from "@/lib/connector-categories";
 import { TRAILER_VERDICT_LABELS, TRAILER_VERDICT_VALUES } from "@/lib/trailer-verdict";
+import type { TrailerVerdict } from "@/types/database";
 
-/** Alle Filterfelder fuer die Ladepunkte-Suche, EIN Ablauf statt der
- * vorherigen kuenstlichen Trennung "Quick-Filter"/"weitere Filter" (beide
- * lagen ohnehin im selben Panel, nur durch eine <hr> getrennt) -- Reihenfolge
- * ist bewusst nach Relevanz fuer die Zielgruppe sortiert:
+/** Alle Filterfelder fuer die Ladepunkte-Suche als Sofort-anwendende Chips
+ * (kein <form>/Submit mehr, siehe charging-station-map-explorer.tsx) -- jeder
+ * Tap ruft `onChange` mit dem geaenderten Ausschnitt des Filterzustands auf,
+ * der Aufrufer haelt den vollstaendigen State. Reihenfolge weiterhin nach
+ * Relevanz fuer die Zielgruppe sortiert:
  *   1. Anhaengertauglichkeit  -- Kernfrage des Produkts (CLAUDE.md
  *      Entwicklungsprinzip 7 "Anhaengertauglichkeit hat Prioritaet"), immer
  *      sichtbar, nie hinter einem Aufklapp-Bereich versteckt.
  *   2. Ladeleistung (Schnelllader) -- zweite technische Kernfrage.
  *   3. Steckertyp / 4. Ladeanbieter -- weitere technische Kompatibilitaet,
  *      potenziell viele Optionen, deshalb aufklappbar (<details>).
- *   5. Suche -- Freitext, kein Kompatibilitaetsfilter.
- *   6. Favoriten -- persoenliche Praeferenz, deshalb zuletzt (vorher an
- *      erster Stelle).
- * Kein eigenes <form>/keine Submit-Buttons hier: das umschliessende <form>
- * samt der jetzt fest am unteren Rand des Filter-Panels stehenden
- * "Filtern"/"Zuruecksetzen"-Buttons lebt in charging-station-map-explorer.tsx
- * (Nutzerwunsch: Buttons "ganz nach unten", nicht mitten im scrollbaren
- * Inhalt). */
+ *   5. Suche -- Freitext, kein Chip (evcaravan.de-Vergleich: dort ebenfalls
+ *      eigenes Suchfeld statt Chip-Muster).
+ *   6. Favoriten -- persoenliche Praeferenz, deshalb zuletzt.
+ */
 export function ChargingStationFilterFields({
   filters,
+  onChange,
   isLoggedIn,
   nameOptions,
   operatorOptions,
 }: {
   filters: ChargingStationFilters;
+  onChange: (patch: Partial<ChargingStationFilters>) => void;
   /** "Nur Favoriten" ist ohne Login wirkungslos (leeres Ergebnis) -- Checkbox
    * dann gar nicht erst anzeigen statt einer verwirrenden leeren Karte. */
   isLoggedIn: boolean;
@@ -37,84 +41,123 @@ export function ChargingStationFilterFields({
    * Stationen (siehe fetchChargingStationOperatorOptions). */
   operatorOptions: ChargingStationOperatorOption[];
 }) {
+  // Nur fuers Offenhalten der beiden Aufklapp-Bereiche (rein optisch, kein
+  // Filterzustand) -- initial offen, wenn dort bereits etwas ausgewaehlt ist.
+  const [connectorOpen, setConnectorOpen] = useState(filters.connectorCategories.length > 0);
+  const [operatorOpen, setOperatorOpen] = useState(filters.operators.length > 0);
+
+  function toggleTrailerVerdict(value: TrailerVerdict) {
+    const next = filters.trailerVerdict.includes(value)
+      ? filters.trailerVerdict.filter((v) => v !== value)
+      : [...filters.trailerVerdict, value];
+    onChange({ trailerVerdict: next });
+  }
+
+  function toggleConnectorCategory(key: string) {
+    const next = filters.connectorCategories.includes(key)
+      ? filters.connectorCategories.filter((k) => k !== key)
+      : [...filters.connectorCategories, key];
+    onChange({ connectorCategories: next });
+  }
+
+  function toggleOperator(operator: string) {
+    const next = filters.operators.includes(operator)
+      ? filters.operators.filter((o) => o !== operator)
+      : [...filters.operators, operator];
+    onChange({ operators: next });
+  }
+
   return (
     <div className="flex flex-col gap-6 text-sm">
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-1 font-medium">
           Anhängertauglichkeit — standardmäßig nur „tauglich“ &amp; „abkoppeln nötig“
         </legend>
-        <div className="flex flex-wrap gap-x-5 gap-y-1">
+        <div className="flex flex-wrap gap-2">
           {TRAILER_VERDICT_VALUES.map((value) => (
-            <label key={value} className="flex min-h-11 items-center gap-2">
-              <input
-                type="checkbox"
-                name={`trailer_${value}`}
-                value="1"
-                defaultChecked={filters.trailerVerdict.includes(value)}
-              />
-              {TRAILER_VERDICT_LABELS[value]}
-            </label>
+            <FilterChip
+              key={value}
+              label={TRAILER_VERDICT_LABELS[value]}
+              active={filters.trailerVerdict.includes(value)}
+              onClick={() => toggleTrailerVerdict(value)}
+            />
           ))}
         </div>
       </fieldset>
 
-      <label className="flex min-h-11 items-center gap-2">
-        <input type="checkbox" name="fast" value="1" defaultChecked={filters.fastChargersOnly} />
-        Nur Schnelllader (≥100 kW) — standardmäßig aktiv
-      </label>
-
-      {/* Aufklappbar statt dauerhaft ausgeklappt -- nativ per <details>, kein
-          Client-Component/State noetig: die Checkboxen bleiben beim
-          Einklappen im DOM und werden beim Absenden des umschliessenden
-          <form> trotzdem mitgeschickt. Bereits aktive Auswahl haelt den
-          Bereich offen, damit sie nicht "versteckt" wirkt. */}
-      <details className="group" open={filters.connectorCategories.length > 0}>
-        <summary className="min-h-11 cursor-pointer select-none py-1 font-medium">
-          Steckertyp
-          {filters.connectorCategories.length > 0 ? ` (${filters.connectorCategories.length} ausgewählt)` : ""}
-        </summary>
-        <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 sm:grid-cols-3">
-          {CONNECTOR_CATEGORIES.map((category) => (
-            <label key={category.key} className="flex min-h-11 items-center gap-2">
-              <input
-                type="checkbox"
-                name={`connector_${category.key}`}
-                value="1"
-                defaultChecked={filters.connectorCategories.includes(category.key)}
-              />
-              {category.label}
-            </label>
-          ))}
+      <div className="flex flex-col gap-2">
+        <span className="font-medium">Ladeleistung</span>
+        <div className="flex flex-wrap gap-2">
+          <FilterChip
+            label="Nur Schnelllader (≥100 kW)"
+            active={filters.fastChargersOnly}
+            onClick={() => onChange({ fastChargersOnly: !filters.fastChargersOnly })}
+          />
         </div>
-      </details>
+      </div>
 
-      <details className="group" open={filters.operators.length > 0}>
-        <summary className="min-h-11 cursor-pointer select-none py-1 font-medium">
-          Ladeanbieter
-          {filters.operators.length > 0 ? ` (${filters.operators.length} ausgewählt)` : ""}
-        </summary>
-        <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 sm:grid-cols-3">
-          {operatorOptions.map((option) => (
-            <label key={option.operator} className="flex min-h-11 items-center gap-2">
-              <input
-                type="checkbox"
-                name="operator"
-                value={option.operator}
-                defaultChecked={filters.operators.includes(option.operator)}
+      {/* Aufklappbar statt dauerhaft ausgeklappt -- eigener State statt
+          nativem <details>/<summary> (dort waere ein kontrollierter
+          "open"-Zustand ohne <form> drumherum unnoetig umstaendlich). */}
+      <div>
+        <button
+          type="button"
+          onClick={() => setConnectorOpen((o) => !o)}
+          className="flex min-h-11 w-full items-center justify-between text-left font-medium"
+          aria-expanded={connectorOpen}
+        >
+          <span>
+            Steckertyp
+            {filters.connectorCategories.length > 0 ? ` (${filters.connectorCategories.length} ausgewählt)` : ""}
+          </span>
+          <span aria-hidden="true">{connectorOpen ? "▲" : "▼"}</span>
+        </button>
+        {connectorOpen && (
+          <div className="mt-2 flex flex-wrap gap-2">
+            {CONNECTOR_CATEGORIES.map((category) => (
+              <FilterChip
+                key={category.key}
+                label={category.label}
+                active={filters.connectorCategories.includes(category.key)}
+                onClick={() => toggleConnectorCategory(category.key)}
               />
-              <span className="truncate" title={option.operator}>
-                {option.operator} ({option.stationCount})
-              </span>
-            </label>
-          ))}
-        </div>
-      </details>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div>
+        <button
+          type="button"
+          onClick={() => setOperatorOpen((o) => !o)}
+          className="flex min-h-11 w-full items-center justify-between text-left font-medium"
+          aria-expanded={operatorOpen}
+        >
+          <span>
+            Ladeanbieter
+            {filters.operators.length > 0 ? ` (${filters.operators.length} ausgewählt)` : ""}
+          </span>
+          <span aria-hidden="true">{operatorOpen ? "▲" : "▼"}</span>
+        </button>
+        {operatorOpen && (
+          <div className="mt-2 flex flex-wrap gap-2">
+            {operatorOptions.map((option) => (
+              <FilterChip
+                key={option.operator}
+                label={`${option.operator} (${option.stationCount})`}
+                active={filters.operators.includes(option.operator)}
+                onClick={() => toggleOperator(option.operator)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
 
       <label className="flex flex-col gap-1">
         Suche
         <NameSuggestField
-          name="q"
-          defaultValue={filters.q}
+          value={filters.q ?? ""}
+          onCommit={(value) => onChange({ q: value || undefined })}
           placeholder="Name des Ladepunkts"
           options={nameOptions}
           className="w-full rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
@@ -122,10 +165,13 @@ export function ChargingStationFilterFields({
       </label>
 
       {isLoggedIn && (
-        <label className="flex min-h-11 items-center gap-2">
-          <input type="checkbox" name="favorites" value="1" defaultChecked={filters.favoritesOnly} />
-          Nur meine Favoriten
-        </label>
+        <div className="flex flex-wrap gap-2">
+          <FilterChip
+            label="Nur meine Favoriten"
+            active={filters.favoritesOnly}
+            onClick={() => onChange({ favoritesOnly: !filters.favoritesOnly })}
+          />
+        </div>
       )}
     </div>
   );

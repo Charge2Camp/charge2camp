@@ -8,7 +8,6 @@ import {
 import { isDefaultTrailerVerdict } from "@/lib/trailer-verdict";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/require-user";
-import { ChargingStationFilterFields } from "@/components/charging-stations/filter-fields";
 import { ChargingStationMapExplorer } from "@/components/charging-stations/charging-station-map-explorer";
 
 export default async function ChargingStationsPage({
@@ -85,13 +84,6 @@ export default async function ChargingStationsPage({
     fetchChargingStationOperatorOptions(),
   ]);
 
-  const activeFilterCount =
-    (filters.q ? 1 : 0) +
-    (filters.favoritesOnly ? 1 : 0) +
-    (isDefaultTrailerVerdict(filters.trailerVerdict) ? 0 : filters.trailerVerdict.length) +
-    filters.connectorCategories.length +
-    filters.operators.length;
-
   let emptyMessage: string;
   if (filters.favoritesOnly) {
     emptyMessage = user
@@ -108,26 +100,22 @@ export default async function ChargingStationsPage({
     <div className="md:mx-auto md:max-w-6xl md:px-4 md:py-6">
       <h1 className="hidden text-2xl font-semibold md:block">Ladepunkte</h1>
 
-      {/* Bewusst KEIN <form> hier aussen drum -- das wuerde sich um die
-          gesamte Kartenansicht inkl. Bottom-Sheet legen und darin
-          zwangsläufig auch das Bewertungsformular verschachteln (ungueltiges
-          HTML, siehe charging-station-map-explorer.tsx). Das <form> fuer die
-          Filterfelder liegt jetzt dort, enger um filterPanel gefasst. */}
+      {/* Kein <form> mehr aussen drum: das Filter-Panel wendet seit der
+          Umstellung auf Sofort-Chips jede Aenderung direkt client-seitig an
+          (siehe charging-station-map-explorer.tsx applyFilters) -- dafuer
+          braucht die Komponente Funktions-Closures ueber ihren eigenen
+          Live-Zustand, die nicht als Server-gebautes ReactNode ueber die
+          Server/Client-Grenze gereicht werden koennen. nameOptions/
+          operatorOptions gehen deshalb als reine Daten mit, das Panel selbst
+          rendert ChargingStationMapExplorer intern. */}
       <ChargingStationMapExplorer
         initialStations={stations}
         filters={filters}
         homeAddress={homeAddress}
         emptyMessage={emptyMessage}
-        activeFilterCount={activeFilterCount}
+        nameOptions={nameOptions}
+        operatorOptions={operatorOptions}
         isLoggedIn={Boolean(user)}
-        filterPanel={
-          <ChargingStationFilterFields
-            filters={filters}
-            isLoggedIn={Boolean(user)}
-            nameOptions={nameOptions}
-            operatorOptions={operatorOptions}
-          />
-        }
       />
     </div>
   );

@@ -9,25 +9,36 @@ const MAX_SUGGESTIONS = 8;
  * Namens-Suchfeld mit Vorschlaegen aus bereits geladenen Namen (Campingplatz-
  * /Ladepunkt-Suche) -- rein clientseitiger Abgleich gegen `options`, keine
  * externe Anfrage noetig (anders als AddressAutocomplete: hier wird gegen
- * unsere eigene DB gesucht, nicht gegen echte Adressen). Bleibt bewusst ein
- * unkontrolliertes natives Formularfeld (wie die uebrigen Filterfelder in
- * filter-form.tsx), damit ein Klick auf einen Vorschlag das umschliessende
- * Formular sofort absenden kann.
+ * unsere eigene DB gesucht, nicht gegen echte Adressen).
+ *
+ * Zwei Modi: ohne `value`-Prop bleibt es ein unkontrolliertes natives
+ * Formularfeld (Campingplatz-Filter, filter-form.tsx) -- ein Klick auf einen
+ * Vorschlag sendet das umschliessende Formular sofort ab. Mit `value`/
+ * `onCommit` (Ladepunkte-Filter, seit der Umstellung auf Sofort-Chips ohne
+ * <form>, siehe charging-station-map-explorer.tsx) wird der Wert vom
+ * Aufrufer gehalten; `onCommit` feuert bei Vorschlagsauswahl oder Enter statt
+ * eines Formular-Submits.
  */
 export function NameSuggestField({
   name,
   defaultValue,
+  value: controlledValue,
+  onCommit,
   placeholder,
   options,
   className,
 }: {
-  name: string;
+  name?: string;
   defaultValue?: string;
+  value?: string;
+  onCommit?: (value: string) => void;
   placeholder?: string;
   options: string[];
   className?: string;
 }) {
-  const [value, setValue] = useState(defaultValue ?? "");
+  const isControlled = controlledValue !== undefined;
+  const [internalValue, setInternalValue] = useState(defaultValue ?? "");
+  const value = isControlled ? controlledValue : internalValue;
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -47,10 +58,15 @@ export function NameSuggestField({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  function setValue(next: string) {
+    if (!isControlled) setInternalValue(next);
+  }
+
   function selectSuggestion(suggestion: string, formEl: HTMLFormElement | null) {
     setValue(suggestion);
     setOpen(false);
-    formEl?.requestSubmit();
+    if (onCommit) onCommit(suggestion);
+    else formEl?.requestSubmit();
   }
 
   return (
@@ -62,6 +78,13 @@ export function NameSuggestField({
         onChange={(e) => {
           setValue(e.target.value);
           setOpen(true);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && onCommit) {
+            e.preventDefault();
+            onCommit(value);
+            setOpen(false);
+          }
         }}
         onFocus={() => setOpen(suggestions.length > 0)}
         placeholder={placeholder}

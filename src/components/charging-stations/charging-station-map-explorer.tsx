@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { MapView, type MapBoundsBox } from "@/components/map/map-view";
 import {
   TRAILER_PIN_COLORS,
@@ -17,12 +18,18 @@ import {
 import { ReviewStateBadge } from "@/components/charging-stations/review-state-badge";
 import { FormError } from "@/components/form-error";
 import { StationBottomSheet } from "@/components/charging-stations/station-bottom-sheet";
+import { ChargingStationFilterFields } from "@/components/charging-stations/filter-fields";
 import { formatConnectorStandard } from "@/lib/connector-standard";
 import { distanceKm } from "@/lib/geo";
 import { saveListNavigationContext } from "@/components/list-navigation";
 import { loadSavedMapViewport, saveMapViewport, type MapViewport } from "@/lib/map-viewport-storage";
 import { useMediaQuery } from "@/lib/use-media-query";
-import type { ChargingStationFilters, ChargingStationView } from "@/lib/charging-stations";
+import { computeActiveFilterCount, buildChargingStationFilterParams } from "@/lib/charging-station-filters";
+import type {
+  ChargingStationFilters,
+  ChargingStationOperatorOption,
+  ChargingStationView,
+} from "@/lib/charging-stations";
 
 // Karte + "pointer: coarse" statt nur der Tailwind-md-Breakpoint-Grenze
 // (anders als Header/Bottom-Tab-Bar, siehe site-header.tsx): ein gedrehtes
@@ -54,20 +61,14 @@ const GERMANY_OVERVIEW_ZOOM = 4.5;
 /** Baut die Query-Parameter fuer /api/charge-points/viewport aus denselben
  * Filtern, die auch der initiale Seitenaufruf verwendet (siehe
  * parseChargingStationFilters) -- Karte und Server-Erstansicht liefern so
- * bei gleichen Filtern immer dieselben Ergebnisse. */
+ * bei gleichen Filtern immer dieselben Ergebnisse. Basis-Parameter (alles
+ * ausser bbox) kommen aus buildChargingStationFilterParams (lib/
+ * charging-station-filters.ts) -- dieselbe Funktion baut auch die URL-Query
+ * fuer den Seitenaufruf selbst (siehe scheduleFilterSync unten), damit beide
+ * Stellen nie auseinanderlaufen. */
 function buildViewportQuery(filters: ChargingStationFilters, bounds: MapBoundsBox): string {
-  const params = new URLSearchParams();
+  const params = buildChargingStationFilterParams(filters);
   params.set("bbox", `${bounds.west},${bounds.south},${bounds.east},${bounds.north}`);
-  // Markiert die Anfrage als "expliziter Filterzustand" (siehe
-  // resolveFastChargersOnly in charging-stations.ts) -- ohne das wuerde ein
-  // bewusst abgewaehltes "Nur Schnelllader" beim naechsten Kartenschwenk
-  // wieder auf den Default zurueckspringen, weil fast dann fehlt.
-  params.set("filters_submitted", "1");
-  if (filters.q) params.set("q", filters.q);
-  if (filters.fastChargersOnly) params.set("fast", "1");
-  for (const v of filters.trailerVerdict) params.set(`trailer_${v}`, "1");
-  for (const key of filters.connectorCategories) params.set(`connector_${key}`, "1");
-  for (const op of filters.operators) params.append("operator", op);
   return params.toString();
 }
 
@@ -210,8 +211,8 @@ export function ChargingStationMapExplorer({
   filters,
   homeAddress,
   emptyMessage,
-  filterPanel,
-  activeFilterCount,
+  nameOptions,
+  operatorOptions,
   isLoggedIn,
 }: {
   /** Serverseitig geladene Erstansicht -- fuer den ersten Render, bevor die
@@ -221,9 +222,9 @@ export function ChargingStationMapExplorer({
    * -- die Favoritenliste ist ohnehin schon vollstaendig und meist klein). */
   initialStations: ChargingStationView[];
   /** Dieselben Filter, mit denen `initialStations` serverseitig geladen
-   * wurde -- Grundlage fuer die Kartenausschnitt-Nachladung
-   * (/api/charge-points/viewport), damit Karte und Erstansicht bei
-   * gleichen Filtern immer dieselben Treffer liefern. */
+   * wurde -- Ausgangswert fuer den clientseitig gehaltenen Live-Filterzustand
+   * (siehe liveFilters unten), Grundlage fuer die Kartenausschnitt-
+   * Nachladung (/api/charge-points/viewport). */
   filters: ChargingStationFilters;
   /** Im Profil ("Meine Daten") hinterlegte Zuhause-Adresse -- Grundlage
    * fuer die initiale Kartenzentrierung (Nutzerwunsch), statt des
@@ -233,18 +234,21 @@ export function ChargingStationMapExplorer({
   homeAddress: { latitude: number; longitude: number } | null;
   /** Text, wenn `stations` leer ist. */
   emptyMessage: string;
-  /** Formularfelder (Quick-Filter + "weitere Filter"), inkl. Submit/Reset --
-   * das umschliessende <form action="/ladepunkte"> liegt direkt hier in der
-   * Komponente (siehe filterOpen-Panel unten), NICHT mehr in ladepunkte/
-   * page.tsx -- sonst waere auch das Bewertungsformular im Bottom-Sheet
-   * ungueltig darin verschachtelt gewesen. */
-  filterPanel: ReactNode;
-  activeFilterCount: number;
+  /** Alle Ladepunkt-Anzeigenamen/Ladeanbieter-Optionen fuers Filter-Panel --
+   * werden HIER (statt in ladepunkte/page.tsx) an ChargingStationFilterFields
+   * gereicht, weil das Panel seit der Umstellung auf Sofort-Chips (kein
+   * <form> mehr) Closures ueber den Live-Filterzustand braucht, der nur
+   * client-seitig existiert -- ein server-gebautes filterPanel-ReactNode
+   * (die vorherige Loesung) kann keine Funktionsreferenzen ueber die
+   * Server/Client-Grenze reichen. */
+  nameOptions: string[];
+  operatorOptions: ChargingStationOperatorOption[];
   /** Fuer das Bottom-Sheet der mobilen Kartenansicht (Favorit-Button/
    * Bewertungsformular/Blockieren nur fuer angemeldete Nutzer, siehe
    * StationBottomSheet). */
   isLoggedIn: boolean;
 }) {
+  const router = useRouter();
   const [viewMode, setViewMode] = useState<"map" | "list">("map");
 
   function handleViewportChange(viewport: MapViewport) {
@@ -252,6 +256,30 @@ export function ChargingStationMapExplorer({
   }
   const [filterOpen, setFilterOpen] = useState(false);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+
+  // Client-seitiger Live-Filterzustand seit der Umstellung auf Sofort-Chips
+  // (kein "Filtern"-Submit mehr, siehe applyFilters unten) -- initialisiert
+  // aus der Server-Erstansicht (`filters`-Prop), damit SSR-HTML und erste
+  // Client-Hydration exakt uebereinstimmen.
+  const [liveFilters, setLiveFilters] = useState<ChargingStationFilters>(filters);
+  // `filters` (Server-Prop) aendert sich nur bei einer ECHTEN Next.js-
+  // Navigation (router.push, siehe resetFilters/favoritesOnly-Zweig in
+  // applyFilters unten) -- Next.js behaelt den Client-Component-State bei
+  // einer Navigation auf dieselbe Route bewusst bei (kein Remount), ohne
+  // diesen Effekt wuerde z. B. "Zuruecksetzen" die URL korrekt aendern, die
+  // Chips aber optisch aktiv stehen lassen (liveFilters bliebe der alte
+  // Stand). Normale Chip-Taps (applyFilters, Nicht-Favoriten-Zweig) loesen
+  // dagegen bewusst KEINE Next.js-Navigation aus (history.replaceState
+  // statt router.replace, s.u.) -- `filters` bleibt dabei unveraendert, der
+  // Effekt feuert also nicht doppelt/unnoetig.
+  useEffect(() => {
+    setLiveFilters(filters);
+  }, [filters]);
+  const activeFilterCount = useMemo(() => computeActiveFilterCount(liveFilters), [liveFilters]);
+  // Letzter bekannter Kartenausschnitt -- Filter-Chips loesen selbst KEIN
+  // onBoundsChange aus (die Karte bewegt sich dabei nicht), brauchen aber
+  // denselben Ausschnitt fuer ihr eigenes Nachladen (siehe applyFilters).
+  const lastBoundsRef = useRef<MapBoundsBox | null>(null);
 
   // Mobil/Touch bekommt eine eigene Vollbild-Karte + Bottom-Sheet statt der
   // Desktop-Box mit MapLibre-Popup (siehe TOUCH_MAP_QUERY oben).
@@ -313,8 +341,12 @@ export function ChargingStationMapExplorer({
     []
   );
 
-  function handleBoundsChange(bounds: MapBoundsBox) {
-    if (filters.favoritesOnly) return;
+  // Gemeinsame, debounced Nachlade-Funktion fuer BEIDE Ausloeser: Kartenschwenk
+  // (handleBoundsChange, Ausschnitt aendert sich) UND Filter-Chip-Tap
+  // (applyFilters, Ausschnitt bleibt gleich) -- ein gemeinsamer Timer statt
+  // zweier unabhaengiger verhindert, dass ein schneller Schwenk direkt nach
+  // einem Chip-Tap (oder umgekehrt) zwei ueberlappende Requests auslöst.
+  function scheduleViewportRefetch(filtersToUse: ChargingStationFilters, bounds: MapBoundsBox) {
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     debounceTimerRef.current = setTimeout(async () => {
       const seq = ++fetchSeqRef.current;
@@ -322,7 +354,7 @@ export function ChargingStationMapExplorer({
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), VIEWPORT_FETCH_TIMEOUT_MS);
       try {
-        const qs = buildViewportQuery(filters, bounds);
+        const qs = buildViewportQuery(filtersToUse, bounds);
         const res = await fetch(`/api/charge-points/viewport?${qs}`, { signal: controller.signal });
         if (!res.ok) {
           if (seq === fetchSeqRef.current) setViewportFetchFailed(true);
@@ -344,6 +376,56 @@ export function ChargingStationMapExplorer({
         if (seq === fetchSeqRef.current) setIsFetchingViewport(false);
       }
     }, VIEWPORT_FETCH_DEBOUNCE_MS);
+  }
+
+  function handleBoundsChange(bounds: MapBoundsBox) {
+    lastBoundsRef.current = bounds;
+    if (liveFilters.favoritesOnly) return;
+    scheduleViewportRefetch(liveFilters, bounds);
+  }
+
+  /** Sofort-Filteraenderung durch einen Chip-Tap (siehe filter-fields.tsx) --
+   * aktualisiert den Live-Zustand, synchronisiert die URL (Teilen-Links/
+   * Zurueck-Button/JS-loser Fallback bleiben korrekt) und laedt den
+   * aktuellen Kartenausschnitt mit den neuen Filtern nach. */
+  function applyFilters(patch: Partial<ChargingStationFilters>) {
+    const next: ChargingStationFilters = { ...liveFilters, ...patch };
+    setLiveFilters(next);
+
+    const favoritesToggled = patch.favoritesOnly !== undefined && patch.favoritesOnly !== liveFilters.favoritesOnly;
+    if (favoritesToggled) {
+      // Der Favoriten-Pfad laedt serverseitig ueber fetchFavoriteChargingStations
+      // (kein Kartenausschnitt-API-Aequivalent, siehe charging-stations.ts) --
+      // volle Navigation statt Live-Refetch, wie zuvor beim Formular-Submit.
+      // Weiterhin ein einzelner Tap, keine separate Absende-Aktion.
+      const params = buildChargingStationFilterParams(next, { includeFavorites: true });
+      router.push(`/ladepunkte?${params.toString()}`);
+      return;
+    }
+
+    // router.replace() statt roher history.replaceState(): erste Version
+    // nutzte die rohe History-API, um den zusaetzlichen RSC-Request pro
+    // Chip-Tap zu sparen -- das bringt aber Next.js' internen
+    // Navigationszustand durcheinander (Next merkt sich selbst, welche URL
+    // "aktuell" ist, unabhaengig vom tatsaechlichen Browser-Verlauf) und
+    // fuehrte dazu, dass ein SPAETERER echter router.push/replace (z. B.
+    // "Zuruecksetzen") von Next als No-Op behandelt wurde: die URL aenderte
+    // sich, der Komponentenbaum aber nicht, liveFilters blieb auf altem
+    // Stand haengen. Deshalb bewusst durchgaengig ueber den Next-Router,
+    // trotz des zusaetzlichen (aber schlanken) Requests pro Tap.
+    const params = buildChargingStationFilterParams(next, { includeFavorites: true });
+    router.replace(`/ladepunkte?${params.toString()}`, { scroll: false });
+    if (!next.favoritesOnly && lastBoundsRef.current) {
+      scheduleViewportRefetch(next, lastBoundsRef.current);
+    }
+  }
+
+  /** "Zurücksetzen" -- volle Navigation zur parameterlosen URL statt eines
+   * Live-Updates: garantiert denselben Zustand wie ein frischer Seitenaufruf
+   * (u. a. das serverseitige stationLimit fuer die filterlose Erstansicht,
+   * siehe ladepunkte/page.tsx), statt das hier separat nachzubilden. */
+  function resetFilters() {
+    router.push("/ladepunkte");
   }
 
   const stationCountLabel = stations.length >= 5000 ? `${stations.length}+` : `${stations.length}`;
@@ -479,7 +561,7 @@ export function ChargingStationMapExplorer({
             onViewportChange={handleViewportChange}
             onMarkerClick={isTouchMap ? selectStation : undefined}
             selectedId={isTouchMap ? (selectedStationId ?? undefined) : undefined}
-            fitBoundsOnMarkersChange={filters.favoritesOnly}
+            fitBoundsOnMarkersChange={liveFilters.favoritesOnly}
             initialCenter={savedViewport ?? homeAddress ?? GERMANY_OVERVIEW_CENTER}
             initialZoom={savedViewport?.zoom ?? (homeAddress ? 10 : GERMANY_OVERVIEW_ZOOM)}
           />
@@ -615,39 +697,33 @@ export function ChargingStationMapExplorer({
                 ×
               </button>
             </div>
-            {/* Eigenes <form> nur um den Filter-Inhalt, NICHT (wie frueher)
-                um die ganze Seite: ein <form> um die komplette Kartenansicht
-                verschachtelte darin zwangsläufig auch das Bewertungsformular
-                im Bottom-Sheet (StationBottomSheet) -- verschachtelte
-                <form>-Elemente sind ungueltiges HTML und fuehrten dazu, dass
-                "Bewertung abschicken" wirkungslos blieb (Nutzerfeedback,
-                Konsole: "A React form was unexpectedly submitted"). Das
-                <form> selbst ist jetzt eine Flex-Spalte: der Filterinhalt
-                scrollt in seinem eigenen Bereich, "Filtern"/"Zuruecksetzen"
-                stehen in einem eigenen, nicht scrollenden Fuss GANZ UNTEN im
-                Panel (Nutzerwunsch) -- immer erreichbar, unabhaengig davon,
-                wie lang die Filterliste gerade ist. */}
-            <form action="/ladepunkte" className="flex flex-1 flex-col overflow-hidden">
-              {/* Siehe resolveFastChargersOnly (charging-stations.ts): markiert
-                  jeden echten Formular-Submit, damit ein bewusst abgewaehltes
-                  "Nur Schnelllader" nicht wieder auf den Default zurueckfaellt. */}
-              <input type="hidden" name="filters_submitted" value="1" />
-              <div className="flex-1 overflow-y-auto p-4">{filterPanel}</div>
-              <div className="flex flex-col gap-2 border-t border-black/10 p-4 pb-[calc(1rem+var(--safe-bottom))] dark:border-white/10 sm:flex-row">
+            {/* Kein <form>/Submit mehr (Umstellung auf Sofort-Chips, siehe
+                filter-fields.tsx applyFilters oben) -- jeder Chip-Tap wirkt
+                sofort, das Panel bleibt dabei offen (Nutzer kann mehrere
+                Filter nacheinander anpassen, wie bei evcaravan.de
+                beobachtet). Einziger verbleibender Button ist "Zurücksetzen"
+                im nicht scrollenden Fuss (Nutzerwunsch: immer erreichbar,
+                unabhaengig von der Filterlisten-Laenge). */}
+            <div className="flex flex-1 flex-col overflow-hidden">
+              <div className="flex-1 overflow-y-auto p-4">
+                <ChargingStationFilterFields
+                  filters={liveFilters}
+                  onChange={applyFilters}
+                  isLoggedIn={isLoggedIn}
+                  nameOptions={nameOptions}
+                  operatorOptions={operatorOptions}
+                />
+              </div>
+              <div className="border-t border-black/10 p-4 pb-[calc(1rem+var(--safe-bottom))] dark:border-white/10">
                 <button
-                  type="submit"
-                  className="min-h-12 flex-1 rounded-md bg-action px-4 py-3 font-medium text-base hover:bg-action-hover"
-                >
-                  Filtern
-                </button>
-                <Link
-                  href="/ladepunkte"
-                  className="flex min-h-12 flex-1 items-center justify-center rounded-md border border-black/10 px-4 hover:bg-black/5 dark:border-white/10 dark:hover:bg-white/10"
+                  type="button"
+                  onClick={resetFilters}
+                  className="flex min-h-12 w-full items-center justify-center rounded-md border border-black/10 px-4 hover:bg-black/5 dark:border-white/10 dark:hover:bg-white/10"
                 >
                   Zurücksetzen
-                </Link>
+                </button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       )}
