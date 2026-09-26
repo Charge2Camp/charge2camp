@@ -13,6 +13,7 @@ import { AddressAutocomplete } from "@/components/address-autocomplete";
 import { MapView } from "@/components/map/map-view";
 import { RouteOverviewPanel } from "@/components/routing/route-overview-panel";
 import { RouteWizardTabs } from "@/components/routing/route-wizard-tabs";
+import { FormError } from "@/components/form-error";
 import { FavoritesPickerDialog } from "@/components/routing/favorites-picker-dialog";
 import { HomeAddressPickerDialog } from "@/components/routing/home-address-picker-dialog";
 import { SavedRoutePickerDialog, type SavedRouteOption } from "@/components/routing/saved-route-picker-dialog";
@@ -1167,7 +1168,7 @@ export function RoutePlannerForm({
           </div>
 
           {showLoadingIndicator && <FullscreenLoader text="Route wird berechnet…" />}
-          {error && <p className="text-sm text-error">{error}</p>}
+          {error && <FormError className="text-sm">{error}</FormError>}
         </form>
       )}
 
@@ -1235,7 +1236,7 @@ export function RoutePlannerForm({
             </p>
           )}
 
-          {replanError && <p className="text-sm text-error">{replanError}</p>}
+          {replanError && <FormError className="text-sm">{replanError}</FormError>}
 
           {!result.plan.chargingStopsRequired && result.manualWaypoints.length === 0 ? (
             <p className="rounded-md border border-route/30 bg-route/5 p-3 text-sm text-route">
@@ -1376,7 +1377,7 @@ export function RoutePlannerForm({
                 .
               </p>
             )}
-            {saveError && <p className="w-full text-sm text-error">{saveError}</p>}
+            {saveError && <FormError className="w-full text-sm">{saveError}</FormError>}
           </div>
 
           {routeSegments && (

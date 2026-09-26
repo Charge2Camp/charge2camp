@@ -15,6 +15,7 @@ import {
   REVIEW_STATE_LABELS,
 } from "@/lib/trailer-verdict";
 import { ReviewStateBadge } from "@/components/charging-stations/review-state-badge";
+import { FormError } from "@/components/form-error";
 import { StationBottomSheet } from "@/components/charging-stations/station-bottom-sheet";
 import { formatConnectorStandard } from "@/lib/connector-standard";
 import { distanceKm } from "@/lib/geo";
@@ -562,7 +563,7 @@ export function ChargingStationMapExplorer({
                 <p className="text-xs text-text-muted">Standort wird ermittelt…</p>
               )}
               {sortOption === "distance" && locationError && (
-                <p className="text-xs text-error">{locationError}</p>
+                <FormError className="text-xs">{locationError}</FormError>
               )}
             </div>
           )}

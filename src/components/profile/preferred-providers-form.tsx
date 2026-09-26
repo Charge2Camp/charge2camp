@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { setPreferredChargingProviders } from "@/app/profil/actions";
 import { CHARGING_PROVIDERS } from "@/lib/charging-providers";
+import { FormError } from "@/components/form-error";
 
 /** Anbieter-Praeferenzen fuer die Ladeplanung (Nutzerwunsch, ganz unten auf
  * "Mein Gespann"): feste Auswahl aus den zehn groessten/verbreitetsten
@@ -102,7 +103,7 @@ export function PreferredProvidersForm({
           Speichern
         </button>
         {saved && <span className="text-sm text-route">Gespeichert.</span>}
-        {error && <span className="text-sm text-error">{error}</span>}
+        {error && <FormError className="text-sm">{error}</FormError>}
       </div>
     </form>
   );

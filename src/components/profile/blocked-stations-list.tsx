@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { toggleChargingStationBlocked } from "@/app/ladepunkte/[id]/actions";
+import { FormError } from "@/components/form-error";
 
 export interface BlockedStationOption {
   id: string;
@@ -70,7 +71,7 @@ export function BlockedStationsList({ stations }: { stations: BlockedStationOpti
               Wieder freigeben
             </button>
           </div>
-          {errorById[station.id] && <p className="text-xs text-error">{errorById[station.id]}</p>}
+          {errorById[station.id] && <FormError className="text-xs">{errorById[station.id]}</FormError>}
         </li>
       ))}
     </ul>

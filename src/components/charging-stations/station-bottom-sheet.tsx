@@ -10,6 +10,7 @@ import { StationReviewsList } from "@/components/charging-stations/station-revie
 import { StationBlockSection } from "@/components/charging-stations/station-block-section";
 import { StationNearbyPoi } from "@/components/charging-stations/station-nearby-poi";
 import { ReviewStateBadge } from "@/components/charging-stations/review-state-badge";
+import { FormError } from "@/components/form-error";
 import { TRAILER_PIN_COLORS, TRAILER_PIN_LABELS, TRAILER_PIN_TEXT_CLASS, getTrailerPinState } from "@/lib/trailer-verdict";
 import {
   NEARBY_POI_CATEGORY_ICONS,
@@ -355,7 +356,7 @@ export function StationBottomSheet({
             // unterwegs (haeufigster Ausloeser dieses Fehlers) ein echter
             // Sackgassen-Zustand ohne das Sheet zu schliessen/neu zu oeffnen.
             <div className="flex items-center justify-between gap-2">
-              <p className="text-sm text-error">Bewertungen konnten nicht geladen werden.</p>
+              <FormError className="text-sm">Bewertungen konnten nicht geladen werden.</FormError>
               <button
                 type="button"
                 onClick={() => void loadExtras(station.id, station.lat, station.lon)}

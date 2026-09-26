@@ -10,6 +10,53 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
 
 ---
 
+## Symbol bei Formularfehlern: neue Komponente `FormError`
+
+- **Decision:** Neue Komponente `src/components/form-error.tsx` — zeigt
+  ein ⚠-Symbol (`aria-hidden`, dekorativ, der Text bleibt die
+  eigentliche Information für Screenreader) neben der Fehlermeldung.
+  26 Fundstellen in 22 Dateien (alle Formular-/Aktionsfehler:
+  Login/Register/Passwort-Formulare, Bewertungsformulare,
+  Fahrzeug-/Wohnwagen-Formulare, Lösch-Bestätigungen, Routenplaner,
+  Standortfehler) darauf umgestellt.
+- **Reason:** UX-07.1 letzter offener Punkt — brand-guide.md §9 ("Farbe
+  nie als einziger Informationsträger") und §3 ("Farbe steht nie allein
+  — immer mit Text und/oder Symbol") waren für Formularfehler bisher
+  nicht erfüllt: nur `text-error`-Farbe, kein Symbol. Bei
+  Farbsehschwäche ist eine rote Fehlermeldung ohne Symbol schwerer von
+  normalem Text zu unterscheiden. Eine zentrale Komponente statt 26
+  Einzel-Patches, da das Muster (bedingtes `<p>`/`<span
+  className="text-error">`) bereits einmal unkontrolliert an vielen
+  Stellen kopiert wurde (s. UX-05.1-Historie) — soll sich nicht
+  wiederholen.
+- **Alternatives:** (1) Symbol nur an ausgewählten, "wichtigen" Stellen
+  ergänzen (verworfen: brand-guide.md §3 gilt ausnahmslos, eine
+  Teilmenge hätte dieselbe Inkonsistenz nur verschoben); (2) Symbol
+  direkt in `--c-error`/`text-error` per CSS `::before` einblenden statt
+  einer React-Komponente (verworfen: nicht barrierefrei steuerbar
+  [kein sauberes `aria-hidden` für generiertes CSS-Content], und nicht
+  jede `text-error`-Stelle ist eine Fehlermeldung — z. B. Löschen-Buttons,
+  Badges, siehe vorherige Migration — ein globales CSS-Symbol hätte
+  diese falsch mit-markiert); (3) unterschiedliche Symbole je nach
+  Fehlerart (verworfen: unnötige Komplexität für eine einzige Rolle
+  "Formularfehler", §32 Kostenoptimierung/Einfachheit).
+- **Was bewusst NICHT geändert wurde:** `text-error` als reine Button-/
+  Link-Farbe (z. B. "Löschen"-Aktionen, "Vermeiden"-Checkbox-Label),
+  Lösch-Bestätigungsfragen ("Wirklich löschen?") und Status-Badges
+  (bereits mit begleitendem Text/Icon versehen) — das sind keine
+  Fehlermeldungen im Sinne von UX-07.1, sondern andere UI-Rollen, die
+  weiterhin ohne Symbol auskommen.
+- **Impact:** `src/components/form-error.tsx` neu, 22 Dateien angepasst
+  (reine Ersetzung des Anzeige-Wrappers, keine Logikänderung an
+  Fehlerzuständen selbst). Typecheck grün. Live auf `/login` mit echtem
+  Fehlerfall (falsche Zugangsdaten) geprüft — Symbol + Text rendern
+  korrekt. Übrige 25 Stellen sind login-/formularpflichtig, nicht
+  einzeln live ausgelöst — mechanisch identische, bereits verifizierte
+  Komponente. UX-07.1 damit vollständig erledigt.
+- **Date:** 2026-09-26 (Phase 16).
+
+---
+
 ## Neuer Token `--c-warning-text`: 11 hartcodierte `text-amber-*`-Stellen migriert
 
 - **Decision:** Neuer Token `--c-warning-text` (#B45309) in

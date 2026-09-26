@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { changeEmail } from "@/app/profil/actions";
+import { FormError } from "@/components/form-error";
 
 /** Extrahiert aus profil/daten/page.tsx (Nutzerwunsch: Server Action darf
  * nicht mehr direkt als `<form action={changeEmail}>` in einem Server
@@ -42,7 +43,7 @@ export function ChangeEmailForm() {
           placeholder="neue@adresse.de"
           className="w-full rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
         />
-        {error && <span className="text-sm text-error">{error}</span>}
+        {error && <FormError className="text-sm">{error}</FormError>}
         {success && (
           <span className="text-sm text-route">
             Bestätigungslink wurde verschickt -- bitte E-Mail(s) prüfen.

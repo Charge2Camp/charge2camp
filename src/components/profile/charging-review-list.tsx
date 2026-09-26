@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { deleteChargingReview, updateChargingReview } from "@/app/profil/actions";
 import { CriterionField } from "@/components/charging-stations/criterion-field";
+import { FormError } from "@/components/form-error";
 import type { ChargingReview } from "@/types/database";
 
 export type ChargingReviewWithStation = ChargingReview & {
@@ -185,7 +186,7 @@ function EditForm({
         className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
       />
 
-      {error && <p className="text-sm text-error">{error}</p>}
+      {error && <FormError className="text-sm">{error}</FormError>}
 
       <div className="flex flex-col gap-2 sm:flex-row">
         <button
@@ -297,7 +298,7 @@ export function ChargingReviewList({ reviews }: { reviews: ChargingReviewWithSta
                 </button>
               </div>
               {deleteErrorById[review.id] && (
-                <p className="mt-1 text-xs text-error">{deleteErrorById[review.id]}</p>
+                <FormError className="mt-1 text-xs">{deleteErrorById[review.id]}</FormError>
               )}
             </>
           )}

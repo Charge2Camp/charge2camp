@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { changePassword, type ChangePasswordState } from "@/app/profil/actions";
+import { FormError } from "@/components/form-error";
 
 const initialState: ChangePasswordState = {};
 
@@ -48,7 +49,7 @@ export function ChangePasswordForm() {
         />
       </label>
 
-      {state.error && <p className="text-sm text-error">{state.error}</p>}
+      {state.error && <FormError className="text-sm">{state.error}</FormError>}
       {state.success && <p className="text-sm text-route">Passwort geändert.</p>}
 
       <button

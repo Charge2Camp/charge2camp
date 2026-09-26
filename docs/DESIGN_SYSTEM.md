@@ -215,8 +215,11 @@ s. Memory/vorherige Sitzungen — nicht weiter verfolgen).
   Button/Card/Badge/Input/Modal/Toast/…-Primitives existieren nicht,
   nur konsistente informelle Muster (s. Abschnitt 5). Eigener, größerer
   Folgeschritt.
-- **UX-05.1 Rest** — `text-black/70`, `bg-red-*`/`border-red-*`
-  bewusst noch nicht migriert (s. `docs/design/ux-problems.md`).
+- **UX-05.1/UX-07.1 vollständig erledigt** — `text-black/70` einzeln
+  geprüft, `bg-red-*`/`border-red-*`/`text-amber-*` migriert (neue
+  Tokens `--c-line-strong`, `--c-warning-text`), Symbol bei
+  Formularfehlern ergänzt (`FormError`-Komponente). S.
+  `docs/DESIGN_DECISIONS.md`.
 - **Figma (Phasen 10/11/13)** — MCP-Verbindung steht
   (`docs/design/figma-integration.md`), Datei selbst noch nicht angelegt.
   Phase 14 (Developer Handoff) gilt davon abweichend als erledigt: der

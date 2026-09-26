@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { Vehicle, VehicleModel } from "@/types/database";
 import { deleteVehicle } from "@/app/profil/actions";
 import { VehicleForm } from "./vehicle-form";
+import { FormError } from "@/components/form-error";
 
 /** Pop-up zum Bearbeiten eines bereits gespeicherten Elektroautos
  * (Nutzerwunsch: statt "Löschen" auf der Liste gibt es jetzt "Bearbeiten",
@@ -94,7 +95,7 @@ export function VehicleEditDialog({
                 Elektroauto aus dem Profil löschen
               </button>
             )}
-            {deleteError && <p className="mt-2 text-sm text-error">{deleteError}</p>}
+            {deleteError && <FormError className="mt-2 text-sm">{deleteError}</FormError>}
           </div>
         </div>
       </div>

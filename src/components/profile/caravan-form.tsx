@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { addCaravan, updateCaravan } from "@/app/profil/actions";
+import { FormError } from "@/components/form-error";
 import type { Caravan, CaravanModel } from "@/types/database";
 
 const EMPTY_FORM = {
@@ -210,7 +211,7 @@ export function CaravanForm({
         </label>
       )}
 
-      {error && <p className="text-sm text-error">{error}</p>}
+      {error && <FormError className="text-sm">{error}</FormError>}
 
       <div>
         <button

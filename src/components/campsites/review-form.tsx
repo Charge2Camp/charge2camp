@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { addCampsiteReview } from "@/app/campingplaetze/[id]/actions";
+import { FormError } from "@/components/form-error";
 
 /** Campingplatz-Bewertungen fragen bewusst nur die Lademoeglichkeit ab
  * (kein freier Sterne-Picker) -- die daraus abgeleitete Sternebewertung
@@ -93,7 +94,7 @@ export function CampsiteReviewForm({ campsiteId }: { campsiteId: string }) {
         />
       </label>
 
-      {error && <p className="text-sm text-error">{error}</p>}
+      {error && <FormError className="text-sm">{error}</FormError>}
 
       <button
         type="submit"

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { deleteAccount } from "@/app/profil/actions";
+import { FormError } from "@/components/form-error";
 
 /** Kontoloeschung ist unwiderruflich (§ docs/privacy.md) -- anders als die
  * leichtgewichtigen Fahrzeug-/Wohnwagen-Loeschungen (dort jederzeit
@@ -42,7 +43,7 @@ export function DeleteAccountForm({ email }: { email: string }) {
           autoComplete="off"
         />
       </label>
-      {error && <p className="text-sm text-error">{error}</p>}
+      {error && <FormError className="text-sm">{error}</FormError>}
       <button
         type="submit"
         disabled={!confirmed || pending}

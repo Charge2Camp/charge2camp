@@ -128,6 +128,13 @@ Phase geprüft:
 
 ### UX-07.1 — Formularfehler ohne Token und ohne begleitendes Symbol (C, aus ci-branding-audit.md übernommen)
 
+- **Symbol ergänzt, UX-07.1 vollständig erledigt (Phase 16, 2026-09-26):**
+  Neue Komponente `src/components/form-error.tsx` (⚠-Symbol + Text,
+  `aria-hidden` auf dem Symbol, Text bleibt für Screenreader). Alle 26
+  Formularfehler-Fundstellen (Login/Register/Formulare/Lösch-
+  Bestätigungen/Routenplaner) darauf umgestellt. Live auf `/login`
+  geprüft (falsche Zugangsdaten ausgelöst): "⚠ E-Mail oder Passwort ist
+  falsch." rendert korrekt. Details s. `docs/DESIGN_DECISIONS.md`.
 - **Amber-Fund erledigt (Phase 16, 2026-09-26):** Beim Migrieren von
   `text-black/70` zusätzlich entdeckt und mit neuem Token gelöst — 11
   hartcodierte `text-amber-*`/`bg-amber-*`/`border-amber-*`-Fundstellen

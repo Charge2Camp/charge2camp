@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { AddressAutocomplete } from "@/components/address-autocomplete";
 import { setHomeAddress } from "@/app/profil/actions";
+import { FormError } from "@/components/form-error";
 
 export function HomeAddressForm({ initialAddress }: { initialAddress: string }) {
   const [value, setValue] = useState(initialAddress);
@@ -51,7 +52,7 @@ export function HomeAddressForm({ initialAddress }: { initialAddress: string }) 
             <input type="hidden" name="home_longitude" value={coords.longitude} />
           </>
         )}
-        {error && <span className="text-sm text-error">{error}</span>}
+        {error && <FormError className="text-sm">{error}</FormError>}
       </label>
       <button
         type="submit"

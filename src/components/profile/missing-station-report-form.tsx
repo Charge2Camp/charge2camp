@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { reportMissingStation } from "@/app/profil/actions";
+import { FormError } from "@/components/form-error";
 
 /** Nach demselben Muster wie change-email-form.tsx: lokaler useState fuer
  * error/success statt useActionState, da reportMissingStation dem
@@ -53,7 +54,7 @@ export function MissingStationReportForm() {
           className="w-full rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
         />
       </label>
-      {error && <p className="text-sm text-error">{error}</p>}
+      {error && <FormError className="text-sm">{error}</FormError>}
       {success && (
         // UX-05.7 (docs/design/ux-problems.md): keine Push-/E-Mail-
         // Benachrichtigung bei Statusaenderung -- ehrlich statt still

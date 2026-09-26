@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { addVehicle, updateVehicle } from "@/app/profil/actions";
+import { FormError } from "@/components/form-error";
 import type { Vehicle, VehicleModel } from "@/types/database";
 
 const EMPTY_FORM = {
@@ -249,7 +250,7 @@ export function VehicleForm({
         </label>
       )}
 
-      {error && <p className="text-sm text-error">{error}</p>}
+      {error && <FormError className="text-sm">{error}</FormError>}
 
       <div>
         <button

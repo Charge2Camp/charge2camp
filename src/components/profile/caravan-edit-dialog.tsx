@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { Caravan, CaravanModel } from "@/types/database";
 import { deleteCaravan } from "@/app/profil/actions";
 import { CaravanForm } from "./caravan-form";
+import { FormError } from "@/components/form-error";
 
 /** Siehe VehicleEditDialog -- gleiches Prinzip fuer Wohnwagen. */
 export function CaravanEditDialog({
@@ -88,7 +89,7 @@ export function CaravanEditDialog({
                 Wohnwagen aus dem Profil löschen
               </button>
             )}
-            {deleteError && <p className="mt-2 text-sm text-error">{deleteError}</p>}
+            {deleteError && <FormError className="mt-2 text-sm">{deleteError}</FormError>}
           </div>
         </div>
       </div>

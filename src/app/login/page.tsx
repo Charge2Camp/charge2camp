@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { translateErrorMessage } from "@/lib/action-result";
 import { LegalFooterLinks } from "@/components/legal-footer-links";
+import { FormError } from "@/components/form-error";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -75,7 +76,7 @@ export default function LoginPage() {
           Passwort vergessen?
         </Link>
 
-        {error && <p className="text-sm text-error">{error}</p>}
+        {error && <FormError className="text-sm">{error}</FormError>}
 
         <button
           type="submit"

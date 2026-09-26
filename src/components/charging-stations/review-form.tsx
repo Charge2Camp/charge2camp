@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { addChargingReview } from "@/app/ladepunkte/[id]/actions";
 import { CriterionField } from "@/components/charging-stations/criterion-field";
+import { FormError } from "@/components/form-error";
 import type { Caravan, Vehicle } from "@/types/database";
 
 export function ChargingReviewForm({
@@ -320,7 +321,7 @@ export function ChargingReviewForm({
         />
       </label>
 
-      {error && <p className="text-sm text-error">{error}</p>}
+      {error && <FormError className="text-sm">{error}</FormError>}
 
       <button
         type="submit"

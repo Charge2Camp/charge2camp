@@ -6,6 +6,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { translateErrorMessage } from "@/lib/action-result";
 import { LegalFooterLinks } from "@/components/legal-footer-links";
+import { FormError } from "@/components/form-error";
 
 /** Formular fuer den zweiten Schritt von "Passwort vergessen" -- erreichbar
  * nur ueber den Link aus der Reset-E-Mail (via /auth/callback, das den
@@ -106,7 +107,7 @@ export default function ResetPasswordPage() {
             />
           </label>
 
-          {error && <p className="text-sm text-error">{error}</p>}
+          {error && <FormError className="text-sm">{error}</FormError>}
 
           <button
             type="submit"

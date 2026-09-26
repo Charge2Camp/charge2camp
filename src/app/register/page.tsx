@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { translateErrorMessage } from "@/lib/action-result";
 import { LegalFooterLinks } from "@/components/legal-footer-links";
+import { FormError } from "@/components/form-error";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -72,7 +73,7 @@ export default function RegisterPage() {
           />
         </label>
 
-        {error && <p className="text-sm text-error">{error}</p>}
+        {error && <FormError className="text-sm">{error}</FormError>}
         {message && <p className="text-sm text-route">{message}</p>}
 
         <button
