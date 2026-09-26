@@ -15,14 +15,23 @@ const MAX_SUGGESTIONS = 8;
  * Formularfeld (Campingplatz-Filter, filter-form.tsx) -- ein Klick auf einen
  * Vorschlag sendet das umschliessende Formular sofort ab. Mit `value`/
  * `onCommit` (Ladepunkte-Filter, seit der Umstellung auf Sofort-Chips ohne
- * <form>, siehe charging-station-map-explorer.tsx) wird der Wert vom
- * Aufrufer gehalten; `onCommit` feuert bei Vorschlagsauswahl oder Enter statt
- * eines Formular-Submits.
+ * <form>, siehe charging-station-map-explorer.tsx) meldet `onCommit` den
+ * Wert bei Vorschlagsauswahl oder Enter an den Aufrufer zurueck.
+ *
+ * Die Eingabe selbst bleibt dabei IMMER interner State (`value`-State unten),
+ * NICHT direkt an die `value`-Prop gebunden -- ein waehrend jedes Tastendrucks
+ * voll kontrolliertes Feld ohne begleitendes onChange wuerde React den
+ * angezeigten Wert bei jedem Render auf die (unveraenderte) Prop zuruecksetzen
+ * lassen, das Feld waere effektiv unbeschreibbar (genau das ist beim ersten
+ * Versuch dieser Umstellung passiert). Die `value`-Prop dient stattdessen nur
+ * als EXTERNES Reset-Signal (z. B. nach "Zuruecksetzen", siehe
+ * charging-station-map-explorer.tsx resetFilters) -- der Effekt unten
+ * synchronisiert nur bei einer Aenderung dieser Prop von aussen.
  */
 export function NameSuggestField({
   name,
   defaultValue,
-  value: controlledValue,
+  value: externalValue,
   onCommit,
   placeholder,
   options,
@@ -36,11 +45,16 @@ export function NameSuggestField({
   options: string[];
   className?: string;
 }) {
-  const isControlled = controlledValue !== undefined;
-  const [internalValue, setInternalValue] = useState(defaultValue ?? "");
-  const value = isControlled ? controlledValue : internalValue;
+  const [value, setValue] = useState(externalValue ?? defaultValue ?? "");
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Mikrotask-entkoppelt statt synchron im Effect-Body (react-hooks/
+  // set-state-in-effect), gleiches Muster wie an anderer Stelle im Projekt
+  // (siehe charging-station-map-explorer.tsx).
+  useEffect(() => {
+    if (externalValue !== undefined) void Promise.resolve().then(() => setValue(externalValue));
+  }, [externalValue]);
 
   const suggestions = useMemo(() => {
     const query = value.trim().toLowerCase();
@@ -57,10 +71,6 @@ export function NameSuggestField({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  function setValue(next: string) {
-    if (!isControlled) setInternalValue(next);
-  }
 
   function selectSuggestion(suggestion: string, formEl: HTMLFormElement | null) {
     setValue(suggestion);

@@ -10,6 +10,55 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
 
 ---
 
+## Ladepunkte-Filter: Sofort-anwendende Chips statt Formular-Submit
+
+- **Decision:** Das komplette Filter-Panel auf `/ladepunkte`
+  (Anhängertauglichkeit, Ladeleistung, Steckertyp, Ladeanbieter,
+  Favoriten) wurde von Checkboxen in einem `<form action="/ladepunkte">`
+  mit separatem „Filtern"-Submit-Button auf sofort-anwendende Chips
+  (`FilterChip`, `aria-pressed`) umgestellt — jeder Tap wirkt direkt,
+  kein Absenden nötig, das Panel bleibt dabei offen. Neue Dateien:
+  `src/lib/charging-station-filters.ts` (`computeActiveFilterCount`,
+  `buildChargingStationFilterParams` — bewusst NICHT in
+  `charging-stations.ts`, das importiert server-only Code über
+  `next/headers`, siehe Kommentar dort) und
+  `src/components/charging-stations/filter-chip.tsx`. Der Live-Filterzustand
+  liegt jetzt client-seitig in `ChargingStationMapExplorer`
+  (`liveFilters`), URL-Synchronisierung läuft über `router.replace`
+  (normale Filter) bzw. `router.push` (Favoriten-Umschalten, Zurücksetzen
+  — beide brauchen frische Server-Daten ohne Kartenausschnitt-Äquivalent).
+- **Reason:** UX-Vergleich mit evcaravan.de (direkter Wettbewerber,
+  gleiche Zielgruppe E-Auto+Wohnwagen) zeigte, dass deren Filter-Panel
+  (ebenfalls Button → Bottom-Sheet, wie unseres) mit Sofort-Chips statt
+  Formular-Submit spürbar weniger Taps für mehrere Filteränderungen
+  hintereinander braucht — das Panel muss nicht nach jeder Änderung neu
+  geöffnet werden. Passt zu CLAUDE.md Prinzip 8 (Mobile-first/Touch).
+- **Alternatives:** (1) Nur die zwei Top-Filter (Anhängertauglichkeit,
+  Schnelllader) umstellen, Steckertyp/Anbieter als Checkbox-Formular
+  belassen (ursprünglich erwogen, dann auf Nutzerwunsch auf das ganze
+  Panel ausgeweitet); (2) `window.history.replaceState` statt
+  `router.replace` für die URL-Synchronisierung bei normalen Taps, um den
+  zusätzlichen RSC-Request pro Tap zu sparen — **verworfen nach Bug**: das
+  bringt Next.js' internen Navigationszustand durcheinander (Next merkt
+  sich selbst die "aktuelle" URL unabhängig vom echten Browser-Verlauf),
+  ein späterer echter `router.push`/`replace` (z. B. „Zurücksetzen")
+  wurde dadurch als No-Op behandelt — URL änderte sich, Chips blieben
+  optisch auf altem Stand. Durchgängig über den Next-Router korrekt,
+  akzeptierter Mehraufwand: ein zusätzlicher (schlanker) Server-Request
+  pro Chip-Tap neben dem ohnehin laufenden
+  `/api/charge-points/viewport`-Request.
+- **Impact:** `filter-fields.tsx` und `name-suggest-field.tsx` sind jetzt
+  "use client" bzw. um einen kontrollierten Modus erweitert (rückwärtskompatibel
+  für die weiterhin formularbasierte Campingplatz-Suche,
+  `campsites/filter-form.tsx`). `ladepunkte/page.tsx` berechnet
+  `activeFilterCount` nicht mehr selbst (jetzt client-seitig live über
+  `computeActiveFilterCount`). Kein `<form>` mehr im Filter-Panel — das
+  frühere Problem verschachtelter `<form>`-Elemente (Bewertungsformular im
+  Bottom-Sheet) entfällt dadurch von selbst.
+- **Date:** 2026-09-26
+
+---
+
 ## Symbol bei Formularfehlern: neue Komponente `FormError`
 
 - **Decision:** Neue Komponente `src/components/form-error.tsx` — zeigt

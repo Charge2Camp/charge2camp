@@ -267,9 +267,12 @@ export function ChargingStationMapExplorer({
   // -- Next.js behaelt den Client-Component-State bei einer Navigation auf
   // dieselbe Route bewusst bei (kein Remount), ohne diesen Effekt wuerde
   // z. B. "Zuruecksetzen" die URL korrekt aendern, die Chips aber optisch
-  // aktiv stehen lassen (liveFilters bliebe der alte Stand).
+  // aktiv stehen lassen (liveFilters bliebe der alte Stand). Ueber einen
+  // Mikrotask entkoppelt wie bei initialStations weiter unten, damit das
+  // setState nicht synchron im Effect-Body passiert (react-hooks/
+  // set-state-in-effect).
   useEffect(() => {
-    setLiveFilters(filters);
+    void Promise.resolve().then(() => setLiveFilters(filters));
   }, [filters]);
   const activeFilterCount = useMemo(() => computeActiveFilterCount(liveFilters), [liveFilters]);
   // Letzter bekannter Kartenausschnitt -- Filter-Chips loesen selbst KEIN
