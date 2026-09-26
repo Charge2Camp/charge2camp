@@ -279,7 +279,7 @@ export function StationBottomSheet({
               </span>
               <ReviewStateBadge origin={station.trailer?.origin} />
               {station.max_power_kw && (
-                <span className="rounded-full border border-black/10 px-2 py-0.5 text-xs dark:border-white/10">
+                <span className="rounded-full border border-line px-2 py-0.5 text-xs">
                   {station.max_power_kw} kW
                 </span>
               )}
@@ -295,7 +295,7 @@ export function StationBottomSheet({
                   (c) => (
                     <span
                       key={c}
-                      className="rounded-full border border-black/10 px-2 py-0.5 text-xs dark:border-white/10"
+                      className="rounded-full border border-line px-2 py-0.5 text-xs"
                     >
                       {NEARBY_POI_CATEGORY_ICONS[c]} {NEARBY_POI_CATEGORY_LABELS[c]}
                     </span>

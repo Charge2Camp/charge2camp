@@ -49,7 +49,7 @@ function AlternativeRow({
   onViewDetails: () => void;
 }) {
   return (
-    <li className="flex flex-col gap-2 rounded-md border border-black/10 p-3 text-sm dark:border-white/10 sm:flex-row sm:items-center sm:justify-between">
+    <li className="flex flex-col gap-2 rounded-md border border-line p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
       <div className="flex flex-col gap-1">
         <span className="font-medium">{alternative.station.name ?? alternative.station.provider}</span>
         <SuitabilityBadges candidate={alternative} />
@@ -192,7 +192,7 @@ export function RouteOverviewPanel({
               <span>· ca. {formatDuration(legDurationMin)}</span>
             </li>
 
-            <li className="rounded-lg border border-black/10 p-3 dark:border-white/10">
+            <li className="rounded-lg border border-line p-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex flex-col gap-1.5">
                   <p className="font-medium">

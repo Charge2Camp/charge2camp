@@ -1,14 +1,12 @@
 import type { HTMLAttributes } from "react";
 
 /** §14 des Design-Briefs -- s. button.tsx fuer den Kontext. `border-line`
- * statt des im Code noch verbreiteten hartcodierten `border-black/10`
- * (64 verbliebene Fundstellen, docs/DESIGN_DECISIONS.md) -- neue
- * Verwendungen sollen von Anfang an den Token nutzen, auch wenn die
- * Massenmigration der Bestandsstellen ein eigener, noch offener Schritt
- * bleibt. Radien `rounded-md`/`rounded-lg` (6px/8px) entsprechen seit
- * der Korrektur in docs/design/brand-guide.md/tokens.json (Phase 16)
- * dem tatsaechlich gelebten Wert -- vorher dokumentierte 10px/12px
- * waren nie umgesetzt. */
+ * statt hartcodiertem `border-black/10` (docs/DESIGN_DECISIONS.md,
+ * "Grosse border-black/10-Aufraeumrunde" -- fast alle Bestandsstellen
+ * inzwischen mitmigriert). Radien `rounded-md`/`rounded-lg` (6px/8px)
+ * entsprechen seit der Korrektur in docs/design/brand-guide.md/
+ * tokens.json (Phase 16) dem tatsaechlich gelebten Wert -- vorher
+ * dokumentierte 10px/12px waren nie umgesetzt. */
 
 export type CardVariant = "default" | "emphasis" | "tint-route" | "tint-warning";
 

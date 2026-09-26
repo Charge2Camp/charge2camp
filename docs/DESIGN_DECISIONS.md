@@ -10,6 +10,33 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
 
 ---
 
+## Große `border-black/10`-Aufräumrunde
+
+- **Decision:** Alle verbliebenen `border-black/10`/`divide-black/10`-
+  Fundstellen (26 Dateien, inkl. `md:`-Präfix-Varianten) auf
+  `border-line`/`divide-line` migriert — bis auf `route-wizard-tabs.tsx`
+  (bewusstes 3-Stufen-Zustandssystem, s. Phase-9-Rest-Entscheidung).
+- **Reason:** Diese Migration war seit der ersten Token-Migration in
+  Phase 9 als Nebenbefund bekannt (dort mit "eigener Folgeschritt"
+  vermerkt) und wurde seitdem in jeder Runde ein Stück weiter
+  reduziert (Phase 12, Phase-9-Rest, Button/Input-Migrationsrunden 3/5).
+  Jetzt der verbliebene Rest in einem gebündelten, expliziten Schritt,
+  statt ihn weiter über Zufallsfunde abzutragen.
+- **Nebenbefund beim Ausführen:** Der erste sed-Lauf ersetzte
+  versehentlich auch den Text in zwei eigenen Erklärkommentaren
+  (`modal.tsx`, `card.tsx`), die `border-black/10` als Beispieltext
+  zitierten, nicht als Klasse verwendeten — direkt bemerkt und
+  korrigiert (Kommentare lesen wieder korrekt "hartcodiertes
+  border-black/10").
+- **Impact:** 27 Dateien geändert. Reine Klassennamen-Ersetzung, keine
+  Logikänderung. Typecheck grün, keine doppelten Leerzeichen, Server-
+  Build ohne Fehler, `/legende` (öffentlich) visuell geprüft — Karten
+  mit sichtbaren Rahmen, keine Regression. UX-05.1 (`border-black/10`-
+  Anteil) damit bis auf die eine bewusste Ausnahme vollständig erledigt.
+- **Date:** 2026-09-26 (Phase 16).
+
+---
+
 ## Neue Komponente `Modal`, 5 Dialoge migriert
 
 - **Decision:** Neue Komponente `src/components/ui/modal.tsx` fasst das

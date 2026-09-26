@@ -121,7 +121,7 @@ export default function LegendePage() {
           {TRAILER_PIN_ORDER.map((state) => (
             <div
               key={state}
-              className="flex items-start gap-3 rounded-lg border border-black/10 p-3 dark:border-white/10"
+              className="flex items-start gap-3 rounded-lg border border-line p-3"
             >
               <Image src={TRAILER_PIN_ICON_SRC[state]} alt="" width={36} height={44} className="mt-0.5 shrink-0" />
               <div>
@@ -137,7 +137,7 @@ export default function LegendePage() {
             </div>
           ))}
 
-          <div className="flex items-start gap-3 rounded-lg border border-black/10 p-3 dark:border-white/10">
+          <div className="flex items-start gap-3 rounded-lg border border-line p-3">
             <Image src={CAMPSITE_PIN_ICON_SRC} alt="" width={36} height={44} className="mt-0.5 shrink-0" />
             <div>
               <p className="font-medium">Campingplatz</p>
@@ -157,7 +157,7 @@ export default function LegendePage() {
         />
         <div className="flex flex-col gap-3">
           {REVIEW_STATE_ORDER.map((state) => (
-            <div key={state} className="flex items-start gap-3 rounded-lg border border-black/10 p-3 dark:border-white/10">
+            <div key={state} className="flex items-start gap-3 rounded-lg border border-line p-3">
               <span
                 className="mt-0.5 inline-block shrink-0 rounded-full px-2 py-0.5 text-xs text-white"
                 style={{ backgroundColor: REVIEW_STATE_COLORS[state] }}
@@ -210,7 +210,7 @@ export default function LegendePage() {
         />
         <ul className="flex flex-col gap-2 text-sm">
           {EV_SCORE_FACTORS.map((f) => (
-            <li key={f.label} className="flex items-center justify-between gap-3 rounded-md border border-black/10 px-3 py-2 dark:border-white/10">
+            <li key={f.label} className="flex items-center justify-between gap-3 rounded-md border border-line px-3 py-2">
               <span>{f.label}</span>
               <span className="shrink-0 font-medium text-route">bis zu {f.weight} Punkte</span>
             </li>
@@ -225,7 +225,7 @@ export default function LegendePage() {
         />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {REVIEW_CRITERIA.map((c) => (
-            <div key={c.label} className="rounded-lg border border-black/10 p-3 dark:border-white/10">
+            <div key={c.label} className="rounded-lg border border-line p-3">
               <p className="flex items-center gap-1.5 font-medium">
                 <span className="text-route">✓</span> {c.label}
               </p>
@@ -238,7 +238,7 @@ export default function LegendePage() {
       <section className="flex flex-col gap-4">
         <SectionHeading title="Weitere Symbole" />
         <div className="flex flex-col gap-3">
-          <div className="flex items-start gap-3 rounded-lg border border-black/10 p-3 dark:border-white/10">
+          <div className="flex items-start gap-3 rounded-lg border border-line p-3">
             <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-line-strong text-xl leading-none">
               <span className="text-error">♥</span>
             </span>

@@ -117,7 +117,7 @@ export default async function CommunityPage() {
           {activity.map((entry) => (
             <li
               key={entry.id}
-              className="rounded-md border border-black/10 p-3 text-sm dark:border-white/10"
+              className="rounded-md border border-line p-3 text-sm"
             >
               {entry.node}
               <p className="mt-1 text-xs text-text-muted">

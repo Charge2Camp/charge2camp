@@ -50,7 +50,7 @@ export function StationReviewsList({
       ) : (
         <ul className="mt-2 flex flex-col gap-3">
           {reviews.map((review) => (
-            <li key={review.id} className="rounded-md border border-black/10 p-3 text-sm dark:border-white/10">
+            <li key={review.id} className="rounded-md border border-line p-3 text-sm">
               <div className="flex items-baseline justify-between gap-2">
                 <p className="font-medium">Anhängertauglich: {SUITABLE_LABELS[review.suitable]}</p>
                 <span className="shrink-0 text-xs text-text-muted">

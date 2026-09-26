@@ -6,7 +6,7 @@ import { ChargingStationBlockButton } from "@/components/charging-stations/block
  * genutzt von Detailseite und Bottom-Sheet. */
 export function StationBlockSection({ stationId, isBlocked }: { stationId: string; isBlocked: boolean }) {
   return (
-    <section className="mt-8 border-t border-black/10 pt-6 dark:border-white/10">
+    <section className="mt-8 border-t border-line pt-6">
       <h2 className="font-semibold">Routenplanung</h2>
       <p className="mt-1 text-sm text-text-muted">
         Soll dieser Ladepunkt nie mehr als Ladestopp vorgeschlagen werden -- z. B. weil er

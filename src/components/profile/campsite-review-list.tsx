@@ -160,7 +160,7 @@ export function CampsiteReviewList({ reviews }: { reviews: CampsiteReviewWithCam
       {items.map((review) => (
         <li
           key={review.id}
-          className="rounded-md border border-black/10 p-3 text-sm dark:border-white/10"
+          className="rounded-md border border-line p-3 text-sm"
         >
           {editingId === review.id ? (
             <EditForm review={review} onCancel={() => setEditingId(null)} />

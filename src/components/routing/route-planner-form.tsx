@@ -987,7 +987,7 @@ export function RoutePlannerForm({
                     diese Route anpassen. Vermiedene Anbieter werden nie als Ladestopp vorgeschlagen.
                   </p>
                 )}
-                <div className="flex flex-col divide-y divide-black/10 dark:divide-white/10">
+                <div className="flex flex-col divide-y divide-line">
                   {CHARGING_PROVIDERS.map((p) => (
                     <div key={p.key} className="flex items-center justify-between gap-3 py-1.5">
                       <span className="text-sm">{p.label}</span>

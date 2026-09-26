@@ -24,7 +24,7 @@ export function CaravanList({ caravans, models }: { caravans: Caravan[]; models:
         {items.map((caravan) => (
           <li
             key={caravan.id}
-            className="flex items-center justify-between gap-4 rounded-md border border-black/10 px-4 py-3 dark:border-white/10"
+            className="flex items-center justify-between gap-4 rounded-md border border-line px-4 py-3"
           >
             <div className="text-sm">
               <p className="font-medium">

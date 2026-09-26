@@ -57,7 +57,7 @@ export default async function SavedRoutesPage() {
       ) : (
         <ul className="mt-4 flex flex-col gap-4">
           {rows.map(({ route, result, error }) => (
-            <li key={route.id} className="rounded-lg border border-black/10 p-4 dark:border-white/10">
+            <li key={route.id} className="rounded-lg border border-line p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <p className="font-medium">{route.name}</p>

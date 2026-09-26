@@ -22,7 +22,7 @@ export function ProfileSubNav() {
     // Auf Mobile-Breiten uebernimmt die ProfileSidebar (ueber die
     // "Profil"-Kachel der Bottom-Tab-Bar) dieselbe Navigation -- diese Leiste
     // waere dort redundant, deshalb ab md: sichtbar.
-    <nav className="mt-4 hidden flex-wrap gap-2 border-b border-black/10 pb-4 text-sm md:flex dark:border-white/10">
+    <nav className="mt-4 hidden flex-wrap gap-2 border-b border-line pb-4 text-sm md:flex">
       {TABS.map((tab) => {
         const active = tab.href === "/profil" ? pathname === "/profil" : pathname.startsWith(tab.href);
         return (

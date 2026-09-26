@@ -119,7 +119,7 @@ function EditForm({
         </fieldset>
       )}
 
-      <div className="flex flex-col gap-3 rounded-md border border-black/10 p-3 dark:border-white/10">
+      <div className="flex flex-col gap-3 rounded-md border border-line p-3">
         <p className="text-sm font-medium">Details zur Durchfahrt</p>
         <CriterionField
           name="enough_space_for_rig"
@@ -229,7 +229,7 @@ export function ChargingReviewList({ reviews }: { reviews: ChargingReviewWithSta
       {items.map((review) => (
         <li
           key={review.id}
-          className="rounded-md border border-black/10 p-3 text-sm dark:border-white/10"
+          className="rounded-md border border-line p-3 text-sm"
         >
           {editingId === review.id ? (
             <EditForm review={review} onCancel={() => setEditingId(null)} />

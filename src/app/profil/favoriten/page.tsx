@@ -51,7 +51,7 @@ export default async function FavoritenPage() {
               return (
                 <li
                   key={`${favorite.entity_type}-${favorite.entity_id}`}
-                  className="rounded-md border border-black/10 px-4 py-3 text-sm dark:border-white/10"
+                  className="rounded-md border border-line px-4 py-3 text-sm"
                 >
                   <span className="mr-2 rounded-full bg-black/5 px-2 py-0.5 text-xs dark:bg-white/10">
                     Campingplatz
@@ -73,7 +73,7 @@ export default async function FavoritenPage() {
             return (
               <li
                 key={`${favorite.entity_type}-${favorite.entity_id}`}
-                className="rounded-md border border-black/10 px-4 py-3 text-sm dark:border-white/10"
+                className="rounded-md border border-line px-4 py-3 text-sm"
               >
                 <span className="mr-2 rounded-full bg-black/5 px-2 py-0.5 text-xs dark:bg-white/10">
                   Ladepunkt

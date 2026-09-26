@@ -66,7 +66,7 @@ export function PreferredProvidersForm({
       }}
       className="flex flex-col gap-3"
     >
-      <div className="flex flex-col divide-y divide-black/10 rounded-md border border-line-strong dark:divide-white/10">
+      <div className="flex flex-col divide-y divide-line rounded-md border border-line-strong">
         {CHARGING_PROVIDERS.map((p) => (
           <div key={p.key} className="flex items-center justify-between gap-3 px-3 py-1.5">
             <span className="text-sm">{p.label}</span>

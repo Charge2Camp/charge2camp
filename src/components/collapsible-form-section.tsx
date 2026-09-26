@@ -33,7 +33,7 @@ export function CollapsibleFormSection({
   }
 
   return (
-    <div className="mt-6 rounded-lg border border-black/10 p-4 dark:border-white/10">
+    <div className="mt-6 rounded-lg border border-line p-4">
       <div className="mb-3 flex items-center justify-between">
         <span className="text-sm font-medium">{addLabel}</span>
         <button

@@ -49,7 +49,7 @@ export default async function MissingStationPage() {
           </p>
           <div className="mt-4 flex flex-col gap-2">
             {reports.map((r) => (
-              <div key={r.id} className="rounded-md border border-black/10 p-3 text-sm dark:border-white/10">
+              <div key={r.id} className="rounded-md border border-line p-3 text-sm">
                 <div className="flex items-center justify-between gap-3">
                   <a href={r.google_maps_url} target="_blank" rel="noreferrer" className="truncate underline">
                     {r.google_maps_url}

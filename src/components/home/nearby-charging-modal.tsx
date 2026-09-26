@@ -195,7 +195,7 @@ export function NearbyChargingModal({ open, onClose }: { open: boolean; onClose:
   return (
     <div className="fixed inset-0 z-50 bg-black/50 sm:flex sm:items-center sm:justify-center sm:p-4">
       <div className="flex h-full w-full flex-col overflow-hidden bg-white dark:bg-neutral-900 sm:h-[85vh] sm:max-h-[720px] sm:w-full sm:max-w-2xl sm:rounded-lg">
-        <div className="flex items-center justify-between border-b border-black/10 p-4 pt-[calc(1rem+var(--safe-top))] dark:border-white/10 sm:pt-4">
+        <div className="flex items-center justify-between border-b border-line p-4 pt-[calc(1rem+var(--safe-top))] sm:pt-4">
           <h2 className="text-lg font-semibold">Ladesäule in der Nähe suchen</h2>
           <Button variant="ghost" iconOnly onClick={onClose} aria-label="Schließen">
             ✕
@@ -233,7 +233,7 @@ export function NearbyChargingModal({ open, onClose }: { open: boolean; onClose:
             )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-black/10 px-4 py-3 text-sm dark:border-white/10">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line px-4 py-3 text-sm">
             {TRAILER_VERDICT_VALUES.map((value) => (
               <label key={value} className="flex min-h-11 items-center gap-1.5">
                 <input
@@ -276,7 +276,7 @@ export function NearbyChargingModal({ open, onClose }: { open: boolean; onClose:
                       <Link
                         href={`/ladepunkte/${s.id}`}
                         onClick={onClose}
-                        className="flex items-center justify-between gap-3 rounded-md border border-black/10 p-3 hover:bg-black/5 dark:border-white/10 dark:hover:bg-white/10"
+                        className="flex items-center justify-between gap-3 rounded-md border border-line p-3 hover:bg-black/5 dark:hover:bg-white/10"
                       >
                         <div>
                           <p className="font-medium">{s.name ?? s.operator}</p>
@@ -296,7 +296,7 @@ export function NearbyChargingModal({ open, onClose }: { open: boolean; onClose:
             )}
           </div>
 
-          <div className="border-t border-black/10 p-4 pb-[calc(1rem+var(--safe-bottom))] dark:border-white/10">
+          <div className="border-t border-line p-4 pb-[calc(1rem+var(--safe-bottom))]">
             <Link
               href={`/ladepunkte${fullSearchParams.toString() ? `?${fullSearchParams.toString()}` : ""}`}
               onClick={onClose}

@@ -43,7 +43,7 @@ function CampsiteCard({
       className={`block rounded-lg border p-4 transition-colors ${
         selected
           ? "border-route bg-route/5"
-          : "border-black/10 hover:bg-black/5 dark:border-white/10 dark:hover:bg-white/10"
+          : "border-line hover:bg-black/5 dark:hover:bg-white/10"
       }`}
     >
       <p className="font-medium">{campsite.name}</p>

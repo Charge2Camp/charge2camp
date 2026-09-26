@@ -286,7 +286,7 @@ export default async function CampsiteDetailPage({
         ) : (
           <ul className="mt-2 flex flex-wrap gap-2 text-sm">
             {activeAmenities.map((key) => (
-              <li key={key} className="rounded-full border border-black/10 px-3 py-1 dark:border-white/10">
+              <li key={key} className="rounded-full border border-line px-3 py-1">
                 {amenityLabels[key] ?? key}
               </li>
             ))}
@@ -329,7 +329,7 @@ export default async function CampsiteDetailPage({
             {allReviews.map((review) => (
               <li
                 key={review.id}
-                className="rounded-md border border-black/10 p-3 text-sm dark:border-white/10"
+                className="rounded-md border border-line p-3 text-sm"
               >
                 <div className="flex items-baseline justify-between gap-2">
                   <p className="font-medium">★ {review.rating}/5</p>

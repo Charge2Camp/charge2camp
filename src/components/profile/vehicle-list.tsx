@@ -28,7 +28,7 @@ export function VehicleList({ vehicles, models }: { vehicles: Vehicle[]; models:
         {items.map((vehicle) => (
           <li
             key={vehicle.id}
-            className="flex items-center justify-between gap-4 rounded-md border border-black/10 px-4 py-3 dark:border-white/10"
+            className="flex items-center justify-between gap-4 rounded-md border border-line px-4 py-3"
           >
             <div className="text-sm">
               <p className="font-medium">

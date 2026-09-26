@@ -84,7 +84,7 @@ export function CampsiteQuickFilters({
         </button>
         <Link
           href="/campingplaetze"
-          className="flex min-h-12 items-center justify-center rounded-md border border-black/10 px-4 hover:bg-black/5 dark:border-white/10 dark:hover:bg-white/10"
+          className="flex min-h-12 items-center justify-center rounded-md border border-line px-4 hover:bg-black/5 dark:hover:bg-white/10"
         >
           Zurücksetzen
         </Link>

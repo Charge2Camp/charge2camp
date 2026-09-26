@@ -67,7 +67,7 @@ export default async function ProfilePage() {
         <Link
           key={card.href}
           href={card.href}
-          className="rounded-lg border border-black/10 p-4 hover:border-route dark:border-white/10"
+          className="rounded-lg border border-line p-4 hover:border-route"
         >
           <p className="font-medium">{card.title}</p>
           <p className="mt-1 text-sm text-text-muted">{card.description}</p>

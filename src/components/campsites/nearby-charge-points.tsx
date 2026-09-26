@@ -24,7 +24,7 @@ export function NearbyChargePointsList({ points }: { points: LinkedChargePoint[]
             <button
               type="button"
               onClick={() => setSelectedId(point.id)}
-              className="flex w-full items-center justify-between rounded-md border border-black/10 px-4 py-2 text-left text-sm hover:bg-black/5 dark:border-white/10 dark:hover:bg-white/10"
+              className="flex w-full items-center justify-between rounded-md border border-line px-4 py-2 text-left text-sm hover:bg-black/5 dark:hover:bg-white/10"
             >
               <div>
                 <p className="font-medium">{point.name ?? point.operator}</p>

@@ -161,7 +161,7 @@ function ChargingStationCard({
       className={`block rounded-lg border p-4 transition-colors ${
         selected
           ? "border-route bg-route/5"
-          : "border-black/10 hover:bg-black/5 dark:border-white/10 dark:hover:bg-white/10"
+          : "border-line hover:bg-black/5 dark:hover:bg-white/10"
       }`}
     >
       <div className="flex items-start justify-between gap-2">
@@ -181,12 +181,12 @@ function ChargingStationCard({
         </span>
         <ReviewStateBadge origin={station.trailer?.origin} />
         {station.max_power_kw && (
-          <span className="rounded-full border border-black/10 px-2 py-0.5 dark:border-white/10">
+          <span className="rounded-full border border-line px-2 py-0.5">
             {station.max_power_kw} kW
           </span>
         )}
         {connectorSummary && (
-          <span className="rounded-full border border-black/10 px-2 py-0.5 dark:border-white/10">
+          <span className="rounded-full border border-line px-2 py-0.5">
             {connectorSummary}
           </span>
         )}
@@ -539,7 +539,7 @@ export function ChargingStationMapExplorer({
               die Tab-Bar um den Home-Indicator-Abstand) am unteren Rand
               hinter der Bar verschwinden, in der normalen Mobile-Browser-
               Ansicht dagegen nicht (Nutzerfeedback). */}
-          <div className="fixed inset-x-0 top-0 bottom-[calc(4rem+var(--safe-bottom))] overflow-hidden md:relative md:inset-auto md:h-[75vh] md:min-h-[420px] md:rounded-xl md:border md:border-black/10 md:dark:border-white/10">
+          <div className="fixed inset-x-0 top-0 bottom-[calc(4rem+var(--safe-bottom))] overflow-hidden md:relative md:inset-auto md:h-[75vh] md:min-h-[420px] md:rounded-xl md:border md:border-line">
           {/* Mobil/Touch: onMarkerClick+selectedId oeffnen das eigene
               Bottom-Sheet statt des MapLibre-Popups (siehe isTouchMap oben).
               Der ausgewaehlte Pin wird dadurch nebenbei groesser statt
@@ -685,7 +685,7 @@ export function ChargingStationMapExplorer({
             className="fixed inset-x-0 bottom-0 z-50 flex max-h-[85vh] flex-col overflow-hidden rounded-t-2xl bg-white dark:bg-neutral-900 md:inset-y-0 md:left-0 md:right-auto md:bottom-auto md:h-full md:max-h-none md:w-96 md:rounded-none md:rounded-r-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-black/10 p-4 pt-[calc(1rem+var(--safe-top))] dark:border-white/10">
+            <div className="flex items-center justify-between border-b border-line p-4 pt-[calc(1rem+var(--safe-top))]">
               <h2 className="text-lg font-semibold">Filter</h2>
               <button
                 type="button"
@@ -713,11 +713,11 @@ export function ChargingStationMapExplorer({
                   operatorOptions={operatorOptions}
                 />
               </div>
-              <div className="border-t border-black/10 p-4 pb-[calc(1rem+var(--safe-bottom))] dark:border-white/10">
+              <div className="border-t border-line p-4 pb-[calc(1rem+var(--safe-bottom))]">
                 <button
                   type="button"
                   onClick={resetFilters}
-                  className="flex min-h-12 w-full items-center justify-center rounded-md border border-black/10 px-4 hover:bg-black/5 dark:border-white/10 dark:hover:bg-white/10"
+                  className="flex min-h-12 w-full items-center justify-center rounded-md border border-line px-4 hover:bg-black/5 dark:hover:bg-white/10"
                 >
                   Zurücksetzen
                 </button>
