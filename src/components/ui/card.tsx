@@ -5,7 +5,10 @@ import type { HTMLAttributes } from "react";
  * (64 verbliebene Fundstellen, docs/DESIGN_DECISIONS.md) -- neue
  * Verwendungen sollen von Anfang an den Token nutzen, auch wenn die
  * Massenmigration der Bestandsstellen ein eigener, noch offener Schritt
- * bleibt. */
+ * bleibt. Radien `rounded-md`/`rounded-lg` (6px/8px) entsprechen seit
+ * der Korrektur in docs/design/brand-guide.md/tokens.json (Phase 16)
+ * dem tatsaechlich gelebten Wert -- vorher dokumentierte 10px/12px
+ * waren nie umgesetzt. */
 
 export type CardVariant = "default" | "emphasis" | "tint-route" | "tint-warning";
 

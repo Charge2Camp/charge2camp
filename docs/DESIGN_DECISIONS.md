@@ -54,10 +54,18 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
   hier bewusst nicht im selben Schritt aufgelöst wurde (eigene
   Entscheidung: Token an Praxis anpassen oder Praxis an Token
   angleichen), sondern unten als offener Punkt vermerkt.
-- **Offener Punkt (neu entdeckt, nicht in dieser Änderung gelöst):**
-  `tokens.json` `radius.card = 12` stimmt nicht mit der tatsächlich
-  verwendeten Kartenrundung (`rounded-lg` = 8px) überein. Muss geklärt
-  werden, bevor `Card` als "fertig" gilt.
+- **Offener Punkt — geklärt (Folge-Commit, 2026-09-26):** Beim
+  genaueren Hinsehen stellte sich heraus, dass auch `radius.control`
+  (dokumentiert 10px) betroffen war — Buttons/Inputs nutzen durchgängig
+  `rounded-md` (6px), nicht nur Cards. Beide Werte waren nie in dieser
+  Form umgesetzt. Statt app-weit alle Radien auf die dokumentierten
+  10px/12px umzustellen (sichtbare Änderung an ~130+ Stellen ohne
+  erkennbaren Auslöser/Nutzerwunsch), wurde die Dokumentation an die
+  tatsächlich gelebte Praxis angepasst: `docs/design/brand-guide.md` §5
+  und `tokens.json` `radius` jetzt `control: 6`/`card: 8`, entsprechend
+  Tailwinds `rounded-md`/`rounded-lg`. Entspricht demselben
+  "ehrlicher Ist-Zustand statt Wunschbild"-Prinzip, das schon für
+  `DESIGN_SYSTEM.md` Abschnitt 5 galt.
 - **Impact:** 4 neue Dateien (`src/components/ui/button.tsx`,
   `card.tsx`, `badge.tsx`, `input.tsx`), 5 Dateien auf die neuen
   Komponenten umgestellt. Typecheck grün. Live geprüft: `/` (Card-Radius

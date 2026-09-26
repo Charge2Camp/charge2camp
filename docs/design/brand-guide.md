@@ -117,7 +117,8 @@ Immer Satzanfang groß, nie Versalien. Zeilenlänge höchstens 72 Zeichen.
 
 ## 5. Form und Abstand
 
-- Radien: 10 px für Bedienelemente, 12 px für Karten, Pillenform nur für Buttons und Filter-Chips.
+- Radien: 6 px für Bedienelemente (Tailwind `rounded-md`), 8 px für Karten (`rounded-lg`),
+  Pillenform nur für Buttons und Filter-Chips.
 - Abstände auf 4er-Raster: 4, 8, 12, 16, 24, 32, 48, 64.
 - Keine Schatten, keine Verläufe. Tiefe entsteht durch den Wechsel von Fläche und Karte.
 - Trennlinien 1 px in `--c-line`.
