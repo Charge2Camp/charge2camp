@@ -10,6 +10,7 @@ import { StationReviewsList } from "@/components/charging-stations/station-revie
 import { StationBlockSection } from "@/components/charging-stations/station-block-section";
 import { StationNearbyPoi } from "@/components/charging-stations/station-nearby-poi";
 import { ReviewStateBadge } from "@/components/charging-stations/review-state-badge";
+import { SectionCard } from "@/components/charging-stations/section-card";
 import { FormError } from "@/components/form-error";
 import { TRAILER_PIN_COLORS, TRAILER_PIN_LABELS, TRAILER_PIN_TEXT_CLASS, getTrailerPinState } from "@/lib/trailer-verdict";
 import {
@@ -347,7 +348,9 @@ export function StationBottomSheet({
 
       <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-8">
         <div className="flex flex-col gap-6 pt-2">
-          <StationTechnicalDetails station={station} />
+          <SectionCard>
+            <StationTechnicalDetails station={station} />
+          </SectionCard>
 
           {extrasLoading && <p className="text-sm text-text-muted">Details werden geladen…</p>}
           {extrasError && (
@@ -369,28 +372,39 @@ export function StationBottomSheet({
 
           {extras && (
             <>
-              <StationCompatibilitySummary
-                communitySummary={extras.communitySummary}
-                personalCompatibility={extras.personalCompatibility}
-                isLoggedIn={isLoggedIn}
-              />
-              <section>
-                <h2 className="font-semibold">Eignung nach Gespannlänge</h2>
-                <div className="mt-2">
-                  <RigLengthDistributionChart distribution={extras.rigLengthDistribution} />
-                </div>
-              </section>
-              <StationNearbyPoi result={extras.nearbyPoi} />
-              <StationReviewsList
-                reviews={extras.reviews}
-                isLoggedIn={isLoggedIn}
-                ownReview={extras.ownReview}
-                stationId={station.id}
-                externalKey={station.external_key}
-                vehicles={extras.ownVehicles}
-                caravans={extras.ownCaravans}
-                onReviewSubmitted={() => loadExtras(station.id, station.lat, station.lon)}
-              />
+              <SectionCard>
+                <StationCompatibilitySummary
+                  communitySummary={extras.communitySummary}
+                  personalCompatibility={extras.personalCompatibility}
+                  isLoggedIn={isLoggedIn}
+                />
+              </SectionCard>
+              <SectionCard>
+                <section>
+                  <h2 className="font-semibold">Eignung nach Gespannlänge</h2>
+                  <div className="mt-2">
+                    <RigLengthDistributionChart distribution={extras.rigLengthDistribution} />
+                  </div>
+                </section>
+              </SectionCard>
+              <SectionCard>
+                <StationNearbyPoi result={extras.nearbyPoi} />
+              </SectionCard>
+              <SectionCard>
+                <StationReviewsList
+                  reviews={extras.reviews}
+                  isLoggedIn={isLoggedIn}
+                  ownReview={extras.ownReview}
+                  stationId={station.id}
+                  externalKey={station.external_key}
+                  vehicles={extras.ownVehicles}
+                  caravans={extras.ownCaravans}
+                  onReviewSubmitted={() => loadExtras(station.id, station.lat, station.lon)}
+                />
+              </SectionCard>
+              {/* StationBlockSection bewusst OHNE SectionCard -- niedrigschwellige
+                  Verwaltungsaktion, keine Inhalts-Info, soll sich nicht wie ein
+                  gleichwertiger Info-Block anfuehlen (Nutzerwunsch, s. ABRP-Vergleich). */}
               {isLoggedIn && <StationBlockSection stationId={station.id} isBlocked={extras.isBlocked} />}
             </>
           )}
