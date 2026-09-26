@@ -82,7 +82,7 @@ export default async function SavedRoutesPage() {
                 </p>
               ) : (
                 result && (
-                  <div className="mt-3 flex flex-col gap-2 text-sm text-black/70 dark:text-white/70">
+                  <div className="mt-3 flex flex-col gap-2 text-sm text-text-muted">
                     <p>
                       Gespann: {result.vehicle.manufacturer} {result.vehicle.model}
                       {result.caravan && ` + ${result.caravan.manufacturer} ${result.caravan.model}`}

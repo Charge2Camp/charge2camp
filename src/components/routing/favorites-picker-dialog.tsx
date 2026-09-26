@@ -60,7 +60,7 @@ export function FavoritesPickerDialog({
         <div className="flex-1 overflow-y-auto p-4 pb-[calc(1rem+var(--safe-bottom))]">
           {selected ? (
             <div className="flex flex-col gap-4">
-              <p className="text-sm text-black/70 dark:text-white/70">
+              <p className="text-sm text-text-muted">
                 <span className="mr-2 rounded-full bg-black/5 px-2 py-0.5 text-xs dark:bg-white/10">
                   {ENTITY_LABELS[selected.entityType]}
                 </span>

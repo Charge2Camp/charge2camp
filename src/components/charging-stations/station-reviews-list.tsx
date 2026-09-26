@@ -78,7 +78,7 @@ export function StationReviewsList({
                       <span
                         key={key}
                         className={`rounded-full px-2 py-0.5 text-xs text-white ${
-                          review[key] ? "bg-route" : "bg-red-600"
+                          review[key] ? "bg-route" : "bg-error"
                         }`}
                       >
                         {review[key] ? "✓" : "✗"} {CRITERION_LABELS[key]}

@@ -10,6 +10,56 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
 
 ---
 
+## UX-05.1/UX-07.1 Rest: `bg-red-*`/`border-red-*` und `text-black/70` einzeln migriert
+
+- **Decision:** Alle verbliebenen `bg-red-*`/`border-red-*`/`text-red-*`-
+  Fundstellen (8 Dateien) auf `bg-error`/`border-error`/`text-error`
+  migriert, mit Opazitäts-Modifiern (`border-error/30`, `bg-error/10`)
+  wie bereits an anderer Stelle etabliert (`border-route/30` auf
+  `/legende`). "Löschen"-Buttons nutzen `hover:bg-error/90` statt eines
+  erfundenen dunkleren Rot-Tons. Von den 25 `text-black/70`-Fundstellen
+  wurden 8 generische Sekundärlabels/-listen auf `text-text-muted`
+  migriert; 16 Stellen (Rechtstexte, Bewertungs-Zitate,
+  Startseiten-Subline, Wizard-Zustandssystem, freie Betreiber-Notizen)
+  bewusst nicht angefasst.
+- **Reason:** Direkte Fortsetzung der in Phase 9 begonnenen, dort
+  bewusst zurückgestellten Token-Migration (`docs/design/
+  ux-problems.md` UX-05.1/UX-07.1). Für `bg-red-*`/`border-red-*` gab
+  es — anders als bei den Text-Opazitätsstufen — keine Unklarheit über
+  eine beabsichtigte Hierarchie: alle 8 Fundstellen sind eindeutig
+  Fehler-/Gefahren-Semantik (Kriterien-Fehlschlag, "nicht
+  betriebsbereit", destruktive Löschen-Aktionen), für die `--c-error`
+  bereits seit Phase 8 exakt vorgesehen ist. Für `text-black/70` wurde
+  jede der 25 Stellen einzeln gegen den Kontext geprüft (nicht wie bei
+  UX-05.1 zuvor pauschal zurückgestellt) — acht davon erwiesen sich als
+  gewöhnliche Sekundärtext-Stellen ohne erkennbaren Grund für die
+  höhere Kontraststufe, die übrigen 16 haben einen inhaltlichen Grund
+  (Zitat, Pflichttext, bewusstes Zustandssystem), heller/gedämpfter
+  wäre dort eine echte Verschlechterung.
+- **Alternatives:** (1) auch `text-amber-*`-Hartcodierungen (11
+  Fundstellen in 9 Dateien, beim Durchsehen zusätzlich entdeckt) im
+  selben Schritt migrieren (zurückgestellt: `--c-warning` ist mit
+  #E8A33D zu hell für Fließtext-Kontrast — die bestehenden
+  `text-amber-700`-Stellen haben keine 1:1-Tokenentsprechung, anders
+  als bei Error/Route; das ist eine eigene Entscheidung [neuer
+  "Warntext"-Token ja/nein], kein reiner Klassentausch — separat zu
+  klären, nicht ungeprüft im selben Schritt mitgezogen); (2) bei
+  `text-black/70` alle 25 Stellen pauschal migrieren, um "fertig" zu
+  sein (verworfen: hätte Rechtstexte/Zitate/Zustandssystem sichtbar
+  verschlechtert, exakt das Risiko, das die ursprüngliche
+  Zurückstellung in Phase 9 vermeiden wollte).
+- **Impact:** 15 Dateien geändert (8 für Error-Migration, 7 für
+  Text-Migration), reine Klassennamen-/Farbwert-Ersetzung ohne
+  Logikänderung. Typecheck grün, keine doppelten Leerzeichen. Error-
+  Migration nicht live getestet (login-/datenpflichtige Komponenten,
+  mechanisch identisches, bereits an anderer Stelle verifiziertes
+  Muster). UX-05.1/UX-07.1 damit bis auf den bewusst offen gelassenen
+  `text-amber-*`-Fund und das fehlende Symbol bei Fehlermeldungen
+  vollständig erledigt.
+- **Date:** 2026-09-26 (Phase 16).
+
+---
+
 ## Lime-Kontrast-Nebenbefund behoben: `TRAILER_PIN_TEXT_CLASS`/`_HEX`
 
 - **Decision:** Zwei neue zentrale Exports in `src/lib/trailer-verdict.ts`

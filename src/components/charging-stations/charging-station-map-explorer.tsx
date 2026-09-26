@@ -124,7 +124,7 @@ function buildStationPopupHtml(station: ChargingStationView): string {
 function OperationalBadge({ isOperational }: { isOperational: boolean }) {
   if (isOperational) return null;
   return (
-    <span className="rounded bg-red-500/10 px-2 py-0.5 text-xs text-red-700 dark:text-red-400">
+    <span className="rounded bg-error/10 px-2 py-0.5 text-xs text-error">
       Laut Quelle nicht betriebsbereit
     </span>
   );

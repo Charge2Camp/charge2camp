@@ -23,7 +23,7 @@ function SuitabilityBadges({ candidate }: { candidate: Pick<ChargingStopCandidat
         {TRAILER_PIN_LABELS[candidate.station.trailerPinState]}
       </span>
       {candidate.personalCompatibility && candidate.personalCompatibility !== "keine_daten" && (
-        <span className="rounded-full border border-line-strong px-2 py-0.5 text-xs text-black/70 dark:border-white/20 dark:text-white/70">
+        <span className="rounded-full border border-line-strong px-2 py-0.5 text-xs text-text-muted dark:border-white/20">
           {PERSONAL_COMPATIBILITY_LABELS[candidate.personalCompatibility]}
         </span>
       )}

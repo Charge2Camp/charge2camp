@@ -52,7 +52,7 @@ export function StationNearbyPoi({
         {categoriesWithHits.map((category) => (
           <div key={category}>
             <p className="text-sm font-medium">{CATEGORY_LABELS[category]}</p>
-            <ul className="mt-1 space-y-1 text-sm text-black/70 dark:text-white/70">
+            <ul className="mt-1 space-y-1 text-sm text-text-muted">
               {result.byCategory[category].map((poi: NearbyPoi) => (
                 <li key={poi.id} className="flex items-baseline justify-between gap-2">
                   <span className="truncate">{poi.name ?? CATEGORY_LABELS[category]}</span>

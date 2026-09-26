@@ -72,7 +72,7 @@ export function VehicleEditDialog({
                   type="button"
                   disabled={deleting}
                   onClick={handleDelete}
-                  className="min-h-11 rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                  className="min-h-11 rounded-md bg-error px-4 py-2 text-sm font-medium text-white hover:bg-error/90 disabled:opacity-50"
                 >
                   Ja, löschen
                 </button>

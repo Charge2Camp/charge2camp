@@ -40,7 +40,7 @@ export function NearbyChargePointsList({ points }: { points: LinkedChargePoint[]
               <span className="shrink-0 pl-3 text-right text-text-muted">
                 {!point.walkable ? (
                   <>
-                    <span className="block rounded-full bg-black/10 px-2 py-0.5 text-xs font-medium text-black/70 dark:bg-white/10 dark:text-white/70">
+                    <span className="block rounded-full bg-black/10 px-2 py-0.5 text-xs font-medium text-text-muted dark:bg-white/10">
                       nicht fußläufig
                     </span>
                     <span className="mt-1 block">{(point.air_distance_m / 1000).toFixed(1)} km Luftlinie</span>
@@ -83,7 +83,7 @@ export function NearbyChargePointsList({ points }: { points: LinkedChargePoint[]
               {TRAILER_VERDICT_LABELS[selected.trailerVerdict]}
             </span>{" "}
             <ReviewStateBadge origin={selected.trailerOrigin} className="mt-2 px-3 py-1 text-sm" />
-            <ul className="mt-3 space-y-1 text-sm text-black/70 dark:text-white/70">
+            <ul className="mt-3 space-y-1 text-sm text-text-muted">
               {selected.operator && selected.name && <li>Betreiber: {selected.operator}</li>}
               {selected.max_power_kw && <li>Max. Ladeleistung: {selected.max_power_kw} kW</li>}
               {!selected.walkable && (

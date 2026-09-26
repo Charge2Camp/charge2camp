@@ -79,7 +79,7 @@ export default async function MeineDatenPage() {
         </a>
       </div>
 
-      <div className="mt-8 rounded-md border border-red-600/30 p-4">
+      <div className="mt-8 rounded-md border border-error/30 p-4">
         <h3 className="font-medium text-error">Konto löschen</h3>
         <p className="mt-1 text-xs text-text-muted">
           Löscht dein Konto und alle zugehörigen Daten (Fahrzeuge, Wohnwagen, Favoriten,

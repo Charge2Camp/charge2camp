@@ -90,17 +90,28 @@ Phase geprüft:
     `text-text-muted`, bleibt nach Migration weiterhin über der
     4.5:1-Mindestanforderung (brand-guide.md §9). Beide auf
     `text-text-muted` migriert.
-  - `text-black/70` (22×) bewusst **nicht** migriert: mindestens eine
-    Stelle (`route-wizard-tabs.tsx`) nutzt `/70` nachweislich als
-    bewusste dritte Stufe eines Tab-Zustandssystems (aktiv → `/70`
-    "erreichbar" → `/30` "nicht erreichbar", jeweils mit passendem
-    `border-black/25`/`border-black/10`) — hier liegt tatsächlich eine
-    beabsichtigte Hierarchie vor, keine Inkonsistenz. Die übrigen
-    `/70`-Stellen (Rechtstexte, Bewertungs-Zitate, Startseiten-Subline)
-    sind zudem die am wenigsten gedämpfte, kontrastreichste Stufe —
-    eine Migration auf den helleren `text-text-muted`-Ton wäre hier das
-    einzige Risiko einer echten Kontrast-*Verschlechterung* gewesen.
-    Bleibt offen für eine spätere, gezielte Einzelfallprüfung.
+  - `text-black/70` **einzeln geprüft (Phase 16, 2026-09-26):** von 25
+    Fundstellen wurden 8 (generische Sekundärlabels/-listen ohne
+    erkennbare eigene Bedeutung — Badge-Text, Adress-/Favoriten-
+    Listeneinträge, Balkendiagramm-Achsenbeschriftung, POI-Liste,
+    Routen-Zusammenfassung) auf `text-text-muted` migriert. 16 Stellen
+    bewusst **nicht** migriert, jede einzeln geprüft statt pauschal
+    übernommen:
+    - `route-wizard-tabs.tsx` (2×) nutzt `/70` nachweislich als
+      bewusste dritte Stufe eines Tab-Zustandssystems (aktiv → `/70`
+      "erreichbar" → `/30` "nicht erreichbar", jeweils mit passendem
+      `border-black/25`/`border-black/10`) — eine beabsichtigte
+      Hierarchie, keine Inkonsistenz.
+    - Rechtstexte (`impressum`/`datenschutz`, 7×), Bewertungs-Zitate
+      (`community`, `campingplaetze/[id]`, `campsite-review-list.tsx`,
+      `charging-review-list.tsx`, `station-reviews-list.tsx`, 6×),
+      Startseiten-Subline (`page.tsx`, 1×) und freie Betreiber-Notizen
+      (`charging-station-map-explorer.tsx`, 1×) sind durchgängig die am
+      wenigsten gedämpfte, kontrastreichste der vier Opazitätsstufen —
+      eine Migration auf den helleren `text-text-muted`-Ton wäre bei
+      genau diesen Inhalten (Pflichtangaben, direkt zitierter
+      Nutzertext) das einzige Risiko einer echten Kontrast-
+      *Verschlechterung* gewesen. Bleiben unverändert.
   - `border-black/15` (85×) stellte sich beim genauen Hinsehen NICHT als
     Variante von `border-line` heraus, sondern als eigenständiges,
     durchgängiges Muster: der De-facto-Standardrahmen für praktisch
@@ -127,9 +138,19 @@ Phase geprüft:
   `text-red-600` wurden auf `text-error` migriert (Typecheck grün, visuell
   stichprobenartig geprüft). **Noch offen:** begleitendes Symbol bei
   Fehlermeldungen (echte Barrierefreiheits-Verbesserung, kein reiner
-  Farbtausch) sowie die 6 `bg-red-600`/3 `border-red-600`/3 `bg-red-700`/
-  1 `bg-red-500`-Fundstellen (Button-/Flächenfarben, kein 1:1-Textmuster,
-  zurückgestellt für einen eigenen Migrationsschritt).
+  Farbtausch).
+- **Flächenfarben erledigt (Phase 16, 2026-09-25):** Die verbliebenen
+  `bg-red-*`/`border-red-*`/`text-red-*`-Fundstellen (8 Dateien:
+  Kriterien-Badges, "Erneut versuchen"-Button, "Nicht betriebsbereit"-
+  Badge, Ladepunkt-Blockieren-Button, drei "Löschen"-Buttons,
+  Konto-löschen-Gefahrenzone) auf `bg-error`/`border-error`/`text-error`
+  migriert, jeweils mit Opazitäts-Modifier (`border-error/30`,
+  `bg-error/10`) wie an anderer Stelle bereits etabliert (z. B.
+  `border-route/30` auf `/legende`). "Löschen"-Buttons nutzen
+  `hover:bg-error/90` statt eines erfundenen dunkleren Rot-Tons — kein
+  `--c-error-hover`-Token vorhanden, absichtlich keinen neuen für einen
+  einzelnen Hover-Effekt ergänzt (Kostenoptimierung/Leitplanke 1). Damit
+  ist UX-07.1 bis auf das Symbol-Fehlen vollständig erledigt.
 
 ### UX-05.2 — `dark:`-Klassen sind toter Code (C, bereits in PRODUCT_AUDIT.md §4.5 notiert)
 

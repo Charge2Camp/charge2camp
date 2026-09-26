@@ -359,7 +359,7 @@ export function StationBottomSheet({
               <button
                 type="button"
                 onClick={() => void loadExtras(station.id, station.lat, station.lon)}
-                className="min-h-11 shrink-0 rounded-md border border-red-600/30 px-3 text-sm font-medium text-error hover:bg-red-600/10"
+                className="min-h-11 shrink-0 rounded-md border border-error/30 px-3 text-sm font-medium text-error hover:bg-error/10"
               >
                 Erneut versuchen
               </button>
