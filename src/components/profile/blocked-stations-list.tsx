@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { toggleChargingStationBlocked } from "@/app/ladepunkte/[id]/actions";
 import { FormError } from "@/components/form-error";
+import { Button } from "@/components/ui/button";
 
 export interface BlockedStationOption {
   id: string;
@@ -62,14 +63,15 @@ export function BlockedStationsList({ stations }: { stations: BlockedStationOpti
             <Link href={`/ladepunkte/${station.id}`} className="flex min-h-11 items-center hover:underline">
               {station.name ?? station.operator ?? "Ladepunkt"}
             </Link>
-            <button
-              type="button"
+            <Button
+              variant="plain"
+              size="link"
               onClick={() => handleUnblock(station.id)}
               disabled={pendingId === station.id}
-              className="flex min-h-11 items-center px-2 -mx-2 text-route hover:underline disabled:opacity-50"
+              className="text-route"
             >
               Wieder freigeben
-            </button>
+            </Button>
           </div>
           {errorById[station.id] && <FormError className="text-xs">{errorById[station.id]}</FormError>}
         </li>

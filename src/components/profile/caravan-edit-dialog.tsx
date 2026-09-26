@@ -5,6 +5,7 @@ import type { Caravan, CaravanModel } from "@/types/database";
 import { deleteCaravan } from "@/app/profil/actions";
 import { CaravanForm } from "./caravan-form";
 import { FormError } from "@/components/form-error";
+import { Button } from "@/components/ui/button";
 
 /** Siehe VehicleEditDialog -- gleiches Prinzip fuer Wohnwagen. */
 export function CaravanEditDialog({
@@ -63,31 +64,22 @@ export function CaravanEditDialog({
             {confirmingDelete ? (
               <div className="flex flex-wrap items-center gap-3">
                 <span className="text-sm text-error">Wohnwagen wirklich aus dem Profil löschen?</span>
-                <button
-                  type="button"
-                  disabled={deleting}
-                  onClick={handleDelete}
-                  className="min-h-11 rounded-md bg-error px-4 py-2 text-sm font-medium text-white hover:bg-error/90 disabled:opacity-50"
-                >
+                <Button variant="destructive" disabled={deleting} onClick={handleDelete}>
                   Ja, löschen
-                </button>
-                <button
-                  type="button"
+                </Button>
+                <Button
+                  variant="plain"
                   disabled={deleting}
                   onClick={() => setConfirmingDelete(false)}
-                  className="min-h-11 rounded-md px-4 py-2 text-sm font-medium text-text-muted hover:underline disabled:opacity-50"
+                  className="text-text-muted"
                 >
                   Abbrechen
-                </button>
+                </Button>
               </div>
             ) : (
-              <button
-                type="button"
-                onClick={() => setConfirmingDelete(true)}
-                className="min-h-11 text-sm font-medium text-error hover:underline"
-              >
+              <Button variant="plain" size="link" onClick={() => setConfirmingDelete(true)} className="text-error">
                 Wohnwagen aus dem Profil löschen
-              </button>
+              </Button>
             )}
             {deleteError && <FormError className="mt-2 text-sm">{deleteError}</FormError>}
           </div>

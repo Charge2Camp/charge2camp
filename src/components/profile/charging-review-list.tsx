@@ -260,21 +260,18 @@ export function ChargingReviewList({ reviews }: { reviews: ChargingReviewWithSta
                 <p className="mt-1 text-black/70 dark:text-white/70">{review.comment}</p>
               )}
               <div className="mt-2 flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setEditingId(review.id)}
-                  className="flex min-h-11 items-center px-2 -mx-2 text-route hover:underline"
-                >
+                <Button variant="plain" size="link" onClick={() => setEditingId(review.id)} className="text-route">
                   Bearbeiten
-                </button>
-                <button
-                  type="button"
+                </Button>
+                <Button
+                  variant="plain"
+                  size="link"
                   onClick={() => handleDelete(review)}
                   disabled={pendingDeleteId === review.id}
-                  className="flex min-h-11 items-center px-2 -mx-2 text-error hover:underline disabled:opacity-50"
+                  className="text-error"
                 >
                   Löschen
-                </button>
+                </Button>
               </div>
               {deleteErrorById[review.id] && (
                 <FormError className="mt-1 text-xs">{deleteErrorById[review.id]}</FormError>

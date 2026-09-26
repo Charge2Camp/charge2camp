@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { deleteSavedRoute } from "@/app/profil/actions";
 import { FormError } from "@/components/form-error";
+import { Button } from "@/components/ui/button";
 
 /** Extrahiert aus profil/routen/page.tsx (Nutzerwunsch: Server Action darf
  * nicht mehr direkt als `<form action={deleteSavedRoute}>` in einem Server
@@ -29,15 +30,16 @@ export function DeleteSavedRouteButton({ id, routeName }: { id: string; routeNam
 
   return (
     <div className="flex flex-col items-end gap-1">
-      <button
-        type="button"
+      <Button
+        variant="plain"
+        size="link"
         onClick={handleClick}
         disabled={pending}
-        className="flex min-h-11 items-center px-2 text-error hover:underline disabled:opacity-50"
+        className="text-error"
         aria-label={`Route "${routeName}" entfernen`}
       >
         Entfernen
-      </button>
+      </Button>
       {error && <FormError className="text-xs">{error}</FormError>}
     </div>
   );

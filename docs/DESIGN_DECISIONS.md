@@ -10,6 +10,37 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
 
 ---
 
+## Button-Größe `link` ergänzt, Lücke aus Runde 3 geschlossen
+
+- **Decision:** Neue `ButtonSize` `"link"` (`flex min-h-11 items-center
+  gap-1 px-2 -mx-2 text-sm`, immer mit `variant="plain"` kombiniert) in
+  `src/components/ui/button.tsx`. Damit 9 weitere Link-Buttons migriert:
+  "Bearbeiten"/"Löschen" in `campsite-review-list.tsx` und
+  `charging-review-list.tsx`, "Wieder freigeben" in
+  `blocked-stations-list.tsx`, "Entfernen" in
+  `delete-saved-route-button.tsx`, sowie die Lösch-Bestätigungsdialoge in
+  `caravan-edit-dialog.tsx`/`vehicle-edit-dialog.tsx` ("Ja, löschen" →
+  `destructive`, "Abbrechen" → `plain`, der einleitende
+  "… löschen"-Link-Button → `plain`+`link`).
+- **Reason:** Schließt die in Runde 3 dokumentierte Lücke ("passt zu
+  keiner Button-Größe"). Statt weiter unmigriert zu lassen: eine echte
+  dritte Größe für exakt diese wiederkehrende Rolle (Link-Button)
+  ergänzt, keine erfundene neue Optik — Klassen 1:1 aus den
+  bestehenden, bereits identischen Fundstellen übernommen.
+- **Was bewusst NICHT migriert wurde:** Die Icon-Only-Schließen-Buttons
+  in denselben beiden Edit-Dialogen (`text-black/50 hover:bg-black/5`)
+  passen weder zu `secondary` (hätte fälschlich einen Rahmen ergänzt)
+  noch zu einer bestehenden Variante — ein "ghost"/ohne-Rahmen-Icon-Button
+  ist eine vierte Variante, die hier nicht nebenbei erfunden werden
+  sollte. Bleibt offen; nebenbei fiel dabei auf, dass diese Stellen noch
+  hartcodiertes `text-black/50` statt `text-text-muted` nutzen (weiterer
+  kleiner Fund für einen künftigen Schritt).
+- **Impact:** 6 Dateien geändert (plus `button.tsx` selbst). Typecheck
+  grün, Server-Build ohne Fehler. Login-gated, nicht live getestet.
+- **Date:** 2026-09-26 (Phase 16).
+
+---
+
 ## Button/Input-Migration Runde 3: Bewertungsformulare
 
 - **Decision:** Weitere 5 Dateien migriert:
