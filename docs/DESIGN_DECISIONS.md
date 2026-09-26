@@ -10,6 +10,46 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
 
 ---
 
+## Button/Input-Migration Runde 2: Profil-Formulare
+
+- **Decision:** Weitere 8 Formulardateien auf `Button`/`Field`/`Input`/
+  `Select`/`Textarea` umgestellt: `vehicle-form.tsx`, `caravan-form.tsx`,
+  `change-email-form.tsx`, `change-password-form.tsx`,
+  `home-address-form.tsx`, `delete-account-form.tsx`,
+  `missing-station-report-form.tsx`, `preferred-providers-form.tsx`.
+- **Reason:** Fortsetzung der in Phase 16 begonnenen, bewusst
+  bereichsweisen Migration (§34 des Briefs) — nach den Auth-Seiten jetzt
+  die Profil-Formulare, die zusammen den größten Teil der ~50
+  Input-Fundstellen ausmachen.
+- **Was bewusst NICHT migriert wurde:** `AddressAutocomplete` in
+  `home-address-form.tsx` ist eine eigenständige Komponente mit eigener
+  interner Eingabelogik, kein einfaches `<input>` — nur der
+  Label-Wrapper (`Field`) wurde umgestellt, die Komponente selbst
+  bleibt unverändert. Bei Buttons mit vom Standard abweichenden
+  Opazitäts-/Cursor-Werten (`disabled:opacity-40/60` statt der in
+  `Button` fest hinterlegten `50`) wurde der Abweichungswert **nicht**
+  per `className` erzwungen (Tailwind-Footgun: zwei Utility-Klassen
+  derselben CSS-Eigenschaft im selben `className`-String haben keine
+  vorhersagbare Gewinner-Reihenfolge ohne `tailwind-merge`, bewusst
+  nicht eingeführt, s. vorheriger Commit) — stattdessen der
+  Komponenten-Default übernommen, eine minimale, nicht wahrnehmbare
+  Vereinheitlichung.
+- **Noch offen für einen weiteren Schritt:** Inline-Bearbeitungsformulare
+  in `campsite-review-list.tsx`/`charging-review-list.tsx`,
+  `review-form.tsx` (campsites/charging-stations), `route-planner-form.tsx`
+  (mit 17 Input-Fundstellen die größte verbliebene Einzeldatei),
+  `blocked-stations-list.tsx` sowie alle übrigen ~16 Komponententypen
+  aus §14.
+- **Impact:** 8 Dateien geändert, reine Ersetzung des Anzeige-Wrappers
+  (keine Logikänderung an Formularverhalten). Typecheck grün. Login-
+  gated (Profil-Formulare) nicht live im Browser getestet — kein
+  Test-Account in dieser Umgebung, identisches, bereits an den
+  Auth-Seiten verifiziertes Muster mechanisch angewendet. `/login`
+  erneut visuell geprüft (unverändert), keine Konsolen-/Serverfehler.
+- **Date:** 2026-09-26 (Phase 16).
+
+---
+
 ## §14 UI Component Library: erste Primitives (Button, Card, Badge, Input)
 
 - **Decision:** Neue `src/components/ui/`-Ordner mit vier Primitives:

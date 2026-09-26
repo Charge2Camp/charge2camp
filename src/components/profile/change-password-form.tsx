@@ -3,6 +3,8 @@
 import { useActionState } from "react";
 import { changePassword, type ChangePasswordState } from "@/app/profil/actions";
 import { FormError } from "@/components/form-error";
+import { Field, Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 const initialState: ChangePasswordState = {};
 
@@ -16,49 +18,22 @@ export function ChangePasswordForm() {
 
   return (
     <form action={formAction} className="mt-2 flex max-w-md flex-col gap-2">
-      <label className="flex flex-col gap-1 text-sm">
-        Aktuelles Passwort
-        <input
-          type="password"
-          name="current_password"
-          required
-          autoComplete="current-password"
-          className="w-full rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
-        />
-      </label>
-      <label className="flex flex-col gap-1 text-sm">
-        Neues Passwort
-        <input
-          type="password"
-          name="new_password"
-          required
-          minLength={6}
-          autoComplete="new-password"
-          className="w-full rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
-        />
-      </label>
-      <label className="flex flex-col gap-1 text-sm">
-        Neues Passwort bestätigen
-        <input
-          type="password"
-          name="new_password_confirm"
-          required
-          minLength={6}
-          autoComplete="new-password"
-          className="w-full rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
-        />
-      </label>
+      <Field label="Aktuelles Passwort">
+        <Input type="password" name="current_password" required autoComplete="current-password" />
+      </Field>
+      <Field label="Neues Passwort">
+        <Input type="password" name="new_password" required minLength={6} autoComplete="new-password" />
+      </Field>
+      <Field label="Neues Passwort bestätigen">
+        <Input type="password" name="new_password_confirm" required minLength={6} autoComplete="new-password" />
+      </Field>
 
       {state.error && <FormError className="text-sm">{state.error}</FormError>}
       {state.success && <p className="text-sm text-route">Passwort geändert.</p>}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="mt-1 min-h-11 self-start rounded-md bg-action px-4 py-2 text-sm font-medium text-base hover:bg-action-hover disabled:opacity-60"
-      >
+      <Button type="submit" disabled={pending} className="mt-1 self-start">
         {pending ? "Wird geändert…" : "Passwort ändern"}
-      </button>
+      </Button>
     </form>
   );
 }

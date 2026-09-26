@@ -4,6 +4,8 @@ import { useState } from "react";
 import { AddressAutocomplete } from "@/components/address-autocomplete";
 import { setHomeAddress } from "@/app/profil/actions";
 import { FormError } from "@/components/form-error";
+import { Field } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 export function HomeAddressForm({ initialAddress }: { initialAddress: string }) {
   const [value, setValue] = useState(initialAddress);
@@ -36,8 +38,7 @@ export function HomeAddressForm({ initialAddress }: { initialAddress: string }) 
       }}
       className="mt-2 flex max-w-md flex-col gap-2 sm:flex-row sm:items-end"
     >
-      <label className="flex flex-1 flex-col gap-1 text-sm">
-        Zuhause-Adresse
+      <Field label="Zuhause-Adresse" className="flex-1">
         <AddressAutocomplete
           name="home_address"
           value={value}
@@ -53,14 +54,10 @@ export function HomeAddressForm({ initialAddress }: { initialAddress: string }) 
           </>
         )}
         {error && <FormError className="text-sm">{error}</FormError>}
-      </label>
-      <button
-        type="submit"
-        disabled={pending}
-        className="min-h-11 rounded-md bg-action px-4 py-2 text-sm font-medium text-base hover:bg-action-hover disabled:opacity-60"
-      >
+      </Field>
+      <Button type="submit" disabled={pending}>
         {pending ? "Wird gespeichert…" : "Speichern"}
-      </button>
+      </Button>
     </form>
   );
 }

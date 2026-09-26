@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react";
 import { addVehicle, updateVehicle } from "@/app/profil/actions";
 import { FormError } from "@/components/form-error";
+import { Field, Input, Select } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import type { Vehicle, VehicleModel } from "@/types/database";
 
 const EMPTY_FORM = {
@@ -115,12 +117,11 @@ export function VehicleForm({
       className="flex flex-col gap-4"
     >
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <label className="flex flex-col gap-1 text-sm">
-          Hersteller auswählen
-          <select
+        <Field label="Hersteller auswählen">
+          <Select
             value={manufacturer}
             onChange={(e) => handleManufacturerSelect(e.target.value)}
-            className="min-h-11 rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
+            className="min-h-11"
           >
             <option value="">Manuell eingeben…</option>
             {manufacturers.map((m) => (
@@ -128,16 +129,15 @@ export function VehicleForm({
                 {m}
               </option>
             ))}
-          </select>
-        </label>
+          </Select>
+        </Field>
 
-        <label className="flex flex-col gap-1 text-sm">
-          Modell auswählen (füllt die Felder unten automatisch aus)
-          <select
+        <Field label="Modell auswählen (füllt die Felder unten automatisch aus)">
+          <Select
             value={selectedId}
             onChange={(e) => handleModelSelect(e.target.value)}
             disabled={!manufacturer}
-            className="min-h-11 rounded-md border border-line-strong px-3 py-2 text-base disabled:opacity-50 dark:bg-transparent"
+            className="min-h-11"
           >
             <option value="">Manuell eingeben…</option>
             {modelsForManufacturer.map((m) => (
@@ -145,37 +145,32 @@ export function VehicleForm({
                 {m.model} {m.variant}
               </option>
             ))}
-          </select>
-        </label>
+          </Select>
+        </Field>
       </div>
       <input type="hidden" name="model_reference_id" value={selectedId} />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <label className="flex flex-col gap-1 text-sm">
-          Hersteller *
-          <input
+        <Field label="Hersteller *">
+          <Input
             name="manufacturer"
             required
             value={form.manufacturer}
             onChange={(e) => updateField("manufacturer", e.target.value)}
-            className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
           />
-        </label>
+        </Field>
 
-        <label className="flex flex-col gap-1 text-sm">
-          Modell *
-          <input
+        <Field label="Modell *">
+          <Input
             name="model"
             required
             value={form.model}
             onChange={(e) => updateField("model", e.target.value)}
-            className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
           />
-        </label>
+        </Field>
 
-        <label className="flex flex-col gap-1 text-sm">
-          Batteriegröße (kWh) *
-          <input
+        <Field label="Batteriegröße (kWh) *">
+          <Input
             name="battery_capacity_kwh"
             type="number"
             step="0.1"
@@ -183,61 +178,52 @@ export function VehicleForm({
             required
             value={form.battery_capacity_kwh}
             onChange={(e) => updateField("battery_capacity_kwh", e.target.value)}
-            className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
           />
-        </label>
+        </Field>
 
-        <label className="flex flex-col gap-1 text-sm">
-          Verbrauch (kWh/100km)
-          <input
+        <Field label="Verbrauch (kWh/100km)">
+          <Input
             name="consumption_kwh_per_100km"
             type="number"
             step="0.1"
             min="0"
             value={form.consumption_kwh_per_100km}
             onChange={(e) => updateField("consumption_kwh_per_100km", e.target.value)}
-            className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
           />
-        </label>
+        </Field>
 
-        <label className="flex flex-col gap-1 text-sm">
-          Ladeleistung (kW, optional)
-          <input
+        <Field label="Ladeleistung (kW, optional)">
+          <Input
             name="charging_power_kw"
             type="number"
             step="1"
             min="0"
             value={form.charging_power_kw}
             onChange={(e) => updateField("charging_power_kw", e.target.value)}
-            className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
           />
-        </label>
+        </Field>
 
-        <label className="flex flex-col gap-1 text-sm">
-          Reichweite (km)
-          <input
+        <Field label="Reichweite (km)">
+          <Input
             name="range_km"
             type="number"
             step="1"
             min="0"
             value={form.range_km}
             onChange={(e) => updateField("range_km", e.target.value)}
-            className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
           />
-        </label>
+        </Field>
 
-        <label className="flex flex-col gap-1 text-sm">
-          Fahrzeuglänge (m)
-          <input
+        <Field label="Fahrzeuglänge (m)">
+          <Input
             name="length_m"
             type="number"
             step="0.01"
             min="0"
             value={form.length_m}
             onChange={(e) => updateField("length_m", e.target.value)}
-            className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
           />
-        </label>
+        </Field>
       </div>
 
       {!isEdit && !selectedId && (
@@ -253,13 +239,9 @@ export function VehicleForm({
       {error && <FormError className="text-sm">{error}</FormError>}
 
       <div>
-        <button
-          type="submit"
-          disabled={pending}
-          className="min-h-12 rounded-md bg-action px-4 py-3 font-medium text-base hover:bg-action-hover disabled:opacity-60"
-        >
+        <Button type="submit" size="md" disabled={pending}>
           {pending ? "Wird gespeichert…" : isEdit ? "Speichern" : "Elektroauto hinzufügen"}
-        </button>
+        </Button>
       </div>
     </form>
   );

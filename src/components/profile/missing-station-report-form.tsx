@@ -3,6 +3,8 @@
 import { useRef, useState } from "react";
 import { reportMissingStation } from "@/app/profil/actions";
 import { FormError } from "@/components/form-error";
+import { Field, Input, Textarea } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 /** Nach demselben Muster wie change-email-form.tsx: lokaler useState fuer
  * error/success statt useActionState, da reportMissingStation dem
@@ -35,25 +37,16 @@ export function MissingStationReportForm() {
       ref={formRef}
       className="flex max-w-md flex-col gap-3"
     >
-      <label className="flex flex-col gap-1 text-sm">
-        Google-Maps-Link zur Ladestation
-        <input
-          type="url"
-          name="google_maps_url"
-          required
-          placeholder="https://maps.app.goo.gl/…"
-          className="w-full rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
-        />
-      </label>
-      <label className="flex flex-col gap-1 text-sm">
-        Notiz (optional)
-        <textarea
+      <Field label="Google-Maps-Link zur Ladestation">
+        <Input type="url" name="google_maps_url" required placeholder="https://maps.app.goo.gl/…" />
+      </Field>
+      <Field label="Notiz (optional)">
+        <Textarea
           name="notes"
           rows={3}
           placeholder="z. B. Name/Betreiber, wie man hinkommt, ob Anhänger durchfahren kann…"
-          className="w-full rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
         />
-      </label>
+      </Field>
       {error && <FormError className="text-sm">{error}</FormError>}
       {success && (
         // UX-05.7 (docs/design/ux-problems.md): keine Push-/E-Mail-
@@ -65,13 +58,9 @@ export function MissingStationReportForm() {
           erneut besuchst -- es gibt noch keine Benachrichtigung per E-Mail oder Push.
         </p>
       )}
-      <button
-        type="submit"
-        disabled={pending}
-        className="min-h-11 self-start rounded-md bg-action px-4 py-2 text-sm font-medium text-base hover:bg-action-hover disabled:opacity-60"
-      >
+      <Button type="submit" disabled={pending} className="self-start">
         {pending ? "Wird gemeldet…" : "Melden"}
-      </button>
+      </Button>
     </form>
   );
 }

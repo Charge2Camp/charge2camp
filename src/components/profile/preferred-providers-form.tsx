@@ -4,6 +4,7 @@ import { useState } from "react";
 import { setPreferredChargingProviders } from "@/app/profil/actions";
 import { CHARGING_PROVIDERS } from "@/lib/charging-providers";
 import { FormError } from "@/components/form-error";
+import { Button } from "@/components/ui/button";
 
 /** Anbieter-Praeferenzen fuer die Ladeplanung (Nutzerwunsch, ganz unten auf
  * "Mein Gespann"): feste Auswahl aus den zehn groessten/verbreitetsten
@@ -95,13 +96,9 @@ export function PreferredProvidersForm({
         ))}
       </div>
       <div className="flex items-center gap-3">
-        <button
-          type="submit"
-          disabled={saving}
-          className="min-h-11 rounded-md bg-action px-4 py-2 text-sm font-medium text-base hover:bg-action-hover disabled:opacity-50"
-        >
+        <Button type="submit" disabled={saving}>
           Speichern
-        </button>
+        </Button>
         {saved && <span className="text-sm text-route">Gespeichert.</span>}
         {error && <FormError className="text-sm">{error}</FormError>}
       </div>

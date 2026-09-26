@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { changeEmail } from "@/app/profil/actions";
 import { FormError } from "@/components/form-error";
+import { Field, Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 /** Extrahiert aus profil/daten/page.tsx (Nutzerwunsch: Server Action darf
  * nicht mehr direkt als `<form action={changeEmail}>` in einem Server
@@ -34,29 +36,18 @@ export function ChangeEmailForm() {
       }}
       className="mt-2 flex max-w-md flex-col gap-2 sm:flex-row sm:items-end"
     >
-      <label className="flex flex-1 flex-col gap-1 text-sm">
-        Neue E-Mail-Adresse
-        <input
-          type="email"
-          name="email"
-          required
-          placeholder="neue@adresse.de"
-          className="w-full rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
-        />
+      <Field label="Neue E-Mail-Adresse" className="flex-1">
+        <Input type="email" name="email" required placeholder="neue@adresse.de" />
         {error && <FormError className="text-sm">{error}</FormError>}
         {success && (
           <span className="text-sm text-route">
             Bestätigungslink wurde verschickt -- bitte E-Mail(s) prüfen.
           </span>
         )}
-      </label>
-      <button
-        type="submit"
-        disabled={pending}
-        className="min-h-11 rounded-md bg-action px-4 py-2 text-sm font-medium text-base hover:bg-action-hover disabled:opacity-60"
-      >
+      </Field>
+      <Button type="submit" disabled={pending}>
         {pending ? "Wird geändert…" : "Ändern"}
-      </button>
+      </Button>
     </form>
   );
 }

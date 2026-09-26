@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react";
 import { addCaravan, updateCaravan } from "@/app/profil/actions";
 import { FormError } from "@/components/form-error";
+import { Field, Input, Select } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import type { Caravan, CaravanModel } from "@/types/database";
 
 const EMPTY_FORM = {
@@ -100,12 +102,11 @@ export function CaravanForm({
       className="flex flex-col gap-4"
     >
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <label className="flex flex-col gap-1 text-sm">
-          Hersteller auswählen
-          <select
+        <Field label="Hersteller auswählen">
+          <Select
             value={manufacturer}
             onChange={(e) => handleManufacturerSelect(e.target.value)}
-            className="min-h-11 rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
+            className="min-h-11"
           >
             <option value="">Manuell eingeben…</option>
             {manufacturers.map((m) => (
@@ -113,16 +114,15 @@ export function CaravanForm({
                 {m}
               </option>
             ))}
-          </select>
-        </label>
+          </Select>
+        </Field>
 
-        <label className="flex flex-col gap-1 text-sm">
-          Modell auswählen (füllt die Felder unten automatisch aus)
-          <select
+        <Field label="Modell auswählen (füllt die Felder unten automatisch aus)">
+          <Select
             value={selectedId}
             onChange={(e) => handleModelSelect(e.target.value)}
             disabled={!manufacturer}
-            className="min-h-11 rounded-md border border-line-strong px-3 py-2 text-base disabled:opacity-50 dark:bg-transparent"
+            className="min-h-11"
           >
             <option value="">Manuell eingeben…</option>
             {modelsForManufacturer.map((m) => (
@@ -130,37 +130,32 @@ export function CaravanForm({
                 {m.model}
               </option>
             ))}
-          </select>
-        </label>
+          </Select>
+        </Field>
       </div>
       <input type="hidden" name="model_reference_id" value={selectedId} />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <label className="flex flex-col gap-1 text-sm">
-          Hersteller *
-          <input
+        <Field label="Hersteller *">
+          <Input
             name="manufacturer"
             required
             value={form.manufacturer}
             onChange={(e) => updateField("manufacturer", e.target.value)}
-            className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
           />
-        </label>
+        </Field>
 
-        <label className="flex flex-col gap-1 text-sm">
-          Modell *
-          <input
+        <Field label="Modell *">
+          <Input
             name="model"
             required
             value={form.model}
             onChange={(e) => updateField("model", e.target.value)}
-            className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
           />
-        </label>
+        </Field>
 
-        <label className="flex flex-col gap-1 text-sm">
-          Länge (m) *
-          <input
+        <Field label="Länge (m) *">
+          <Input
             name="length_m"
             type="number"
             step="0.01"
@@ -168,13 +163,11 @@ export function CaravanForm({
             required
             value={form.length_m}
             onChange={(e) => updateField("length_m", e.target.value)}
-            className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
           />
-        </label>
+        </Field>
 
-        <label className="flex flex-col gap-1 text-sm">
-          Breite (m) *
-          <input
+        <Field label="Breite (m) *">
+          <Input
             name="width_m"
             type="number"
             step="0.01"
@@ -182,13 +175,11 @@ export function CaravanForm({
             required
             value={form.width_m}
             onChange={(e) => updateField("width_m", e.target.value)}
-            className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
           />
-        </label>
+        </Field>
 
-        <label className="flex flex-col gap-1 text-sm">
-          Höhe (m) *
-          <input
+        <Field label="Höhe (m) *">
+          <Input
             name="height_m"
             type="number"
             step="0.01"
@@ -196,9 +187,8 @@ export function CaravanForm({
             required
             value={form.height_m}
             onChange={(e) => updateField("height_m", e.target.value)}
-            className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
           />
-        </label>
+        </Field>
       </div>
 
       {!isEdit && !selectedId && (
@@ -214,12 +204,9 @@ export function CaravanForm({
       {error && <FormError className="text-sm">{error}</FormError>}
 
       <div>
-        <button
-          type="submit"
-          className="min-h-12 rounded-md bg-action px-4 py-3 font-medium text-base hover:bg-action-hover"
-        >
+        <Button type="submit" size="md">
           {isEdit ? "Speichern" : "Wohnwagen hinzufügen"}
-        </button>
+        </Button>
       </div>
     </form>
   );

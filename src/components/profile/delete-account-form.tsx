@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { deleteAccount } from "@/app/profil/actions";
 import { FormError } from "@/components/form-error";
+import { Field, Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 /** Kontoloeschung ist unwiderruflich (§ docs/privacy.md) -- anders als die
  * leichtgewichtigen Fahrzeug-/Wohnwagen-Loeschungen (dort jederzeit
@@ -32,25 +34,19 @@ export function DeleteAccountForm({ email }: { email: string }) {
       }}
       className="mt-3 flex max-w-md flex-col gap-2"
     >
-      <label className="flex flex-col gap-1 text-sm">
-        Zur Bestätigung deine E-Mail-Adresse eingeben ({email}):
-        <input
+      <Field label={`Zur Bestätigung deine E-Mail-Adresse eingeben (${email}):`}>
+        <Input
           type="email"
           value={confirmation}
           onChange={(e) => setConfirmation(e.target.value)}
           placeholder={email}
-          className="w-full rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
           autoComplete="off"
         />
-      </label>
+      </Field>
       {error && <FormError className="text-sm">{error}</FormError>}
-      <button
-        type="submit"
-        disabled={!confirmed || pending}
-        className="min-h-11 rounded-md bg-error px-4 py-2 text-sm font-medium text-white hover:bg-error/90 disabled:cursor-not-allowed disabled:opacity-40"
-      >
+      <Button type="submit" variant="destructive" disabled={!confirmed || pending} className="disabled:cursor-not-allowed">
         Konto endgültig löschen
-      </button>
+      </Button>
     </form>
   );
 }
