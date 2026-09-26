@@ -14,6 +14,8 @@ import { MapView } from "@/components/map/map-view";
 import { RouteOverviewPanel } from "@/components/routing/route-overview-panel";
 import { RouteWizardTabs } from "@/components/routing/route-wizard-tabs";
 import { FormError } from "@/components/form-error";
+import { Field, Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { FavoritesPickerDialog } from "@/components/routing/favorites-picker-dialog";
 import { HomeAddressPickerDialog } from "@/components/routing/home-address-picker-dialog";
 import { SavedRoutePickerDialog, type SavedRouteOption } from "@/components/routing/saved-route-picker-dialog";
@@ -767,21 +769,13 @@ export function RoutePlannerForm({
           aktuelle Route komplett -- fuer Anpassungen an der bestehenden
           Route gibt es stattdessen "← Daten anpassen" in Tab 2). */}
       {result ? (
-        <button
-          type="button"
-          onClick={handleNewPlanning}
-          className="min-h-11 w-fit rounded-md border border-line-strong px-4 py-2 text-sm font-medium hover:bg-black/5 dark:hover:bg-white/5"
-        >
+        <Button variant="secondary" onClick={handleNewPlanning} className="w-fit">
           Neue Routenplanung
-        </button>
+        </Button>
       ) : (
-        <button
-          type="button"
-          onClick={() => setSavedRouteDialogOpen(true)}
-          className="min-h-11 w-fit rounded-md border border-line-strong px-4 py-2 text-sm font-medium hover:bg-black/5 dark:hover:bg-white/5"
-        >
+        <Button variant="secondary" onClick={() => setSavedRouteDialogOpen(true)} className="w-fit">
           Gespeicherte Route öffnen
-        </button>
+        </Button>
       )}
 
       {showSavedRouteLoadingIndicator && <FullscreenLoader text="Gespeicherte Route wird geladen…" />}
@@ -838,26 +832,17 @@ export function RoutePlannerForm({
           className="grid grid-cols-1 gap-4 sm:grid-cols-2"
         >
           <div className="flex flex-wrap gap-2 sm:col-span-2">
-            <button
-              type="button"
-              onClick={() => setFavoritesDialogOpen(true)}
-              className="min-h-11 rounded-md border border-line-strong px-4 py-2 text-sm hover:bg-black/5 dark:hover:bg-white/5"
-            >
+            <Button variant="secondary" onClick={() => setFavoritesDialogOpen(true)}>
               ♥ Aus Favoriten wählen
-            </button>
+            </Button>
             {homeAddress && (
-              <button
-                type="button"
-                onClick={() => setHomeDialogOpen(true)}
-                className="min-h-11 rounded-md border border-line-strong px-4 py-2 text-sm hover:bg-black/5 dark:hover:bg-white/5"
-              >
+              <Button variant="secondary" onClick={() => setHomeDialogOpen(true)}>
                 🏠 Zuhause verwenden
-              </button>
+              </Button>
             )}
           </div>
 
-          <label className="flex flex-col gap-1 text-sm">
-            Start *
+          <Field label="Start *">
             <AddressAutocomplete
               name="start"
               required
@@ -873,10 +858,9 @@ export function RoutePlannerForm({
                 <input type="hidden" name="start_longitude" value={startCoords.longitude} />
               </>
             )}
-          </label>
+          </Field>
 
-          <label className="flex flex-col gap-1 text-sm">
-            Ziel *
+          <Field label="Ziel *">
             <AddressAutocomplete
               name="end"
               required
@@ -893,7 +877,7 @@ export function RoutePlannerForm({
                 <input type="hidden" name="end_longitude" value={endCoords.longitude} />
               </>
             )}
-          </label>
+          </Field>
 
           {/* Gespann-Auswahl (Nutzerwunsch: uebersichtlicher, eigener
               Block statt zweier gleichrangiger Felder mitten im Formular)
@@ -921,9 +905,8 @@ export function RoutePlannerForm({
               Mausrad in der jeweiligen Feld-Schrittweite anpassen, siehe
               useNumberFieldWheel. */}
           <div className="flex gap-4 sm:col-span-2">
-            <label className="flex flex-col gap-1 text-sm">
-              Verbrauch mit Gespann (kWh/100km)
-              <input
+            <Field label="Verbrauch mit Gespann (kWh/100km)">
+              <Input
                 ref={consumptionInputRef}
                 name="consumption_kwh_per_100km"
                 type="number"
@@ -931,13 +914,12 @@ export function RoutePlannerForm({
                 min="0"
                 value={consumption}
                 onChange={(e) => setConsumption(e.target.value)}
-                className="w-24 rounded-md border border-line-strong px-2 py-2 text-base dark:bg-transparent"
+                className="w-24"
               />
-            </label>
+            </Field>
 
-            <label className="flex flex-col gap-1 text-sm">
-              Mindest-Ladeleistung (kW, optional)
-              <input
+            <Field label="Mindest-Ladeleistung (kW, optional)">
+              <Input
                 ref={minPowerInputRef}
                 name="min_power_kw"
                 type="number"
@@ -945,9 +927,9 @@ export function RoutePlannerForm({
                 min="0"
                 value={minPowerKw}
                 onChange={(e) => setMinPowerKw(e.target.value)}
-                className="w-24 rounded-md border border-line-strong px-2 py-2 text-base dark:bg-transparent"
+                className="w-24"
               />
-            </label>
+            </Field>
           </div>
 
           <div className="text-sm sm:col-span-2">
@@ -955,10 +937,10 @@ export function RoutePlannerForm({
                 Muster wie "Mein Gespann" oben -- die Box selbst zeigt nur
                 noch die Zusammenfassung der aktuellen Auswahl. */}
             <p className="text-sm">Anbieter priorisieren oder ausschließen (optional)</p>
-            <button
-              type="button"
+            <Button
+              variant="secondary"
               onClick={() => setProvidersOpen((o) => !o)}
-              className="mt-1 flex min-h-11 w-full items-center justify-between rounded-md border border-line-strong px-3 py-2 text-left font-medium"
+              className="mt-1 flex w-full items-center justify-between text-left"
             >
               <span>
                 {preferredProviders.length === 0 && avoidedProviders.length === 0
@@ -971,7 +953,7 @@ export function RoutePlannerForm({
                       .join(" · ")}
               </span>
               <span aria-hidden="true">{providersOpen ? "▲" : "▼"}</span>
-            </button>
+            </Button>
 
             {/* Solange die Auswahl eingeklappt ist (Standard, auch mit aus dem
                 Profil vorbelegten Anbietern -- siehe providersOpen oben),
@@ -1069,26 +1051,22 @@ export function RoutePlannerForm({
                     className="w-full rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
                   />
                 </div>
-                <button
-                  type="button"
+                <Button
+                  variant="secondary"
+                  iconOnly
                   onClick={() => setManualStopQueries(manualStopQueries.filter((_, i) => i !== index))}
                   aria-label="Zwischenstopp entfernen"
-                  className="flex min-h-11 min-w-11 items-center justify-center rounded-md border border-line-strong text-base hover:bg-black/5 dark:hover:bg-white/5"
                 >
                   ✕
-                </button>
+                </Button>
               </div>
             ))}
-            <button
-              type="button"
-              onClick={() => setManualStopQueries([...manualStopQueries, ""])}
-              className="w-fit min-h-11 rounded-md border border-line-strong px-4 py-2 text-sm hover:bg-black/5 dark:hover:bg-white/5"
-            >
+            <Button variant="secondary" onClick={() => setManualStopQueries([...manualStopQueries, ""])} className="w-fit">
               + Zwischenstopp hinzufügen
-            </button>
+            </Button>
           </div>
 
-          <div className="rounded-lg border border-black/10 p-4 dark:border-white/10 sm:col-span-2">
+          <div className="rounded-lg border border-line p-4 sm:col-span-2">
             <p className="mb-3 text-sm font-medium">Ladeeinstellungen</p>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <SocSlider
@@ -1154,17 +1132,13 @@ export function RoutePlannerForm({
           )}
 
           <div className="flex flex-col gap-3 sm:col-span-2 sm:flex-row sm:flex-wrap">
-            <button
-              type="submit"
-              disabled={loading || vehicles.length === 0}
-              className="min-h-12 rounded-md bg-action px-5 py-3 font-medium text-base hover:bg-action-hover disabled:opacity-50"
-            >
+            <Button type="submit" size="md" disabled={loading || vehicles.length === 0}>
               {loading
                 ? "Route wird berechnet…"
                 : result
                   ? "Route mit angepassten Einstellungen neu berechnen"
                   : "Route berechnen"}
-            </button>
+            </Button>
           </div>
 
           {showLoadingIndicator && <FullscreenLoader text="Route wird berechnet…" />}
@@ -1260,20 +1234,12 @@ export function RoutePlannerForm({
           )}
 
           <div className="flex flex-col gap-3 sm:flex-row">
-            <button
-              type="button"
-              onClick={() => setActiveStep(1)}
-              className="min-h-12 rounded-md border border-line-strong px-5 py-3 font-medium hover:bg-black/5 dark:hover:bg-white/5"
-            >
+            <Button variant="secondary" size="md" onClick={() => setActiveStep(1)}>
               ← Daten anpassen
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveStep(3)}
-              className="min-h-12 flex-1 rounded-md bg-action px-5 py-3 font-medium text-base hover:bg-action-hover sm:flex-none"
-            >
+            </Button>
+            <Button size="md" onClick={() => setActiveStep(3)} className="flex-1 sm:flex-none">
               Route finalisieren →
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -1348,26 +1314,19 @@ export function RoutePlannerForm({
             ))}
           </ol>
 
-          <div className="flex flex-col gap-3 rounded-lg border border-black/10 p-4 dark:border-white/10 sm:flex-row sm:flex-wrap sm:items-end">
-            <label className="flex flex-1 flex-col gap-1 text-sm">
-              Name für &quot;Meine Routen&quot; im Profil
-              <input
+          <div className="flex flex-col gap-3 rounded-lg border border-line p-4 sm:flex-row sm:flex-wrap sm:items-end">
+            <Field label={'Name für "Meine Routen" im Profil'} className="flex-1">
+              <Input
                 value={saveRouteName || defaultSaveRouteName}
                 onChange={(e) => {
                   setSaveRouteName(e.target.value);
                   setSaveSuccess(false);
                 }}
-                className="rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
               />
-            </label>
-            <button
-              type="button"
-              onClick={handleSaveRoute}
-              disabled={savingRoute}
-              className="min-h-12 rounded-md border border-line-strong px-4 py-3 text-sm font-medium hover:bg-black/5 disabled:opacity-50 dark:hover:bg-white/5"
-            >
+            </Field>
+            <Button variant="secondary" size="md" onClick={handleSaveRoute} disabled={savingRoute}>
               {savingRoute ? "Wird gespeichert…" : "Im Profil speichern"}
-            </button>
+            </Button>
             {saveSuccess && (
               <p className="w-full text-sm text-route">
                 Gespeichert — zu finden unter{" "}

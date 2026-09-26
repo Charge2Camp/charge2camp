@@ -10,6 +10,41 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
 
 ---
 
+## Button/Input-Migration Runde 5: `route-planner-form.tsx` (größte Einzeldatei)
+
+- **Decision:** Die zuvor als "größte verbliebene Einzeldatei" benannte
+  `route-planner-form.tsx` (1457 Zeilen) migriert: alle regulären Text-/
+  Zahlenfelder (`Field`+`Input`), alle Standard-Buttons (`Button`,
+  Varianten `primary`/`secondary`, Größen `sm`/`md`, plus `iconOnly` für
+  den Zwischenstopp-Entfernen-Button), zwei weitere `border-black/10`-
+  Fundstellen auf `border-line`. `Input` dabei um `forwardRef` erweitert
+  (`src/components/ui/input.tsx`) — notwendig für den bestehenden
+  nicht-passiven `wheel`-Listener (`useNumberFieldWheel`, Mausrad-
+  Feinsteuerung für Verbrauch/Ladeleistung), den ein Funktions-Prop ohne
+  echten DOM-Ref nicht abbilden kann.
+- **Reason:** Fortsetzung der bereichsweisen §14-Migration; diese Datei
+  war explizit als nächster Schritt benannt.
+- **Was bewusst NICHT migriert wurde:** `SocSlider` (eigene
+  Range-Input-Komponente, kein Text-/Select-Feld — `type="range"`
+  passt konzeptionell nicht zu `Input`s Rolle), die Anbieter-
+  Checkboxen (`type="checkbox"`, ebenfalls außerhalb von `Input`s
+  Rolle), `NavigationLink`-Elemente (eigene Link-Komponente mit
+  `href`, kein `<button>`) sowie mehrere Stellen mit vom
+  `Button`-Default abweichendem Padding (`px-5 py-3` statt `px-4 py-3`,
+  `px-2`/`px-3` statt `px-3`/`px-4`) — Komponenten-Default übernommen
+  statt per `className` zu erzwingen (derselbe Tailwind-Klassenkonflikt-
+  Grund wie in Runde 2).
+- **Impact:** 1 großer Diff in einer Datei plus `input.tsx` (forwardRef).
+  Reine Wrapper-Ersetzung, keine Logikänderung — `useNumberFieldWheel`
+  funktioniert unverändert, da der Ref jetzt korrekt bis zum echten
+  `<input>`-Element durchgereicht wird. Typecheck grün (deckte den
+  fehlenden `forwardRef` sofort auf), Server-Build ohne Fehler,
+  `/routenplaner` leitet korrekt zu `/login` weiter (kein Compile-/
+  Runtime-Fehler). Login-gated, Formular selbst nicht live getestet.
+- **Date:** 2026-09-26 (Phase 16).
+
+---
+
 ## Button-Größe `link` ergänzt, Lücke aus Runde 3 geschlossen
 
 - **Decision:** Neue `ButtonSize` `"link"` (`flex min-h-11 items-center
