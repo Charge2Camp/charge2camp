@@ -118,18 +118,28 @@ einmal:
   — das mit Abstand konsistenteste Altmuster im Code (ein Klassenstring
   an ~50 Stellen identisch wiederholt), jetzt eine echte Komponente.
   `Field` kapselt den Label-Wrapper (`flex flex-col gap-1 text-sm`).
+  `Input` ist `forwardRef`-fähig (für bestehende Refs wie den
+  nicht-passiven `wheel`-Listener in `route-planner-form.tsx`).
+- **`Modal`** (`src/components/ui/modal.tsx`) — Sheet auf Mobile,
+  zentriertes Panel ab `sm:`, Kopfzeile mit Titel + Ghost-Schließen-
+  Button, scrollbarer Inhaltsbereich mit Safe-Area-Padding. Deckt nicht
+  jeden Dialog ab — `nearby-charging-modal.tsx` hat eine abweichende
+  feste Höhe (Kartenausschnitt) und bleibt bewusst eigenständig.
 
-Erstmigriert (Vorher/Nachher-Nachweis, s. `docs/DESIGN_DECISIONS.md`):
-`/login`, `/register`, `/passwort-vergessen`, `/passwort-zuruecksetzen`,
-`trust-preview.tsx`. Die übrigen ~45 Input- und ~45 Button-Fundstellen
-sowie Modal/Toast/Bottom Sheet/Slider/Progress/Toggle/Checkbox/Empty
-State bleiben offen für weitere, bereichsweise Schritte — nicht in
-einem Rutsch, um das Risiko eines unkontrollierten Diffs zu vermeiden
-(§34 des Briefs).
+Über mehrere Runden migriert (Details je Runde in
+`docs/DESIGN_DECISIONS.md`): alle fünf öffentlichen Auth-/Startseiten,
+die meisten Profil-Formulare, die Bewertungsformulare (inkl. Inline-
+Bearbeitung), `route-planner-form.tsx` (größte Einzeldatei), sowie fünf
+Dialoge auf `Modal` umgestellt. Bewusst offen bleiben: Toast, Bottom
+Sheet als eigene Komponente, Slider, Progress, Toggle, Checkbox,
+Empty/Error State, eine `route`-farbige Button-Outline-Variante
+(bisher Einzelfall), sowie ein Rest an `border-black/10`-Fundstellen
+und den beiden `rounded-full`-Icon-Button-Varianten in
+`station-bottom-sheet.tsx`.
 - **Gespann-Panel:** wiederverwendete Komponente
   `src/components/gespann-panel.tsx` (Fahrzeug+Wohnwagen-Auswahl,
-  identisch im Routenplaner und auf `/profil/gespann`) — einziges
-  bereits echt extrahiertes, mehrfach verwendetes UI-Primitive.
+  identisch im Routenplaner und auf `/profil/gespann`) — bereits vor
+  Phase 16 extrahiert, unabhängig von den `ui/`-Primitives.
 - **Leerzustände:** durchgängig vorhanden und konsistent formuliert
   ("Noch keine Route gespeichert…", s. `docs/design/ux-problems.md`,
   Phase 5 bestätigt kein Problem).
