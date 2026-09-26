@@ -136,10 +136,31 @@ einmal:
 die meisten Profil-Formulare, die Bewertungsformulare (inkl. Inline-
 Bearbeitung), `route-planner-form.tsx` (größte Einzeldatei), fünf
 Dialoge auf `Modal` umgestellt, alle bekannten Icon-Only-Button-
-Fundstellen (`square`/`circle`). Bewusst offen bleiben nur noch
-eigenständige, bisher unangefragte Komponententypen: Toast, Bottom
-Sheet als eigene Komponente, Slider, Progress, Toggle, Checkbox,
-Empty/Error State.
+Fundstellen (`square`/`circle`).
+
+**Geprüft und bewusst NICHT gebaut (Phase 16, 2026-09-26):** Toast,
+Progress, Toggle existieren im Code schlicht nicht — nirgends verwendet,
+kein Muster zum Extrahieren. Checkboxen sind durchgängig unstylisierte
+native `<input type="checkbox">` ohne eigenes wiederkehrendes
+Klassenmuster (42 Fundstellen geprüft) — eine `Checkbox`-Komponente
+würde hier ein neues visuelles Design erfinden, nicht bestehendes
+konsolidieren. `Slider` existiert einmal, bereits als lokale Komponente
+(`SocSlider` in `route-planner-form.tsx`, 5-fach intern wiederverwendet)
+— für den Umzug nach `ui/` fehlt ein zweiter, unabhängiger
+Einsatzort. Ein separates `EmptyState`-Primitive wäre eine dünne
+Wrapper-Komponente um einen einzelnen `<p className="text-sm
+text-text-muted">`-Absatz (bereits durchgängig konsistent, s.
+`docs/design/ux-problems.md`, Phase 5) — kein echter
+Konsolidierungsgewinn. Neue Komponenten ohne belegten, wiederkehrenden
+Bedarf zu bauen widerspräche CLAUDE.md ("keine Abstraktion für
+hypothetische künftige Anforderungen") — dieser Teil der
+Komponentenbibliotheks-Arbeit gilt damit als abgeschlossen, nicht als
+offen liegen gelassen. "Bottom Sheet" bleibt die einzige echte
+Restlücke: `station-bottom-sheet.tsx` ist bereits eine funktionierende,
+eigenständige Sheet-Implementierung (Drag-Gesten, Snap-Punkte) — eine
+generische `ui/`-Version wäre eine grössere Neuentwicklung, kein
+Extraktionsschritt, und braucht einen zweiten Einsatzort, um sich zu
+lohnen.
 - **Gespann-Panel:** wiederverwendete Komponente
   `src/components/gespann-panel.tsx` (Fahrzeug+Wohnwagen-Auswahl,
   identisch im Routenplaner und auf `/profil/gespann`) — bereits vor

@@ -10,6 +10,56 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
 
 ---
 
+## §14 Komponentenbibliothek: verbleibende Typen bewusst nicht gebaut
+
+- **Decision:** Toast, Progress, Toggle, Checkbox, Slider (als `ui/`-
+  Primitive), Empty/Error State (als eigene Komponente) und Bottom Sheet
+  (als generisches `ui/`-Primitive) werden **nicht** gebaut. Die
+  Button/Card/Badge/Input/Modal-Konsolidierung (Runden 1–9) gilt damit
+  als abgeschlossen.
+- **Reason:** Vor jeder weiteren Komponente geprüft, ob ein echtes,
+  wiederkehrendes Muster im Code existiert (dieselbe Methode wie bei
+  allen bisherigen §14-Schritten — nie spekulativ bauen, immer aus
+  belegtem Bedarf extrahieren):
+  - Toast, Progress, Toggle: kommen im Code schlicht nicht vor (`grep`
+    auf `role="switch"`/`role="progressbar"`/Toast-Muster: 0 echte
+    Treffer).
+  - Checkbox: 42 Fundstellen geprüft, durchgängig unstylisierte native
+    `<input type="checkbox">` ohne eigenes Klassenmuster — eine
+    Komponente hier würde ein neues visuelles Design erfinden statt
+    Bestehendes zu konsolidieren.
+  - Slider: existiert bereits als lokale Komponente (`SocSlider` in
+    `route-planner-form.tsx`), aber nur an einem einzigen Einsatzort
+    (intern 5-fach wiederverwendet) — kein zweiter unabhängiger
+    Verwendungskontext, der einen Umzug nach `ui/` rechtfertigen würde.
+  - Empty/Error State: bereits durchgängig als einfacher
+    `<p className="text-sm text-text-muted">`-Absatz konsistent (s.
+    `docs/design/ux-problems.md`, Phase 5: "kein Problem gefunden") —
+    eine Wrapper-Komponente dafür wäre keine echte Konsolidierung.
+  - Bottom Sheet: `station-bottom-sheet.tsx` ist eine funktionierende,
+    eigenständige Implementierung (Drag-Gesten, Snap-Punkte) mit nur
+    einem Einsatzort — eine generische Version wäre eine
+    Neuentwicklung, kein Extraktionsschritt.
+  In allen sechs Fällen würde "einfach bauen" gegen CLAUDE.md verstoßen
+  ("Don't add features... beyond what the task requires... No
+  half-finished implementations", sinngemäß auch auf spekulative
+  Komponenten ohne zweiten Verwendungsfall übertragen) und gegen §34
+  des Design-Briefs (inkrementell, nicht auf Vorrat).
+- **Alternatives:** (1) alle sechs Typen trotzdem bauen, um "§14
+  vollständig" abzuhaken (verworfen: würde reinen Blindflug-Code ohne
+  Verwendungsstelle erzeugen — genau das Gegenteil der bisherigen
+  Methode, die immer aus echten Fundstellen konsolidiert hat); (2) nur
+  die "billigen" (Checkbox, Toggle) bauen, weil der Aufwand gering wäre
+  (verworfen: geringer Aufwand rechtfertigt keine Komponente ohne
+  Bedarf, das ist trotzdem spekulativ).
+- **Impact:** keine Code-Änderung, reine Dokumentations-Entscheidung.
+  `docs/DESIGN_SYSTEM.md` Abschnitt 5 entsprechend ergänzt, damit eine
+  spätere Sitzung nicht denselben Rechercheaufwand wiederholt oder
+  fälschlich annimmt, diese Typen seien schlicht vergessen worden.
+- **Date:** 2026-09-26 (Phase 16, Abschluss).
+
+---
+
 ## Letzte offene Button-Lücken: `route-outline`-Variante, `iconShape`
 
 - **Decision:** Neue `ButtonVariant` `"route-outline"` (`border-route
