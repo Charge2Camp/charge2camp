@@ -262,16 +262,12 @@ export function ChargingStationMapExplorer({
   // aus der Server-Erstansicht (`filters`-Prop), damit SSR-HTML und erste
   // Client-Hydration exakt uebereinstimmen.
   const [liveFilters, setLiveFilters] = useState<ChargingStationFilters>(filters);
-  // `filters` (Server-Prop) aendert sich nur bei einer ECHTEN Next.js-
-  // Navigation (router.push, siehe resetFilters/favoritesOnly-Zweig in
-  // applyFilters unten) -- Next.js behaelt den Client-Component-State bei
-  // einer Navigation auf dieselbe Route bewusst bei (kein Remount), ohne
-  // diesen Effekt wuerde z. B. "Zuruecksetzen" die URL korrekt aendern, die
-  // Chips aber optisch aktiv stehen lassen (liveFilters bliebe der alte
-  // Stand). Normale Chip-Taps (applyFilters, Nicht-Favoriten-Zweig) loesen
-  // dagegen bewusst KEINE Next.js-Navigation aus (history.replaceState
-  // statt router.replace, s.u.) -- `filters` bleibt dabei unveraendert, der
-  // Effekt feuert also nicht doppelt/unnoetig.
+  // `filters` (Server-Prop) aendert sich bei JEDER Navigation ueber den
+  // Next-Router (router.replace/push, siehe applyFilters/resetFilters unten)
+  // -- Next.js behaelt den Client-Component-State bei einer Navigation auf
+  // dieselbe Route bewusst bei (kein Remount), ohne diesen Effekt wuerde
+  // z. B. "Zuruecksetzen" die URL korrekt aendern, die Chips aber optisch
+  // aktiv stehen lassen (liveFilters bliebe der alte Stand).
   useEffect(() => {
     setLiveFilters(filters);
   }, [filters]);
