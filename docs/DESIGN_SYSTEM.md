@@ -123,13 +123,16 @@ einmal:
   — das mit Abstand konsistenteste Altmuster im Code (ein Klassenstring
   an ~50 Stellen identisch wiederholt), jetzt eine echte Komponente.
   `Field` kapselt den Label-Wrapper (`flex flex-col gap-1 text-sm`).
-  `Input` ist `forwardRef`-fähig (für bestehende Refs wie den
-  nicht-passiven `wheel`-Listener in `route-planner-form.tsx`).
 - **`Modal`** (`src/components/ui/modal.tsx`) — Sheet auf Mobile,
   zentriertes Panel ab `sm:`, Kopfzeile mit Titel + Ghost-Schließen-
   Button, scrollbarer Inhaltsbereich mit Safe-Area-Padding. Deckt nicht
   jeden Dialog ab — `nearby-charging-modal.tsx` hat eine abweichende
   feste Höhe (Kartenausschnitt) und bleibt bewusst eigenständig.
+- **`FilterChip`** (`src/components/ui/filter-chip.tsx`) — Einzel-/
+  Mehrfachauswahl-Chip (`aria-pressed`, `min-h-11`), seit 2026-09-27 mit
+  zwei Einsatzorten (Ladepunkte-Filter-Panel, Mindest-Ladeleistung im
+  Routenplaner) und deshalb nach `ui/` verschoben, s.
+  `docs/DESIGN_DECISIONS.md`.
 
 Über mehrere Runden migriert (Details je Runde in
 `docs/DESIGN_DECISIONS.md`): alle fünf öffentlichen Auth-/Startseiten,
@@ -147,7 +150,12 @@ würde hier ein neues visuelles Design erfinden, nicht bestehendes
 konsolidieren. `Slider` existiert einmal, bereits als lokale Komponente
 (`SocSlider` in `route-planner-form.tsx`, 5-fach intern wiederverwendet)
 — für den Umzug nach `ui/` fehlt ein zweiter, unabhängiger
-Einsatzort. Ein separates `EmptyState`-Primitive wäre eine dünne
+Einsatzort. Gleiches gilt seit 2026-09-27 für `WheelPicker`
+(`src/components/routing/wheel-picker.tsx`, Nutzerwunsch: iOS-artige
+Wheel-Auswahl für den Verbrauchswert statt freier Zahleneingabe,
+CSS-`scroll-snap` statt npm-Abhängigkeit) — bisher genau ein
+Einsatzort, bleibt lokal bei `routing/`. Ein separates
+`EmptyState`-Primitive wäre eine dünne
 Wrapper-Komponente um einen einzelnen `<p className="text-sm
 text-text-muted">`-Absatz (bereits durchgängig konsistent, s.
 `docs/design/ux-problems.md`, Phase 5) — kein echter

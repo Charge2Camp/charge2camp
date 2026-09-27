@@ -16,6 +16,8 @@ import { RouteWizardTabs } from "@/components/routing/route-wizard-tabs";
 import { FormError } from "@/components/form-error";
 import { Field, Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { FilterChip } from "@/components/ui/filter-chip";
+import { WheelPicker } from "@/components/routing/wheel-picker";
 import { FavoritesPickerDialog } from "@/components/routing/favorites-picker-dialog";
 import { HomeAddressPickerDialog } from "@/components/routing/home-address-picker-dialog";
 import { SavedRoutePickerDialog, type SavedRouteOption } from "@/components/routing/saved-route-picker-dialog";
@@ -86,45 +88,23 @@ const CONSUMPTION_SOURCE_LABELS = {
   default: `Standardwert (${DEFAULT_CONSUMPTION_KWH_PER_100KM} kWh/100km, kein Profil-/Eingabewert vorhanden)`,
 } as const;
 
+/** Nutzerwunsch (2026-09-27): statt einer freien Zahleneingabe eine
+ * Stufenauswahl analog zu den Filter-Chips in der Ladepunkte-Kartenansicht
+ * (sinnvolle, an gaengigen Schnelllader-Leistungsklassen orientierte
+ * Schritte statt beliebiger kW-Werte). "" (leer) bedeutet "kein Minimum" --
+ * das Formularfeld min_power_kw bleibt dann leer, actions.ts wertet das wie
+ * bisher als "keine Mindestleistung gefordert". */
+const MIN_POWER_KW_OPTIONS: { label: string; value: string }[] = [
+  { label: "Kein Minimum", value: "" },
+  { label: "≥ 50 kW", value: "50" },
+  { label: "≥ 150 kW", value: "150" },
+  { label: "≥ 300 kW", value: "300" },
+];
+
 function formatDuration(minutes: number): string {
   const h = Math.floor(minutes / 60);
   const m = Math.round(minutes % 60);
   return h > 0 ? `${h} Std. ${m} Min.` : `${m} Min.`;
-}
-
-// Wert eines Zahlenfelds per Mausrad erhoehen/verringern (Nutzerwunsch, fuer
-// Verbrauch mit Gespann und Mindest-Ladeleistung) -- nur wenn das Feld
-// tatsaechlich fokussiert ist, sonst scrollt ein zufaellig darueber
-// bewegtes Mausrad weiterhin ganz normal die Seite. React registriert
-// onWheel/onScroll standardmaessig als PASSIVEN Listener -- ein
-// preventDefault() darin wird von Chrome/Firefox stillschweigend
-// ignoriert, das native (viel groebere, feste 1er-)Scroll-Increment des
-// <input type="number"> feuert dann trotzdem. Deshalb hier ein echter,
-// nicht-passiver DOM-Listener per ref/useEffect statt eines React-
-// onWheel-Props.
-function useNumberFieldWheel(
-  setValue: React.Dispatch<React.SetStateAction<string>>,
-  step: number,
-  min: number
-) {
-  const ref = useRef<HTMLInputElement>(null);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    function onWheel(e: WheelEvent) {
-      if (document.activeElement !== el) return;
-      e.preventDefault();
-      setValue((prev) => {
-        const current = Number(prev);
-        const base = Number.isFinite(current) ? current : min;
-        const next = Math.max(min, base + (e.deltaY < 0 ? step : -step));
-        return String(Math.round(next * 10) / 10);
-      });
-    }
-    el.addEventListener("wheel", onWheel, { passive: false });
-    return () => el.removeEventListener("wheel", onWheel);
-  }, [setValue, step, min]);
-  return ref;
 }
 
 function escapeHtml(value: string): string {
@@ -327,8 +307,6 @@ export function RoutePlannerForm({
       DEFAULT_CONSUMPTION_KWH_PER_100KM.toString()
   );
   const [minPowerKw, setMinPowerKw] = useState(DEFAULT_MIN_POWER_KW.toString());
-  const consumptionInputRef = useNumberFieldWheel(setConsumption, 1, 0);
-  const minPowerInputRef = useNumberFieldWheel(setMinPowerKw, 10, 0);
   const [preferTrailerSuitable, setPreferTrailerSuitable] = useState(true);
   const [departureSoc, setDepartureSoc] = useState(DEFAULT_DEPARTURE_SOC_PERCENT);
   const [minSocAtStop, setMinSocAtStop] = useState(DEFAULT_MIN_SOC_AT_STOP_PERCENT);
@@ -899,37 +877,36 @@ export function RoutePlannerForm({
             />
           </div>
 
-          {/* Nebeneinander mit bewusst schmalen Feldern (Nutzerwunsch: Seite
-              kompakter) statt je einer vollen Grid-Spalte -- beide Werte
-              sind vorbelegt (38 kWh/100km bzw. 100 kW) und lassen sich per
-              Mausrad in der jeweiligen Feld-Schrittweite anpassen, siehe
-              useNumberFieldWheel. */}
-          <div className="flex gap-4 sm:col-span-2">
-            <Field label="Verbrauch mit Gespann (kWh/100km)">
-              <Input
-                ref={consumptionInputRef}
-                name="consumption_kwh_per_100km"
-                type="number"
-                step="0.1"
-                min="0"
-                value={consumption}
-                onChange={(e) => setConsumption(e.target.value)}
-                className="w-24"
-              />
-            </Field>
+          {/* Nebeneinander (Nutzerwunsch: Seite kompakter) statt je einer
+              vollen Grid-Spalte -- Verbrauch als Wheel Picker (2026-09-27,
+              siehe wheel-picker.tsx), Mindest-Ladeleistung als
+              Stufenauswahl analog zu den Filter-Chips in der
+              Ladepunkte-Kartenansicht statt einer freien Zahleneingabe. */}
+          <div className="flex flex-wrap gap-6 sm:col-span-2">
+            <WheelPicker
+              label="Verbrauch mit Gespann (kWh/100km)"
+              name="consumption_kwh_per_100km"
+              value={Number(consumption) || DEFAULT_CONSUMPTION_KWH_PER_100KM}
+              onChange={(v) => setConsumption(String(v))}
+              min={15}
+              max={60}
+              step={1}
+            />
 
-            <Field label="Mindest-Ladeleistung (kW, optional)">
-              <Input
-                ref={minPowerInputRef}
-                name="min_power_kw"
-                type="number"
-                step="10"
-                min="0"
-                value={minPowerKw}
-                onChange={(e) => setMinPowerKw(e.target.value)}
-                className="w-24"
-              />
-            </Field>
+            <div className="flex flex-col gap-1 text-sm">
+              <span>Mindest-Ladeleistung</span>
+              <div className="flex flex-wrap gap-2">
+                {MIN_POWER_KW_OPTIONS.map((option) => (
+                  <FilterChip
+                    key={option.label}
+                    label={option.label}
+                    active={minPowerKw === option.value}
+                    onClick={() => setMinPowerKw(option.value)}
+                  />
+                ))}
+              </div>
+              <input type="hidden" name="min_power_kw" value={minPowerKw} />
+            </div>
           </div>
 
           <div className="text-sm sm:col-span-2">

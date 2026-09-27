@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { NameSuggestField } from "@/components/name-suggest-field";
-import { FilterChip } from "@/components/charging-stations/filter-chip";
+import { FilterChip } from "@/components/ui/filter-chip";
 import type { ChargingStationFilters, ChargingStationOperatorOption } from "@/lib/charging-stations";
 import { CONNECTOR_CATEGORIES } from "@/lib/connector-categories";
 import { TRAILER_VERDICT_LABELS, TRAILER_VERDICT_VALUES } from "@/lib/trailer-verdict";

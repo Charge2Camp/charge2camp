@@ -10,6 +10,66 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
 
 ---
 
+## Routenplaner: Verbrauch als Wheel Picker, Mindest-Ladeleistung als Stufenauswahl
+
+- **Decision:** Zwei Felder im Routenplaner-Formular (Tab 1,
+  `route-planner-form.tsx`) von freier Zahleneingabe auf geführte
+  Widgets umgestellt:
+  - "Verbrauch mit Gespann (kWh/100km)" ist jetzt ein iOS-artiger
+    Wheel Picker (neue Komponente `src/components/routing/wheel-picker.tsx`),
+    Bereich 15–60 in 1er-Schritten, per CSS `scroll-snap` (kein neues
+    npm-Paket, CLAUDE.md Prinzip 4) -- funktioniert auf Touch nativ mit
+    Momentum-Scrolling, zusaetzlich Klick auf einen Wert sowie
+    Pfeiltasten-Steuerung bei Fokus. Ein aus dem Fahrzeugprofil
+    uebernommener Dezimalwert (z. B. 24.3) bleibt bis zur ersten
+    Nutzerinteraktion exakt erhalten (nur die Wheel-Darstellung rundet
+    auf den naechsten 1er-Schritt) -- erst ein Dreh am Wheel ersetzt ihn
+    durch einen der festen Ganzzahl-Schritte.
+  - "Mindest-Ladeleistung" ist jetzt eine Einzelauswahl aus vier Stufen
+    ("Kein Minimum" / "≥ 50 kW" / "≥ 150 kW" / "≥ 300 kW") statt einer
+    freien kW-Zahl, per `FilterChip` (siehe unten). Default beim
+    Formular-Erstaufruf auf "≥ 150 kW" gesetzt
+    (`DEFAULT_MIN_POWER_KW` in `route-planning.ts`, vorher 100 kW als
+    freier Zahlenwert).
+  - `FilterChip` (bisher nur im Ladepunkte-Filter-Panel,
+    `charging-stations/filter-chip.tsx`) nach
+    `src/components/ui/filter-chip.tsx` verschoben -- durch die
+    Mindest-Ladeleistung-Auswahl jetzt zweiter echter Verwendungskontext,
+    erfuellt damit die im §14-Komponentenbibliotheks-Prozess dieser
+    Session etablierte Schwelle fuer eine Promotion nach `ui/`.
+  - Die bisherige Mausrad-Inkrement/Dekrement-Loesung
+    (`useNumberFieldWheel`-Hook, per echtem Non-Passive-`wheel`-Listener)
+    entfaellt fuer beide Felder ersatzlos -- der Wheel Picker deckt das
+    Bedienbeduerfnis fuer den Verbrauch direkt ab (Scroll IST jetzt die
+    Eingabemethode), die Mindest-Ladeleistung braucht als diskrete
+    Stufenauswahl kein Scroll-Inkrement mehr.
+- **Reason:** Nutzerwunsch: "Wheel Picker" statt freier Zahleneingabe
+  fuer den Verbrauch, und eine Stufenauswahl fuer die Mindest-
+  Ladeleistung analog zu den bereits etablierten Filter-Chips in der
+  Ladepunkte-Kartenansicht (Wiedererkennbarkeit im UI), mit sinnvollen,
+  an gaengigen Schnelllader-Leistungsklassen orientierten Schritten
+  statt beliebiger kW-Werte.
+- **Alternatives:** Fuer den Wheel Picker eine npm-Bibliothek
+  (`react-mobile-picker` o. Ae.) -- verworfen, CSS-`scroll-snap` deckt
+  den Bedarf ohne zusaetzliche Abhaengigkeit und Bundle-Groesse
+  vollstaendig ab (Prinzip 4). `WheelPicker` in `ui/` statt lokal bei
+  `routing/` -- verworfen, bisher genau ein Einsatzort (analog zur
+  bestehenden Begruendung fuer `SocSlider`, die aus demselben Grund
+  ebenfalls lokal bleibt); wird bei einem zweiten echten
+  Verwendungskontext nachgezogen. Fester Stufensatz (50/150/300) statt
+  konfigurierbarer Grenzen -- bewusst so belassen, deckt die
+  realistischen Leistungsklassen ab und haelt die Auswahl uebersichtlich.
+- **Impact:** Verbrauchseingabe erzwingt jetzt ganzzahlige 1er-Schritte
+  bei aktiver Nutzereingabe (vorher 0,1er-Schritte frei); Mindest-
+  Ladeleistung ist nicht mehr frei waehlbar, sondern auf vier Stufen
+  begrenzt. Formular-Submit-Feldnamen (`consumption_kwh_per_100km`,
+  `min_power_kw`) und die Server-Validierung in
+  `app/routenplaner/actions.ts` unveraendert -- beide Widgets tragen den
+  Wert weiterhin per verstecktem `<input>` ins native Formular.
+- **Date:** 2026-09-27
+
+---
+
 ## Mindest-Stationszahl für Ladeanbieter-Filter von 5 auf 20 angehoben
 
 - **Decision:** `MIN_STATIONS_PER_OPERATOR` (`src/lib/charging-stations.ts`)

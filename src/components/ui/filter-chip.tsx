@@ -1,8 +1,11 @@
 "use client";
 
-/** Sofort-anwendender Filter-Chip (kein Formular-Submit noetig) -- ersetzt
- * die bisherigen Checkboxen im Ladepunkte-Filter-Panel. `aria-pressed` statt
- * nur eines Farbunterschieds, damit der aktive Zustand auch per Screenreader
+/** §14 Komponentenbibliothek: nach dem Ladepunkte-Filter-Panel (ersetzt dort
+ * die bisherigen Checkboxen, kein Formular-Submit noetig) inzwischen auch im
+ * Routenplaner fuer die Mindest-Ladeleistung-Stufenauswahl im Einsatz --
+ * damit zweiter echter Verwendungskontext, deshalb nach ui/ verschoben
+ * (2026-09-27, docs/DESIGN_DECISIONS.md). `aria-pressed` statt nur eines
+ * Farbunterschieds, damit der aktive Zustand auch per Screenreader
  * erkennbar ist. min-h-11 (44px) nach CLAUDE.md Prinzip 8 (Touch-Ziele). */
 export function FilterChip({
   label,

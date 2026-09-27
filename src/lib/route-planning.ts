@@ -60,8 +60,11 @@ export const DEFAULT_CHARGING_POWER_KW = 120;
 
 // Standard-Mindestladeleistung im Routenplaner-Formular (Nutzerwunsch) --
 // deckt die meisten heutigen Schnelllader-Standorte ab, ohne bei Bedarf
-// (z. B. abgelegenere Ziele) zu restriktiv zu sein; ueberschreibbar.
-export const DEFAULT_MIN_POWER_KW = 100;
+// (z. B. abgelegenere Ziele) zu restriktiv zu sein; ueberschreibbar. Muss
+// einer der Stufen aus MIN_POWER_KW_OPTIONS (wheel-picker.tsx-Nachbarschaft,
+// s. route-planner-form.tsx) entsprechen, seit das Feld von einer freien
+// Zahleneingabe auf eine Stufenauswahl umgestellt wurde (2026-09-27).
+export const DEFAULT_MIN_POWER_KW = 150;
 
 // Standardwerte fuer die SOC-Eingaben (Nutzer kann jeden Wert im
 // Routenplaner-Formular ueberschreiben).
