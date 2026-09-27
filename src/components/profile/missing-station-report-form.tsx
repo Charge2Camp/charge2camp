@@ -49,13 +49,14 @@ export function MissingStationReportForm() {
       </Field>
       {error && <FormError className="text-sm">{error}</FormError>}
       {success && (
-        // UX-05.7 (docs/design/ux-problems.md): keine Push-/E-Mail-
-        // Benachrichtigung bei Statusaenderung -- ehrlich statt still
-        // ("Fehler sagen, was passiert ist", brand-guide.md §8), damit
-        // niemand auf eine Rueckmeldung wartet, die nie kommt.
+        // UX-05.7 (docs/design/ux-problems.md): seit der E-Mail-
+        // Benachrichtigung (admin/lib/notify-missing-station-report.ts)
+        // bekommt der Melder eine Mail bei Statusaenderung -- Push gibt es
+        // weiterhin nicht, das bleibt ehrlich benannt statt stillschweigend
+        // wegzulassen ("Fehler sagen, was passiert ist", brand-guide.md §8).
         <p className="text-sm text-route">
-          Danke! Deine Meldung wird geprüft. Den Status siehst du weiter unten, sobald du diese Seite
-          erneut besuchst -- es gibt noch keine Benachrichtigung per E-Mail oder Push.
+          Danke! Deine Meldung wird geprüft. Du bekommst eine E-Mail, sobald sie bearbeitet wurde --
+          eine Push-Benachrichtigung gibt es noch nicht.
         </p>
       )}
       <Button type="submit" disabled={pending} className="self-start">

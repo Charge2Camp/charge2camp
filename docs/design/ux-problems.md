@@ -292,6 +292,18 @@ Phase geprüft:
   Seitenbesuch aktuell ist — ehrlich statt stillschweigend (§8
   brand-guide.md). Die eigentliche Benachrichtigungsfunktion bleibt ein
   offener, größerer Folgeschritt (nicht Teil dieser Änderung).
+- **Erledigt (2026-09-27):** Echte E-Mail-Benachrichtigung gebaut —
+  `admin/lib/providers/email/` (Resend-Adapter nach CLAUDE.md Prinzip 3,
+  mock-Fallback ohne `RESEND_API_KEY`) und
+  `admin/lib/notify-missing-station-report.ts`, aufgerufen aus beiden
+  Moderations-Aktionen (`approve`/`rejectMissingStationReport`) nach dem
+  Status-Update, fehlertolerant (E-Mail-Fehler blockiert nie die
+  Moderations-Aktion selbst). Melder bekommt jetzt eine Mail bei
+  Freigabe/Ablehnung; Text in `missing-station-report-form.tsx` und
+  `fehlende-saeule/page.tsx` entsprechend angepasst. **Push-Benachrichtigung
+  bleibt weiterhin offen** (kleinerer, aber separater Aufwand — Service
+  Worker/Web Push nicht Teil dieser Änderung), Hinweistext dazu bewusst
+  stehen gelassen. Details s. `docs/DESIGN_DECISIONS.md`.
 
 ---
 

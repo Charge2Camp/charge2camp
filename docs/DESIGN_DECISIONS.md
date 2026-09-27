@@ -10,6 +10,56 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
 
 ---
 
+## UX-05.7: E-Mail-Benachrichtigung bei Meldestatus-Änderung (Resend-Adapter)
+
+- **Decision:** Neuer E-Mail-Provider-Adapter in
+  `admin/lib/providers/email/` (`types.ts`/`mock.ts`/`resend.ts`/`index.ts`)
+  nach dem bestehenden Provider-Muster von `src/lib/providers/`. Ohne
+  gesetzten `RESEND_API_KEY` fällt `getEmailProvider()` auf einen
+  mock-Adapter zurück, der nur loggt statt zu senden. Neue Funktion
+  `admin/lib/notify-missing-station-report.ts` komponiert Betreff/Text für
+  `approved`/`rejected` und wird aus beiden Moderations-Aktionen
+  (`rejectMissingStationReport` in `fehlende-saeulen/actions.ts`,
+  `approveMissingStationReport` in `fehlende-saeulen/[reportId]/actions.ts`)
+  aufgerufen — jeweils NACH dem erfolgreichen Status-Update, in try/catch,
+  damit ein E-Mail-Fehler die Moderations-Aktion selbst nicht blockiert
+  oder rückgängig macht. Die Empfänger-Mail wird nicht aus einer
+  `profiles.email`-Spalte gelesen (die ist laut bestehender Doku bewusst
+  nicht synchron gehalten), sondern live über
+  `supabase.auth.admin.getUserById()` (Service-Role, umgeht RLS).
+  Frontend-Texte in `missing-station-report-form.tsx` und
+  `fehlende-saeule/page.tsx` (Haupt-App) entsprechend angepasst — von
+  "es gibt noch keine Benachrichtigung" zu "du bekommst eine E-Mail,
+  Push gibt es noch nicht".
+- **Reason:** CLAUDE.md Prinzip 3 (Provider über Adapter kapseln) macht
+  den Provider austauschbar, falls Resend später ersetzt wird. Prinzip 2
+  (keine Scheindaten) macht den mock-Fallback nötig, statt in der lokalen
+  Entwicklung ohne Key so zu tun, als würde eine Mail rausgehen. Prinzip 4
+  (Kostenoptimierung) — Resend kostenloser Tarif (3000 Mails/Monat, Stand
+  2026, keine Kreditkarte) reicht für das MVP-Meldevolumen, per WebSearch
+  aktuell verifiziert statt aus Trainingsdaten angenommen. Prinzip 5
+  (keine Secrets im Code) — `RESEND_API_KEY`/`NOTIFICATION_EMAIL_FROM` nur
+  als leere Variablennamen in `admin/.env.example`, kein echter Key
+  irgendwo im Repo.
+- **Alternatives:** Supabase-eigener E-Mail-Versand (Auth-SMTP) — verworfen,
+  da dafür SMTP-Zugangsdaten eines eigenen Anbieters nötig wären, kein
+  echter Vorteil gegenüber einer schlanken REST-API wie Resend. Eigene
+  Edge Function mit DB-Trigger bei Statuswechsel — verworfen als
+  Überkonstruktion für einen einzigen, klar lokalisierbaren Aufrufpunkt
+  (zwei Server Actions), der ohne zusätzliche Infrastruktur auskommt.
+- **Impact:** Melder einer fehlenden Ladesäule bekommen jetzt eine
+  E-Mail, sobald ein Admin ihre Meldung freigibt oder ablehnt. Push-
+  Benachrichtigungen bleiben weiterhin ein offener, separater Punkt (s.
+  `docs/design/ux-problems.md`, UX-05.7) — nicht Teil dieser Änderung.
+  Live-Verifikation im Browser war für diesen Schritt nicht möglich (die
+  betroffenen Server Actions liegen im login-gated Admin-Backend, kein
+  Test-Account verfügbar) — abgesichert stattdessen über `npx tsc
+  --noEmit` (beide Apps, fehlerfrei) und Code-Review der Datenbank-Spalten
+  gegen die Migration `20261003000000_missing_station_reports.sql`.
+- **Date:** 2026-09-27
+
+---
+
 ## §14 Komponentenbibliothek: verbleibende Typen bewusst nicht gebaut
 
 - **Decision:** Toast, Progress, Toggle, Checkbox, Slider (als `ui/`-

@@ -39,13 +39,15 @@ export default async function MissingStationPage() {
       {reports && reports.length > 0 && (
         <section className="mt-10">
           <h3 className="font-semibold">Meine Meldungen</h3>
-          {/* UX-05.7: kein Push/E-Mail bei Statusaenderung -- der Status
-              hier aktualisiert sich nur, wenn diese Seite erneut besucht
-              wird. Ehrlich benannt statt stillschweigend so zu tun, als
-              kaeme automatisch eine Rueckmeldung. */}
+          {/* UX-05.7: Statusaenderungen loesen seit
+              admin/lib/notify-missing-station-report.ts eine E-Mail aus --
+              die Liste hier aktualisiert sich trotzdem nur bei erneutem
+              Besuch dieser Seite (kein Live-Update), und Push gibt es
+              weiterhin nicht. */}
           <p className="mt-1 text-xs text-text-muted">
-            Der Status aktualisiert sich, sobald du diese Seite erneut besuchst -- es gibt noch keine
-            Benachrichtigung per E-Mail oder Push.
+            Du bekommst eine E-Mail, sobald eine Meldung bearbeitet wurde. Der Status hier aktualisiert
+            sich zusätzlich, sobald du diese Seite erneut besuchst -- eine Push-Benachrichtigung gibt es
+            noch nicht.
           </p>
           <div className="mt-4 flex flex-col gap-2">
             {reports.map((r) => (
