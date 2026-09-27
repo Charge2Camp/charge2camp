@@ -16,8 +16,12 @@ const FAST_CHARGER_MIN_KW = 100;
  * vorkommenden Anbieter zeigen (core.charge_point.operator), nicht nur eine
  * feste Auswahl -- aber nur solche mit mindestens so vielen aktiven
  * Stationen, dass die Auswahl auch wirklich Treffer liefert (siehe
- * fetchChargingStationOperatorOptions). */
-const MIN_STATIONS_PER_OPERATOR = 5;
+ * fetchChargingStationOperatorOptions). Ursprünglich 5 -- bei diesem
+ * niedrigen Schwellwert rutschten zu viele Einzel-/Datenmüll-Eintraege
+ * (Tippfehler-Varianten, Kleinstbetreiber aus dem BNetzA-Import) in die
+ * Liste, was unprofessionell wirkte, statt schnell die gaengigen Anbieter
+ * filtern zu lassen (Nutzerfeedback 2026-09-27). Auf 20 angehoben.*/
+const MIN_STATIONS_PER_OPERATOR = 20;
 
 /** PostgREST kodiert `.in(...)` als Query-Parameter in der URL -- bei
  * mehreren tausend IDs (siehe fetchChargingStations, bis zu 5000 Stationen)

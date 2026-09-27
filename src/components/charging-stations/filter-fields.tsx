@@ -37,7 +37,7 @@ export function ChargingStationFilterFields({
   isLoggedIn: boolean;
   /** Alle Ladepunkt-Anzeigenamen, fuer Vorschlaege im Suchfeld ab drei Zeichen. */
   nameOptions: string[];
-  /** Alle core.charge_point.operator-Werte mit mindestens 5 aktiven
+  /** Alle core.charge_point.operator-Werte mit mindestens 20 aktiven
    * Stationen (siehe fetchChargingStationOperatorOptions). */
   operatorOptions: ChargingStationOperatorOption[];
 }) {

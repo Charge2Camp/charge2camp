@@ -10,6 +10,35 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
 
 ---
 
+## Mindest-Stationszahl für Ladeanbieter-Filter von 5 auf 20 angehoben
+
+- **Decision:** `MIN_STATIONS_PER_OPERATOR` (`src/lib/charging-stations.ts`)
+  von 5 auf 20 erhöht. Die Liste im Ladeanbieter-Filter
+  (`fetchChargingStationOperatorOptions`, Checkbox-Auswahl in
+  `filter-fields.tsx`) zeigt damit nur noch Anbieter mit mindestens 20
+  aktiven Stationen.
+- **Reason:** Nutzerfeedback: bei einem Schwellwert von 5 rutschte zu
+  viel Datenmüll (Tippfehler-Varianten, Kleinstbetreiber aus dem
+  automatischen BNetzA-Import) in die Auswahl — wirkte unprofessionell
+  statt eine schnelle, bequeme Filterung nach den gängigen Anbietern zu
+  ermöglichen.
+- **Alternatives:** Manuelle Deduplizierung/Normalisierung der
+  Operator-Strings (z. B. Tippfehler-Varianten zusammenführen) — deutlich
+  aufwendiger (Datenbereinigung statt reiner Anzeige-Schwellwert) und
+  nicht Teil dieser Änderung; ein reiner Schwellwert-Filter löst das
+  eigentliche UX-Problem (zu lange, unübersichtliche Liste) bereits
+  ausreichend. Fester Wert pro Aufruf statt konfigurierbarem Parameter —
+  beibehalten, da `p_min_stations` in der SQL-Funktion
+  (`core.charge_point_operator_options`) ohnehin schon parametrisiert ist
+  und der App-seitige Aufrufer die einzige Stelle ist, die den Wert
+  braucht.
+- **Impact:** Ladeanbieter-Filter zeigt weniger, aber relevantere
+  Anbieter. Keine Datenbank-Migration nötig (SQL-Funktions-Default bleibt
+  bei 5, wird aber immer mit explizitem `p_min_stations` aufgerufen).
+- **Date:** 2026-09-27
+
+---
+
 ## Ladepunkte-Filter-Badge zählt Standardfilter mit
 
 - **Decision:** `computeActiveFilterCount()` (`src/lib/charging-station-filters.ts`)
