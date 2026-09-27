@@ -128,12 +128,6 @@ einmal:
   Button, scrollbarer Inhaltsbereich mit Safe-Area-Padding. Deckt nicht
   jeden Dialog ab — `nearby-charging-modal.tsx` hat eine abweichende
   feste Höhe (Kartenausschnitt) und bleibt bewusst eigenständig.
-- **`FilterChip`** (`src/components/ui/filter-chip.tsx`) — Einzel-/
-  Mehrfachauswahl-Chip (`aria-pressed`, `min-h-11`), seit 2026-09-27 mit
-  zwei Einsatzorten (Ladepunkte-Filter-Panel, Mindest-Ladeleistung im
-  Routenplaner) und deshalb nach `ui/` verschoben, s.
-  `docs/DESIGN_DECISIONS.md`.
-
 Über mehrere Runden migriert (Details je Runde in
 `docs/DESIGN_DECISIONS.md`): alle fünf öffentlichen Auth-/Startseiten,
 die meisten Profil-Formulare, die Bewertungsformulare (inkl. Inline-
@@ -150,12 +144,20 @@ würde hier ein neues visuelles Design erfinden, nicht bestehendes
 konsolidieren. `Slider` existiert einmal, bereits als lokale Komponente
 (`SocSlider` in `route-planner-form.tsx`, 5-fach intern wiederverwendet)
 — für den Umzug nach `ui/` fehlt ein zweiter, unabhängiger
-Einsatzort. Gleiches gilt seit 2026-09-27 für `WheelPicker`
-(`src/components/routing/wheel-picker.tsx`, Nutzerwunsch: iOS-artige
-Wheel-Auswahl für den Verbrauchswert statt freier Zahleneingabe,
-CSS-`scroll-snap` statt npm-Abhängigkeit) — bisher genau ein
-Einsatzort, bleibt lokal bei `routing/`. Ein separates
-`EmptyState`-Primitive wäre eine dünne
+Einsatzort. Gleiches gilt für `WheelPickerField`
+(`src/components/routing/wheel-picker.tsx`, Nutzerwunsch 2026-09-27:
+Wheel-Picker-Bottom-Sheet -- kompakter Feld-Trigger öffnet ein Sheet mit
+grossem Wheel, analog zu iOS `UIPickerView`/Android Material
+BottomSheet-Picker, CSS-`scroll-snap` statt npm-Abhängigkeit -- für
+Verbrauch UND Mindest-Ladeleistung im Routenplaner im Einsatz) — beide
+Einsatzorte liegen in derselben Datei/demselben Formular, kein
+unabhängiger zweiter Kontext, bleibt deshalb wie `SocSlider` lokal bei
+`routing/`. `FilterChip` (`src/components/charging-stations/
+filter-chip.tsx`) war am selben Tag kurzzeitig nach `ui/` verschoben,
+weil es testweise auch für die Mindest-Ladeleistung genutzt wurde —
+seit der Umstellung auf `WheelPickerField` hat es dort wieder nur einen
+Einsatzort und ist zurückverschoben, s. `docs/DESIGN_DECISIONS.md`. Ein
+separates `EmptyState`-Primitive wäre eine dünne
 Wrapper-Komponente um einen einzelnen `<p className="text-sm
 text-text-muted">`-Absatz (bereits durchgängig konsistent, s.
 `docs/design/ux-problems.md`, Phase 5) — kein echter

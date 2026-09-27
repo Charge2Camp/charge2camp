@@ -10,6 +10,61 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
 
 ---
 
+## Nachbesserung: Wheel Picker als echtes Bottom-Sheet statt Inline-Widget
+
+- **Decision:** Der im vorherigen Eintrag ("Routenplaner: Verbrauch als
+  Wheel Picker...") beschriebene, direkt im Formular eingebettete Wheel
+  Picker wurde noch am selben Tag durch ein Bottom-Sheet-Muster ersetzt
+  (Nutzerfeedback: "nicht gut umgesetzt", gemeint war ein Wheel Picker
+  als Bottom Sheet analog zu iOS `UIPickerView` bzw. dem
+  Android-Aequivalent). Neue Struktur in `wheel-picker.tsx`:
+  - `WheelPickerField` -- ein kompakter Feld-Trigger (Label + aktueller
+    Wert + Chevron, sieht aus wie ein `Select`), der per Tap ein von
+    unten einfahrendes Sheet mit Kopfzeile (Titel + "Fertig") und dem
+    eigentlichen, jetzt groesseren Wheel (5 statt 3 sichtbare Zeilen)
+    oeffnet.
+  - `Wheel` (intern) -- generisch ueber `WheelPickerOption<T>[]` statt
+    nur ueber numerische min/max/step, damit dieselbe Scroll-Snap-Wheel-
+    Mechanik sowohl den Verbrauch (Zahlen) als auch die Mindest-
+    Ladeleistung (benannte Stufen "Kein Minimum"/"≥ 50 kW"/...)
+    bedienen kann.
+  - Mindest-Ladeleistung nutzt jetzt ebenfalls `WheelPickerField` statt
+    der Filter-Chip-Reihe aus dem vorherigen Eintrag -- dadurch hat
+    `FilterChip` seinen zweiten Einsatzort wieder verloren und wurde von
+    `ui/filter-chip.tsx` zurueck nach
+    `charging-stations/filter-chip.tsx` verschoben (s.
+    `docs/DESIGN_SYSTEM.md`).
+  - `Modal` (`ui/modal.tsx`) wurde bewusst NICHT fuer das Sheet
+    wiederverwendet -- `Modal` ist auf Mobile ein Vollbild-Sheet
+    (`h-full`), hier war ein kompaktes, nur-inhaltsgrosses Sheet am
+    unteren Rand gefragt. Eigenes, schlankes Sheet-Markup ohne
+    Drag-Gesten (Inhalt hat feste Hoehe, anders als beim gezogenen
+    `station-bottom-sheet.tsx`).
+  - Beide Felder bleiben nebeneinander in einer Zeile (`flex gap-4`,
+    beide `flex-1`) -- explizite Nutzeranforderung, unveraendert
+    gegenueber dem vorherigen Eintrag.
+- **Reason:** Die erste Umsetzung (Wheel direkt inline im Formular
+  eingebettet, kleine 3-Zeilen-Ansicht) traf nicht das gemeinte
+  Bedienkonzept -- native Wheel Picker auf iOS/Android erscheinen
+  typischerweise in einem eigenen Bottom Sheet, nicht eingebettet
+  zwischen anderen Formularfeldern. Ein generisches Sheet mit groesserem
+  Wheel kommt dieser Erwartung naeher und wirkt weniger gedraengt.
+- **Alternatives:** Native `<select>` mit `size`-Attribut fuer einen
+  Wheel-aehnlichen Effekt -- verworfen, kein gestaltbares Snap-/
+  Center-Highlight-Verhalten, wirkt nicht wie ein Wheel Picker. Eine
+  npm-Bibliothek fuer iOS-/Android-Picker-Sheets -- weiterhin verworfen
+  wie im vorherigen Eintrag (Prinzip 4), das selbstgebaute Sheet deckt
+  den Bedarf ohne zusaetzliche Abhaengigkeit.
+- **Impact:** Verbrauch UND Mindest-Ladeleistung oeffnen jetzt beide ein
+  Bottom-Sheet statt eines Inline-Widgets; Formular-Feldnamen und
+  Server-Validierung weiterhin unveraendert. Live im Browser verifiziert
+  (Desktop + emulierter Mobile-Viewport 375×812): Sheet oeffnet sich am
+  unteren Rand, Scroll- und Klick-Auswahl aktualisieren den Trigger
+  korrekt, "Fertig" schliesst das Sheet.
+- **Date:** 2026-09-27
+
+---
+
 ## Routenplaner: Verbrauch als Wheel Picker, Mindest-Ladeleistung als Stufenauswahl
 
 - **Decision:** Zwei Felder im Routenplaner-Formular (Tab 1,
