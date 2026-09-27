@@ -142,16 +142,20 @@ function Wheel<T extends string | number>({
   );
 }
 
-/** Nutzerwunsch (2026-09-27, nach einer ersten -- als zu unauffaellig
- * bemaengelten -- inline-Version): ein kompakter Feld-Trigger, der wie bei
- * iOS UIPickerView bzw. dem Android-Aequivalent (Material BottomSheet mit
- * Wheel/NumberPicker) ein eigenes Bottom-Sheet mit einem grossen Wheel
- * oeffnet, statt das Wheel direkt im Formular einzubetten. `Modal`
- * (ui/modal.tsx) passt dafuer nicht: die ist auf Mobile ein VOLLBILD-Sheet
- * (h-full) -- hier soll dagegen nur ein kompaktes, inhaltsgrosses Sheet am
- * unteren Rand erscheinen, daher ein eigenes, bewusst schlankes
- * Sheet-Markup ohne Drag-Gesten (Inhalt hat feste Hoehe, ein Drag-Handle
- * waere hier nur Dekoration ohne Funktion, anders als beim gezogenen
+/** §14 Komponentenbibliothek: urspruenglich lokal bei routing/ (Nutzerwunsch
+ * 2026-09-27, Wheel-Picker-Bottom-Sheet analog zu iOS UIPickerView bzw. dem
+ * Android-Aequivalent, statt eines inline eingebetteten Wheels oder einer
+ * freien Zahleneingabe), seit dem selben Tag mit einem zweiten, unabhaengigen
+ * Einsatzort (Mindest-Ladeleistung im Ladepunkte-Filter-Panel, identische
+ * Stufenauswahl wie im Routenplaner) nach ui/ verschoben, s.
+ * docs/DESIGN_DECISIONS.md. Ein kompakter Feld-Trigger (Label + aktueller
+ * Wert + Chevron, sieht aus wie ein `Select`) oeffnet per Tap ein von unten
+ * einfahrendes Sheet mit einem grossen Wheel. `Modal` (ui/modal.tsx) passt
+ * dafuer nicht: die ist auf Mobile ein VOLLBILD-Sheet (h-full) -- hier soll
+ * dagegen nur ein kompaktes, inhaltsgrosses Sheet am unteren Rand
+ * erscheinen, daher ein eigenes, bewusst schlankes Sheet-Markup ohne
+ * Drag-Gesten (Inhalt hat feste Hoehe, ein Drag-Handle waere hier nur
+ * Dekoration ohne Funktion, anders als beim gezogenen
  * station-bottom-sheet.tsx). */
 export function WheelPickerField<T extends string | number>({
   label,
@@ -165,14 +169,18 @@ export function WheelPickerField<T extends string | number>({
   options: WheelPickerOption<T>[];
   value: T;
   onChange: (value: T) => void;
-  /** Fuer den nativen Formular-Submit (planRoute liest FormData, kein
-   * kontrolliertes React-Feld) -- verstecktes Input-Element traegt den Wert. */
+  /** Fuer einen nativen Formular-Submit ueber FormData (z. B. planRoute im
+   * Routenplaner, kein kontrolliertes React-Feld) -- verstecktes
+   * Input-Element traegt den Wert. Im Ladepunkte-Filter-Panel dagegen nicht
+   * gesetzt, dort wendet `onChange` den Filter direkt an (kein Formular-
+   * Submit noetig, siehe charging-station-map-explorer.tsx). */
   name?: string;
   /** Wie der aktuelle Wert auf dem Feld-Trigger dargestellt wird -- per
    * Default das Label der naechstgelegenen Option. Noetig fuer den
-   * Verbrauch: ein aus dem Fahrzeugprofil uebernommener Dezimalwert (z. B.
-   * 24.3) soll dort bis zur ersten Nutzerinteraktion exakt sichtbar
-   * bleiben, nicht auf den naechsten Wheel-Schritt gerundet. */
+   * Verbrauch im Routenplaner: ein aus dem Fahrzeugprofil uebernommener
+   * Dezimalwert (z. B. 24.3) soll dort bis zur ersten Nutzerinteraktion
+   * exakt sichtbar bleiben, nicht auf den naechsten Wheel-Schritt
+   * gerundet. */
   triggerFormat?: (value: T) => string;
 }) {
   const [open, setOpen] = useState(false);

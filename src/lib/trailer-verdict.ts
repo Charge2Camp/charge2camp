@@ -33,8 +33,8 @@ export const DEFAULT_TRAILER_VERDICTS: TrailerVerdict[] = ["yes", "unhitch"];
  * Haekchen selbst gesetzt hat) -- in beiden Faellen soll der Filter NICHT als
  * "aktiv" gelten (Filter-Badge/activeFilterCount) und NICHT das groessere
  * Server-Erstansicht-Limit ausloesen (siehe ladepunkte/page.tsx
- * hasActiveFilters), exakt wie fastChargersOnly das bereits fuer "Nur
- * Schnelllader" handhabt. */
+ * hasActiveFilters), exakt wie die Mindest-Ladeleistung das bereits ueber
+ * ihren eigenen Default-Vergleich (minPowerKw === 150) handhabt. */
 export function isDefaultTrailerVerdict(verdict: TrailerVerdict[]): boolean {
   return (
     verdict.length === DEFAULT_TRAILER_VERDICTS.length &&

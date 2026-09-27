@@ -10,6 +10,52 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
 
 ---
 
+## Ladepunkte-Kartenansicht: identische Mindest-Ladeleistung-Stufenauswahl wie Routenplaner
+
+- **Decision:** Der bisherige einzelne "Nur Schnelllader (≥100 kW)"-Chip im
+  Ladepunkte-Filter-Panel (`filter-fields.tsx`) ist ersetzt durch dieselbe
+  Stufenauswahl wie im Routenplaner: "Kein Minimum" / "≥ 50 kW" /
+  "≥ 150 kW" / "≥ 300 kW", als `WheelPickerField`-Bottom-Sheet. Default bei
+  einem frischen Seitenaufruf ist jetzt ≥150 kW (vorher ≥100 kW) --
+  identisch zum Routenplaner-Default (`DEFAULT_MIN_POWER_KW`,
+  `route-planning.ts`).
+  - `ChargingStationFilters.fastChargersOnly: boolean` ersetzt durch
+    `minPowerKw: number` (0 = kein Minimum) in `charging-stations.ts` --
+    `resolveFastChargersOnly` (Default bisher `true`) wird zu
+    `resolveMinPowerKw` (Default bisher 150), Query-Parameter `fast=1`
+    wird zu `min_power=<kW>`. `p_min_power_kw`/`.gte("max_power_kw", ...)`
+    nehmen jetzt den tatsaechlichen Stufenwert statt einer festen
+    Konstante.
+  - `computeActiveFilterCount`/`buildChargingStationFilterParams`
+    (`charging-station-filters.ts`) entsprechend angepasst.
+  - `WheelPickerField`/`numericWheelOptions`/`WheelPickerOption` von
+    `routing/wheel-picker.tsx` nach `ui/wheel-picker.tsx` verschoben --
+    durch den zweiten, unabhaengigen Einsatzort (Ladepunkte-Filter-Panel
+    zusaetzlich zum Routenplaner) erfuellt die Komponente jetzt die in
+    dieser Session etablierte Promotion-Schwelle.
+  - `NearbyChargingModal` (Startseiten-Popup "Ladesäule in der Nähe
+    suchen") intern ebenfalls von `fastChargersOnly`/`fast=1` auf
+    `minPowerKw`/`min_power=<kW>` umgestellt (identischer Server-Vertrag),
+    UI dort bewusst unveraendert als einfache Checkbox belassen (kein Teil
+    dieser Anfrage, nur die Server-Kompatibilitaet musste erhalten
+    bleiben) -- Checkbox-Beschriftung von "≥100 kW" auf "≥150 kW"
+    korrigiert.
+- **Reason:** Nutzerwunsch: identische Ladeleistungsfilterung mit
+  denselben Stufen wie im Routenplaner auch auf der Karte, mit demselben
+  Default (150 kW).
+- **Alternatives:** Den alten "Nur Schnelllader"-Chip als fuenfte, separate
+  Option neben der Stufenauswahl behalten -- verworfen, das waere
+  redundant (≥50/≥150/≥300 kW deckt denselben Bedarf feiner ab) und
+  widerspraeche der expliziten Forderung nach identischer Filterung.
+- **Impact:** Karten-Erstansicht zeigt jetzt nur noch Ladepunkte ≥150 kW
+  statt ≥100 kW (etwas restriktiver) -- deckt sich mit dem bereits
+  etablierten Routenplaner-Default. Live im Browser verifiziert: Trigger,
+  Bottom-Sheet-Auswahl und URL-Synchronisierung (`min_power=50` nach
+  Auswahl von "≥ 50 kW") funktionieren wie im Routenplaner.
+- **Date:** 2026-09-27
+
+---
+
 ## Nachbesserung: Wheel Picker als echtes Bottom-Sheet statt Inline-Widget
 
 - **Decision:** Der im vorherigen Eintrag ("Routenplaner: Verbrauch als

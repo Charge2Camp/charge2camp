@@ -3,10 +3,24 @@
 import { useState } from "react";
 import { NameSuggestField } from "@/components/name-suggest-field";
 import { FilterChip } from "@/components/charging-stations/filter-chip";
+import { WheelPickerField, type WheelPickerOption } from "@/components/ui/wheel-picker";
 import type { ChargingStationFilters, ChargingStationOperatorOption } from "@/lib/charging-stations";
 import { CONNECTOR_CATEGORIES } from "@/lib/connector-categories";
 import { TRAILER_VERDICT_LABELS, TRAILER_VERDICT_VALUES } from "@/lib/trailer-verdict";
 import type { TrailerVerdict } from "@/types/database";
+
+/** Identische Stufen wie MIN_POWER_KW_OPTIONS im Routenplaner
+ * (route-planner-form.tsx), aber mit `number`-Values statt `string` --
+ * ChargingStationFilters.minPowerKw ist `number` (0 = kein Minimum), damit
+ * er sich direkt fuer den Server-Query-Vergleich (`.gte("max_power_kw", ...)`
+ * bzw. `p_min_power_kw`) eignet, ohne eine Text-zu-Zahl-Umwandlung an der
+ * Filter-Grenze. */
+const MIN_POWER_KW_OPTIONS: WheelPickerOption<number>[] = [
+  { label: "Kein Minimum", value: 0 },
+  { label: "≥ 50 kW", value: 50 },
+  { label: "≥ 150 kW", value: 150 },
+  { label: "≥ 300 kW", value: 300 },
+];
 
 /** Alle Filterfelder fuer die Ladepunkte-Suche als Sofort-anwendende Chips
  * (kein <form>/Submit mehr, siehe charging-station-map-explorer.tsx) -- jeder
@@ -16,7 +30,9 @@ import type { TrailerVerdict } from "@/types/database";
  *   1. Anhaengertauglichkeit  -- Kernfrage des Produkts (CLAUDE.md
  *      Entwicklungsprinzip 7 "Anhaengertauglichkeit hat Prioritaet"), immer
  *      sichtbar, nie hinter einem Aufklapp-Bereich versteckt.
- *   2. Ladeleistung (Schnelllader) -- zweite technische Kernfrage.
+ *   2. Mindest-Ladeleistung -- zweite technische Kernfrage, seit 2026-09-27
+ *      dieselbe Stufenauswahl (Wheel-Picker-Bottom-Sheet) wie im
+ *      Routenplaner statt eines einzelnen "Nur Schnelllader"-Chips.
  *   3. Steckertyp / 4. Ladeanbieter -- weitere technische Kompatibilitaet,
  *      potenziell viele Optionen, deshalb aufklappbar (<details>).
  *   5. Suche -- Freitext, kein Chip (evcaravan.de-Vergleich: dort ebenfalls
@@ -83,15 +99,13 @@ export function ChargingStationFilterFields({
         </div>
       </fieldset>
 
-      <div className="flex flex-col gap-2">
-        <span className="font-medium">Ladeleistung</span>
-        <div className="flex flex-wrap gap-2">
-          <FilterChip
-            label="Nur Schnelllader (≥100 kW)"
-            active={filters.fastChargersOnly}
-            onClick={() => onChange({ fastChargersOnly: !filters.fastChargersOnly })}
-          />
-        </div>
+      <div className="max-w-[12rem]">
+        <WheelPickerField
+          label="Mindest-Ladeleistung"
+          options={MIN_POWER_KW_OPTIONS}
+          value={filters.minPowerKw}
+          onChange={(v) => onChange({ minPowerKw: v })}
+        />
       </div>
 
       {/* Aufklappbar statt dauerhaft ausgeklappt -- eigener State statt

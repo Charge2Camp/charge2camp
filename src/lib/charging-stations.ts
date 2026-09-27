@@ -10,8 +10,6 @@ import type {
   TrailerVerdict,
 } from "@/types/database";
 
-const FAST_CHARGER_MIN_KW = 100;
-
 /** Nutzerwunsch: der Ladeanbieter-Filter soll ALLE tatsaechlich in der DB
  * vorkommenden Anbieter zeigen (core.charge_point.operator), nicht nur eine
  * feste Auswahl -- aber nur solche mit mindestens so vielen aktiven
@@ -53,7 +51,11 @@ async function fetchInBatches<T>(
 export interface ChargingStationFilters {
   q?: string;
   trailerVerdict: TrailerVerdict[];
-  fastChargersOnly: boolean;
+  /** Mindest-Ladeleistung in kW, identische Stufenauswahl wie im
+   * Routenplaner (0 / 50 / 150 / 300, siehe MIN_POWER_KW_OPTIONS in
+   * filter-fields.tsx) -- 0 bedeutet "kein Minimum" statt `null`, damit der
+   * Wert direkt als WheelPickerOption<number>-Value nutzbar ist. */
+  minPowerKw: number;
   /** Schluessel aus CONNECTOR_CATEGORIES (connector-categories.ts), mehrfach
    * waehlbar -- ein Ladepunkt passt, sobald mindestens einer seiner
    * Connectoren zu MINDESTENS einer der gewaehlten Kategorien passt. */
@@ -69,11 +71,13 @@ export interface ChargingStationFilters {
   favoritesOnly: boolean;
 }
 
-/** Nutzerwunsch: "Nur Schnelllader" ist der Default-Zustand bei einem
- * frischen Seitenaufruf (Zielgruppe braucht auf der Reise vor allem
- * DC-Schnelllader). HTML-Checkboxen senden im unchecked-Zustand aber gar
- * keinen Parameter -- ohne weiteres Signal liesse sich "Nutzer war noch nie
- * hier" (Default soll gelten) nicht von "Nutzer hat bewusst abgewaehlt und
+/** Nutzerwunsch: "Mindest-Ladeleistung ≥150 kW" ist der Default-Zustand bei
+ * einem frischen Seitenaufruf (Zielgruppe braucht auf der Reise vor allem
+ * Schnelllader; identischer Default wie im Routenplaner, siehe
+ * DEFAULT_MIN_POWER_KW in route-planning.ts). Filter-Chips/Wheel-Picker
+ * senden im "nichts ausgewaehlt"-Zustand aber gar keinen Parameter -- ohne
+ * weiteres Signal liesse sich "Nutzer war noch nie hier" (Default soll
+ * gelten) nicht von "Nutzer hat bewusst 'Kein Minimum' gewaehlt und
  * abgeschickt" (Default soll NICHT gelten) unterscheiden. Das einzige
  * <form> im Filter-Panel (charging-station-map-explorer.tsx) traegt deshalb
  * IMMER ein verstecktes `filters_submitted=1`-Feld; genauso haengt
@@ -81,9 +85,10 @@ export interface ChargingStationFilters {
  * das eine "explizite" Anfrage mit dem aktuellen Filterzustand ist. Fehlt
  * das Feld (reiner Aufruf von "/ladepunkte" ohne Query, z. B. per
  * "Zuruecksetzen"-Link), gilt der Default. */
-function resolveFastChargersOnly(fastParam: string | undefined, filtersSubmitted: boolean): boolean {
-  if (!filtersSubmitted) return true;
-  return fastParam === "1";
+function resolveMinPowerKw(minPowerParam: string | undefined, filtersSubmitted: boolean): number {
+  if (!filtersSubmitted) return 150;
+  const parsed = Number(minPowerParam);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 }
 
 /** Default-Zustand ('yes'/'unhitch') + isDefaultTrailerVerdict() liegen in
@@ -122,7 +127,7 @@ export function parseChargingStationFilters(
   return {
     q: get("q")?.trim() || undefined,
     trailerVerdict: resolveTrailerVerdict(verdicts, filtersSubmitted),
-    fastChargersOnly: resolveFastChargersOnly(get("fast"), filtersSubmitted),
+    minPowerKw: resolveMinPowerKw(get("min_power"), filtersSubmitted),
     connectorCategories,
     operators: getAll("operator"),
     favoritesOnly: get("favorites") === "1",
@@ -223,7 +228,7 @@ export async function fetchChargingStations(
       p_south: bbox.south,
       p_east: bbox.east,
       p_north: bbox.north,
-      p_min_power_kw: filters.fastChargersOnly ? FAST_CHARGER_MIN_KW : null,
+      p_min_power_kw: filters.minPowerKw > 0 ? filters.minPowerKw : null,
       p_q: filters.q ?? null,
       p_limit: limit,
       // Filtert bereits VOR der Connector-/Trailer-Anreicherung (enrichStations
@@ -244,7 +249,7 @@ export async function fetchChargingStations(
   } else {
     let query = supabase.schema("core").from("charge_point_geo").select("*");
     if (filters.q) query = query.ilike("name", `%${filters.q}%`);
-    if (filters.fastChargersOnly) query = query.gte("max_power_kw", FAST_CHARGER_MIN_KW);
+    if (filters.minPowerKw > 0) query = query.gte("max_power_kw", filters.minPowerKw);
     ({ data, error } = await query.order("name").limit(limit));
   }
 

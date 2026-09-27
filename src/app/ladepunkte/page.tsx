@@ -58,8 +58,8 @@ export default async function ChargingStationsPage({
   // (enrichStations(), 20 parallele Batch-Queries) brauchten dafuer
   // zusammen ca. 6s DB-Zeit bei schwankendem I/O-Durchsatz der Instanz und
   // ueberschritten das PostgREST-Statement-Timeout dadurch sporadisch.
-  // "Nur Schnelllader" ist seit Nutzerwunsch der Default-Zustand (siehe
-  // resolveFastChargersOnly in charging-stations.ts) und zaehlt deshalb
+  // "Mindest-Ladeleistung ≥150 kW" ist seit Nutzerwunsch der Default-Zustand
+  // (siehe resolveMinPowerKw in charging-stations.ts) und zaehlt deshalb
   // bewusst NICHT als "aktiver Filter" -- sonst wuerde die Badge/das
   // groessere Limit unten bei JEDEM Erstaufruf greifen, auch ohne dass der
   // Nutzer irgendetwas veraendert hat. Gleiches gilt seit 2026-09-24 fuer den

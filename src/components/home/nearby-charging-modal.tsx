@@ -27,20 +27,22 @@ const GERMANY_OVERVIEW_ZOOM = 4.5;
 
 interface QuickFilters {
   trailerVerdict: TrailerVerdict[];
-  fastChargersOnly: boolean;
+  /** Identische Stufenauswahl wie /ladepunkte und der Routenplaner (0 = kein
+   * Minimum), s. ChargingStationFilters.minPowerKw in charging-stations.ts. */
+  minPowerKw: number;
 }
 
 function buildViewportQuery(filters: QuickFilters, bounds: MapBoundsBox): string {
   const params = new URLSearchParams();
   params.set("bbox", `${bounds.west},${bounds.south},${bounds.east},${bounds.north}`);
   // Bugfix (2026-09-24): ohne dieses Feld ignoriert der Server (siehe
-  // resolveFastChargersOnly/resolveTrailerVerdict, charging-stations.ts)
-  // JEDE hier gesendete Filterauswahl und erzwingt stattdessen immer seine
-  // eigenen Defaults -- die Checkboxen unten in diesem Popup waren dadurch
-  // bisher rein kosmetisch (Symptom: "Nur Schnelllader" abgewaehlt, Karte
-  // zeigte trotzdem nur Schnelllader).
+  // resolveMinPowerKw/resolveTrailerVerdict, charging-stations.ts) JEDE hier
+  // gesendete Filterauswahl und erzwingt stattdessen immer seine eigenen
+  // Defaults -- die Checkboxen unten in diesem Popup waren dadurch bisher
+  // rein kosmetisch (Symptom: "Nur Schnelllader" abgewaehlt, Karte zeigte
+  // trotzdem nur Schnelllader).
   params.set("filters_submitted", "1");
-  if (filters.fastChargersOnly) params.set("fast", "1");
+  if (filters.minPowerKw > 0) params.set("min_power", String(filters.minPowerKw));
   for (const v of filters.trailerVerdict) params.set(`trailer_${v}`, "1");
   return params.toString();
 }
@@ -59,13 +61,13 @@ function buildViewportQuery(filters: QuickFilters, bounds: MapBoundsBox): string
  * einen Login-Hinweis statt einer irrefuehrenden "keine Ladepunkte"-Meldung. */
 export function NearbyChargingModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   // Gleiche Defaults wie /ladepunkte (siehe DEFAULT_TRAILER_VERDICTS,
-  // resolveFastChargersOnly in charging-stations.ts) -- vorher zeigte dieses
+  // resolveMinPowerKw in charging-stations.ts) -- vorher zeigte dieses
   // Popup lokal "false"/"[]" (Checkboxen unmarkiert) an, waehrend der Server
   // mangels filters_submitted trotzdem IMMER die echten Defaults anwendete;
   // die UI luegt also nicht mehr ueber den tatsaechlich aktiven Filter.
   const [filters, setFilters] = useState<QuickFilters>({
     trailerVerdict: DEFAULT_TRAILER_VERDICTS,
-    fastChargersOnly: true,
+    minPowerKw: 150,
   });
   const [stations, setStations] = useState<ChargingStationView[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -160,7 +162,7 @@ export function NearbyChargingModal({ open, onClose }: { open: boolean; onClose:
 
   function toggleFastOnly() {
     setFilters((prev) => {
-      const updated = { ...prev, fastChargersOnly: !prev.fastChargersOnly };
+      const updated = { ...prev, minPowerKw: prev.minPowerKw > 0 ? 0 : 150 };
       if (boundsRef.current) runFetch(boundsRef.current, updated);
       return updated;
     });
@@ -181,7 +183,7 @@ export function NearbyChargingModal({ open, onClose }: { open: boolean; onClose:
   // wendet /ladepunkte beim Wechsel von diesem Popup zur vollen Seite seine
   // eigenen Defaults an, statt der hier tatsaechlich gewaehlten Auswahl.
   fullSearchParams.set("filters_submitted", "1");
-  if (filters.fastChargersOnly) fullSearchParams.set("fast", "1");
+  if (filters.minPowerKw > 0) fullSearchParams.set("min_power", String(filters.minPowerKw));
   for (const v of filters.trailerVerdict) fullSearchParams.set(`trailer_${v}`, "1");
 
   const markers = stations.map((s) => ({
@@ -245,8 +247,8 @@ export function NearbyChargingModal({ open, onClose }: { open: boolean; onClose:
               </label>
             ))}
             <label className="flex min-h-11 items-center gap-1.5">
-              <input type="checkbox" checked={filters.fastChargersOnly} onChange={toggleFastOnly} />
-              Nur Schnelllader (≥100 kW)
+              <input type="checkbox" checked={filters.minPowerKw > 0} onChange={toggleFastOnly} />
+              Nur Schnelllader (≥150 kW)
             </label>
           </div>
 

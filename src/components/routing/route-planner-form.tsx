@@ -16,7 +16,7 @@ import { RouteWizardTabs } from "@/components/routing/route-wizard-tabs";
 import { FormError } from "@/components/form-error";
 import { Field, Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { WheelPickerField, numericWheelOptions } from "@/components/routing/wheel-picker";
+import { WheelPickerField, numericWheelOptions } from "@/components/ui/wheel-picker";
 import { FavoritesPickerDialog } from "@/components/routing/favorites-picker-dialog";
 import { HomeAddressPickerDialog } from "@/components/routing/home-address-picker-dialog";
 import { SavedRoutePickerDialog, type SavedRouteOption } from "@/components/routing/saved-route-picker-dialog";

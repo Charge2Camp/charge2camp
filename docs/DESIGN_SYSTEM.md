@@ -128,6 +128,18 @@ einmal:
   Button, scrollbarer Inhaltsbereich mit Safe-Area-Padding. Deckt nicht
   jeden Dialog ab — `nearby-charging-modal.tsx` hat eine abweichende
   feste Höhe (Kartenausschnitt) und bleibt bewusst eigenständig.
+- **`WheelPickerField`** (`src/components/ui/wheel-picker.tsx`) —
+  kompakter Feld-Trigger (Label + aktueller Wert + Chevron), öffnet per
+  Tap ein von unten einfahrendes Bottom-Sheet mit einem großen,
+  scroll-snap-basierten Wheel (analog zu iOS `UIPickerView`/Android
+  Material BottomSheet-Picker, kein neues npm-Paket). Generisch über
+  `WheelPickerOption<T>[]` — deckt sowohl numerische Bereiche
+  (`numericWheelOptions`, z. B. Verbrauch) als auch benannte Stufen (z. B.
+  Mindest-Ladeleistung) ab. Zwei unabhängige Einsatzorte seit 2026-09-27:
+  Routenplaner (Verbrauch, Mindest-Ladeleistung) und Ladepunkte-
+  Filter-Panel (Mindest-Ladeleistung, identische Stufen), s.
+  `docs/DESIGN_DECISIONS.md`.
+
 Über mehrere Runden migriert (Details je Runde in
 `docs/DESIGN_DECISIONS.md`): alle fünf öffentlichen Auth-/Startseiten,
 die meisten Profil-Formulare, die Bewertungsformulare (inkl. Inline-
@@ -144,20 +156,13 @@ würde hier ein neues visuelles Design erfinden, nicht bestehendes
 konsolidieren. `Slider` existiert einmal, bereits als lokale Komponente
 (`SocSlider` in `route-planner-form.tsx`, 5-fach intern wiederverwendet)
 — für den Umzug nach `ui/` fehlt ein zweiter, unabhängiger
-Einsatzort. Gleiches gilt für `WheelPickerField`
-(`src/components/routing/wheel-picker.tsx`, Nutzerwunsch 2026-09-27:
-Wheel-Picker-Bottom-Sheet -- kompakter Feld-Trigger öffnet ein Sheet mit
-grossem Wheel, analog zu iOS `UIPickerView`/Android Material
-BottomSheet-Picker, CSS-`scroll-snap` statt npm-Abhängigkeit -- für
-Verbrauch UND Mindest-Ladeleistung im Routenplaner im Einsatz) — beide
-Einsatzorte liegen in derselben Datei/demselben Formular, kein
-unabhängiger zweiter Kontext, bleibt deshalb wie `SocSlider` lokal bei
-`routing/`. `FilterChip` (`src/components/charging-stations/
-filter-chip.tsx`) war am selben Tag kurzzeitig nach `ui/` verschoben,
-weil es testweise auch für die Mindest-Ladeleistung genutzt wurde —
-seit der Umstellung auf `WheelPickerField` hat es dort wieder nur einen
-Einsatzort und ist zurückverschoben, s. `docs/DESIGN_DECISIONS.md`. Ein
-separates `EmptyState`-Primitive wäre eine dünne
+Einsatzort. `FilterChip` (`src/components/charging-stations/
+filter-chip.tsx`) war kurzzeitig nach `ui/` verschoben, weil es
+testweise auch für die Mindest-Ladeleistung im Routenplaner genutzt
+wurde — seit der Umstellung auf `WheelPickerField` dort hat es wieder
+nur einen Einsatzort (Ladepunkte-Filter-Panel) und ist zurückverschoben,
+s. `docs/DESIGN_DECISIONS.md`. Ein separates `EmptyState`-Primitive wäre
+eine dünne
 Wrapper-Komponente um einen einzelnen `<p className="text-sm
 text-text-muted">`-Absatz (bereits durchgängig konsistent, s.
 `docs/design/ux-problems.md`, Phase 5) — kein echter
