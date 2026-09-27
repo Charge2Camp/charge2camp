@@ -10,6 +10,37 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
 
 ---
 
+## Ladepunkte-Filter-Badge zählt Standardfilter mit
+
+- **Decision:** `computeActiveFilterCount()` (`src/lib/charging-station-filters.ts`)
+  zählt ab sofort ALLE gerade wirksamen Filter, auch die beiden
+  Standardwerte "Nur Schnelllader" und die Anhängertauglichkeit-
+  Voreinstellung ("tauglich" &amp; "abkoppeln nötig") — vorher waren beide
+  bewusst ausgeklammert (`isDefaultTrailerVerdict`), sodass die Zahl-Badge
+  am Filter-Button in der Kartenansicht bei einem frischen Seitenaufruf
+  0 zeigte, obwohl tatsächlich schon gefiltert wurde. Im Zuge dessen den
+  erklärenden Legend-Zusatz "— standardmäßig nur „tauglich" &amp;
+  „abkoppeln nötig"" in `filter-fields.tsx` entfernt.
+- **Reason:** Nutzerwunsch: die Kartenansicht soll ohne Text erkennen
+  lassen, dass bereits gefiltert wird — allein über die Zahl am
+  Filter-Button, kein zusätzlicher erklärender Hinweistext nötig.
+  `isDefaultTrailerVerdict`/`hasActiveFilters` (`ladepunkte/page.tsx`)
+  bleiben unverändert bestehen — dort ist der Zweck ein anderer
+  (serverseitiges Erstansicht-Limit soll nicht schon ohne Nutzerzutun
+  auf 5000 statt 300 springen), die beiden Konzepte sind bewusst getrennt.
+- **Alternatives:** Separater "Dot"-Indikator zusätzlich zur Zahl, oder
+  ein Hinweistext neben dem Filter-Button — verworfen, da laut Rückmeldung
+  die Zahl allein bereits ausreichend selbsterklärend ist und ein
+  zusätzliches Element/Text nur Redundanz wäre.
+- **Impact:** Der Filter-Button in der Ladepunkte-Kartenansicht zeigt nun
+  auch ohne jede Nutzeraktion eine Zahl (mindestens die beiden aktiven
+  Anhängertauglichkeits-Verdicts + "Nur Schnelllader", i. d. R. also 3).
+  Verhalten der eigentlichen Datenabfrage (Server-Limit, Query-Params)
+  unverändert.
+- **Date:** 2026-09-27
+
+---
+
 ## UX-05.7: E-Mail-Benachrichtigung bei Meldestatus-Änderung (Resend-Adapter)
 
 - **Decision:** Neuer E-Mail-Provider-Adapter in

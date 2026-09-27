@@ -1,4 +1,3 @@
-import { isDefaultTrailerVerdict } from "@/lib/trailer-verdict";
 import type { ChargingStationFilters } from "@/lib/charging-stations";
 
 /** Bewusst HIER (statt in charging-stations.ts) definiert: charging-stations.ts
@@ -9,11 +8,21 @@ import type { ChargingStationFilters } from "@/lib/charging-stations";
  * `ChargingStationFilters` selbst ist ein reiner Typ-Import (wird beim Build
  * entfernt, unproblematisch). */
 
+/** Zaehlt bewusst ALLE momentan wirksamen Filter mit, auch die beiden
+ * Standardwerte (Anhaengertauglichkeit-Default, "Nur Schnelllader") --
+ * anders als isDefaultTrailerVerdict/hasActiveFilters (ladepunkte/page.tsx),
+ * die den Default gezielt AUSKLAMMERN, um das serverseitige Erstansicht-
+ * Limit nicht schon ohne Nutzerzutun zu erhoehen. Hier ist der Zweck ein
+ * anderer: die Zahl-Badge am Filter-Button in der Kartenansicht soll direkt
+ * zeigen, dass (und wie viele) Filter gerade greifen -- ohne begleitenden
+ * Erklaertext ("Standardmaessig sind X Filter aktiv"), s.
+ * docs/DESIGN_DECISIONS.md. */
 export function computeActiveFilterCount(filters: ChargingStationFilters): number {
   return (
     (filters.q ? 1 : 0) +
     (filters.favoritesOnly ? 1 : 0) +
-    (isDefaultTrailerVerdict(filters.trailerVerdict) ? 0 : filters.trailerVerdict.length) +
+    (filters.fastChargersOnly ? 1 : 0) +
+    filters.trailerVerdict.length +
     filters.connectorCategories.length +
     filters.operators.length
   );
