@@ -224,6 +224,14 @@ export function MapView({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markersRef = useRef<Map<string, Marker>>(new Map());
+  // Ausgewaehlt-Zustand je Marker/Key zum Zeitpunkt der letzten Erzeugung --
+  // renderIndividualMarkers/renderClustered bauen ein Marker-Element nur neu
+  // auf, wenn sich sein Ausgewaehlt-Zustand seit dem letzten Render
+  // geaendert hat (siehe dort). Ohne diese Nebenbuchhaltung liesse sich beim
+  // Wiederverwenden eines bestehenden Markers nicht erkennen, ob z. B. ein
+  // Antippen selectedId geaendert hat und der Marker deshalb doch neu
+  // gezeichnet werden muss.
+  const markerSelectedRef = useRef<Map<string, boolean>>(new Map());
   const routeRef = useRef<RoutePoint[] | undefined>(undefined);
   const onBoundsChangeRef = useRef(onBoundsChange);
   useEffect(() => {
@@ -347,11 +355,6 @@ export function MapView({
     const map = mapRef.current;
     if (!map) return;
 
-    const clearMarkers = () => {
-      for (const marker of markersRef.current.values()) marker.remove();
-      markersRef.current.clear();
-    };
-
     // Popup wird ueber Marker.setPopup angehaengt -- MapLibre haengt dafuer
     // intern einen eigenen click-Listener an das Marker-Element (zusaetzlich
     // zu unserem el.onclick fuer onMarkerClick), das Icon oeffnet/schliesst
@@ -361,39 +364,83 @@ export function MapView({
       marker.setPopup(new Popup({ offset: 25, closeButton: true, maxWidth: "260px" }).setHTML(popupHtml));
     };
 
+    // Nutzerfeedback: bei jedem Kartenausschnitt-Fetch verschwanden ALLE
+    // Marker kurz und wurden neu aufgebaut (clearMarkers() + kompletter
+    // Neuaufbau) -- das verstaerkte den "laedt neu"-Eindruck zusaetzlich zum
+    // Netzwerk-Delay selbst, obwohl die meisten Punkte zwischen zwei
+    // Ladepunkte-Antworten identisch bleiben. renderIndividualMarkers/
+    // renderClustered aktualisieren jetzt per Diff: unveraenderte Marker
+    // bleiben als DOM-Element bestehen (nur setLngLat), nur tatsaechlich
+    // neue/entfernte/im Ausgewaehlt-Zustand geaenderte Marker werden neu
+    // erzeugt bzw. entfernt.
     const renderIndividualMarkers = (items: MapMarker[]) => {
-      clearMarkers();
+      const nextIds = new Set(items.map((m) => m.id));
+      for (const [id, marker] of markersRef.current) {
+        if (!nextIds.has(id)) {
+          marker.remove();
+          markersRef.current.delete(id);
+          markerSelectedRef.current.delete(id);
+        }
+      }
       for (const m of items) {
-        const el = buildIndividualMarkerElement(m, m.id === selectedId, () => onMarkerClick?.(m.id));
+        const isSelected = m.id === selectedId;
+        const existing = markersRef.current.get(m.id);
+        if (existing && markerSelectedRef.current.get(m.id) === isSelected) {
+          existing.setLngLat([m.longitude, m.latitude]);
+          continue;
+        }
+        existing?.remove();
+        const el = buildIndividualMarkerElement(m, isSelected, () => onMarkerClick?.(m.id));
         const marker = new Marker({ element: el, anchor: m.iconSrc ? "bottom" : "center" })
           .setLngLat([m.longitude, m.latitude])
           .addTo(map);
         attachPopup(marker, m.popupHtml);
         markersRef.current.set(m.id, marker);
+        markerSelectedRef.current.set(m.id, isSelected);
       }
     };
 
     const renderClustered = () => {
       const index = indexRef.current;
       if (!index) return;
-      clearMarkers();
       const b = map.getBounds();
       const bbox: [number, number, number, number] = [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()];
       const zoom = Math.round(map.getZoom());
       const results = index.getClusters(bbox, zoom);
 
-      results.forEach((feature, i) => {
+      // Cluster-IDs von Supercluster sind fuer denselben Index bei gleichem
+      // bbox/zoom stabil -- als Diff-Key ausreichend (kein zusaetzlicher
+      // Index i wie zuvor noetig, der hier den Wiedererkennung ueber zwei
+      // Renderdurchlaeufe hinweg verhindert haette).
+      const nextKeys = new Set<string>();
+
+      for (const feature of results) {
         const [longitude, latitude] = feature.geometry.coordinates;
         if (feature.properties.cluster) {
           const { cluster_id: clusterId, point_count: pointCount } = feature.properties;
+          const key = `cluster-${clusterId}`;
+          nextKeys.add(key);
+          const existing = markersRef.current.get(key);
+          if (existing) {
+            existing.setLngLat([longitude, latitude]);
+            continue;
+          }
           const el = buildClusterMarkerElement(pointCount, () => {
             const expansionZoom = Math.min(index.getClusterExpansionZoom(clusterId), 18);
             map.easeTo({ center: [longitude, latitude], zoom: expansionZoom });
           });
           const marker = new Marker({ element: el }).setLngLat([longitude, latitude]).addTo(map);
-          markersRef.current.set(`cluster-${clusterId}-${i}`, marker);
+          markersRef.current.set(key, marker);
         } else {
           const { markerId } = feature.properties;
+          nextKeys.add(markerId);
+          const isSelected = markerId === selectedId;
+          const existing = markersRef.current.get(markerId);
+          if (existing && markerSelectedRef.current.get(markerId) === isSelected) {
+            existing.setLngLat([longitude, latitude]);
+            continue;
+          }
+          existing?.remove();
           const original = markers.find((m) => m.id === markerId);
           const el = buildIndividualMarkerElement(
             {
@@ -404,7 +451,7 @@ export function MapView({
               color: feature.properties.color,
               iconSrc: original?.iconSrc,
             },
-            markerId === selectedId,
+            isSelected,
             () => onMarkerClick?.(markerId)
           );
           const marker = new Marker({ element: el, anchor: original?.iconSrc ? "bottom" : "center" })
@@ -412,8 +459,17 @@ export function MapView({
             .addTo(map);
           attachPopup(marker, original?.popupHtml);
           markersRef.current.set(markerId, marker);
+          markerSelectedRef.current.set(markerId, isSelected);
         }
-      });
+      }
+
+      for (const [key, marker] of markersRef.current) {
+        if (!nextKeys.has(key)) {
+          marker.remove();
+          markersRef.current.delete(key);
+          markerSelectedRef.current.delete(key);
+        }
+      }
     };
 
     let renderFn: () => void;

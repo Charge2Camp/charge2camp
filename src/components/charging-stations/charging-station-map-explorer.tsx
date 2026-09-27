@@ -40,7 +40,16 @@ const TOUCH_MAP_QUERY = "(max-width: 767px), (pointer: coarse)";
 
 const LIST_NAV_STORAGE_KEY = "ladepunkte:list-nav";
 const MAP_VIEWPORT_STORAGE_KEY = "ladepunkte:map-viewport";
-const VIEWPORT_FETCH_DEBOUNCE_MS = 500;
+// Nutzerfeedback: ABRP/EVCaravan wirken beim Kartenschwenken "sofort da",
+// bei uns erschienen die Ladepunkte dagegen sichtbar verzoegert nach. 500ms
+// Debounce ALLEIN war schon die Haelfte der gefuehlten Verzoegerung. Auf
+// 150ms gesenkt -- vertretbar, weil PREFETCH_MARGIN_RATIO unten die
+// tatsaechliche Anfragehaeufigkeit ohnehin drastisch senkt (die meisten
+// kleinen Schwenks loesen dank des Zwischenspeichers ueberhaupt keinen
+// Request mehr aus, siehe isBoundsContained/lastFetchedBoundsRef), das
+// 120/min-Rate-Limit (route.ts) bleibt dadurch trotz kuerzerer Debounce
+// unkritisch.
+const VIEWPORT_FETCH_DEBOUNCE_MS = 150;
 // Go-Live-Audit (Offline-/Netzstaerke-Verhalten): ohne Timeout haengt ein
 // Request bei schwachem statt komplett fehlendem Netz (der realistischere
 // Fall unterwegs) unbegrenzt in "Laedt...", ohne dass handleBoundsChange
@@ -48,6 +57,16 @@ const VIEWPORT_FETCH_DEBOUNCE_MS = 500;
 // Timeout-Konventionen (z. B. iOS Safari), lang genug fuer 3G, kurz genug
 // um dem Nutzer zeitnah eine Rueckmeldung zu geben statt endlos zu warten.
 const VIEWPORT_FETCH_TIMEOUT_MS = 12000;
+// Nutzerfeedback (s.o.): ABRP/EVCaravan laden sichtbar einen groesseren
+// Bereich vor, als gerade zu sehen ist, damit ein normaler Schwenk in
+// bereits vorgeladenes Gebiet KEINEN neuen Request ausloest -- die Punkte
+// sind dann schon da. 0.5 = 50% Rand auf jeder Seite (Gesamtflaeche ca.
+// 4x der sichtbaren Kartenflaeche), abgefragt statt des exakten
+// Kartenausschnitts (siehe scheduleViewportRefetch/buildViewportQuery).
+// Die core.charge_points_in_bbox()-Abfrage bleibt dabei (~53ms, siehe
+// 20261023020000_charge_points_in_bbox_spatial_index.sql) auch bei der
+// groesseren Flaeche unkritisch.
+const PREFETCH_MARGIN_RATIO = 0.5;
 
 // Deutschland-weiter Standard-Ausschnitt fuer die initiale Kartenzentrierung
 // ohne hinterlegte Zuhause-Adresse (Nutzerwunsch) -- entspricht MapView's
@@ -70,6 +89,34 @@ function buildViewportQuery(filters: ChargingStationFilters, bounds: MapBoundsBo
   const params = buildChargingStationFilterParams(filters);
   params.set("bbox", `${bounds.west},${bounds.south},${bounds.east},${bounds.north}`);
   return params.toString();
+}
+
+/** Erweitert einen Kartenausschnitt um `ratio` je Seite -- Grundlage fuer das
+ * Vorladen ueber den sichtbaren Ausschnitt hinaus (siehe
+ * PREFETCH_MARGIN_RATIO oben). */
+function padBounds(bounds: MapBoundsBox, ratio: number): MapBoundsBox {
+  const width = bounds.east - bounds.west;
+  const height = bounds.north - bounds.south;
+  return {
+    west: bounds.west - width * ratio,
+    east: bounds.east + width * ratio,
+    south: bounds.south - height * ratio,
+    north: bounds.north + height * ratio,
+  };
+}
+
+/** Prueft, ob `inner` vollstaendig innerhalb von `outer` liegt -- damit
+ * entscheidet handleBoundsChange, ob der neue Kartenausschnitt bereits vom
+ * zuletzt geladenen (vorgeladenen) Bereich abgedeckt ist und ein Nachladen
+ * komplett entfallen kann (Nutzerfeedback: Ladepunkte sollen bei kleinen
+ * Schwenks ohne jede Verzoegerung da sein, nicht erst nach einem Request). */
+function isBoundsContained(inner: MapBoundsBox, outer: MapBoundsBox): boolean {
+  return (
+    inner.west >= outer.west &&
+    inner.east <= outer.east &&
+    inner.south >= outer.south &&
+    inner.north <= outer.north
+  );
 }
 
 const PAGE_SIZE = 30;
@@ -323,6 +370,16 @@ export function ChargingStationMapExplorer({
   const [viewportFetchFailed, setViewportFetchFailed] = useState(false);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fetchSeqRef = useRef(0);
+  // Der zuletzt erfolgreich geladene (bereits um PREFETCH_MARGIN_RATIO
+  // vergroesserte) Bereich -- liegt der neue Kartenausschnitt komplett
+  // darin, zeigt die Karte weiterhin die vorhandenen `stations` ohne
+  // jeden Request (siehe handleBoundsChange). Nach jedem Filterwechsel
+  // ODER fehlgeschlagenen Fetch wird hier bewusst NICHT zurueckgesetzt --
+  // ein neuer Fetch (applyFilters ruft ihn direkt auf) ueberschreibt den
+  // Wert ohnehin bei Erfolg; bei Misserfolg soll ein erneuter kleiner
+  // Schwenk innerhalb des zuletzt bekannten guten Bereichs weiterhin ohne
+  // Request funktionieren, statt staendig neu zu scheitern.
+  const lastFetchedBoundsRef = useRef<MapBoundsBox | null>(null);
 
   function selectStation(id: string | null) {
     setSelectedStationId(id);
@@ -347,13 +404,19 @@ export function ChargingStationMapExplorer({
   // einem Chip-Tap (oder umgekehrt) zwei ueberlappende Requests auslöst.
   function scheduleViewportRefetch(filtersToUse: ChargingStationFilters, bounds: MapBoundsBox) {
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    // Vorladen: es wird nicht der exakte Ausschnitt, sondern ein um
+    // PREFETCH_MARGIN_RATIO vergroesserter Bereich abgefragt (ABRP/
+    // EVCaravan-Verhalten, Nutzerfeedback) -- ein anschliessender kleiner
+    // Schwenk faellt dadurch meist noch in lastFetchedBoundsRef und
+    // ueberspringt den Request komplett (siehe handleBoundsChange).
+    const paddedBounds = padBounds(bounds, PREFETCH_MARGIN_RATIO);
     debounceTimerRef.current = setTimeout(async () => {
       const seq = ++fetchSeqRef.current;
       setIsFetchingViewport(true);
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), VIEWPORT_FETCH_TIMEOUT_MS);
       try {
-        const qs = buildViewportQuery(filtersToUse, bounds);
+        const qs = buildViewportQuery(filtersToUse, paddedBounds);
         const res = await fetch(`/api/charge-points/viewport?${qs}`, { signal: controller.signal });
         if (!res.ok) {
           if (seq === fetchSeqRef.current) setViewportFetchFailed(true);
@@ -366,6 +429,7 @@ export function ChargingStationMapExplorer({
         if (seq !== fetchSeqRef.current) return;
         setStations(data.stations ?? []);
         setViewportFetchFailed(false);
+        lastFetchedBoundsRef.current = paddedBounds;
       } catch {
         // Netzwerkfehler/Timeout: Karte behaelt die zuletzt bekannten Marker
         // statt abzustuerzen, zeigt aber einen Hinweis (viewportFetchFailed).
@@ -380,6 +444,12 @@ export function ChargingStationMapExplorer({
   function handleBoundsChange(bounds: MapBoundsBox) {
     lastBoundsRef.current = bounds;
     if (liveFilters.favoritesOnly) return;
+    // Schwenk faellt komplett in den zuletzt vorgeladenen Bereich -- die
+    // bereits angezeigten `stations` decken ihn schon ab, kein Request
+    // noetig (Kernstueck des ABRP/EVCaravan-Verhaltens, Nutzerfeedback).
+    if (lastFetchedBoundsRef.current && isBoundsContained(bounds, lastFetchedBoundsRef.current)) {
+      return;
+    }
     scheduleViewportRefetch(liveFilters, bounds);
   }
 
