@@ -1364,3 +1364,40 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
   `favorites-quick-list.tsx` (neu), `campsite-explorer.tsx` (EV-Score-/
   AC-DC-Badges, Sortierung nach EV-Score).
 - **Date:** 2026-09-28.
+
+## Campingplatzsuche: Umkreissuche per Adresse + Bereinigung der doppelten Lademöglichkeit-Filter
+
+- **Decision:** Neuer Kernfilter "Ort oder Adresse" (AddressAutocomplete,
+  wie im Routenplaner) mit einstellbarem Umkreis (10/25/50/100/200 km,
+  Wheel-Picker) auf `/campingplaetze`. Zusaetzlich wurden die beiden
+  Elektromobilitaets-Merkmale `charging_on_site`/`charging_dc` (core.amenity,
+  Kategorie "laden") aus dem "Weitere Lademerkmale"-Filter entfernt --
+  `charging_at_pitch`/`trailer_friendly` bleiben.
+- **Reason:** Nutzeranfrage (Umkreissuche). Die Rueckfrage "was ist der
+  Unterschied zwischen Lademoeglichkeit und Elektromobilitaet?" hat einen
+  echten Daten-/UX-Mangel aufgedeckt, keinen reinen Erklaerungsbedarf: die
+  "Lademoeglichkeit"-Chips lesen aus core.campsite_search (berechnet aus
+  core.campsite_charge_link, der echten Ladepunkt-Distanz-Verknuepfung),
+  waehrend `charging_on_site`/`charging_dc` unabhaengig davon manuell/per
+  OSM getaggte core.amenity-Merkmale sind -- beide beantworten scheinbar
+  dieselbe Frage, koennen sich aber widersprechen (z. B. ein Platz mit
+  `charging_on_site`-Tag, aber ohne verknuepften Ladepunkt in
+  campsite_charge_link, oder umgekehrt). Ausblenden statt Umbenennen, weil
+  die berechnete Variante die verlaesslichere Quelle ist.
+- **Alternatives:** (1) beide Filter behalten und nur umbenennen/erklaeren
+  (z. B. Tooltip) -- verworfen: loest den Widerspruch nicht, nur die
+  Verwirrung ueber den Namen. (2) Umkreissuche server-seitig ueber PostGIS
+  `ST_DWithin`/eine neue RPC statt Lat/Lon-Bounding-Box + Haversine-
+  Nachfilterung -- verworfen (CLAUDE.md Prinzip 4, Kostenoptimierung):
+  core.campsite_search hat keine Geometrie-Spalte, eine neue Spalte/RPC nur
+  fuer diesen Filter waere unverhaeltnismaessig, die Bounding-Box nutzt den
+  vorhandenen `idx_cssearch_geo`-Index und ist bei den hier relevanten
+  Fallzahlen (max. 5000 Treffer) performant genug.
+- **Impact:** `src/lib/campsites.ts` (`CampsiteFilters.near`/`radiusKm`,
+  Bounding-Box-Vorfilter + Haversine-Trim + Distanz-Sortierung in
+  `fetchCampsites`), `src/lib/campsite-filters.ts` (`RADIUS_KM_OPTIONS`,
+  URL-Parameter `near_lat`/`near_lon`/`near_label`/`radius_km`),
+  `quick-filters.tsx` (Adressfeld + Umkreis-Wheel-Picker, entfernte Chips),
+  `campsite-explorer.tsx` (Sortierung "Entfernung", Default bei aktiver
+  Umkreissuche).
+- **Date:** 2026-09-28.

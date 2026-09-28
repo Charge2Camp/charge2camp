@@ -73,6 +73,7 @@ export function CampsiteSearchClient({
       liveFilters.charging ||
       liveFilters.evScoreMin ||
       liveFilters.ratingMin ||
+      liveFilters.near ||
       liveFilters.amenities.length > 0
   );
 
@@ -114,7 +115,13 @@ export function CampsiteSearchClient({
         campsites={campsites}
         amenityLabels={Object.fromEntries(amenityCatalog.map((a) => [a.key, a.label_de]))}
         emptyMessage={emptyMessage}
-        homeAddress={homeAddress}
+        // Bei aktiver Umkreissuche ist der gesuchte Ort der sinnvollere
+        // Kartenmittelpunkt als die Zuhause-Adresse -- v. a. relevant, wenn
+        // der Umkreis (noch) keine Treffer enthaelt (sonst zentriert
+        // fitBoundsOnMarkersChange ohnehin auf die Treffer, siehe
+        // campsite-explorer.tsx).
+        homeAddress={liveFilters.near ? { latitude: liveFilters.near.latitude, longitude: liveFilters.near.longitude } : homeAddress}
+        hasNearFilter={Boolean(liveFilters.near)}
       />
     </div>
   );

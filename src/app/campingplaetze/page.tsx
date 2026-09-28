@@ -37,6 +37,7 @@ export default async function CampsitesPage({
       filters.charging ||
       filters.evScoreMin ||
       filters.ratingMin ||
+      filters.near ||
       filters.amenities.length > 0
   );
 
@@ -67,11 +68,14 @@ export default async function CampsitesPage({
   let heading: string;
   let emptyMessage: string;
   if (hasActiveFilters) {
+    const nearSuffix = filters.near ? ` im Umkreis von ${filters.radiusKm} km um ${filters.near.label}` : "";
     heading =
       campsites.length >= 5000
         ? `Mindestens ${campsites.length} Campingplätze gefunden -- Filter eingrenzen für vollständige Ergebnisse`
-        : `${campsites.length} Campingplätze gefunden`;
-    emptyMessage = "Keine Campingplätze gefunden. Filter anpassen?";
+        : `${campsites.length} Campingplätze gefunden${nearSuffix}`;
+    emptyMessage = filters.near
+      ? "Keine Campingplätze in diesem Umkreis gefunden. Radius vergrößern oder Filter anpassen?"
+      : "Keine Campingplätze gefunden. Filter anpassen?";
   } else if (user) {
     heading = "Filtern, um Campingplätze zu durchsuchen";
     emptyMessage = "Filter setzen, um Campingplätze zu durchsuchen.";

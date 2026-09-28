@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { EV_SCORE_MIN_OPTIONS } from "@/lib/campsite-filters";
+import { EV_SCORE_MIN_OPTIONS, RADIUS_KM_OPTIONS } from "@/lib/campsite-filters";
+import { distanceKm } from "@/lib/geo";
 import type { CampsiteSearchRow, CoreAmenity, Favorite } from "@/types/database";
 
 /** Merkmalskatalog aus core.amenity (siehe Migration
@@ -34,6 +35,12 @@ export interface CampsiteFilters {
    * Sterne) -- "EV-Camping-Tauglichkeit" laut Nutzeranfrage, unabhaengig
    * vom ev_score (siehe Migration 20261025080000). */
   ratingMin?: number;
+  /** Umkreissuche um einen per Adressfeld gewaehlten Ort (Nutzeranfrage) --
+   * `label` nur fuer die Anzeige (Adressfeld-Text), die eigentliche Filterung
+   * nutzt ausschliesslich latitude/longitude. Nur zusammen mit `radiusKm`
+   * wirksam (siehe fetchCampsites). */
+  near?: { latitude: number; longitude: number; label: string };
+  radiusKm?: number;
 }
 
 export function parseCampsiteFilters(
@@ -48,6 +55,20 @@ export function parseCampsiteFilters(
   const chargingRaw = get("charging");
   const evScoreMinRaw = Number(get("evScoreMin"));
   const ratingMinRaw = Number(get("ratingMin"));
+
+  const nearLatRaw = Number(get("near_lat"));
+  const nearLonRaw = Number(get("near_lon"));
+  const nearLabel = get("near_label")?.trim();
+  const radiusKmRaw = Number(get("radius_km"));
+  const near =
+    Number.isFinite(nearLatRaw) && Number.isFinite(nearLonRaw) && nearLabel
+      ? { latitude: nearLatRaw, longitude: nearLonRaw, label: nearLabel }
+      : undefined;
+  const radiusKm =
+    near && Number.isFinite(radiusKmRaw) && (RADIUS_KM_OPTIONS as readonly number[]).includes(radiusKmRaw)
+      ? radiusKmRaw
+      : undefined;
+
   return {
     q: get("q")?.trim() || undefined,
     country: get("country") || undefined,
@@ -61,6 +82,8 @@ export function parseCampsiteFilters(
         ? evScoreMinRaw
         : undefined,
     ratingMin: Number.isFinite(ratingMinRaw) && ratingMinRaw >= 1 && ratingMinRaw <= 5 ? ratingMinRaw : undefined,
+    near,
+    radiusKm,
   };
 }
 
@@ -80,9 +103,41 @@ export async function fetchCampsites(filters: CampsiteFilters): Promise<Campsite
   if (filters.evScoreMin) query = query.gte("ev_score", filters.evScoreMin);
   if (filters.ratingMin) query = query.gte("rating_avg", filters.ratingMin);
 
+  // Umkreissuche: core.campsite_search hat keine PostGIS-Geometrie (nur
+  // lat/lon, siehe Migration 20260919000000), deshalb kein serverseitiges
+  // ST_DWithin -- stattdessen ein grobzuegiges Lat/Lon-Bounding-Box-Vorfilter
+  // (nutzt den bestehenden idx_cssearch_geo-Index, guenstigste technisch
+  // sinnvolle Loesung statt einer neuen PostGIS-Spalte/RPC nur fuer diesen
+  // Filter, CLAUDE.md Prinzip 4) + eine praezise Haversine-Nachfilterung
+  // unten (die Box ist immer ein Obermenge des Kreises). Ergebnisse werden
+  // dabei zusaetzlich nach Entfernung sortiert -- bei einer Umkreissuche ist
+  // "am naechsten zuerst" die naheliegende Erwartung, nicht alphabetisch.
+  if (filters.near && filters.radiusKm) {
+    const { latitude, longitude } = filters.near;
+    const latDeltaDeg = filters.radiusKm / 111;
+    const lonDeltaDeg = filters.radiusKm / (111 * Math.max(0.01, Math.cos((latitude * Math.PI) / 180)));
+    query = query
+      .gte("lat", latitude - latDeltaDeg)
+      .lte("lat", latitude + latDeltaDeg)
+      .gte("lon", longitude - lonDeltaDeg)
+      .lte("lon", longitude + lonDeltaDeg);
+  }
+
   const { data, error } = await query.order("name").limit(5000);
   if (error) throw new Error(error.message);
-  return (data as CampsiteSearchRow[]) ?? [];
+  let results = (data as CampsiteSearchRow[]) ?? [];
+
+  if (filters.near && filters.radiusKm) {
+    const center = filters.near;
+    const radiusKm = filters.radiusKm;
+    results = results
+      .map((c) => ({ c, distance: distanceKm(center, { latitude: c.lat, longitude: c.lon }) }))
+      .filter(({ distance }) => distance <= radiusKm)
+      .sort((a, b) => a.distance - b.distance)
+      .map(({ c }) => c);
+  }
+
+  return results;
 }
 
 /** Alle Campingplatz-Namen (unabhaengig von aktiven Filtern) fuer die

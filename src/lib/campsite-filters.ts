@@ -16,6 +16,16 @@ import type { CampsiteFilters } from "@/lib/campsites";
  * grobe, verstaendliche Stufen statt eines Sliders mit 100 Einzelwerten. */
 export const EV_SCORE_MIN_OPTIONS = [0, 50, 70, 90] as const;
 
+/** Stufen fuer den Umkreis-Wheel-Picker der Ortssuche (Nutzeranfrage) --
+ * grobe Kilometer-Stufen statt Freitext-Zahleneingabe, gleiches Muster wie
+ * EV_SCORE_MIN_OPTIONS/MIN_POWER_KW_OPTIONS. */
+export const RADIUS_KM_OPTIONS = [10, 25, 50, 100, 200] as const;
+/** Default-Radius, sobald ein Ort ausgewaehlt wird (bevor der Nutzer den
+ * Wheel-Picker anfasst) -- 50 km deckt einen typischen Tagesausflugs-/
+ * Zielgebiets-Umkreis ab, ohne Ergebnisse eines ganzen Bundeslands
+ * zurueckzugeben. */
+export const DEFAULT_RADIUS_KM = 50;
+
 /** Fuer die Zahl-Badge am "Weitere Filter"-Button -- zaehlt bewusst nur die
  * dort versteckten Filter (Suche + Merkmale ausser Elektromobilitaet/Land/
  * Lademoeglichkeit/EV-Score/Bewertung, die direkt auf der Seite stehen, s.
@@ -34,6 +44,12 @@ export function buildCampsiteFilterParams(filters: CampsiteFilters): URLSearchPa
   if (filters.charging) params.set("charging", filters.charging);
   if (filters.evScoreMin) params.set("evScoreMin", String(filters.evScoreMin));
   if (filters.ratingMin) params.set("ratingMin", String(filters.ratingMin));
+  if (filters.near && filters.radiusKm) {
+    params.set("near_lat", String(filters.near.latitude));
+    params.set("near_lon", String(filters.near.longitude));
+    params.set("near_label", filters.near.label);
+    params.set("radius_km", String(filters.radiusKm));
+  }
   for (const key of filters.amenities) params.set(key, "1");
   return params;
 }

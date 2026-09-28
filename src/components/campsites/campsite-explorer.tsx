@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { MapView } from "@/components/map/map-view";
 import { CAMPSITE_PIN_ICON_SRC } from "@/lib/trailer-verdict";
@@ -86,11 +86,12 @@ function CampsiteCard({
 
 const PAGE_SIZE = 30;
 
-type SortOption = "name_asc" | "ev_score_desc";
+type SortOption = "name_asc" | "ev_score_desc" | "distance_asc";
 
 const SORT_LABELS: Record<SortOption, string> = {
   name_asc: "Name (A–Z)",
   ev_score_desc: "EV-Score (hoch–niedrig)",
+  distance_asc: "Entfernung (nah–fern)",
 };
 
 export function CampsiteExplorer({
@@ -98,6 +99,7 @@ export function CampsiteExplorer({
   amenityLabels,
   emptyMessage = "Keine Campingplätze gefunden. Filter anpassen?",
   homeAddress,
+  hasNearFilter = false,
 }: {
   campsites: CampsiteSearchRow[];
   amenityLabels: Record<string, string>;
@@ -112,6 +114,12 @@ export function CampsiteExplorer({
    * Sobald Marker vorhanden sind, zentriert MapView per fitBounds
    * weiterhin auf DIESE -- unveraendert. */
   homeAddress?: { latitude: number; longitude: number } | null;
+  /** Bei aktiver Umkreissuche liefert fetchCampsites `campsites` bereits
+   * nach Entfernung sortiert (campsites.ts) -- die Sortierung startet dann
+   * standardmaessig auf "distance_asc" (die Reihenfolge bleibt einfach
+   * erhalten) statt alphabetisch, weil "am naechsten zuerst" die
+   * naheliegende Erwartung einer Umkreissuche ist. */
+  hasNearFilter?: boolean;
 }) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [mobileTab, setMobileTab] = useState<"list" | "map">("list");
@@ -129,8 +137,18 @@ export function CampsiteExplorer({
     setHoveredId(id);
     if (isTouchMap && id) setMobileTab("list");
   }
-  const [sortOption, setSortOption] = useState<SortOption>("name_asc");
+  const [sortOption, setSortOption] = useState<SortOption>(hasNearFilter ? "distance_asc" : "name_asc");
+  // Erzwingt "distance_asc" nur bei der STEIGENDEN Flanke (Umkreissuche wird
+  // aktiviert) -- eine manuell gewaehlte andere Sortierung bleibt erhalten,
+  // wenn hasNearFilter unveraendert bleibt oder wieder auf false wechselt.
+  useEffect(() => {
+    if (hasNearFilter) void Promise.resolve().then(() => setSortOption("distance_asc"));
+  }, [hasNearFilter]);
   const sortedCampsites = useMemo(() => {
+    // "distance_asc": campsites kommt von fetchCampsites bereits nach
+    // Entfernung sortiert (campsites.ts) -- Reihenfolge unveraendert lassen,
+    // statt hier ohne bekannte Referenzkoordinaten neu zu sortieren.
+    if (sortOption === "distance_asc") return campsites;
     const list = [...campsites];
     return sortOption === "ev_score_desc"
       ? list.sort((a, b) => b.ev_score - a.ev_score)
@@ -203,11 +221,13 @@ export function CampsiteExplorer({
                 onChange={(e) => setSortOption(e.target.value as SortOption)}
                 className="min-h-11 rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
               >
-                {(Object.keys(SORT_LABELS) as SortOption[]).map((option) => (
-                  <option key={option} value={option}>
-                    {SORT_LABELS[option]}
-                  </option>
-                ))}
+                {(Object.keys(SORT_LABELS) as SortOption[])
+                  .filter((option) => option !== "distance_asc" || hasNearFilter)
+                  .map((option) => (
+                    <option key={option} value={option}>
+                      {SORT_LABELS[option]}
+                    </option>
+                  ))}
               </select>
             </label>
           )}

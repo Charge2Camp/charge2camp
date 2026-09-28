@@ -1,8 +1,10 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { AddressAutocomplete } from "@/components/address-autocomplete";
 import { FilterChip } from "@/components/charging-stations/filter-chip";
 import { WheelPickerField, type WheelPickerOption } from "@/components/ui/wheel-picker";
-import { EV_SCORE_MIN_OPTIONS } from "@/lib/campsite-filters";
+import { DEFAULT_RADIUS_KM, EV_SCORE_MIN_OPTIONS, RADIUS_KM_OPTIONS } from "@/lib/campsite-filters";
 import type { CampsiteFilters } from "@/lib/campsites";
 import type { CoreAmenity } from "@/types/database";
 
@@ -12,8 +14,29 @@ import type { CoreAmenity } from "@/types/database";
  * sichtbar (siehe Kommentar in campingplaetze/page.tsx). */
 const EV_AMENITY_CATEGORY = "laden";
 
+/** "charging_on_site"/"charging_dc" (core.amenity, Kategorie "laden") sind
+ * manuell/per OSM getaggte Merkmale aus einer ANDEREN, unabhaengigen
+ * Datenquelle (core.campsite_amenity) als die berechneten Lademoeglichkeit-
+ * Chips oben (core.campsite_search.charging_on_site/walkable_dc_m, aus der
+ * Ladepunkt-Verknuepfung core.campsite_charge_link) -- fuer den Nutzer nicht
+ * unterscheidbar, konnten sich sogar widersprechen (Audit-Befund
+ * 2026-09-28: "was ist der Unterschied zu Lademoeglichkeit?"). Ausgeblendet
+ * statt umbenannt, weil die berechnete Variante die verlaesslichere
+ * Datengrundlage hat (echte Ladepunkt-/Distanz-Verknuepfung statt reinem
+ * Tag) -- "charging_at_pitch"/"trailer_friendly" bleiben, die decken echte
+ * ZUSAETZLICHE Fragen ab (Laden direkt am eigenen Stellplatz statt nur
+ * irgendwo auf dem Platz; anhaengertaugliche Zufahrt), s.
+ * docs/DESIGN_DECISIONS.md.
+ */
+const REDUNDANT_LADEN_AMENITY_KEYS = new Set(["charging_on_site", "charging_dc"]);
+
 const EV_SCORE_OPTIONS: WheelPickerOption<number>[] = EV_SCORE_MIN_OPTIONS.map((v) => ({
   label: v === 0 ? "Kein Minimum" : `≥ ${v}`,
+  value: v,
+}));
+
+const RADIUS_OPTIONS: WheelPickerOption<number>[] = RADIUS_KM_OPTIONS.map((v) => ({
+  label: `${v} km`,
   value: v,
 }));
 
@@ -29,9 +52,9 @@ const RATING_MIN_OPTIONS: { value: number; label: string }[] = [
 /** Kernfilter der Campingplatzsuche, direkt auf der Seite sichtbar (kein
  * Formular-Submit mehr, siehe campsite-search-client.tsx applyFilters) --
  * jede Aenderung wirkt sofort, Karte/Liste passen sich live an, wie in der
- * Routenplanung/Ladepunkte-Suche. Reihenfolge nach Nutzeranfrage: Land,
- * Lademoeglichkeit, EV-Score, EV-Camping-Tauglichkeit, dann die uebrigen
- * Elektromobilitaets-Merkmale. */
+ * Routenplanung/Ladepunkte-Suche. Reihenfolge nach Nutzeranfrage: Ort/
+ * Umkreis, Land, Lademoeglichkeit, EV-Score, EV-Camping-Tauglichkeit, dann
+ * die uebrigen Lademerkmale. */
 export function CampsiteQuickFilters({
   filters,
   onChange,
@@ -43,7 +66,18 @@ export function CampsiteQuickFilters({
   countries: string[];
   amenityCatalog: CoreAmenity[];
 }) {
-  const evAmenities = amenityCatalog.filter((a) => a.category === EV_AMENITY_CATEGORY && a.value_type === "bool");
+  const evAmenities = amenityCatalog.filter(
+    (a) => a.category === EV_AMENITY_CATEGORY && a.value_type === "bool" && !REDUNDANT_LADEN_AMENITY_KEYS.has(a.key)
+  );
+
+  // Eigener Text-State fuers Adressfeld (siehe AddressAutocomplete-Kommentar):
+  // `value` ist bewusst NICHT direkt an filters.near.label gebunden, sonst
+  // waere das Feld waehrend der Eingabe unbeschreibbar. Der Effekt darunter
+  // synchronisiert nur bei einer AEUSSEREN Aenderung (z. B. "Zuruecksetzen").
+  const [addressText, setAddressText] = useState(filters.near?.label ?? "");
+  useEffect(() => {
+    void Promise.resolve().then(() => setAddressText(filters.near?.label ?? ""));
+  }, [filters.near?.label]);
 
   function toggleAmenity(key: string) {
     const next = filters.amenities.includes(key)
@@ -60,8 +94,63 @@ export function CampsiteQuickFilters({
     onChange({ ratingMin: filters.ratingMin === value ? undefined : value });
   }
 
+  function selectAddressCoordinates(coords: { latitude: number; longitude: number } | null) {
+    if (!coords) {
+      onChange({ near: undefined, radiusKm: undefined });
+      return;
+    }
+    onChange({ near: { ...coords, label: addressText }, radiusKm: filters.radiusKm ?? DEFAULT_RADIUS_KM });
+  }
+
+  function clearLocation() {
+    setAddressText("");
+    onChange({ near: undefined, radiusKm: undefined });
+  }
+
   return (
     <div className="flex flex-col gap-5 text-sm">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+        <label className="flex min-w-0 flex-1 flex-col gap-1">
+          Ort oder Adresse
+          <div className="flex items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <AddressAutocomplete
+                name="near"
+                value={addressText}
+                onChange={setAddressText}
+                onSelectCoordinates={selectAddressCoordinates}
+                placeholder="z. B. Konstanz oder eine Adresse"
+                className="w-full rounded-md border border-line-strong px-3 py-2 dark:bg-transparent"
+              />
+            </div>
+            {filters.near && (
+              <button
+                type="button"
+                onClick={clearLocation}
+                aria-label="Ort entfernen"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-line-strong text-lg leading-none hover:bg-black/5 dark:hover:bg-white/10"
+              >
+                ×
+              </button>
+            )}
+          </div>
+        </label>
+
+        {/* Der Radius ist ohne gewaehlten Ort bedeutungslos -- Progressive
+            Disclosure statt eines dauerhaft sichtbaren, aber wirkungslosen
+            Feldes. */}
+        {filters.near && (
+          <div className="max-w-[10rem]">
+            <WheelPickerField
+              label="Umkreis"
+              options={RADIUS_OPTIONS}
+              value={filters.radiusKm ?? DEFAULT_RADIUS_KM}
+              onChange={(v) => onChange({ radiusKm: v })}
+            />
+          </div>
+        )}
+      </div>
+
       <label className="flex flex-col gap-1 sm:max-w-xs">
         Land
         <select
@@ -126,7 +215,7 @@ export function CampsiteQuickFilters({
 
       {evAmenities.length > 0 && (
         <fieldset className="flex flex-col gap-2">
-          <legend className="mb-1 font-medium">Elektromobilität</legend>
+          <legend className="mb-1 font-medium">Weitere Lademerkmale</legend>
           <div className="flex flex-wrap gap-2">
             {evAmenities.map((amenity) => (
               <FilterChip
