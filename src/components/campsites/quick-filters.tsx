@@ -6,29 +6,22 @@ import { FilterChip } from "@/components/charging-stations/filter-chip";
 import { WheelPickerField, type WheelPickerOption } from "@/components/ui/wheel-picker";
 import { DEFAULT_RADIUS_KM, EV_SCORE_MIN_OPTIONS, RADIUS_KM_OPTIONS } from "@/lib/campsite-filters";
 import type { CampsiteFilters } from "@/lib/campsites";
-import type { CoreAmenity } from "@/types/database";
 
-/** Die Elektromobilitaets-Merkmale aus core.amenity (Kategorie "laden") --
- * fuer diese Zielgruppe (Camper mit E-Auto) die wichtigste Frage ueberhaupt,
- * deshalb bewusst nicht im "Weitere Filter"-Pop-up versteckt, sondern direkt
- * sichtbar (siehe Kommentar in campingplaetze/page.tsx). */
-const EV_AMENITY_CATEGORY = "laden";
-
-/** "charging_on_site"/"charging_dc" (core.amenity, Kategorie "laden") sind
- * manuell/per OSM getaggte Merkmale aus einer ANDEREN, unabhaengigen
- * Datenquelle (core.campsite_amenity) als die berechneten Lademoeglichkeit-
- * Chips oben (core.campsite_search.charging_on_site/walkable_dc_m, aus der
- * Ladepunkt-Verknuepfung core.campsite_charge_link) -- fuer den Nutzer nicht
- * unterscheidbar, konnten sich sogar widersprechen (Audit-Befund
- * 2026-09-28: "was ist der Unterschied zu Lademoeglichkeit?"). Ausgeblendet
- * statt umbenannt, weil die berechnete Variante die verlaesslichere
- * Datengrundlage hat (echte Ladepunkt-/Distanz-Verknuepfung statt reinem
- * Tag) -- "charging_at_pitch"/"trailer_friendly" bleiben, die decken echte
- * ZUSAETZLICHE Fragen ab (Laden direkt am eigenen Stellplatz statt nur
- * irgendwo auf dem Platz; anhaengertaugliche Zufahrt), s.
- * docs/DESIGN_DECISIONS.md.
+/** Alle Elektromobilitaets-Merkmale aus core.amenity (Kategorie "laden":
+ * "charging_on_site", "charging_at_pitch", "charging_dc") wurden bewusst
+ * NICHT als eigene Chips uebernommen -- sie waren manuell/per OSM getaggte
+ * Signale aus einer ANDEREN, unabhaengigen Datenquelle (core.campsite_amenity)
+ * als die berechneten Lademoeglichkeit-Chips unten (core.campsite_search.
+ * charging_on_site/walkable_ac_m/walkable_dc_m, aus der echten
+ * Ladepunkt-Verknuepfung core.campsite_charge_link), fuer den Nutzer nicht
+ * unterscheidbar und teils widerspruechlich (Audit-Befund 2026-09-28: "was
+ * ist der Unterschied zu Lademoeglichkeit?"). Statt eigener Chips fliesst
+ * "charging_at_pitch" seit Migration
+ * 20261025090000_campsite_onsite_charging_includes_pitch_amenity.sql direkt
+ * in die Berechnung von charging_on_site ein (Laden am Stellplatz zaehlt
+ * als Laden auf dem Platz, Nutzeranfrage: EIN konsolidierter Filter statt
+ * mehrerer sich ueberschneidender), s. docs/DESIGN_DECISIONS.md.
  */
-const REDUNDANT_LADEN_AMENITY_KEYS = new Set(["charging_on_site", "charging_dc"]);
 
 const EV_SCORE_OPTIONS: WheelPickerOption<number>[] = EV_SCORE_MIN_OPTIONS.map((v) => ({
   label: v === 0 ? "Kein Minimum" : `≥ ${v}`,
@@ -59,17 +52,11 @@ export function CampsiteQuickFilters({
   filters,
   onChange,
   countries,
-  amenityCatalog,
 }: {
   filters: CampsiteFilters;
   onChange: (patch: Partial<CampsiteFilters>) => void;
   countries: string[];
-  amenityCatalog: CoreAmenity[];
 }) {
-  const evAmenities = amenityCatalog.filter(
-    (a) => a.category === EV_AMENITY_CATEGORY && a.value_type === "bool" && !REDUNDANT_LADEN_AMENITY_KEYS.has(a.key)
-  );
-
   // Eigener Text-State fuers Adressfeld (siehe AddressAutocomplete-Kommentar):
   // `value` ist bewusst NICHT direkt an filters.near.label gebunden, sonst
   // waere das Feld waehrend der Eingabe unbeschreibbar. Der Effekt darunter
@@ -78,13 +65,6 @@ export function CampsiteQuickFilters({
   useEffect(() => {
     void Promise.resolve().then(() => setAddressText(filters.near?.label ?? ""));
   }, [filters.near?.label]);
-
-  function toggleAmenity(key: string) {
-    const next = filters.amenities.includes(key)
-      ? filters.amenities.filter((k) => k !== key)
-      : [...filters.amenities, key];
-    onChange({ amenities: next });
-  }
 
   function toggleCharging(value: NonNullable<CampsiteFilters["charging"]>) {
     onChange({ charging: filters.charging === value ? undefined : value });
@@ -212,22 +192,6 @@ export function CampsiteQuickFilters({
           </div>
         </fieldset>
       </div>
-
-      {evAmenities.length > 0 && (
-        <fieldset className="flex flex-col gap-2">
-          <legend className="mb-1 font-medium">Weitere Lademerkmale</legend>
-          <div className="flex flex-wrap gap-2">
-            {evAmenities.map((amenity) => (
-              <FilterChip
-                key={amenity.key}
-                label={amenity.label_de}
-                active={filters.amenities.includes(amenity.key)}
-                onClick={() => toggleAmenity(amenity.key)}
-              />
-            ))}
-          </div>
-        </fieldset>
-      )}
     </div>
   );
 }

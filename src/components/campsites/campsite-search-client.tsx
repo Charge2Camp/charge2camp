@@ -80,12 +80,7 @@ export function CampsiteSearchClient({
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-4">
-        <CampsiteQuickFilters
-          filters={liveFilters}
-          onChange={applyFilters}
-          countries={countries}
-          amenityCatalog={amenityCatalog}
-        />
+        <CampsiteQuickFilters filters={liveFilters} onChange={applyFilters} countries={countries} />
 
         <div className="flex flex-wrap items-center gap-3">
           <FurtherFiltersSheet activeFilterCount={furtherFilterCount}>

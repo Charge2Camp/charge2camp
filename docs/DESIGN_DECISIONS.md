@@ -1401,3 +1401,40 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
   `campsite-explorer.tsx` (Sortierung "Entfernung", Default bei aktiver
   Umkreissuche).
 - **Date:** 2026-09-28.
+
+## Campingplatzsuche: "Laden am Stellplatz" in "Auf dem Platz" konsolidiert (kein eigener Filter mehr)
+
+- **Decision:** `charging_at_pitch` (core.amenity, "Laden am Stellplatz")
+  ist kein eigener Filter-Chip mehr. Stattdessen zaehlt es jetzt auf
+  Datenebene direkt als "Laden auf dem Platz" mit: `core.campsite_search.
+  charging_on_site` (und damit auch der EV-Score) beruecksichtigt
+  `charging_at_pitch` als zusaetzliches automatisches Signal, sobald keine
+  manuelle Recherche (enrich.campsite_charging.has_charging) vorliegt,
+  siehe die neue Funktion `core.campsite_has_onsite_charging()` (Migration
+  20261025090000). Das "Weitere Lademerkmale"-Fieldset in quick-filters.tsx
+  entfaellt komplett (war nach der vorherigen Bereinigung ohnehin nur noch
+  dieser eine Chip).
+- **Reason:** Nutzeranfrage: "Laden am Stellplatz ist auch nicht relevant
+  [als eigener Filter] ... wichtig ist, dass diese Merkmale alle
+  konsolidiert ein nutzbarer Filter sind fuer Laden am Campingplatz, egal
+  ob auf dem Platz oder am Stellplatz." Laden am Stellplatz ist immer eine
+  Teilmenge von Laden auf dem Platz (der Stellplatz liegt auf dem Platz) --
+  ein separater, gleichrangiger Filter dafuer war unnoetig granular und
+  verstaerkte genau die Verwechslungsgefahr aus dem vorherigen Eintrag.
+  Nebeneffekt (Datenqualitaet): vorher fiel ein Platz, der NUR per
+  `charging_at_pitch`-Tag markiert war (keine enrich-Recherche, keine
+  core.campsite_charge_link-Verknuepfung), faelschlich durchs
+  "Auf dem Platz"-Filterraster -- das ist mit der Konsolidierung behoben.
+- **Alternatives:** `charging_at_pitch` weiterhin als eigenen, aber z. B.
+  umbenannten Chip zeigen -- verworfen: loest nicht das Kernproblem
+  (Nutzeranfrage will explizit EINEN konsolidierten Filter, keine
+  Umbenennung).
+- **Impact:** `supabase/migrations/20261025090000_campsite_onsite_charging_includes_pitch_amenity.sql`
+  (neue Funktion `core.campsite_has_onsite_charging()`, ersetzt 4 identische
+  `coalesce(ecc.has_charging, exists(...))`-Ausdruecke in
+  `core.campsite_search` inkl. der ev_score-Berechnung -- eine Aenderung an
+  dieser Logik wirkt sich dadurch jetzt automatisch auf beide Stellen aus).
+  `quick-filters.tsx` (Fieldset/evAmenities-Code entfernt, `amenityCatalog`-
+  Prop nicht mehr benoetigt), `campsite-search-client.tsx` (Aufruf
+  angepasst).
+- **Date:** 2026-09-28.
