@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { CampsiteQuickFilters } from "@/components/campsites/quick-filters";
 import { CampsiteFilterForm } from "@/components/campsites/filter-form";
@@ -56,14 +56,34 @@ export function CampsiteSearchClient({
   const evAmenityKeys = new Set(amenityCatalog.filter((a) => a.category === "laden").map((a) => a.key));
   const furtherFilterCount = computeFurtherFilterCount(liveFilters, evAmenityKeys);
 
+  // Mehrere Filteraenderungen kurz hintereinander (z. B. schnelles
+  // Umschalten zwischen zwei Chips) loesten bisher JEDE fuer sich eine
+  // eigene router.replace-Navigation aus -- mehrere ueberlappende RSC-
+  // Anfragen gegen denselben Turbopack-Dev-Server konnten dabei sporadisch
+  // einen Chunk-Ladefehler ausloesen ("Failed to load module script...
+  // text/html", vereinzelt bis zur error.tsx-Fehlerseite eskaliert,
+  // Audit-Befund 2026-09-28). Die Chip-Optik selbst bleibt sofort reaktiv
+  // (setLiveFilters direkt), nur die tatsaechliche Navigation wird debounct
+  // -- gleiches Prinzip wie VIEWPORT_FETCH_DEBOUNCE_MS in
+  // charging-station-map-explorer.tsx, dort fuers Kartenschwenken statt
+  // fuer Filter-Chips.
+  const navigateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (navigateTimerRef.current) clearTimeout(navigateTimerRef.current);
+  }, []);
+
   function applyFilters(patch: Partial<CampsiteFilters>) {
     const next: CampsiteFilters = { ...liveFilters, ...patch };
     setLiveFilters(next);
-    const params = buildCampsiteFilterParams(next);
-    router.replace(`/campingplaetze?${params.toString()}`, { scroll: false });
+    if (navigateTimerRef.current) clearTimeout(navigateTimerRef.current);
+    navigateTimerRef.current = setTimeout(() => {
+      const params = buildCampsiteFilterParams(next);
+      router.replace(`/campingplaetze?${params.toString()}`, { scroll: false });
+    }, 250);
   }
 
   function resetFilters() {
+    if (navigateTimerRef.current) clearTimeout(navigateTimerRef.current);
     router.push("/campingplaetze");
   }
 
