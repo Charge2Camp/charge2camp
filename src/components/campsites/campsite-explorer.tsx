@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { MapView } from "@/components/map/map-view";
 import { CAMPSITE_PIN_ICON_SRC } from "@/lib/trailer-verdict";
@@ -46,19 +46,34 @@ function CampsiteCard({
           : "border-line hover:bg-black/5 dark:hover:bg-white/10"
       }`}
     >
-      <p className="font-medium">{campsite.name}</p>
-      <p className="text-sm text-text-muted">
-        {[campsite.city, campsite.country_code].filter(Boolean).join(", ")}
-      </p>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="font-medium">{campsite.name}</p>
+          <p className="text-sm text-text-muted">
+            {[campsite.city, campsite.country_code].filter(Boolean).join(", ")}
+          </p>
+        </div>
+        {/* EV-Score als kompakte Zahl-Badge -- die volle Begruendung
+            (EvScoreBadge, reasons-Liste) bleibt der Detailseite vorbehalten,
+            hier reicht die Zahl fuer den schnellen Vergleich in der Liste. */}
+        <span className="shrink-0 rounded-full border border-route/40 bg-route/5 px-2 py-1 text-xs font-semibold text-route">
+          {campsite.ev_score}
+        </span>
+      </div>
       <div className="mt-2 flex flex-wrap gap-2 text-xs text-text-muted">
         {campsite.charging_on_site && (
           <span className="rounded bg-route/10 px-2 py-0.5 text-route">
             Ladepunkt auf dem Platz
           </span>
         )}
-        {!campsite.charging_on_site && campsite.nearest_walk_m != null && (
+        {campsite.walkable_ac_m != null && (
           <span className="rounded bg-route/10 px-2 py-0.5 text-route">
-            Ladepunkt {campsite.nearest_walk_m} m entfernt
+            AC {campsite.walkable_ac_m} m entfernt
+          </span>
+        )}
+        {campsite.walkable_dc_m != null && (
+          <span className="rounded bg-route/10 px-2 py-0.5 text-route">
+            DC {campsite.walkable_dc_m} m entfernt
           </span>
         )}
         {campsite.amenities.slice(0, 3).map((key) => (
@@ -70,6 +85,13 @@ function CampsiteCard({
 }
 
 const PAGE_SIZE = 30;
+
+type SortOption = "name_asc" | "ev_score_desc";
+
+const SORT_LABELS: Record<SortOption, string> = {
+  name_asc: "Name (A–Z)",
+  ev_score_desc: "EV-Score (hoch–niedrig)",
+};
 
 export function CampsiteExplorer({
   campsites,
@@ -107,14 +129,22 @@ export function CampsiteExplorer({
     setHoveredId(id);
     if (isTouchMap && id) setMobileTab("list");
   }
+  const [sortOption, setSortOption] = useState<SortOption>("name_asc");
+  const sortedCampsites = useMemo(() => {
+    const list = [...campsites];
+    return sortOption === "ev_score_desc"
+      ? list.sort((a, b) => b.ev_score - a.ev_score)
+      : list.sort((a, b) => a.name.localeCompare(b.name));
+  }, [campsites, sortOption]);
+
   // Bei bis zu 5000 Treffern (core.campsite_search, siehe fetchCampsites)
   // wuerde die Liste sonst komplett auf einmal ins DOM gerendert -- auf
   // dem Handy spuerbar langsam (siehe Design-Review). Karte zeigt trotzdem
   // weiterhin ALLE Treffer als Marker, nur die Listen-Karten wachsen
   // schrittweise.
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-  const visibleCampsites = campsites.slice(0, visibleCount);
-  const campsiteIds = campsites.map((c) => c.id);
+  const visibleCampsites = sortedCampsites.slice(0, visibleCount);
+  const campsiteIds = sortedCampsites.map((c) => c.id);
 
   function handleViewportChange(viewport: MapViewport) {
     saveMapViewport(MAP_VIEWPORT_STORAGE_KEY, viewport);
@@ -165,6 +195,22 @@ export function CampsiteExplorer({
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div className={`flex flex-col gap-3 ${mobileTab === "map" ? "hidden md:flex" : ""}`}>
+          {campsites.length > 0 && (
+            <label className="flex items-center gap-2 text-sm">
+              Sortieren nach
+              <select
+                value={sortOption}
+                onChange={(e) => setSortOption(e.target.value as SortOption)}
+                className="min-h-11 rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
+              >
+                {(Object.keys(SORT_LABELS) as SortOption[]).map((option) => (
+                  <option key={option} value={option}>
+                    {SORT_LABELS[option]}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           {campsites.length === 0 ? (
             <p className="text-sm text-text-muted">{emptyMessage}</p>
           ) : (

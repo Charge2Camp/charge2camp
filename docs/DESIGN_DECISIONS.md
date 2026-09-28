@@ -1305,3 +1305,62 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
 - **Impact:** keine Funktionsänderung, keine Datenverluste. Bei Bedarf
   später wieder verlinkbar, sobald echte Einstellungen existieren.
 - **Date:** 2026-09-25 (Phase 2, `docs/PRODUCT_AUDIT.md`).
+
+## Campingplatzsuche: Sofort-Filter statt Formular-Submit, EV-Score/AC-DC als Kernfilter, eigene Favoriten-Kurzliste
+
+- **Decision:** `/campingplaetze` wurde auf dasselbe Sofort-Filter-Muster
+  wie Ladepunkte/Routenplanung umgestellt (kein `<form>`/"Filtern"-Button
+  mehr, jede Filteränderung wirkt sofort per `router.replace`, siehe
+  `campsite-search-client.tsx`). Die Kernfilter (Land, Lademöglichkeit,
+  EV-Score, EV-Camping-Tauglichkeit) stehen direkt auf der Seite, alles
+  andere bleibt im "Weitere Filter"-Sheet. "Lademöglichkeit" unterscheidet
+  jetzt explizit "Auf dem Platz" / "AC fußläufig" / "DC fußläufig" (vorher
+  nur grob "fußläufig", ohne AC/DC). EV-Score (core.campsite_search.
+  ev_score) und die Community-Bewertung (rating_avg) sind neue, serverseitig
+  vorberechnete Filter-/Sortierkriterien (Migration
+  20261025080000_campsite_search_ev_score_ac_dc.sql). Eine neue, von den
+  Filtern unabhängige Favoriten-Kurzliste (`favorites-quick-list.tsx`, Name/
+  Ort/Land/Ladepunkt/EV-Score) steht permanent zwischen Filtern und
+  Ergebnissen; im Gegenzug zeigt die Ergebnisliste ohne aktive Filter nicht
+  mehr automatisch die Favoriten, sondern einen Aufruf zum Filtern (vorher:
+  `hasActiveFilters ? fetchCampsites(filters) : fetchFavoriteCampsites(...)`
+  in `campingplaetze/page.tsx`).
+- **Reason:** Nutzeranfrage: Land/Lademöglichkeit(AC/DC)/EV-Score/
+  EV-Tauglichkeit als Kernfilter, Favoriten-Kurzliste immer sichtbar, Liste/
+  Karte jederzeit live per Filteranpassung aktualisierbar (wie beim
+  Routenplaner). Die frühere, bewusste Entscheidung "Campingplatzsuche
+  bleibt formularbasiert" (Eintrag "Ladepunkte-Filter: Sofort-Chips statt
+  Formular-Submit" oben) galt nur bis zu dieser expliziten Anforderung —
+  keine stillschweigende Rücknahme, sondern eine neue, hier dokumentierte
+  Entscheidung. AC/DC-Filter stützt sich bewusst auf `core.connector.
+  current_type` (breit befüllt aus OCM-/IRVE-/RIPREE-/BNetzA-Import) statt
+  auf `enrich.campsite_charging.charging_type` (dünn befüllte manuelle
+  Recherche) — CLAUDE.md Prinzip 2 (keine Scheindaten): ein Filter auf
+  Basis eines kaum befüllten Feldes wäre für die meisten Plätze irreführend
+  leer statt informativ.
+- **Alternatives:** (1) EV-Score clientseitig pro Zeile nachberechnen statt
+  in der DB vorzuberechnen — verworfen (Nutzerentscheidung): bei bis zu
+  5000 Treffern (`fetchCampsites`-Limit) wäre serverseitige Filterung/
+  Sortierung sonst nicht möglich, ohne alle Zeilen ungefiltert zu laden.
+  (2) Ergebnisse in einer eigenen Route/eigenem Navigations-Tab statt auf
+  derselben Seite — verworfen (Nutzerentscheidung): kein Eingriff in
+  Bottom-Tab-Bar/IA nötig, Liste/Karte-Umschalter existiert auf der Seite
+  bereits. (3) Favoriten weiterhin als Standard-Ergebnisliste ohne Filter
+  zeigen, zusätzlich zur neuen Kurzliste — verworfen: doppelte Darstellung
+  derselben Daten an zwei Stellen auf derselben Seite wäre verwirrend statt
+  hochwertig wirkend.
+- **Impact:** `supabase/migrations/20261025080000_campsite_search_ev_score_ac_dc.sql`
+  (neue Spalten `walkable_ac_m`/`walkable_dc_m`/`rating_avg`/`ev_score` auf
+  `core.campsite_search`, EV-Score-Berechnung dupliziert bewusst
+  `calculateEvCampingScore()`/`ev-camping-score.ts` in SQL für die Suche —
+  **beide Implementierungen müssen bei Änderungen an den Gewichtungen
+  synchron gehalten werden**, siehe Kommentar in der Migration).
+  `src/types/database.ts` (`CampsiteSearchRow` erweitert),
+  `src/lib/campsites.ts` (`CampsiteFilters` erweitert/`charging`-Werte
+  geändert: `walking` → `ac_walk`/`dc_walk`, nicht abwärtskompatibel),
+  `src/lib/campsite-filters.ts` (neu, client-sicherer Filter-Helfer),
+  `src/components/campsites/quick-filters.tsx`/`filter-form.tsx` (auf
+  Sofort-Filter umgestellt), `campsite-search-client.tsx`/
+  `favorites-quick-list.tsx` (neu), `campsite-explorer.tsx` (EV-Score-/
+  AC-DC-Badges, Sortierung nach EV-Score).
+- **Date:** 2026-09-28.

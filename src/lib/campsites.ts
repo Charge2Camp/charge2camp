@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { EV_SCORE_MIN_OPTIONS } from "@/lib/campsite-filters";
 import type { CampsiteSearchRow, CoreAmenity, Favorite } from "@/types/database";
 
 /** Merkmalskatalog aus core.amenity (siehe Migration
@@ -21,7 +22,18 @@ export interface CampsiteFilters {
   q?: string;
   country?: string;
   amenities: string[];
-  charging?: "on_site" | "walking";
+  /** "on_site" = Ladepunkt auf dem Platz, "ac_walk"/"dc_walk" = fusslaeufig
+   * erreichbarer AC- bzw. DC-Ladepunkt (core.connector.current_type, siehe
+   * Migration 20261025080000). Ersetzt das bisherige grobe "walking"
+   * (fusslaeufig, ohne AC/DC-Unterscheidung) -- Nutzeranfrage. */
+  charging?: "on_site" | "ac_walk" | "dc_walk";
+  /** Mindest-EV-Score (core.campsite_search.ev_score, 0-100). 0/undefined =
+   * kein Minimum. */
+  evScoreMin?: number;
+  /** Mindest-Community-Bewertung (core.campsite_search.rating_avg, 1-5
+   * Sterne) -- "EV-Camping-Tauglichkeit" laut Nutzeranfrage, unabhaengig
+   * vom ev_score (siehe Migration 20261025080000). */
+  ratingMin?: number;
 }
 
 export function parseCampsiteFilters(
@@ -34,16 +46,27 @@ export function parseCampsiteFilters(
   };
 
   const chargingRaw = get("charging");
+  const evScoreMinRaw = Number(get("evScoreMin"));
+  const ratingMinRaw = Number(get("ratingMin"));
   return {
     q: get("q")?.trim() || undefined,
     country: get("country") || undefined,
     amenities: amenityKeys.filter((key) => get(key) === "1"),
-    charging: chargingRaw === "on_site" || chargingRaw === "walking" ? chargingRaw : undefined,
+    charging:
+      chargingRaw === "on_site" || chargingRaw === "ac_walk" || chargingRaw === "dc_walk"
+        ? chargingRaw
+        : undefined,
+    evScoreMin:
+      Number.isFinite(evScoreMinRaw) && (EV_SCORE_MIN_OPTIONS as readonly number[]).includes(evScoreMinRaw)
+        ? evScoreMinRaw
+        : undefined,
+    ratingMin: Number.isFinite(ratingMinRaw) && ratingMinRaw >= 1 && ratingMinRaw <= 5 ? ratingMinRaw : undefined,
   };
 }
 
 /** Liest aus core.campsite_search (Lesesicht mit Merkmalen + vorberechneter
- * Ladepunkt-Naehe, siehe Migration 20260913000200). */
+ * Ladepunkt-Naehe/EV-Score, siehe Migration 20260913000200 und
+ * 20261025080000). */
 export async function fetchCampsites(filters: CampsiteFilters): Promise<CampsiteSearchRow[]> {
   const supabase = createAdminClient();
   let query = supabase.schema("core").from("campsite_search").select("*");
@@ -52,7 +75,10 @@ export async function fetchCampsites(filters: CampsiteFilters): Promise<Campsite
   if (filters.country) query = query.eq("country_code", filters.country);
   if (filters.amenities.length > 0) query = query.contains("amenities", filters.amenities);
   if (filters.charging === "on_site") query = query.eq("charging_on_site", true);
-  if (filters.charging === "walking") query = query.not("nearest_walk_m", "is", null);
+  if (filters.charging === "ac_walk") query = query.not("walkable_ac_m", "is", null);
+  if (filters.charging === "dc_walk") query = query.not("walkable_dc_m", "is", null);
+  if (filters.evScoreMin) query = query.gte("ev_score", filters.evScoreMin);
+  if (filters.ratingMin) query = query.gte("rating_avg", filters.ratingMin);
 
   const { data, error } = await query.order("name").limit(5000);
   if (error) throw new Error(error.message);

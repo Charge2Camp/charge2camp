@@ -276,6 +276,20 @@ export interface CampsiteSearchRow {
   nearest_trailer_ok_m: number | null;
   nearby_max_power_kw: number | null;
   charge_points_walkable: number;
+  /** Naechster fusslaeufig (relation='walking') erreichbarer AC- bzw.
+   * DC-Ladepunkt in Metern (core.connector.current_type), siehe Migration
+   * 20261025080000. */
+  walkable_ac_m: number | null;
+  walkable_dc_m: number | null;
+  /** Durchschnittliche Community-Bewertung (1-5 Sterne), unabhaengig vom
+   * ev_score -- siehe Migration 20261025080000. */
+  rating_avg: number | null;
+  /** EV-Camping-Score (0-100), serverseitig vorberechnet fuer Filter/
+   * Sortierung in der Suche -- Nachbildung von calculateEvCampingScore()
+   * (src/lib/scoring/ev-camping-score.ts), siehe Migration
+   * 20261025080000. Die Detailseite zeigt weiterhin die eigenstaendig
+   * (TS) berechnete Variante. */
+  ev_score: number;
 }
 
 export interface CoreAmenity {

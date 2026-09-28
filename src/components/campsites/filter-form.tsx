@@ -1,3 +1,6 @@
+"use client";
+
+import { FilterChip } from "@/components/charging-stations/filter-chip";
 import { NameSuggestField } from "@/components/name-suggest-field";
 import type { CampsiteFilters } from "@/lib/campsites";
 import type { CoreAmenity } from "@/types/database";
@@ -30,30 +33,38 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 /** "Weitere Filter" -- Suche + alle Merkmals-Kategorien ausser
- * Elektromobilitaet (siehe quick-filters.tsx) und Land (siehe
- * campingplaetze/page.tsx). Kein eigenes <form>: die Felder gehoeren zum
- * umschliessenden <form> in campingplaetze/page.tsx, damit ein Submit
- * Quick-Filter und "weitere Filter" gemeinsam anwendet, egal ob er aus dem
- * Pop-up oder von den Quick-Filtern ausgeloest wird. */
+ * Elektromobilitaet (siehe quick-filters.tsx) und Land/Lademoeglichkeit/
+ * EV-Score/Bewertung (ebenfalls quick-filters.tsx). Kein <form>/Submit mehr
+ * (Umstellung auf Sofort-Filter, siehe campsite-search-client.tsx) -- jede
+ * Aenderung wirkt sofort, das Sheet bleibt dabei offen. */
 export function CampsiteFilterForm({
   filters,
+  onChange,
   amenityCatalog,
   nameOptions,
 }: {
   filters: CampsiteFilters;
+  onChange: (patch: Partial<CampsiteFilters>) => void;
   amenityCatalog: CoreAmenity[];
   /** Alle Campingplatz-Namen, fuer Vorschlaege im Suchfeld ab drei Zeichen. */
   nameOptions: string[];
 }) {
   const groups = groupByCategory(amenityCatalog);
 
+  function toggleAmenity(key: string) {
+    const next = filters.amenities.includes(key)
+      ? filters.amenities.filter((k) => k !== key)
+      : [...filters.amenities, key];
+    onChange({ amenities: next });
+  }
+
   return (
     <div className="flex flex-col gap-5 text-sm">
       <label className="flex flex-col gap-1">
         Suche
         <NameSuggestField
-          name="q"
-          defaultValue={filters.q}
+          value={filters.q ?? ""}
+          onCommit={(value) => onChange({ q: value || undefined })}
           placeholder="Name des Campingplatzes"
           options={nameOptions}
           className="w-full rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
@@ -63,26 +74,18 @@ export function CampsiteFilterForm({
       {Array.from(groups.entries()).map(([category, amenities]) => (
         <fieldset key={category} className="flex flex-col gap-2">
           <legend className="mb-1 font-medium">{CATEGORY_LABELS[category] ?? category}</legend>
-          {amenities.map((amenity) => (
-            <label key={amenity.key} className="flex min-h-11 items-center gap-2">
-              <input
-                type="checkbox"
-                name={amenity.key}
-                value="1"
-                defaultChecked={filters.amenities.includes(amenity.key)}
+          <div className="flex flex-wrap gap-2">
+            {amenities.map((amenity) => (
+              <FilterChip
+                key={amenity.key}
+                label={amenity.label_de}
+                active={filters.amenities.includes(amenity.key)}
+                onClick={() => toggleAmenity(amenity.key)}
               />
-              {amenity.label_de}
-            </label>
-          ))}
+            ))}
+          </div>
         </fieldset>
       ))}
-
-      <button
-        type="submit"
-        className="min-h-12 rounded-md bg-action px-4 py-3 font-medium text-base hover:bg-action-hover"
-      >
-        Filtern
-      </button>
     </div>
   );
 }
