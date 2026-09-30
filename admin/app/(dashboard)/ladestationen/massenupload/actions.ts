@@ -129,6 +129,14 @@ export async function bulkUpdateChargePoints(
     }
 
     if (Object.keys(coreUpdate).length > 0) {
+      // manual_override = true wie bei der Einzel-/Checkbox-Massenbearbeitung
+      // (updateChargePoint/ladestationen/actions.ts) -- ohne dieses Flag
+      // wuerde eine bewusste CSV-Korrektur (z.B. Name/Betreiber) vom
+      // naechsten naechtlichen OCM-Reimport stillschweigend wieder
+      // ueberschrieben (Audit-Befund 2026-09-30, gleiche Fehlerklasse wie
+      // 20261001000000_charge_point_manual_override.sql beheben sollte,
+      // hier aber uebersehen).
+      coreUpdate.manual_override = true;
       coreUpdate.updated_at = new Date().toISOString();
       const { error } = await supabase.schema("core").from("charge_point").update(coreUpdate).eq("id", point.id);
       if (error) issues.push({ external_key: externalKey, reason: `Stammdaten-Update fehlgeschlagen: ${error.message}` });

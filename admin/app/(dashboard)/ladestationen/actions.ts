@@ -8,10 +8,14 @@ import type { TrailerVerdict } from "@/lib/types";
 /** Felder aus core.charge_point, bei denen es sinnvoll ist, MEHREREN
  * unterschiedlichen Stationen denselben Wert zuzuweisen (Nutzerwunsch: z.B.
  * bei allen faelschlich als "ladenetz.de" statt "Stadtwerke Muenchen"
- * gefuehrten Stationen den Betreiber in einem Schritt korrigieren). Bewusst
- * OHNE name/address/max_power_kw/Koordinaten -- die sind je Station
- * individuell, ein Massen-Ueberschreiben ergibt dort keinen Sinn. */
-const CHARGE_POINT_FIELDS = ["operator", "access_type", "country_code", "is_operational"] as const;
+ * gefuehrten Stationen den Betreiber in einem Schritt korrigieren). "name"
+ * war urspruenglich bewusst ausgeschlossen (bei unterschiedlichen Stationen
+ * selten sinnvoll, ein Name ist normalerweise individuell) -- auf
+ * expliziten Nutzerwunsch (2026-09-30) trotzdem ergaenzt, z.B. fuer
+ * Batch-Korrekturen falsch/uneinheitlich importierter Namen derselben
+ * Kette. Weiterhin OHNE address/max_power_kw/Koordinaten -- die bleiben
+ * je Station individuell. */
+const CHARGE_POINT_FIELDS = ["name", "operator", "access_type", "country_code", "is_operational"] as const;
 // Anhaengertauglichkeit/Drive-Through liegen NICHT auf core.charge_point,
 // sondern in enrich.trailer_suitability (Schluessel: external_key, nicht
 // id) -- eigener Codepfad unten, gleiche Auswahl-UI (siehe station-list.tsx).

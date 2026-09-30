@@ -26,6 +26,7 @@ const VERDICT_LABELS: Record<string, string> = {
 };
 
 const FIELD_OPTIONS: { value: BulkEditableField; label: string }[] = [
+  { value: "name", label: "Name" },
   { value: "operator", label: "Betreiber" },
   { value: "access_type", label: "Zugang" },
   { value: "country_code", label: "Land (ISO2)" },
