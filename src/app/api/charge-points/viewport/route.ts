@@ -58,21 +58,32 @@ export async function GET(request: NextRequest) {
     }
     const filters = parseChargingStationFilters(searchParamsObject);
 
-    // Supabase begrenzt jede PostgREST-Antwort projektweit hart auf
-    // max_rows = 5000 (supabase/config.toml) -- ein hoeheres `limit` hier
-    // haette also keine Wirkung, die Datenbank kappt ohnehin. Bei einem
-    // stark herausgezoomten Kartenausschnitt (z. B. "ganz Italien") kann
-    // die tatsaechliche Treffermenge trotz Geo-Filterung ueber 5000 liegen
-    // (insgesamt ca. 18.900 Ladepunkte) -- fuer den in diesem Fall
-    // gekappten Fall zeigt der Client dann bewusst "5000+" statt eine
-    // vermeintlich vollstaendige Liste vorzutaeuschen (siehe
-    // charging-station-map-explorer.tsx stationCountLabel). Bei einem
-    // realistisch gezoomten Ausschnitt (z. B. eine Region wie in der
-    // Nutzermeldung) bleibt die Treffermenge weit darunter -- dort ist
-    // die Kappung ohne Belang und alle Ladepunkte im Ausschnitt erscheinen
-    // vollstaendig, unabhaengig vom Namen.
-    const stations = await fetchChargingStations(filters, 5000, bbox);
-    return NextResponse.json({ stations, truncated: stations.length >= 5000 });
+    // Audit-Befund 2026-09-30 (Nutzermeldung, Server-Log: "canceling
+    // statement due to statement timeout"): core.charge_points_in_bbox()
+    // mit einem weit herausgezoomten Ausschnitt (z. B. Deutschland-weit)
+    // OHNE Anhaengertauglichkeits-Filter (das UI erlaubt, beide
+    // Default-Chips -- "yes"/"unhitch" -- abzuwaehlen, siehe
+    // DEFAULT_TRAILER_VERDICTS) braucht bei `p_limit=5000` gemessen ~5,4s
+    // (EXPLAIN ANALYZE direkt gegen Produktion) -- bei `p_limit=1500` nur
+    // noch ~60-280ms. 5000 war ohnehin nur durch Supabases projektweites
+    // PostgREST-max_rows-Limit motiviert (siehe Kommentar unten), nicht
+    // durch einen tatsaechlichen Darstellungsbedarf -- 1500 Marker sind fuer
+    // eine live interaktive Karte bereits sehr viel, die "5000+"-Kappungs-
+    // UI (stationCountLabel in charging-station-map-explorer.tsx) zeigt bei
+    // Ueberschreiten weiterhin korrekt an, dass nicht ALLE Treffer geladen
+    // wurden (jetzt ab 1500 statt 5000).
+    const VIEWPORT_LIMIT = 1500;
+    // Supabase begrenzt jede PostgREST-Antwort projektweit zusaetzlich hart
+    // auf max_rows = 5000 (supabase/config.toml) -- bei einem stark
+    // herausgezoomten Kartenausschnitt (z. B. "ganz Italien") kann die
+    // tatsaechliche Treffermenge trotz Geo-Filterung trotzdem ueber
+    // VIEWPORT_LIMIT liegen (insgesamt ca. 18.900+ Ladepunkte) -- der Client
+    // zeigt dann bewusst "1500+" statt eine vermeintlich vollstaendige Liste
+    // vorzutaeuschen. Bei einem realistisch gezoomten Ausschnitt (z. B. eine
+    // Region) bleibt die Treffermenge weit darunter -- dort ist die Kappung
+    // ohne Belang und alle Ladepunkte im Ausschnitt erscheinen vollstaendig.
+    const stations = await fetchChargingStations(filters, VIEWPORT_LIMIT, bbox);
+    return NextResponse.json({ stations, truncated: stations.length >= VIEWPORT_LIMIT });
   } catch (err) {
     // Landet in den Vercel-Funktionslogs (Runtime Logs) -- ohne dieses Log
     // war ein hier geworfener Fehler bisher nur am Client als nackter 500
