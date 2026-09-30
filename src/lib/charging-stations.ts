@@ -26,11 +26,25 @@ const MIN_STATIONS_PER_OPERATOR = 20;
  * wird die URL laenger als das von Cloudflare/dem Hosting erlaubte Limit
  * (lokal gegen Docker-Supabase nicht aufgefallen, dort kein CDN davor;
  * auf dem gehosteten Projekt "414 Request-URI Too Large"). Deshalb in
- * Batches abfragen statt einer einzigen riesigen IN-Liste -- alle Batches
- * PARALLEL (nicht nacheinander), sonst summieren sich bei tausenden IDs die
- * einzelnen Round-Trips zu spuerbaren Sekunden Ladezeit (die Ladepunkte-
- * Seite laedt seit der kartenzentrierten Umstellung IMMER die volle Menge,
- * nicht mehr nur bei aktivem Filter). */
+ * Batches abfragen statt einer einzigen riesigen IN-Liste.
+ *
+ * Batches laufen in begrenzt GROSSEN Gruppen parallel (BATCH_CONCURRENCY),
+ * nicht mehr alle auf einmal -- bei einem weit herausgezoomten
+ * Kartenausschnitt ohne bekannten Standort (Deutschland-weiter
+ * Default-Ausschnitt, GERMANY_OVERVIEW_ZOOM in
+ * charging-station-map-explorer.tsx) sind das bis zu 5000 IDs / 150er-Batch
+ * = ~34 Batches, die enrichStations() unten ZWEIMAL (Connectoren +
+ * Anhaengertauglichkeit) gleichzeitig aufruft -- macht bis zu ~68 parallele
+ * DB-Anfragen. Das sprengte auf der gehosteten Instanz den Connection-Pool
+ * und riss dort reihum das Postgres-Statement-Timeout ("canceling statement
+ * due to statement timeout", Nutzermeldung 2026-09-30, Karte ohne Standort
+ * geoeffnet -- lokal gegen Docker-Supabase mit wenigen Testdaten nicht
+ * aufgefallen). Gruppen statt unbegrenzter Parallelitaet haelt die
+ * Gesamtzahl gleichzeitig offener Verbindungen in einem sicheren Rahmen,
+ * ohne die Batches wieder rein sequenziell (und damit spuerbar langsamer)
+ * abzuarbeiten. */
+const BATCH_CONCURRENCY = 8;
+
 async function fetchInBatches<T>(
   ids: string[],
   batchSize: number,
@@ -39,11 +53,14 @@ async function fetchInBatches<T>(
   const batches: string[][] = [];
   for (let i = 0; i < ids.length; i += batchSize) batches.push(ids.slice(i, i + batchSize));
 
-  const results = await Promise.all(batches.map((batch) => fetchBatch(batch)));
   const rows: T[] = [];
-  for (const { data, error } of results) {
-    if (error) throw new Error(error.message);
-    rows.push(...(data ?? []));
+  for (let i = 0; i < batches.length; i += BATCH_CONCURRENCY) {
+    const group = batches.slice(i, i + BATCH_CONCURRENCY);
+    const results = await Promise.all(group.map((batch) => fetchBatch(batch)));
+    for (const { data, error } of results) {
+      if (error) throw new Error(error.message);
+      rows.push(...(data ?? []));
+    }
   }
   return rows;
 }
