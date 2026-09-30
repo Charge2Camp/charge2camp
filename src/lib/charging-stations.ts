@@ -310,6 +310,20 @@ export async function fetchFavoriteChargingStations(userId: string): Promise<Cha
   return enrichStations(adminClient, (data as CoreChargePointGeo[]) ?? []);
 }
 
+// Audit-Befund 2026-09-30 (Nutzermeldung: Absturz beim Oeffnen von
+// /ladepunkte, Server-Log: "canceling statement due to statement timeout"):
+// dieselbe Abfrage mit LIMIT 5000 gegen core.charge_point (inzwischen weit
+// ueber 100.000 aktive Zeilen nach dem Frankreich-/Spanien-Import) braucht
+// auf der gehosteten Instanz trotz Index-Nutzung (idx_cp_active_name)
+// gemessen ~2,7s -- bei LIMIT 1000 dagegen nur ~10ms (nicht-lineare
+// Verschlechterung ab mehreren tausend Zeilen, vermutlich Ressourcen-
+// Drosselung der Instanz). Diese Liste dient nur der Vorschlagsliste im
+// Suchfeld (NameSuggestField filtert client-seitig ab 3 Zeichen und zeigt
+// ohnehin nur die ersten 8 Treffer) -- 1000 Namen decken das bei weitem ab,
+// ohne das restliche /ladepunkte-Rendering (parallele Anfragen im selben
+// Request) ins PostgREST-Statement-Timeout laufen zu lassen.
+const NAME_OPTIONS_LIMIT = 1000;
+
 /** Anzeigename je Ladepunkt (Name, falls vorhanden, sonst Betreiber),
  * unabhaengig von aktiven Filtern, fuer die Vorschlagsliste im Suchfeld. */
 export async function fetchChargingStationNameOptions(): Promise<string[]> {
@@ -320,7 +334,7 @@ export async function fetchChargingStationNameOptions(): Promise<string[]> {
     .select("name, operator")
     .eq("is_active", true)
     .order("name")
-    .limit(5000);
+    .limit(NAME_OPTIONS_LIMIT);
   if (error) throw new Error(error.message);
   const labels = (data ?? []).map((row) => row.name ?? row.operator).filter(Boolean);
   return Array.from(new Set(labels));
