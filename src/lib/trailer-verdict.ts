@@ -42,6 +42,24 @@ export function isDefaultTrailerVerdict(verdict: TrailerVerdict[]): boolean {
   );
 }
 
+/** Ob eine (vom Default abweichende) `verdict`-Auswahl im nicht-bbox-Pfad
+ * von fetchChargingStations() (Server-Erstansicht, siehe ladepunkte/page.tsx)
+ * ein groesseres Such-Limit braucht. Dieser Pfad filtert trailerVerdict
+ * ausschliesslich in JS NACH dem Laden (siehe fetchChargingStations) -- ein
+ * kleines Limit liefert also nur dann genug Treffer, wenn die Auswahl
+ * 'unknown' enthaelt: das ist der BNetzA-Import-Platzhalter und deckt laut
+ * 20261024120000_fix_checked_verdict_filter_timeout.sql ~98,4 % aller
+ * Ladepunkte ab, jede kleine alphabetische Stichprobe enthaelt also fast nur
+ * Treffer. Ohne 'unknown' (nur 'yes'/'unhitch'/'no', zusammen nur ~1,6 %)
+ * waere eine kleine Stichprobe dagegen fast leer -- dort bleibt das groessere
+ * Limit noetig. Bewusst getrennt von isDefaultTrailerVerdict: eine von
+ * 'unknown' abweichende Auswahl ZAEHLT weiterhin als aktiver Filter
+ * (Badge/activeFilterCount), braucht aber nicht zwingend das groessere
+ * Server-Limit. */
+export function trailerVerdictNeedsWiderSearch(verdict: TrailerVerdict[]): boolean {
+  return verdict.length > 0 && !verdict.includes("unknown");
+}
+
 export const TRAILER_VERDICT_LABELS: Record<TrailerVerdict, string> = {
   yes: "Anhängertauglich bestätigt",
   unhitch: "Nur abgekoppelt erreichbar",
