@@ -5,7 +5,7 @@ import {
   fetchFavoriteChargingStations,
   parseChargingStationFilters,
 } from "@/lib/charging-stations";
-import { isDefaultTrailerVerdict } from "@/lib/trailer-verdict";
+import { isDefaultTrailerVerdict, trailerVerdictNeedsWiderSearch } from "@/lib/trailer-verdict";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/require-user";
 import { ChargingStationMapExplorer } from "@/components/charging-stations/charging-station-map-explorer";
@@ -67,10 +67,19 @@ export default async function ChargingStationsPage({
   // isDefaultTrailerVerdict in charging-stations.ts) -- isDefaultTrailerVerdict
   // ist deshalb hier (statt eines simplen .length > 0) noetig, um den
   // Default-Zustand von einer bewussten Nutzerauswahl zu unterscheiden.
+  //
+  // trailerVerdict zaehlt zusaetzlich nur dann fuers groessere Limit, wenn
+  // die Auswahl tatsaechlich SELEKTIV ist (trailerVerdictNeedsWiderSearch,
+  // siehe dort) -- der nicht-bbox-Pfad von fetchChargingStations() filtert
+  // trailerVerdict ausschliesslich in JS NACH dem Laden+Anreichern, nie in
+  // SQL. Bei 'unknown' (~98,4 % aller Ladepunkte, siehe dort) matcht eine
+  // kleine Stichprobe fast vollstaendig -- das groessere Limit wuerde dort nur
+  // unnoetig bis zu 5000 Ladepunkte laden und anreichern (Performance-Audit
+  // 2026-09-30), ohne die Ergebnisqualitaet zu verbessern.
   const hasActiveFilters = Boolean(
     filters.q ||
       filters.connectorCategories.length > 0 ||
-      !isDefaultTrailerVerdict(filters.trailerVerdict) ||
+      (!isDefaultTrailerVerdict(filters.trailerVerdict) && trailerVerdictNeedsWiderSearch(filters.trailerVerdict)) ||
       filters.operators.length > 0
   );
   const stationLimit = hasActiveFilters ? 5000 : 300;
