@@ -267,6 +267,20 @@ export async function fetchChargingStations(
     let query = supabase.schema("core").from("charge_point_geo").select("*");
     if (filters.q) query = query.ilike("name", `%${filters.q}%`);
     if (filters.minPowerKw > 0) query = query.gte("max_power_kw", filters.minPowerKw);
+    // Performance-Audit 2026-09-30 (Nutzermeldung "canceling statement due to
+    // statement timeout" auf GET /ladepunkte, ausgeloest durch einen reinen
+    // Betreiber-Filter ohne Textsuche): operators wurde bisher AUSSCHLIESSLICH
+    // in JS nach enrichStations() gefiltert (siehe unten) -- ohne q/
+    // trailerVerdict-Selektivitaet lud dieser Zweig dadurch die ersten 5000
+    // (alphabetisch, is_active + Mindestleistung) Ladepunkte UNGEFILTERT nach
+    // Betreiber und reicherte sie komplett an, bevor der eigentliche Filter
+    // ueberhaupt griff -- gemessen 8,7s fuer die Basisabfrage allein (EXPLAIN
+    // ANALYZE gegen Produktion), plus die volle Anreicherung obendrauf. Ein
+    // vorhandener Index (idx_cp_active_operator) macht das direkte SQL-Filtern
+    // dagegen trivial schnell (~3ms gemessen). Nebeneffekt: vorher haette ein
+    // Treffer jenseits der ersten 5000 alphabetischen Zeilen nie gefunden
+    // werden koennen -- auch ein Korrektheits-, nicht nur ein Performance-Fix.
+    if (filters.operators.length > 0) query = query.in("operator", filters.operators);
     ({ data, error } = await query.order("name").limit(limit));
   }
 
