@@ -8,6 +8,7 @@ import {
   setChargePointActive,
   updateChargePoint,
 } from "./actions";
+import { TrailerVerdictForm } from "./trailer-verdict-form";
 
 export default async function ChargePointDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -217,58 +218,7 @@ export default async function ChargePointDetailPage({ params }: { params: Promis
               Überschreibt die community-basierte Einschätzung direkt. Aktuell: {trailer?.verdict ?? "ungeprüft"}
               {trailer?.origin ? ` (Quelle: ${trailer.origin})` : ""}.
             </p>
-        <form action={overrideAction} className="mt-3 flex flex-col gap-4">
-          <label className="flex flex-col gap-1 text-sm">
-            Einstufung
-            <select name="verdict" defaultValue={trailer?.verdict ?? "unknown"} className="min-h-11 rounded-md border border-line px-3 py-2 text-base">
-              <option value="yes">Anhängertauglich</option>
-              <option value="unhitch">Nur abgekoppelt erreichbar</option>
-              <option value="no">Nicht anhängertauglich</option>
-              <option value="unknown">Ungeprüft</option>
-            </select>
-          </label>
-          <label className="flex min-h-11 items-center gap-2 text-sm">
-            <input type="checkbox" name="drive_through" value="1" defaultChecked={trailer?.drive_through ?? false} />
-            Drive-Through (durchfahrbar, kein Rangieren nötig)
-          </label>
-          <div className="grid grid-cols-2 gap-4">
-            <label className="flex flex-col gap-1 text-sm">
-              Rangierfläche
-              <select
-                name="maneuvering_space"
-                defaultValue={trailer?.maneuvering_space ?? ""}
-                className="min-h-11 rounded-md border border-line px-3 py-2 text-base"
-              >
-                <option value="">Unbekannt</option>
-                <option value="ample">Ausreichend</option>
-                <option value="tight">Eng</option>
-                <option value="none">Keine</option>
-              </select>
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              Einfahrlänge (m)
-              <input
-                type="number"
-                step="0.1"
-                name="pull_in_length_m"
-                defaultValue={trailer?.pull_in_length_m ?? ""}
-                className="min-h-11 rounded-md border border-line px-3 py-2 text-base"
-              />
-            </label>
-          </div>
-          <label className="flex flex-col gap-1 text-sm">
-            Notizen
-            <textarea
-              name="notes"
-              defaultValue={trailer?.notes ?? ""}
-              rows={3}
-              className="rounded-md border border-line px-3 py-2 text-base"
-            />
-          </label>
-          <button type="submit" className="min-h-11 self-start rounded-md bg-action px-4 text-sm font-medium hover:bg-action-hover">
-            Anhängertauglichkeit speichern
-          </button>
-        </form>
+            <TrailerVerdictForm trailer={trailer} overrideAction={overrideAction} />
           </>
         )}
       </section>
