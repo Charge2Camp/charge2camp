@@ -119,6 +119,18 @@ function isBoundsContained(inner: MapBoundsBox, outer: MapBoundsBox): boolean {
   );
 }
 
+/** Guenstige Signatur der fuer das Marker-Aussehen relevanten Felder (Pin-
+ * Icon haengt an trailer.verdict/drive_through, siehe markers-useMemo unten)
+ * -- NICHT das volle Stationsobjekt (JSON.stringify waere fuer bis zu 1500
+ * Eintraege pro Vergleich unnoetig teuer). Dient scheduleViewportRefetch
+ * dazu, eine inhaltlich unveraenderte Antwort zu erkennen und setStations
+ * zu ueberspringen (siehe stationsSignatureRef dort). */
+function stationsSignature(list: ChargingStationView[]): string {
+  return list
+    .map((s) => `${s.id}:${s.trailer?.verdict ?? ""}:${s.trailer?.drive_through ?? ""}:${s.connectors.length}`)
+    .join("|");
+}
+
 const PAGE_SIZE = 30;
 
 type SortOption = "name_asc" | "name_desc" | "power_desc" | "power_asc" | "distance";
@@ -380,6 +392,21 @@ export function ChargingStationMapExplorer({
   // Schwenk innerhalb des zuletzt bekannten guten Bereichs weiterhin ohne
   // Request funktionieren, statt staendig neu zu scheitern.
   const lastFetchedBoundsRef = useRef<MapBoundsBox | null>(null);
+  // Performance-Audit 2026-10-01 (Nutzermeldung "Karte laedt beim Bewegen/
+  // Zoomen zu langsam"): setStations() ersetzte bisher bei JEDER Antwort
+  // bedingungslos das gesamte Array -- auch wenn der nachgeladene Ausschnitt
+  // (leicht ausserhalb von lastFetchedBoundsRef, siehe handleBoundsChange
+  // oben) inhaltlich fast identisch zum vorherigen Stand war. Eine neue
+  // Array-Referenz loeste dabei jedesmal `markers` (useMemo, [stations,
+  // isTouchMap]) UND darueber MapView's kompletten Supercluster-Neuaufbau
+  // (indexRef.current = new Supercluster(...); index.load(...), siehe
+  // map-view.tsx) aus -- fuer bis zu 1500 Punkte spuerbarer Ruckler bei
+  // JEDEM Schwenk, selbst wenn sich am Ergebnis kaum etwas aenderte. Eine
+  // guenstige Signatur (nur die fuer Marker-Aussehen relevanten Felder,
+  // nicht das volle Objekt, siehe stationsSignature() oben in der Datei)
+  // entscheidet jetzt VOR dem setStations, ob sich ueberhaupt etwas
+  // geaendert hat.
+  const stationsSignatureRef = useRef<string>(stationsSignature(initialStations));
 
   function selectStation(id: string | null) {
     setSelectedStationId(id);
@@ -387,7 +414,13 @@ export function ChargingStationMapExplorer({
   }
 
   useEffect(() => {
-    void Promise.resolve().then(() => setStations(initialStations));
+    void Promise.resolve().then(() => {
+      const nextSignature = stationsSignature(initialStations);
+      if (nextSignature !== stationsSignatureRef.current) {
+        stationsSignatureRef.current = nextSignature;
+        setStations(initialStations);
+      }
+    });
   }, [initialStations]);
 
   useEffect(
@@ -427,7 +460,12 @@ export function ChargingStationMapExplorer({
         // weitergeschwenkt hat) verwerfen, sonst ueberschreibt eine
         // langsame, alte Antwort ein bereits aktuelleres Ergebnis.
         if (seq !== fetchSeqRef.current) return;
-        setStations(data.stations ?? []);
+        const nextStations = data.stations ?? [];
+        const nextSignature = stationsSignature(nextStations);
+        if (nextSignature !== stationsSignatureRef.current) {
+          stationsSignatureRef.current = nextSignature;
+          setStations(nextStations);
+        }
         setViewportFetchFailed(false);
         lastFetchedBoundsRef.current = paddedBounds;
       } catch {
