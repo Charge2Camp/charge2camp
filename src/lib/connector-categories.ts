@@ -55,3 +55,17 @@ export function connectorStandardMatchesAnyCategory(
 ): boolean {
   return categoryKeys.some((key) => connectorStandardMatchesCategory(standard, key));
 }
+
+/** Flache, deduplizierte Liste aller core.connector.standard-Rohwerte fuer die
+ * angegebenen Kategorien -- fuer core.search_charge_points()
+ * (p_connector_standards, siehe charging-stations.ts nicht-bbox-Pfad), das
+ * exakt gegen diese Rohwerte matcht statt gegen Kategorie-Schluessel (die
+ * Kategorisierung ist reine App-Logik, core.connector kennt sie nicht). */
+export function standardsForCategories(categoryKeys: string[]): string[] {
+  const standards = new Set<string>();
+  for (const key of categoryKeys) {
+    const category = CATEGORY_BY_KEY.get(key);
+    if (category) for (const s of category.matchStandards) standards.add(s);
+  }
+  return Array.from(standards);
+}

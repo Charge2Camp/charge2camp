@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { CONNECTOR_CATEGORIES, connectorStandardMatchesAnyCategory } from "@/lib/connector-categories";
+import { CONNECTOR_CATEGORIES, connectorStandardMatchesAnyCategory, standardsForCategories } from "@/lib/connector-categories";
 import { DEFAULT_TRAILER_VERDICTS } from "@/lib/trailer-verdict";
 import type {
   CoreChargePointGeo,
@@ -264,24 +264,40 @@ export async function fetchChargingStations(
       p_trailer_verdicts: filters.trailerVerdict.length > 0 ? filters.trailerVerdict : null,
     }));
   } else {
-    let query = supabase.schema("core").from("charge_point_geo").select("*");
-    if (filters.q) query = query.ilike("name", `%${filters.q}%`);
-    if (filters.minPowerKw > 0) query = query.gte("max_power_kw", filters.minPowerKw);
-    // Performance-Audit 2026-09-30 (Nutzermeldung "canceling statement due to
-    // statement timeout" auf GET /ladepunkte, ausgeloest durch einen reinen
-    // Betreiber-Filter ohne Textsuche): operators wurde bisher AUSSCHLIESSLICH
-    // in JS nach enrichStations() gefiltert (siehe unten) -- ohne q/
-    // trailerVerdict-Selektivitaet lud dieser Zweig dadurch die ersten 5000
-    // (alphabetisch, is_active + Mindestleistung) Ladepunkte UNGEFILTERT nach
+    // Performance-/Korrektheits-Audit 2026-09-30 (Nutzermeldung "canceling
+    // statement due to statement timeout" auf GET /ladepunkte): q/operator/
+    // min_power_kw liessen sich ueber den PostgREST-Query-Builder direkt in
+    // SQL filtern, connectorCategories dagegen NICHT (core.connector haengt
+    // ueber charge_point_id an core.charge_point, PostgREST kann darauf ueber
+    // die VIEW core.charge_point_geo keine Embedded-Filter-Beziehung bilden)
+    // -- wurde deshalb bisher ausschliesslich in JS NACH der vollen
+    // Connector-/Trailer-Anreicherung gefiltert. Ohne q/trailerVerdict-
+    // Selektivitaet lud dieser Zweig dadurch die ersten 5000 (alphabetisch,
+    // is_active + Mindestleistung) Ladepunkte UNGEFILTERT nach Steckertyp/
     // Betreiber und reicherte sie komplett an, bevor der eigentliche Filter
     // ueberhaupt griff -- gemessen 8,7s fuer die Basisabfrage allein (EXPLAIN
-    // ANALYZE gegen Produktion), plus die volle Anreicherung obendrauf. Ein
-    // vorhandener Index (idx_cp_active_operator) macht das direkte SQL-Filtern
-    // dagegen trivial schnell (~3ms gemessen). Nebeneffekt: vorher haette ein
-    // Treffer jenseits der ersten 5000 alphabetischen Zeilen nie gefunden
-    // werden koennen -- auch ein Korrektheits-, nicht nur ein Performance-Fix.
-    if (filters.operators.length > 0) query = query.in("operator", filters.operators);
-    ({ data, error } = await query.order("name").limit(limit));
+    // ANALYZE gegen Produktion), plus die volle Anreicherung obendrauf.
+    // core.search_charge_points() (20261025140000) filtert jetzt ALLE vier
+    // nicht-bbox-Filter direkt in SQL (connectorCategories ueber ein EXISTS
+    // auf core.connector, idx_conn_std) -- eine grosse ID-Liste ueber die
+    // REST-API waere bei einer verbreiteten Kategorie wie "Type 2" potenziell
+    // zehntausende IDs gewesen, weit jenseits sinnvoller Query-Groessen.
+    // order()/limit() bewusst HIER auf das RPC-Ergebnis angewendet statt im
+    // Funktionskoerper -- ein LIMIT dort verhindert, dass Postgres die
+    // (an sich inlinebare) SQL-Funktion in die aufrufende Abfrage inlined,
+    // was beim Connector-Filter live gemessen 8,3s statt 310ms kostete
+    // (siehe Migrationskommentar 20261025140000).
+    ({ data, error } = await supabase
+      .schema("core")
+      .rpc("search_charge_points", {
+        p_q: filters.q ?? null,
+        p_operators: filters.operators.length > 0 ? filters.operators : null,
+        p_min_power_kw: filters.minPowerKw > 0 ? filters.minPowerKw : null,
+        p_connector_standards:
+          filters.connectorCategories.length > 0 ? standardsForCategories(filters.connectorCategories) : null,
+      })
+      .order("name")
+      .limit(limit));
   }
 
   if (error) throw new Error(error.message);
