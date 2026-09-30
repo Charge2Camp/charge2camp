@@ -15,39 +15,49 @@ import { requireApiUser } from "@/lib/api-guard";
  * 245" beim reinen Kartenbrowsen nie auftauchte (Nutzerfeedback).
  */
 export async function GET(request: NextRequest) {
-  // Sicherheits-Audit: Login + Rate-Limit Pflicht. Limit grosszuegiger als
-  // bei den anderen Endpunkten (120/min statt 60/min), da der Karten-Client
-  // dies bei aktivem Schwenken/Zoomen alle 500ms aufrufen kann (siehe
-  // VIEWPORT_FETCH_DEBOUNCE_MS in charging-station-map-explorer.tsx) --
-  // ein durchgehend geschwenkter Ausschnitt ueber eine volle Minute kaeme
-  // damit theoretisch auf bis zu 120 Aufrufe.
-  const guard = await requireApiUser("charge-points-viewport", { windowSeconds: 60, maxRequests: 120 });
-  if ("response" in guard) return guard.response;
-
-  const sp = request.nextUrl.searchParams;
-
-  const bboxRaw = sp.get("bbox");
-  if (!bboxRaw) return NextResponse.json({ error: "bbox fehlt." }, { status: 400 });
-  const parts = bboxRaw.split(",").map(Number);
-  if (parts.length !== 4 || parts.some((n) => Number.isNaN(n))) {
-    return NextResponse.json({ error: "bbox muss 'west,south,east,north' sein." }, { status: 400 });
-  }
-  const [west, south, east, north] = parts;
-  const bbox: MapBounds = { west, south, east, north };
-
-  // Mehrere gleichnamige Parameter (z. B. operator=A&operator=B fuer den
-  // Ladeanbieter-Filter) muessen als Array ankommen -- ein simples
-  // Ueberschreiben pro Key wuerde alle bis auf den letzten Wert verwerfen.
-  const searchParamsObject: Record<string, string | string[]> = {};
-  for (const [key, value] of sp.entries()) {
-    const existing = searchParamsObject[key];
-    if (existing === undefined) searchParamsObject[key] = value;
-    else if (Array.isArray(existing)) existing.push(value);
-    else searchParamsObject[key] = [existing, value];
-  }
-  const filters = parseChargingStationFilters(searchParamsObject);
-
+  // Audit-Befund 2026-09-30: requireApiUser() (Login- + Rate-Limit-Check,
+  // inkl. eines eigenen DB-RPC-Aufrufs) lag bisher AUSSERHALB des unten
+  // stehenden try/catch -- ein dort unerwartet geworfener Fehler (z. B. eine
+  // kurze DB-Stoerung beim check_rate_limit()-Aufruf) fiel dadurch nicht auf
+  // die eigene, informative JSON-Fehlerantwort zurueck, sondern auf Next.js'
+  // generische 500-Antwort OHNE Fehlermeldung -- fuer den Karten-Client
+  // (charging-station-map-explorer.tsx) nicht von einem echten Datenfehler
+  // unterscheidbar, und ohne jede Diagnose-Information in den Vercel-
+  // Funktionslogs. Der try-Block umschliesst deshalb jetzt die GESAMTE
+  // Anfrageverarbeitung, nicht nur den fetchChargingStations-Aufruf.
   try {
+    // Sicherheits-Audit: Login + Rate-Limit Pflicht. Limit grosszuegiger als
+    // bei den anderen Endpunkten (120/min statt 60/min), da der Karten-Client
+    // dies bei aktivem Schwenken/Zoomen alle 500ms aufrufen kann (siehe
+    // VIEWPORT_FETCH_DEBOUNCE_MS in charging-station-map-explorer.tsx) --
+    // ein durchgehend geschwenkter Ausschnitt ueber eine volle Minute kaeme
+    // damit theoretisch auf bis zu 120 Aufrufe.
+    const guard = await requireApiUser("charge-points-viewport", { windowSeconds: 60, maxRequests: 120 });
+    if ("response" in guard) return guard.response;
+
+    const sp = request.nextUrl.searchParams;
+
+    const bboxRaw = sp.get("bbox");
+    if (!bboxRaw) return NextResponse.json({ error: "bbox fehlt." }, { status: 400 });
+    const parts = bboxRaw.split(",").map(Number);
+    if (parts.length !== 4 || parts.some((n) => Number.isNaN(n))) {
+      return NextResponse.json({ error: "bbox muss 'west,south,east,north' sein." }, { status: 400 });
+    }
+    const [west, south, east, north] = parts;
+    const bbox: MapBounds = { west, south, east, north };
+
+    // Mehrere gleichnamige Parameter (z. B. operator=A&operator=B fuer den
+    // Ladeanbieter-Filter) muessen als Array ankommen -- ein simples
+    // Ueberschreiben pro Key wuerde alle bis auf den letzten Wert verwerfen.
+    const searchParamsObject: Record<string, string | string[]> = {};
+    for (const [key, value] of sp.entries()) {
+      const existing = searchParamsObject[key];
+      if (existing === undefined) searchParamsObject[key] = value;
+      else if (Array.isArray(existing)) existing.push(value);
+      else searchParamsObject[key] = [existing, value];
+    }
+    const filters = parseChargingStationFilters(searchParamsObject);
+
     // Supabase begrenzt jede PostgREST-Antwort projektweit hart auf
     // max_rows = 5000 (supabase/config.toml) -- ein hoeheres `limit` hier
     // haette also keine Wirkung, die Datenbank kappt ohnehin. Bei einem
@@ -64,6 +74,11 @@ export async function GET(request: NextRequest) {
     const stations = await fetchChargingStations(filters, 5000, bbox);
     return NextResponse.json({ stations, truncated: stations.length >= 5000 });
   } catch (err) {
+    // Landet in den Vercel-Funktionslogs (Runtime Logs) -- ohne dieses Log
+    // war ein hier geworfener Fehler bisher nur am Client als nackter 500
+    // sichtbar, nirgends serverseitig nachvollziehbar (Audit-Befund
+    // 2026-09-30, Nutzermeldung "etwas ist schiefgelaufen" auf /ladepunkte).
+    console.error("[charge-points/viewport]", err);
     return NextResponse.json({ error: err instanceof Error ? err.message : "Unbekannter Fehler." }, { status: 500 });
   }
 }
