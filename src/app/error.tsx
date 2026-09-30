@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import * as Sentry from "@sentry/nextjs";
+import { isChunkLoadError, reloadOnceForChunkError } from "@/lib/chunk-error";
 
 /** Sicherheitsnetz fuer JEDE Route (siehe Bugreport "intensive Pruefung"):
  * bisher gab es GAR KEINE error.tsx im ganzen Projekt -- ein unerwarteter,
@@ -21,10 +22,31 @@ export default function Error({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const isChunkError = isChunkLoadError(error.message);
+  // Nur waehrend des tatsaechlich ausgeloesten Reloads nichts anzeigen --
+  // wurde (Retry-Fenster in lib/chunk-error.ts) bereits kuerzlich versucht
+  // und schlaegt der Fehler trotzdem erneut auf, soll die normale
+  // Fehlerkarte erscheinen statt einer leeren Seite ohne jeden Ausweg.
+  const [isReloading, setIsReloading] = useState(false);
+
   useEffect(() => {
     console.error(error);
+    // "Stale chunk" nach einem Deploy (siehe lib/chunk-error.ts) ist kein
+    // echter Anwendungsfehler, sondern ein voruebergehender Zustand des
+    // Tabs -- dafuer nicht Sentry fluten, stattdessen einmalig neu laden.
+    if (isChunkError && reloadOnceForChunkError()) {
+      // Wie loadExtras() in station-bottom-sheet.tsx: setState ueber einen
+      // Mikrotask entkoppelt, damit es nicht synchron im Effect-Body
+      // passiert (react-hooks/set-state-in-effect). window.location.reload()
+      // ist bereits ausgeloest, der Wert hier blendet nur noch die
+      // Fehlerkarte fuer die kurze Zeit bis zum tatsaechlichen Neuladen aus.
+      void Promise.resolve().then(() => setIsReloading(true));
+      return;
+    }
     Sentry.captureException(error);
-  }, [error]);
+  }, [error, isChunkError]);
+
+  if (isReloading) return null;
 
   return (
     <div className="mx-auto flex max-w-md flex-col items-center gap-4 px-4 py-20 text-center">

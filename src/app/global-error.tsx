@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import * as Sentry from "@sentry/nextjs";
+import { isChunkLoadError, reloadOnceForChunkError } from "@/lib/chunk-error";
 
 /** Faengt Fehler ab, die aus dem ROOT-Layout selbst kommen (extrem selten --
  * error.tsx alleine deckt das NICHT ab, da es innerhalb des Layouts haengt).
@@ -16,10 +17,30 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const isChunkError = isChunkLoadError(error.message);
+  // Siehe error.tsx: nur waehrend des tatsaechlich ausgeloesten Reloads
+  // nichts anzeigen, sonst die normale Fehlerkarte.
+  const [isReloading, setIsReloading] = useState(false);
+
   useEffect(() => {
     console.error(error);
+    if (isChunkError && reloadOnceForChunkError()) {
+      // Siehe error.tsx: setState ueber einen Mikrotask entkoppelt
+      // (react-hooks/set-state-in-effect). Der Reload ist bereits
+      // ausgeloest.
+      void Promise.resolve().then(() => setIsReloading(true));
+      return;
+    }
     Sentry.captureException(error);
-  }, [error]);
+  }, [error, isChunkError]);
+
+  if (isReloading) {
+    return (
+      <html lang="de">
+        <body />
+      </html>
+    );
+  }
 
   return (
     <html lang="de">
