@@ -71,11 +71,12 @@ export default async function ChargingStationsPage({
   // trailerVerdict zaehlt zusaetzlich nur dann fuers groessere Limit, wenn
   // die Auswahl tatsaechlich SELEKTIV ist (trailerVerdictNeedsWiderSearch,
   // siehe dort) -- der nicht-bbox-Pfad von fetchChargingStations() filtert
-  // trailerVerdict ausschliesslich in JS NACH dem Laden+Anreichern, nie in
-  // SQL. Bei 'unknown' (~98,4 % aller Ladepunkte, siehe dort) matcht eine
-  // kleine Stichprobe fast vollstaendig -- das groessere Limit wuerde dort nur
-  // unnoetig bis zu 5000 Ladepunkte laden und anreichern (Performance-Audit
-  // 2026-09-30), ohne die Ergebnisqualitaet zu verbessern.
+  // trailerVerdict seit 20261026100000 schon in SQL VOR dem Limit, die
+  // Treffermenge einer selektiven Auswahl (~1.700 Zeilen) passt dadurch
+  // komplett unter 5000 und wird vollstaendig gezeigt. Bei 'unknown'
+  // (~98,4 % aller Ladepunkte, siehe dort) waere die Treffermenge dagegen
+  // riesig -- das groessere Limit wuerde dort nur unnoetig bis zu 5000
+  // Ladepunkte laden und anreichern (Performance-Audit 2026-09-30).
   const hasActiveFilters = Boolean(
     filters.q ||
       filters.connectorCategories.length > 0 ||

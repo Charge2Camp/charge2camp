@@ -42,20 +42,22 @@ export function isDefaultTrailerVerdict(verdict: TrailerVerdict[]): boolean {
   );
 }
 
-/** Ob eine (vom Default abweichende) `verdict`-Auswahl im nicht-bbox-Pfad
- * von fetchChargingStations() (Server-Erstansicht, siehe ladepunkte/page.tsx)
- * ein groesseres Such-Limit braucht. Dieser Pfad filtert trailerVerdict
- * ausschliesslich in JS NACH dem Laden (siehe fetchChargingStations) -- ein
- * kleines Limit liefert also nur dann genug Treffer, wenn die Auswahl
- * 'unknown' enthaelt: das ist der BNetzA-Import-Platzhalter und deckt laut
- * 20261024120000_fix_checked_verdict_filter_timeout.sql ~98,4 % aller
- * Ladepunkte ab, jede kleine alphabetische Stichprobe enthaelt also fast nur
- * Treffer. Ohne 'unknown' (nur 'yes'/'unhitch'/'no', zusammen nur ~1,6 %)
- * waere eine kleine Stichprobe dagegen fast leer -- dort bleibt das groessere
- * Limit noetig. Bewusst getrennt von isDefaultTrailerVerdict: eine von
- * 'unknown' abweichende Auswahl ZAEHLT weiterhin als aktiver Filter
- * (Badge/activeFilterCount), braucht aber nicht zwingend das groessere
- * Server-Limit. */
+/** Ob eine (vom Default abweichende) `verdict`-Auswahl SELEKTIV ist, ihre
+ * Treffermenge also klein und begrenzt bleibt -- dann darf die Server-
+ * Erstansicht im nicht-bbox-Pfad von fetchChargingStations() (siehe
+ * ladepunkte/page.tsx) das groessere Limit nutzen und zeigt alle Treffer.
+ * trailerVerdict wird dort seit 20261026100000 schon in SQL gefiltert
+ * (core.search_charge_points_by_verdict), das Limit gilt also fuer bereits
+ * passende Zeilen. Enthaelt die Auswahl 'unknown' (BNetzA-Import-
+ * Platzhalter, laut 20261024120000_fix_checked_verdict_filter_timeout.sql
+ * ~98,4 % aller Ladepunkte), waere die Treffermenge dagegen riesig: das
+ * grosse Limit wuerde dann unnoetig bis zu 5000 Ladepunkte laden und
+ * anreichern -- dort bleibt es beim kleinen Limit. Ohne 'unknown' (nur
+ * 'yes'/'unhitch'/'no', zusammen ~1,6 %, in Produktion ~1.700 Zeilen) ist
+ * alles auf einmal guenstig. Bewusst getrennt von isDefaultTrailerVerdict:
+ * eine von 'unknown' abweichende Auswahl ZAEHLT weiterhin als aktiver
+ * Filter (Badge/activeFilterCount), braucht aber nicht zwingend das
+ * groessere Server-Limit. */
 export function trailerVerdictNeedsWiderSearch(verdict: TrailerVerdict[]): boolean {
   return verdict.length > 0 && !verdict.includes("unknown");
 }
