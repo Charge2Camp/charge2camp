@@ -202,12 +202,13 @@ export interface MapBounds {
   north: number;
 }
 
-/** connectorCategories/operators filtern erst NACH dem Laden (in JS) statt in
- * der SQL-Abfrage -- fuer den MVP-Datenumfang ausreichend. trailerVerdict
- * filtert beim bbox-Pfad zusaetzlich schon VOR der Anreicherung in SQL (siehe
- * p_trailer_verdicts unten) und danach zur Sicherheit nochmal identisch in
- * JS -- beim nicht-bbox-Pfad (Server-Erstansicht ohne bekannten
- * Kartenausschnitt) filtert weiterhin ausschliesslich JS.
+/** Alle Filter (q, Betreiber, Mindestleistung, Steckertyp, trailerVerdict)
+ * greifen schon VOR der Anreicherung in SQL -- beim bbox-Pfad ueber
+ * core.charge_points_in_bbox (p_trailer_verdicts), beim nicht-bbox-Pfad
+ * (Server-Erstansicht ohne bekannten Kartenausschnitt) ueber
+ * core.search_charge_points bzw. mit trailerVerdict ueber
+ * core.search_charge_points_by_verdict (20261026100000). Die JS-Filter am
+ * Ende sind nur noch eine identische Sicherheitsnetz-Pruefung.
  * `limit` bewusst ueberschreibbar: die kartenzentrierte Ladepunkte-Seite
  * laedt ohne aktiven Filter (Karten-Erstueberblick) eine kleinere Menge als
  * bei gezielter Filterung (siehe ladepunkte/page.tsx) -- ueber 18.000 echte
@@ -287,17 +288,31 @@ export async function fetchChargingStations(
     // (an sich inlinebare) SQL-Funktion in die aufrufende Abfrage inlined,
     // was beim Connector-Filter live gemessen 8,3s statt 310ms kostete
     // (siehe Migrationskommentar 20261025140000).
-    ({ data, error } = await supabase
-      .schema("core")
-      .rpc("search_charge_points", {
-        p_q: filters.q ?? null,
-        p_operators: filters.operators.length > 0 ? filters.operators : null,
-        p_min_power_kw: filters.minPowerKw > 0 ? filters.minPowerKw : null,
-        p_connector_standards:
-          filters.connectorCategories.length > 0 ? standardsForCategories(filters.connectorCategories) : null,
-      })
-      .order("name")
-      .limit(limit));
+    const searchParams = {
+      p_q: filters.q ?? null,
+      p_operators: filters.operators.length > 0 ? filters.operators : null,
+      p_min_power_kw: filters.minPowerKw > 0 ? filters.minPowerKw : null,
+      p_connector_standards:
+        filters.connectorCategories.length > 0 ? standardsForCategories(filters.connectorCategories) : null,
+    };
+    if (filters.trailerVerdict.length > 0) {
+      // Mit Verdict-Filter: PL/pgSQL-Funktion mit getrennten Pfaden je nach
+      // Selektivitaet (nicht inlinebar) -- order/limit stecken deshalb IM
+      // Funktionskoerper (p_limit), nicht per PostgREST aussen
+      // (20261026100000). Ohne Verdict-Filter bleibt die inlinebare
+      // search_charge_points mit order/limit von aussen.
+      ({ data, error } = await supabase.schema("core").rpc("search_charge_points_by_verdict", {
+        ...searchParams,
+        p_trailer_verdicts: filters.trailerVerdict,
+        p_limit: limit,
+      }));
+    } else {
+      ({ data, error } = await supabase
+        .schema("core")
+        .rpc("search_charge_points", searchParams)
+        .order("name")
+        .limit(limit));
+    }
   }
 
   if (error) throw new Error(error.message);
