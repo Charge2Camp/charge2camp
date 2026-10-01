@@ -119,15 +119,32 @@ function isBoundsContained(inner: MapBoundsBox, outer: MapBoundsBox): boolean {
   );
 }
 
-/** Guenstige Signatur der fuer das Marker-Aussehen relevanten Felder (Pin-
- * Icon haengt an trailer.verdict/drive_through, siehe markers-useMemo unten)
- * -- NICHT das volle Stationsobjekt (JSON.stringify waere fuer bis zu 1500
- * Eintraege pro Vergleich unnoetig teuer). Dient scheduleViewportRefetch
- * dazu, eine inhaltlich unveraenderte Antwort zu erkennen und setStations
- * zu ueberspringen (siehe stationsSignatureRef dort). */
+/** Guenstige Signatur aller in Karte, Popup und Liste (ChargingStationCard,
+ * buildStationPopupHtml, markers-useMemo) angezeigten Felder -- NICHT das
+ * volle Stationsobjekt (JSON.stringify waere fuer bis zu 1500 Eintraege pro
+ * Vergleich unnoetig teuer). Jedes dort angezeigte Feld muss hier enthalten
+ * sein, sonst bliebe eine inhaltlich geaenderte Antwort unsichtbar (z. B.
+ * is_operational als Statusangabe). Dient scheduleViewportRefetch dazu, eine
+ * unveraenderte Antwort zu erkennen und setStations zu ueberspringen (siehe
+ * stationsSignatureRef dort). */
 function stationsSignature(list: ChargingStationView[]): string {
   return list
-    .map((s) => `${s.id}:${s.trailer?.verdict ?? ""}:${s.trailer?.drive_through ?? ""}:${s.connectors.length}`)
+    .map((s) =>
+      [
+        s.id,
+        s.name,
+        s.operator,
+        s.lat,
+        s.lon,
+        s.is_operational ? 1 : 0,
+        s.max_power_kw,
+        s.trailer?.verdict,
+        s.trailer?.drive_through,
+        s.trailer?.origin,
+        s.trailer?.notes,
+        s.connectors.map((c) => `${c.standard}/${c.power_kw}/${c.quantity}`).join(","),
+      ].join(":")
+    )
     .join("|");
 }
 
