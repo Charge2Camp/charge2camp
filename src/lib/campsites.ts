@@ -1,7 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { EV_SCORE_MIN_OPTIONS, RADIUS_KM_OPTIONS } from "@/lib/campsite-filters";
-import { distanceKm } from "@/lib/geo";
 import type { CampsiteSearchRow, CoreAmenity, Favorite } from "@/types/database";
 
 /** Merkmalskatalog aus core.amenity (siehe Migration
@@ -89,55 +88,36 @@ export function parseCampsiteFilters(
 
 /** Liest aus core.campsite_search (Lesesicht mit Merkmalen + vorberechneter
  * Ladepunkt-Naehe/EV-Score, siehe Migration 20260913000200 und
- * 20261025080000). */
+ * 20261025080000) ueber core.search_campsites() (Migration 20261025190000).
+ *
+ * EU-Skalierungs-Audit 2026-10-01: die vorherige Fassung filterte die
+ * Umkreissuche per Lat/Lon-Bounding-Box in SQL, danach `.order("name")
+ * .limit(5000)` und ERST DANACH praezise per Haversine in JS -- bei aktuell
+ * 3.706 Campingplaetzen unauffaellig, aber bei vollstaendigem europaweiten
+ * Rollout (zehntausende Campingplaetze) haette eine dichte Region bei
+ * grossem Radius mehr als 5000 Treffer INNERHALB der groben Box enthalten
+ * koennen: die alphabetische Sortierung vor dem Limit haette dann echte,
+ * naeher gelegene Treffer stillschweigend abschneiden koennen, noch bevor
+ * die praezise Umkreispruefung ueberhaupt lief (identische Fehlerklasse wie
+ * der am selben Tag behobene Ladepunkte-Bug). core.search_campsites()
+ * filtert jetzt ALLE Kriterien (inkl. Umkreis per ST_DWithin auf
+ * core.campsite.geom, GiST-indexgestuetzt) direkt in SQL, mit korrekter
+ * Entfernungssortierung VOR dem Limit. */
 export async function fetchCampsites(filters: CampsiteFilters): Promise<CampsiteSearchRow[]> {
   const supabase = createAdminClient();
-  let query = supabase.schema("core").from("campsite_search").select("*");
-
-  if (filters.q) query = query.ilike("name", `%${filters.q}%`);
-  if (filters.country) query = query.eq("country_code", filters.country);
-  if (filters.amenities.length > 0) query = query.contains("amenities", filters.amenities);
-  if (filters.charging === "on_site") query = query.eq("charging_on_site", true);
-  if (filters.charging === "ac_walk") query = query.not("walkable_ac_m", "is", null);
-  if (filters.charging === "dc_walk") query = query.not("walkable_dc_m", "is", null);
-  if (filters.evScoreMin) query = query.gte("ev_score", filters.evScoreMin);
-  if (filters.ratingMin) query = query.gte("rating_avg", filters.ratingMin);
-
-  // Umkreissuche: core.campsite_search hat keine PostGIS-Geometrie (nur
-  // lat/lon, siehe Migration 20260919000000), deshalb kein serverseitiges
-  // ST_DWithin -- stattdessen ein grobzuegiges Lat/Lon-Bounding-Box-Vorfilter
-  // (nutzt den bestehenden idx_cssearch_geo-Index, guenstigste technisch
-  // sinnvolle Loesung statt einer neuen PostGIS-Spalte/RPC nur fuer diesen
-  // Filter, CLAUDE.md Prinzip 4) + eine praezise Haversine-Nachfilterung
-  // unten (die Box ist immer ein Obermenge des Kreises). Ergebnisse werden
-  // dabei zusaetzlich nach Entfernung sortiert -- bei einer Umkreissuche ist
-  // "am naechsten zuerst" die naheliegende Erwartung, nicht alphabetisch.
-  if (filters.near && filters.radiusKm) {
-    const { latitude, longitude } = filters.near;
-    const latDeltaDeg = filters.radiusKm / 111;
-    const lonDeltaDeg = filters.radiusKm / (111 * Math.max(0.01, Math.cos((latitude * Math.PI) / 180)));
-    query = query
-      .gte("lat", latitude - latDeltaDeg)
-      .lte("lat", latitude + latDeltaDeg)
-      .gte("lon", longitude - lonDeltaDeg)
-      .lte("lon", longitude + lonDeltaDeg);
-  }
-
-  const { data, error } = await query.order("name").limit(5000);
+  const { data, error } = await supabase.schema("core").rpc("search_campsites", {
+    p_q: filters.q ?? null,
+    p_country: filters.country ?? null,
+    p_amenities: filters.amenities.length > 0 ? filters.amenities : null,
+    p_charging: filters.charging ?? null,
+    p_ev_score_min: filters.evScoreMin ?? null,
+    p_rating_min: filters.ratingMin ?? null,
+    p_near_lat: filters.near?.latitude ?? null,
+    p_near_lon: filters.near?.longitude ?? null,
+    p_radius_km: filters.near && filters.radiusKm ? filters.radiusKm : null,
+  });
   if (error) throw new Error(error.message);
-  let results = (data as CampsiteSearchRow[]) ?? [];
-
-  if (filters.near && filters.radiusKm) {
-    const center = filters.near;
-    const radiusKm = filters.radiusKm;
-    results = results
-      .map((c) => ({ c, distance: distanceKm(center, { latitude: c.lat, longitude: c.lon }) }))
-      .filter(({ distance }) => distance <= radiusKm)
-      .sort((a, b) => a.distance - b.distance)
-      .map(({ c }) => c);
-  }
-
-  return results;
+  return (data as CampsiteSearchRow[]) ?? [];
 }
 
 /** Alle Campingplatz-Namen (unabhaengig von aktiven Filtern) fuer die
