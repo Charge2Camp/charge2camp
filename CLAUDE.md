@@ -93,6 +93,8 @@ aktualisieren (Standardwerte sind bereits für lokale Entwicklung vorbelegt).
 - [docs/api.md](docs/api.md) — API-/Adapter-Struktur
 - [docs/data-sources.md](docs/data-sources.md) — externe Datenquellen & Lizenzen
 - [docs/privacy.md](docs/privacy.md) — Datenschutz/DSGVO
+- [docs/i18n.md](docs/i18n.md) — Mehrsprachigkeit (geplant): Bibliothek,
+  URL-/Katalogstruktur, KI-gesteuerte Übersetzungspipeline, Rollout-Reihenfolge
 - [supabase/migrations/](supabase/migrations/) — DB-Schema
 
 ### Charge2Camp Product Design System (verbindlich, s. Prinzip 9)

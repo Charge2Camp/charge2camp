@@ -393,6 +393,11 @@ Routen, Favoriten, Bewertungen) und einer Unterseiten-Navigation
    BE, 63.209 Ladepunkte, lokal und remote) — restliche europäische Länder
    folgen bei Bedarf
 9. **Live-Daten** — echte Provider-Adapter anschließen
+10. **Mehrsprachigkeit** — next-intl, DE als Quelle, KI-gesteuerte
+    Übersetzungspipeline mit Fach-Glossar, Reihenfolge DE → EN → FR/ES/IT/NL,
+    synchron zu den jeweiligen Datenquellen-Rollouts (siehe
+    [i18n.md](i18n.md)) — vor dem vollständigen europaweiten
+    Daten-Rollout, nicht parallel dazu
 
 Jede Phase wird implementiert, getestet, dokumentiert, bevor die nächste
 beginnt.

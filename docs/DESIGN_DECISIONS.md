@@ -10,6 +10,44 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
 
 ---
 
+## Mehrsprachigkeit (i18n): next-intl + KI-gesteuerte Übersetzungspipeline, DE als Quelle
+
+- **Decision:** Für den geplanten europaweiten Rollout wird next-intl als
+  i18n-Bibliothek eingesetzt (App-Router-nativ), mit `localePrefix:
+  "as-needed"` (DE bleibt ohne Sprachpräfix, andere Sprachen bekommen
+  `/en/...`, `/fr/...` etc.). DE ist die einzige von Menschen gepflegte
+  Quelle; alle anderen Sprachkataloge werden ausschließlich über ein
+  Skript erzeugt, das NUR neue/geänderte Schlüssel an die Anthropic API
+  übergibt (zusammen mit einem gepflegten Fach-Glossar und dem
+  Namespace/Schlüsselpfad als Kontext), nicht von Hand parallel gepflegt.
+  Rollout-Reihenfolge: DE (bereits vorhanden) → EN (validiert die
+  Pipeline) → FR/ES/IT/NL, synchron zu den jeweiligen
+  Datenquellen-Rollouts. Volle Begründung und technische Details in
+  [docs/i18n.md](i18n.md).
+- **Reason:** Nutzerwunsch (2026-10-01): Plattform soll für den
+  europaweiten Rollout auf die gängigsten Sprachen umstellbar sein, mit
+  KI-gesteuerter Übersetzung, die die EV-Camping-spezifische
+  Begrifflichkeit (z. B. "Lademöglichkeit", "Anhängertauglichkeit", "Nur
+  abgekoppelt erreichbar") korrekt und konsistent trifft -- eine reine
+  automatische Übersetzung ohne Glossar/Kontext würde genau diese
+  Fachbegriffe verfehlen.
+- **Alternatives:** `next-i18next` (Pages-Router-orientiert, passt nicht
+  zum App-Router-Stack) verworfen. Sprachpräfix auch für DE
+  (`localePrefix: "always"`) verworfen -- hätte alle bestehenden
+  DE-URLs/Bookmarks/SEO-Signale gebrochen, ohne Mehrwert für die aktuell
+  einzige unterstützte Sprache. Vollautomatische Übersetzung ohne
+  menschliches Freigabe-Gate für neue Sprachen verworfen -- das erste
+  Review einer komplett neuen Sprache bleibt ein bewusster Kontrollpunkt,
+  nur spätere Diff-Updates einer bereits abgenommenen Sprache laufen
+  risikoärmer automatisiert.
+- **Impact:** Noch keine Code-Änderung -- reine Architekturplanung,
+  dokumentiert in docs/i18n.md. Die Umstellung auf `src/app/[locale]/...`
+  betrifft jede bestehende Route und wird als eigener Umbauschritt VOR dem
+  eigentlichen europaweiten Daten-Rollout empfohlen, nicht parallel dazu.
+- **Date:** 2026-10-01
+
+---
+
 ## Ladepunkte-Kartenansicht: identische Mindest-Ladeleistung-Stufenauswahl wie Routenplaner
 
 - **Decision:** Der bisherige einzelne "Nur Schnelllader (≥100 kW)"-Chip im
