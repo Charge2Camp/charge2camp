@@ -4,12 +4,19 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 const MIN_QUERY_LENGTH = 3;
 const MAX_SUGGESTIONS = 8;
+const DEBOUNCE_MS = 300;
 
 /**
  * Namens-Suchfeld mit Vorschlaegen aus bereits geladenen Namen (Campingplatz-
  * /Ladepunkt-Suche) -- rein clientseitiger Abgleich gegen `options`, keine
  * externe Anfrage noetig (anders als AddressAutocomplete: hier wird gegen
  * unsere eigene DB gesucht, nicht gegen echte Adressen).
+ *
+ * Vorschlagsquelle: entweder `options` (vorgeladene Liste, rein clientseitig
+ * gefiltert -- Ladepunkt-Suche) oder `fetchSuggestions` (debounced
+ * serverseitige Suche ab drei Zeichen -- Campingplatz-Suche, damit keine
+ * komplette Namensliste mehr an den Client geht und bei EU-Datenmenge keine
+ * Namen abgeschnitten werden). `fetchSuggestions` hat Vorrang.
  *
  * Zwei Modi: ohne `value`-Prop bleibt es ein unkontrolliertes natives
  * Formularfeld (Campingplatz-Filter, filter-form.tsx) -- ein Klick auf einen
@@ -34,7 +41,8 @@ export function NameSuggestField({
   value: externalValue,
   onCommit,
   placeholder,
-  options,
+  options = [],
+  fetchSuggestions,
   className,
 }: {
   name?: string;
@@ -42,12 +50,19 @@ export function NameSuggestField({
   value?: string;
   onCommit?: (value: string) => void;
   placeholder?: string;
-  options: string[];
+  options?: string[];
+  /** Serverseitige Vorschlagssuche (mind. 3 Zeichen, debounced); ersetzt `options`. */
+  fetchSuggestions?: (query: string) => Promise<string[]>;
   className?: string;
 }) {
   const [value, setValue] = useState(externalValue ?? defaultValue ?? "");
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [remoteSuggestions, setRemoteSuggestions] = useState<string[]>([]);
+  const requestIdRef = useRef(0);
+  // Eine ausgewaehlte Suggestion aendert `value` und wuerde sonst sofort eine
+  // neue Abfrage fuer den gerade gewaehlten Text ausloesen.
+  const suppressNextFetchRef = useRef(false);
 
   // Mikrotask-entkoppelt statt synchron im Effect-Body (react-hooks/
   // set-state-in-effect), gleiches Muster wie an anderer Stelle im Projekt
@@ -56,11 +71,39 @@ export function NameSuggestField({
     if (externalValue !== undefined) void Promise.resolve().then(() => setValue(externalValue));
   }, [externalValue]);
 
-  const suggestions = useMemo(() => {
+  const localSuggestions = useMemo(() => {
     const query = value.trim().toLowerCase();
     if (query.length < MIN_QUERY_LENGTH) return [];
     return options.filter((o) => o.toLowerCase().includes(query)).slice(0, MAX_SUGGESTIONS);
   }, [value, options]);
+  const suggestions = fetchSuggestions ? remoteSuggestions : localSuggestions;
+
+  useEffect(() => {
+    if (!fetchSuggestions) return;
+    if (suppressNextFetchRef.current) {
+      suppressNextFetchRef.current = false;
+      return;
+    }
+    const query = value.trim();
+    const requestId = ++requestIdRef.current;
+    const timeout = setTimeout(async () => {
+      if (query.length < MIN_QUERY_LENGTH) {
+        setRemoteSuggestions([]);
+        return;
+      }
+      try {
+        const results = await fetchSuggestions(query);
+        if (requestIdRef.current !== requestId) return; // veraltete Antwort ignorieren
+        setRemoteSuggestions(results.slice(0, MAX_SUGGESTIONS));
+      } catch {
+        // Vorschlaege sind nur eine Komfortfunktion -- das Feld bleibt frei
+        // beschreibbar und absendbar, ein Fehler zeigt einfach keine Liste.
+        if (requestIdRef.current !== requestId) return;
+        setRemoteSuggestions([]);
+      }
+    }, DEBOUNCE_MS);
+    return () => clearTimeout(timeout);
+  }, [value, fetchSuggestions]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -73,6 +116,12 @@ export function NameSuggestField({
   }, []);
 
   function selectSuggestion(suggestion: string, formEl: HTMLFormElement | null) {
+    // Nur wenn sich `value` wirklich aendert -- sonst laeuft der Effect nicht
+    // und das Flag wuerde die naechste echte Eingabe verschlucken.
+    // (Gleiches gilt fuer `fetchSuggestions`: muss referenzstabil sein, z. B.
+    // eine Funktion auf Modulebene, sonst feuert der Effect bei jedem Render.)
+    suppressNextFetchRef.current = suggestion !== value;
+    setRemoteSuggestions([]);
     setValue(suggestion);
     setOpen(false);
     if (onCommit) onCommit(suggestion);

@@ -1,7 +1,6 @@
 import {
   fetchAmenityCatalog,
   fetchCampsiteCountryOptions,
-  fetchCampsiteNameOptions,
   fetchCampsites,
   fetchFavoriteCampsites,
   parseCampsiteFilters,
@@ -47,11 +46,10 @@ export default async function CampsitesPage({
   const user = await requireUser("/campingplaetze");
   const supabase = await createClient();
 
-  const [campsites, favoriteCampsites, countries, nameOptions, { data: profile }] = await Promise.all([
+  const [campsites, favoriteCampsites, countries, { data: profile }] = await Promise.all([
     hasActiveFilters ? fetchCampsites(filters) : Promise.resolve([]),
     user ? fetchFavoriteCampsites(user.id) : Promise.resolve([]),
     fetchCampsiteCountryOptions(),
-    fetchCampsiteNameOptions(),
     user
       ? supabase.from("profiles").select("home_address, home_latitude, home_longitude").eq("id", user.id).maybeSingle()
       : Promise.resolve({ data: null }),
@@ -95,7 +93,6 @@ export default async function CampsitesPage({
           campsites={campsites}
           countries={countries}
           amenityCatalog={amenityCatalog}
-          nameOptions={nameOptions}
           emptyMessage={emptyMessage}
           homeAddress={homeAddress}
         >

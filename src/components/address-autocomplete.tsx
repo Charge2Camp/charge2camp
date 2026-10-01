@@ -29,10 +29,15 @@ export interface LocalSuggestion {
  * ist als bei Photon. Wird kein Vorschlag ausgewaehlt (freie Texteingabe),
  * bleibt die Aufloesung wie gehabt Aufgabe der aufrufenden Stelle.
  *
- * `localSuggestions` (z. B. unsere eigenen Campingplaetze) werden zusaetzlich
- * ohne Debounce/Netzwerk rein clientseitig gefiltert, zuerst und farblich
- * abgesetzt angezeigt -- wichtig u. a., weil z. B. Demo-Campingplatznamen
- * ("[DEMO] ...") ueber einen echten Geocoder gar nicht auffindbar waeren.
+ * `localSuggestions` (statische Liste) und `fetchLocalSuggestions`
+ * (serverseitige Suche, z. B. unsere eigenen Campingplaetze) werden
+ * zusaetzlich zuerst und farblich abgesetzt angezeigt -- wichtig u. a., weil
+ * z. B. Demo-Campingplatznamen ("[DEMO] ...") ueber einen echten Geocoder
+ * gar nicht auffindbar waeren. Die statische Liste wird ohne Netzwerk
+ * clientseitig gefiltert; `fetchLocalSuggestions` laeuft debounced
+ * parallel zu Photon und erscheint unabhaengig davon, sobald die Antwort
+ * da ist (ein langsamer Geocoder verzoegert unsere eigenen Treffer nicht).
+ * `fetchLocalSuggestions` muss referenzstabil sein (Modulebene/useCallback).
  */
 export function AddressAutocomplete({
   name,
@@ -42,6 +47,7 @@ export function AddressAutocomplete({
   required,
   className,
   localSuggestions = [],
+  fetchLocalSuggestions,
   localSuggestionLabel = "Unser Campingplatz",
   onSelectCoordinates,
 }: {
@@ -52,10 +58,12 @@ export function AddressAutocomplete({
   required?: boolean;
   className?: string;
   localSuggestions?: LocalSuggestion[];
+  fetchLocalSuggestions?: (query: string) => Promise<LocalSuggestion[]>;
   localSuggestionLabel?: string;
   onSelectCoordinates?: (coords: { latitude: number; longitude: number } | null) => void;
 }) {
   const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
+  const [fetchedLocal, setFetchedLocal] = useState<LocalSuggestion[]>([]);
   // UX-Audit (2026-09-24): ein fehlgeschlagener Vorschlag-Abruf blieb bisher
   // komplett unsichtbar (leere Liste, kein Hinweis) -- wirkte fuer den
   // Nutzer wie "diese Adresse gibt es nicht", statt wie ein Netzwerkproblem.
@@ -72,10 +80,10 @@ export function AddressAutocomplete({
   const localMatches = useMemo(() => {
     const query = value.trim().toLowerCase();
     if (query.length < MIN_QUERY_LENGTH) return [];
-    return localSuggestions
-      .filter((s) => s.displayName.toLowerCase().includes(query))
-      .slice(0, MAX_LOCAL_SUGGESTIONS);
-  }, [value, localSuggestions]);
+    const staticMatches = localSuggestions.filter((s) => s.displayName.toLowerCase().includes(query));
+    const seen = new Set(staticMatches.map((s) => s.id));
+    return [...staticMatches, ...fetchedLocal.filter((s) => !seen.has(s.id))].slice(0, MAX_LOCAL_SUGGESTIONS);
+  }, [value, localSuggestions, fetchedLocal]);
 
   useEffect(() => {
     if (suppressNextSearchRef.current) {
@@ -89,8 +97,23 @@ export function AddressAutocomplete({
     const timeout = setTimeout(async () => {
       if (query.length < MIN_QUERY_LENGTH) {
         setSuggestions([]);
+        setFetchedLocal([]);
         setSuggestFailed(false);
         return;
+      }
+      if (fetchLocalSuggestions) {
+        // Bewusst NICHT awaited: unsere eigenen Treffer erscheinen, sobald
+        // sie da sind, unabhaengig von der (oft langsameren) Photon-Antwort.
+        // Ein Fehler zeigt einfach keine eigenen Vorschlaege -- Photon und
+        // freie Eingabe funktionieren weiter.
+        fetchLocalSuggestions(query).then(
+          (results) => {
+            if (requestIdRef.current === requestId) setFetchedLocal(results);
+          },
+          () => {
+            if (requestIdRef.current === requestId) setFetchedLocal([]);
+          }
+        );
       }
       try {
         const results = await searchAddressSuggestions(query);
@@ -106,7 +129,7 @@ export function AddressAutocomplete({
     }, DEBOUNCE_MS);
 
     return () => clearTimeout(timeout);
-  }, [value]);
+  }, [value, fetchLocalSuggestions]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -136,6 +159,7 @@ export function AddressAutocomplete({
     onSelectCoordinates?.({ latitude: suggestion.latitude, longitude: suggestion.longitude });
     setOpen(false);
     setSuggestions([]);
+    setFetchedLocal([]);
   }
 
   function selectRemote(suggestion: AddressSuggestion) {
@@ -144,6 +168,7 @@ export function AddressAutocomplete({
     onSelectCoordinates?.({ latitude: suggestion.latitude, longitude: suggestion.longitude });
     setOpen(false);
     setSuggestions([]);
+    setFetchedLocal([]);
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {

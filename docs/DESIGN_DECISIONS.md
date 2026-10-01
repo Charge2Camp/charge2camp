@@ -1476,3 +1476,36 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
   Prop nicht mehr benoetigt), `campsite-search-client.tsx` (Aufruf
   angepasst).
 - **Date:** 2026-09-28.
+
+## Campingplatz-Namensvorschläge serverseitig statt vorgeladener Namenslisten
+
+- **Decision:** Die Namensvorschläge im Campingplatz-Suchfeld
+  (`NameSuggestField`) und die Campingplatz-Vorschläge im Routenplaner-Ziel
+  (`AddressAutocomplete`) kommen jetzt aus einer debounced serverseitigen
+  Suche (`GET /api/campsites/suggest`, ab 3 Zeichen, max. 8 Treffer,
+  Präfix-Treffer zuerst) statt aus beim Seitenaufruf vorgeladenen Listen.
+  `NameSuggestField` behält den `options`-Modus für die Ladepunkt-Suche
+  (dort unverändert). Die Koordinaten einer gespeicherten Route werden beim
+  Öffnen per Namen serverseitig nachgeschlagen (`?name=`), das Routenziel
+  `?destination_campsite_id=` per ID. Zusätzlich liefert
+  `core.campsite_country_options()` (`20261026110000`) die Länderliste des
+  Land-Filters in SQL.
+- **Reason:** Die alten Listen (`order by name limit 5000`) verloren ab
+  >5.000 Campingplätzen (EU-Rollout, aktuell ~3.700) alle Namen jenseits des
+  Alphabet-Endes und hätten mit jedem Land mehr Payload an jeden Client
+  geschickt; die Länderliste las zufällige erste 5.000 Zeilen ohne
+  `order by`/`distinct` und verlor ab da stillschweigend Länder (SQL-Perf-
+  Review 2026-10-26, Befunde 1-3).
+- **Alternatives:** Vorgeladene Listen weiter vergrößern -- verworfen, wächst
+  mit jedem Land und verschiebt nur die Obergrenze. Obergrenze nur anheben --
+  gleiches Problem, nur später.
+- **Impact:** Neue Vorschläge brauchen eine Netzwerkabfrage (Debounce
+  300-350 ms); bei Fehler/Offline bleibt das Feld frei beschreibbar, nur die
+  Vorschlagsliste fehlt (Photon-Adressvorschläge laufen unabhängig). Eigene
+  Campingplatz-Treffer erscheinen im Routenplaner, sobald ihre Antwort da
+  ist, unabhängig von Photon. `campsites.ts`: `fetchCampsiteNameOptions`/
+  `fetchCampsiteDestinationOptions` entfernt, `suggestCampsites`/
+  `fetchCampsiteDestinationByName`/`ById` neu; `src/lib/campsite-suggest.ts`
+  (client-sicherer Teil). Seiten `/campingplaetze` und `/routenplaner`
+  laden keine Campingplatz-Namensliste mehr.
+- **Date:** 2026-10-26.

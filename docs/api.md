@@ -74,6 +74,13 @@ echten Datenlayer (`raw`/`core`/`enrich`, siehe [database.md](database.md)):
   eigene `COUNT`-Abfragen. Adapter: `src/lib/search/meilisearch.ts`.
 - `GET /api/campsites/{external_key}` — volles Objekt inkl. verknüpfter
   Ladepunkte mit Anschlüssen, direkt aus Postgres/PostgREST.
+- `GET /api/campsites/suggest` — **interner** Endpunkt (Login + Rate-Limit,
+  kein öffentlicher Vertrag) für Campingplatz-Namensvorschläge:
+  `?q=<text>` (Name enthält q, ab 3 Zeichen, max. 8, Präfix-Treffer zuerst)
+  oder `?name=<text>` (genau dieser Platz, zum Wiederherstellen einer
+  gespeicherten Route). Antwort: `{ campsites: [{ id, name, latitude, longitude }] }`.
+  Liest `core.campsite_search` (Trigram-Index), Aufrufer: `NameSuggestField`
+  (Campingplatz-Suche) und `AddressAutocomplete` (Routenplaner-Ziel).
 - `GET /api/charge-points/search` — analog, aber noch ohne eigenen
   Suchindex (Auftrag E deckt nur Campingplätze ab), deshalb direkt gegen
   `core.charge_point_geo` mit serverseitiger Umkreis-/Boundingbox-

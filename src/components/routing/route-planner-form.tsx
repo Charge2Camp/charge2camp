@@ -9,7 +9,7 @@ import {
   saveRoute,
   type RoutePlanResult,
 } from "@/app/routenplaner/actions";
-import { AddressAutocomplete } from "@/components/address-autocomplete";
+import { AddressAutocomplete, type LocalSuggestion } from "@/components/address-autocomplete";
 import { MapView } from "@/components/map/map-view";
 import { RouteOverviewPanel } from "@/components/routing/route-overview-panel";
 import { RouteWizardTabs } from "@/components/routing/route-wizard-tabs";
@@ -37,7 +37,7 @@ import { buildRouteSegments } from "@/lib/route-navigation";
 import { logRouteExportEvent } from "@/lib/analytics-actions";
 import { TRAILER_PIN_COLORS, TRAILER_PIN_ICON_SRC, TRAILER_PIN_LABELS, TRAILER_PIN_TEXT_CLASS, TRAILER_PIN_TEXT_HEX } from "@/lib/trailer-verdict";
 import { CHARGING_PROVIDERS } from "@/lib/charging-providers";
-import type { CampsiteDestinationOption } from "@/lib/campsites";
+import { fetchCampsiteByName, fetchCampsiteSuggestions } from "@/lib/campsite-suggest";
 import type { FavoriteDestinationOption } from "@/lib/favorites";
 import type { Caravan, Vehicle } from "@/types/database";
 import { useDelayedLoading } from "@/lib/use-delayed-loading";
@@ -211,12 +211,19 @@ interface RouteDraftState {
   result: RoutePlanResult;
 }
 
+/** Serverseitige Vorschlaege eigener Campingplaetze fuer das Ziel-Feld
+ * (statt einer vorgeladenen Liste, siehe suggestCampsites in campsites.ts).
+ * Auf Modulebene, damit die Referenz fuer AddressAutocomplete stabil bleibt. */
+async function suggestCampsiteDestinations(query: string): Promise<LocalSuggestion[]> {
+  const campsites = await fetchCampsiteSuggestions(query);
+  return campsites.map((c) => ({ id: c.id, displayName: c.name, latitude: c.latitude, longitude: c.longitude }));
+}
+
 export function RoutePlannerForm({
   vehicles,
   caravans,
   initialPreferredProviders,
   initialAvoidedProviders,
-  campsiteDestinations,
   favorites,
   homeAddress,
   savedRoutes,
@@ -237,8 +244,6 @@ export function RoutePlannerForm({
    * charging-providers.ts) -- Vorbelegung fuer den Anbieter-Filter unten,
    * analog zu initialPreferredProviders. */
   initialAvoidedProviders: string[];
-  /** Eigene Campingplaetze (Name + Koordinaten), als zusaetzliche, erkennbare Vorschlaege im Ziel-Feld. */
-  campsiteDestinations: CampsiteDestinationOption[];
   /** Vom Nutzer gemerkte Campingplaetze/Ladepunkte, fuer die Favoriten-Auswahl (Start/Ziel). */
   favorites: FavoriteDestinationOption[];
   /** Im Profil ("Meine Daten") hinterlegte Zuhause-Adresse, fuer den "Zuhause verwenden"-Button (Start/Ziel). */
@@ -285,22 +290,18 @@ export function RoutePlannerForm({
   );
   const [favoritesDialogOpen, setFavoritesDialogOpen] = useState(false);
   const [homeDialogOpen, setHomeDialogOpen] = useState(false);
-  const campsiteSuggestions = useMemo(
-    () => campsiteDestinations.map((c) => ({ id: c.id, displayName: c.name, latitude: c.latitude, longitude: c.longitude })),
-    [campsiteDestinations]
-  );
-  // Kombinierte Nachschlage-Tabelle (alle eigenen Campingplaetze + alle
-  // Favoriten + Zuhause-Adresse) nach Anzeigename -- genutzt beim
-  // Wiederherstellen einer gespeicherten Route, um Start/Ziel-Koordinaten
-  // zurueckzubekommen, falls damals ein Campingplatz/Favorit/Zuhause
-  // gewaehlt wurde (siehe useEffect unten).
+  // Nachschlage-Tabelle (alle Favoriten + Zuhause-Adresse) nach Anzeigename --
+  // genutzt beim Wiederherstellen einer gespeicherten Route, um Start/Ziel-
+  // Koordinaten zurueckzubekommen, falls damals ein Favorit/Zuhause gewaehlt
+  // wurde (siehe loadAndApplySavedRoute unten). Eigene Campingplaetze sind
+  // NICHT mehr vorgeladen, sondern werden dort per Namen serverseitig
+  // nachgeschlagen (fetchCampsiteByName).
   const knownPlaceByName = useMemo(() => {
     const map = new Map<string, { latitude: number; longitude: number }>();
-    for (const c of campsiteSuggestions) map.set(c.displayName, { latitude: c.latitude, longitude: c.longitude });
     for (const f of favorites) map.set(f.name, { latitude: f.latitude, longitude: f.longitude });
     if (homeAddress) map.set(homeAddress.name, { latitude: homeAddress.latitude, longitude: homeAddress.longitude });
     return map;
-  }, [campsiteSuggestions, favorites, homeAddress]);
+  }, [favorites, homeAddress]);
   const [vehicleId, setVehicleId] = useState(initialVehicleId);
   const [caravanId, setCaravanId] = useState(initialCaravanId);
   // Verbrauch aus dem Fahrzeugprofil vorbelegen, wenn die Gespann-Auswahl
@@ -393,6 +394,21 @@ export function RoutePlannerForm({
   // (?savedRouteId=... aus dem Link "Öffnen" im Profil) und vom
   // "Gespeicherte Route öffnen"-Picker (siehe savedRouteDialogOpen), bevor
   // eine eigene Route berechnet wurde.
+  async function resolveKnownPlace(name: string): Promise<{ latitude: number; longitude: number } | null> {
+    const known = knownPlaceByName.get(name);
+    if (known) return known;
+    // Kein Treffer unter Favoriten/Zuhause: koennte ein eigener Campingplatz
+    // gewesen sein. Ein Fehler/Nichttreffer bedeutet nur "Koordinaten
+    // unbekannt" (wie bisher bei freiem Text) -- die Route laesst sich
+    // trotzdem oeffnen und wird beim Neuberechnen normal geocodiert.
+    try {
+      const campsite = await fetchCampsiteByName(name);
+      return campsite ? { latitude: campsite.latitude, longitude: campsite.longitude } : null;
+    } catch {
+      return null;
+    }
+  }
+
   async function loadAndApplySavedRoute(id: string) {
     setLoadingSavedRoute(true);
     setError(null);
@@ -403,6 +419,10 @@ export function RoutePlannerForm({
         return;
       }
       const saved = savedResult.data;
+      const [restoredStartCoords, restoredEndCoords] = await Promise.all([
+        resolveKnownPlace(saved.startQuery),
+        resolveKnownPlace(saved.endQuery),
+      ]);
       setStart(saved.startQuery);
       setEnd(saved.endQuery);
       // Falls Start/Ziel damals ueber einen unserer Campingplatz-
@@ -410,8 +430,8 @@ export function RoutePlannerForm({
       // Koordinaten wiederherstellen -- sonst wuerde ein spaeteres "neu
       // berechnen" versuchen, den (bei Demo-Namen nicht auffindbaren) Text
       // per Nominatim zu geocodieren, siehe actions.ts.
-      setStartCoords(knownPlaceByName.get(saved.startQuery) ?? null);
-      setEndCoords(knownPlaceByName.get(saved.endQuery) ?? null);
+      setStartCoords(restoredStartCoords);
+      setEndCoords(restoredEndCoords);
       setManualStopQueries(saved.manualStopQueries);
       setVehicleId(saved.vehicleId);
       setCaravanId(saved.caravanId ?? "");
@@ -850,7 +870,7 @@ export function RoutePlannerForm({
               onChange={setEnd}
               placeholder="z. B. Porec, Kroatien"
               className="w-full rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
-              localSuggestions={campsiteSuggestions}
+              fetchLocalSuggestions={suggestCampsiteDestinations}
               onSelectCoordinates={setEndCoords}
             />
             {endCoords && (

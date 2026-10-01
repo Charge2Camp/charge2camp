@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { EV_SCORE_MIN_OPTIONS, RADIUS_KM_OPTIONS } from "@/lib/campsite-filters";
+import { CAMPSITE_SUGGEST_MIN_QUERY_LENGTH, type CampsiteDestinationOption } from "@/lib/campsite-suggest";
 import type { CampsiteSearchRow, CoreAmenity, Favorite } from "@/types/database";
 
 /** Merkmalskatalog aus core.amenity (siehe Migration
@@ -120,42 +121,98 @@ export async function fetchCampsites(filters: CampsiteFilters): Promise<Campsite
   return (data as CampsiteSearchRow[]) ?? [];
 }
 
-/** Alle Campingplatz-Namen (unabhaengig von aktiven Filtern) fuer die
- * Vorschlagsliste im Suchfeld -- siehe NameSuggestField. */
-export async function fetchCampsiteNameOptions(): Promise<string[]> {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .schema("core")
-    .from("campsite")
-    .select("name")
-    .eq("is_active", true)
-    .order("name")
-    .limit(5000);
-  if (error) throw new Error(error.message);
-  return Array.from(new Set((data ?? []).map((row) => row.name).filter(Boolean)));
+const SUGGEST_LIMIT = 8;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+type CampsiteDestinationRow = { id: string; name: string; lat: number; lon: number };
+
+function toDestinationOption(r: CampsiteDestinationRow): CampsiteDestinationOption {
+  return { id: r.id, name: r.name, latitude: r.lat, longitude: r.lon };
 }
 
-export interface CampsiteDestinationOption {
-  id: string;
-  name: string;
-  latitude: number;
-  longitude: number;
+/** LIKE-Metazeichen (% _ und der Escape-Backslash) sowie PostgREST's
+ * "*"-Wildcard aus Nutzereingaben neutralisieren, damit "50%" oder "a_b"
+ * woertlich gesucht werden statt als Muster. */
+function escapeLikeTerm(term: string): string {
+  const backslash = String.fromCharCode(92);
+  return term
+    .split("*")
+    .join("")
+    .split(backslash)
+    .join(backslash + backslash)
+    .replace(/[%_]/g, (c) => backslash + c);
 }
 
-/** Name + Koordinaten aller Campingplaetze, fuer die Ziel-Vorschlaege im
- * Routenplaner (AddressAutocomplete `localSuggestions`) -- die Koordinaten
- * sind bereits bekannt, kein erneutes Geocoding des Namens noetig (siehe
- * routenplaner/actions.ts). */
-export async function fetchCampsiteDestinationOptions(): Promise<CampsiteDestinationOption[]> {
+/** Vorschlaege fuer Campingplatz-Namensfelder (Filter-Suche, Routenplaner-
+ * Ziel): Name enthaelt `query`, Praefix-Treffer zuerst, hoechstens
+ * SUGGEST_LIMIT. Serverseitig statt einer vorgeladenen Namensliste -- die
+ * frueheren Listen (order by name limit 5000) verloren ab >5.000
+ * Campingplaetzen (EU-Rollout) alle Namen jenseits des Alphabet-Endes und
+ * wuerden mit jedem Land mehr Payload an den Client schicken. Nutzt den
+ * Trigram-Index idx_cssearch_name_trgm (20261024260000) von
+ * core.campsite_search. Rueckgabe samt Koordinaten, damit der Routenplaner
+ * nicht erneut geocodieren muss (siehe routenplaner/actions.ts). */
+export async function suggestCampsites(query: string): Promise<CampsiteDestinationOption[]> {
+  // "*" ist PostgREST's LIKE-Wildcard und wird entfernt (siehe escapeLikeTerm);
+  // erst NACH dem Entfernen auf die Mindestlaenge pruefen, sonst matcht z. B.
+  // "***" als leeres Muster alles.
+  const term = query.split("*").join("").trim();
+  if (term.length < CAMPSITE_SUGGEST_MIN_QUERY_LENGTH) return [];
+  const pattern = escapeLikeTerm(term);
   const supabase = createAdminClient();
-  const { data, error } = await supabase
+
+  async function find(likePattern: string, limit: number): Promise<CampsiteDestinationRow[]> {
+    const { data, error } = await supabase
+      .schema("core")
+      .from("campsite_search")
+      .select("id, name, lat, lon")
+      .ilike("name", likePattern)
+      .order("name")
+      .limit(limit);
+    if (error) throw new Error(error.message);
+    return (data ?? []) as CampsiteDestinationRow[];
+  }
+
+  // Praefix-Treffer zuerst (eigene Abfrage, damit sie nicht hinter beliebig
+  // vielen alphabetisch frueheren Enthaelt-Treffern abgeschnitten werden),
+  // danach -- nur falls noch Platz ist -- reine Enthaelt-Treffer.
+  const prefixRows = await find(`${pattern}%`, SUGGEST_LIMIT);
+  if (prefixRows.length >= SUGGEST_LIMIT) return prefixRows.map(toDestinationOption);
+  const prefixIds = new Set(prefixRows.map((r) => r.id));
+  const containsRows = (await find(`%${pattern}%`, SUGGEST_LIMIT + prefixRows.length)).filter(
+    (r) => !prefixIds.has(r.id)
+  );
+  return [...prefixRows, ...containsRows].slice(0, SUGGEST_LIMIT).map(toDestinationOption);
+}
+
+/** Genau der Campingplatz mit diesem Namen -- zum Wiederherstellen der
+ * Koordinaten einer gespeicherten Route (route-planner-form.tsx). Bei
+ * mehreren gleichnamigen der alphabetisch/technisch erste. */
+export async function fetchCampsiteDestinationByName(name: string): Promise<CampsiteDestinationOption | null> {
+  const { data, error } = await createAdminClient()
     .schema("core")
     .from("campsite_search")
     .select("id, name, lat, lon")
-    .order("name")
-    .limit(5000);
+    .eq("name", name)
+    .limit(1);
   if (error) throw new Error(error.message);
-  return (data ?? []).map((r) => ({ id: r.id, name: r.name, latitude: r.lat, longitude: r.lon }));
+  const row = (data ?? [])[0] as CampsiteDestinationRow | undefined;
+  return row ? toDestinationOption(row) : null;
+}
+
+/** Ziel-Vorbelegung ueber `?destination_campsite_id=` (Button "Route hierher
+ * planen", routenplaner/page.tsx). Ungueltige IDs (kein UUID-Format) liefern
+ * null statt einen Datenbankfehler zu werfen. */
+export async function fetchCampsiteDestinationById(id: string): Promise<CampsiteDestinationOption | null> {
+  if (!UUID_RE.test(id)) return null;
+  const { data, error } = await createAdminClient()
+    .schema("core")
+    .from("campsite_search")
+    .select("id, name, lat, lon")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data ? toDestinationOption(data as CampsiteDestinationRow) : null;
 }
 
 /** Vom Nutzer gemerkte Campingplaetze mit vollen Merkmalen (core.campsite_search)
@@ -181,14 +238,13 @@ export async function fetchFavoriteCampsites(userId: string): Promise<CampsiteSe
   return (data as CampsiteSearchRow[]) ?? [];
 }
 
-/** Bekannte Laendercodes fuer den Land-Filter. */
+/** Bekannte Laendercodes (nur aktive Campingplaetze) fuer den Land-Filter.
+ * Eindeutige Werte kommen aus core.campsite_country_options()
+ * (20261026110000) -- die frueher gelesenen ersten 5.000 Zeilen ohne
+ * order by verloren ab >5.000 Campingplaetzen stillschweigend Laender. */
 export async function fetchCampsiteCountryOptions(): Promise<string[]> {
   const supabase = createAdminClient();
-  const { data, error } = await supabase.schema("core").from("campsite").select("country_code").limit(5000);
+  const { data, error } = await supabase.schema("core").rpc("campsite_country_options");
   if (error) throw new Error(error.message);
-  const countries = new Set<string>();
-  for (const row of data ?? []) {
-    if (row.country_code) countries.add(row.country_code);
-  }
-  return Array.from(countries).sort();
+  return (data as string[]) ?? [];
 }

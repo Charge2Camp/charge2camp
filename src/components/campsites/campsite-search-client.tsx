@@ -23,7 +23,6 @@ export function CampsiteSearchClient({
   campsites,
   countries,
   amenityCatalog,
-  nameOptions,
   emptyMessage,
   homeAddress,
   children,
@@ -32,7 +31,6 @@ export function CampsiteSearchClient({
   campsites: CampsiteSearchRow[];
   countries: string[];
   amenityCatalog: CoreAmenity[];
-  nameOptions: string[];
   emptyMessage: string;
   homeAddress: { latitude: number; longitude: number } | null;
   /** Favoriten-Kurzliste -- serverseitig gerendert, siehe
@@ -108,7 +106,6 @@ export function CampsiteSearchClient({
               filters={liveFilters}
               onChange={applyFilters}
               amenityCatalog={amenityCatalog}
-              nameOptions={nameOptions}
             />
           </FurtherFiltersSheet>
 

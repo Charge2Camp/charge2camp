@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireUser } from "@/lib/require-user";
 import type { Caravan, Vehicle } from "@/types/database";
-import { fetchCampsiteDestinationOptions } from "@/lib/campsites";
+import { fetchCampsiteDestinationById } from "@/lib/campsites";
 import { fetchFavoriteDestinations } from "@/lib/favorites";
 import { RoutePlannerForm } from "@/components/routing/route-planner-form";
 
@@ -31,7 +31,7 @@ export default async function RoutePlannerPage({
   const [
     { data: vehicles },
     { data: caravans },
-    campsiteDestinations,
+    destinationCampsite,
     stationResult,
     favorites,
     { data: profile },
@@ -47,7 +47,7 @@ export default async function RoutePlannerPage({
       .select("*")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false }),
-    fetchCampsiteDestinationOptions(),
+    destinationCampsiteId ? fetchCampsiteDestinationById(destinationCampsiteId) : Promise.resolve(null),
     destinationStationId
       ? createAdminClient()
           .schema("core")
@@ -121,9 +121,6 @@ export default async function RoutePlannerPage({
   // vorbelegt, inkl. bekannter Koordinaten (kein erneutes Geocoding noetig,
   // siehe route-planner-form.tsx). Hoechstens einer der beiden Query-
   // Parameter ist in der Praxis gesetzt.
-  const destinationCampsite = destinationCampsiteId
-    ? campsiteDestinations.find((c) => c.id === destinationCampsiteId)
-    : undefined;
   const initialDestination =
     destinationCampsite ??
     (stationResult.data
@@ -147,7 +144,6 @@ export default async function RoutePlannerPage({
           caravans={(caravans as Caravan[]) ?? []}
           initialPreferredProviders={profile?.preferred_charging_providers ?? []}
           initialAvoidedProviders={profile?.avoided_charging_providers ?? []}
-          campsiteDestinations={campsiteDestinations}
           favorites={favorites}
           homeAddress={homeAddress}
           savedRoutes={savedRoutes}

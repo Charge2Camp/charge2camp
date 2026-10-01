@@ -3,7 +3,14 @@
 import { FilterChip } from "@/components/charging-stations/filter-chip";
 import { NameSuggestField } from "@/components/name-suggest-field";
 import type { CampsiteFilters } from "@/lib/campsites";
+import { fetchCampsiteSuggestions } from "@/lib/campsite-suggest";
 import type { CoreAmenity } from "@/types/database";
+
+/** Serverseitige Namensvorschlaege fuer das Suchfeld (ab drei Zeichen, siehe
+ * NameSuggestField) -- auf Modulebene, damit die Referenz stabil bleibt. */
+async function suggestCampsiteNames(query: string): Promise<string[]> {
+  return (await fetchCampsiteSuggestions(query)).map((c) => c.name);
+}
 
 /** Merkmale nach Kategorie gruppiert -- bei 30 Eintraegen ist eine flache
  * Liste unuebersichtlich (siehe core.amenity, Migration
@@ -41,13 +48,10 @@ export function CampsiteFilterForm({
   filters,
   onChange,
   amenityCatalog,
-  nameOptions,
 }: {
   filters: CampsiteFilters;
   onChange: (patch: Partial<CampsiteFilters>) => void;
   amenityCatalog: CoreAmenity[];
-  /** Alle Campingplatz-Namen, fuer Vorschlaege im Suchfeld ab drei Zeichen. */
-  nameOptions: string[];
 }) {
   const groups = groupByCategory(amenityCatalog);
 
@@ -66,7 +70,7 @@ export function CampsiteFilterForm({
           value={filters.q ?? ""}
           onCommit={(value) => onChange({ q: value || undefined })}
           placeholder="Name des Campingplatzes"
-          options={nameOptions}
+          fetchSuggestions={suggestCampsiteNames}
           className="w-full rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
         />
       </label>
