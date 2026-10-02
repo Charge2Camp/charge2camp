@@ -86,6 +86,49 @@ npm run dev
 Nach `supabase start` ggf. `.env.local` mit den ausgegebenen Werten
 aktualisieren (Standardwerte sind bereits für lokale Entwicklung vorbelegt).
 
+## Befehle
+
+```bash
+npm run dev            # Next.js-Dev-Server (cross-env, System-CA)
+npm run lint           # ESLint
+npx tsc --noEmit       # Typecheck (kein npm-Script)
+npm test               # Vitest (src/**/*.test.ts), nur reine Logik in src/lib
+npm run build          # Produktions-Build, faengt Server/Client-Fehler
+```
+
+Tests: Vitest fuer reine Logik (`src/lib/scoring`, `geo`, `travel-time`, `route-timeline`); keine DOM-/
+Supabase-Tests, kein Playwright. `admin/` hat keinen Test-Runner. Python-Tests liegen in `ingest/`
+(`test_*.py`). Neue reine Logik in `src/lib` bekommt einen Test (`<name>.test.ts` daneben).
+Skills: `/pre-push-check` vor Push, `/new-migration` fuer Migrationen, `/mobile-check` fuer UI-Aenderungen.
+
+## Repo-Struktur (Ueberblick)
+
+- `src/` — Haupt-App (Next.js): `app/`, `components/`, `lib/` (Datenzugriff, Scoring,
+  `providers/` = Adapter, `supabase/{client,server,admin,middleware}.ts`).
+- `admin/` — **eigenes** Next.js-Projekt (eigenes `package.json`, `CLAUDE.md`, Lint/Build) fuer das
+  Admin-Backend (Massenupload, Quellen-Import). Aenderungen dort separat pruefen.
+- `ingest/` — Python-Importer (BNetzA, IRVE, OCM, OSM, Ripree …) gegen dieselbe Supabase-DB.
+  Laufen produktiv per GitHub Action `.github/workflows/source-import.yml`, nicht in Vercel.
+- `supabase/migrations/` — Schema; `sql/` — Qualitaetspruefungen.
+- `.claude/` — Hooks (`pre-edit-guard`, `post-edit-check` = tsc/eslint/Vitest/Farb-Check,
+  `client-server-boundary`; alle gelten fuer `src/` **und** `admin/`), Agents (`design-system-reviewer`,
+  `sql-perf-reviewer`, `security-reviewer`), Skills (`new-migration`, `pre-push-check`, `mobile-check`).
+- `.mcp.json` — `figma`, `context7` (aktuelle Bibliotheks-Doku) und `supabase-local-db` (nur lesend,
+  nur `127.0.0.1:54322` = lokale Docker-DB, nie Prod; braucht `npx supabase start`).
+
+## Bekannte Fallen (verbindlich beachten)
+
+1. **Client/Server-Grenze:** Ein Wert-Import aus Server-only-Code (`next/headers`,
+   `@/lib/supabase/server|admin`, `server-only`) in `"use client"`-Code legt die ganze App mit
+   500 lahm; tsc/eslint merken es nicht (ein Hook und `npm run build` schon). Nur `import type`
+   oder eine `"use server"`-Action verwenden.
+2. **SQL-Funktions-Overload:** `CREATE OR REPLACE FUNCTION` mit geaenderter Parameterliste erzeugt
+   einen zweiten Overload. Immer vorher `DROP FUNCTION IF EXISTS schema.name(<alte Typliste>)`.
+3. **Lokalen DB-Stand pruefen:** nie `supabase db query --linked=false` (kann still die
+   Produktions-DB treffen), sondern `docker exec -i supabase_db_eCamper psql …`.
+4. **Migrations-Drift:** vor jedem `db push` `npx supabase migration list` pruefen; Prod-Historie
+   hatte Luecken (repariert 2026-10-04). `db push` nur nach ausdruecklicher Freigabe.
+
 ## Wichtige Dateien
 
 - [docs/architecture.md](docs/architecture.md) — volle Spezifikation & Phasenplan

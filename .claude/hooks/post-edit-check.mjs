@@ -1,18 +1,16 @@
-// PostToolUse (Edit|Write|MultiEdit): Typecheck + ESLint + Design-Token-Check.
+// PostToolUse (Edit|Write|MultiEdit): Typecheck + ESLint + Vitest (src/lib) + Design-Token-Check (src/ und admin/).
 // Exit 2 = Befund geht per stderr zurueck an Claude.
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
+import { projectFor, readHookInput } from "./project.mjs";
 
-const input = JSON.parse(readFileSync(0, "utf8"));
-const ti = input.tool_input ?? {};
-const file = String(ti.file_path ?? "").split(String.fromCharCode(92)).join("/");
-const root = String(input.cwd ?? process.cwd());
-
-if (!/\/src\/.*\.(ts|tsx)$/.test(file)) process.exit(0);
+const { ti, file, root } = readHookInput(readFileSync(0, "utf8"));
+const project = projectFor(file, root);
+if (!project) process.exit(0);
 
 const problems = [];
 const run = (label, args) => {
-  const r = spawnSync(process.execPath, args, { cwd: root, encoding: "utf8" });
+  const r = spawnSync(process.execPath, args, { cwd: project.dir, encoding: "utf8" });
   if (r.status !== 0) {
     const out = `${r.stdout ?? ""}${r.stderr ?? ""}`.trim().split("\n").slice(0, 30).join("\n");
     problems.push(`${label}:\n${out}`);
@@ -21,6 +19,12 @@ const run = (label, args) => {
 
 run("tsc --noEmit", ["node_modules/typescript/bin/tsc", "--noEmit"]);
 run("eslint", ["node_modules/eslint/bin/eslint.js", file]);
+
+// Vitest (nur Haupt-App, reine Logik unter src/lib): Tests, die die geaenderte Datei importieren
+// (bei einer Testdatei: diese selbst). Kein Treffer = ok.
+if (project.name === "app" && /\/src\/lib\//.test(file)) {
+  run("vitest", ["node_modules/vitest/vitest.mjs", "related", "--run", "--passWithNoTests", file]);
+}
 
 // Design-System (CLAUDE.md Prinzip 9): keine hart codierten Farben. Nur der neu
 // geschriebene Text wird geprueft, damit Altbestand nicht bei jeder Edit nervt.

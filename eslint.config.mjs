@@ -16,6 +16,8 @@ const eslintConfig = defineConfig([
     // eigener eslint.config.mjs -- soll nicht von der Haupt-App-Config
     // mitgelintet werden (eigene tsconfig/"@/"-Aliase).
     "admin/**",
+    // Git-Worktrees von Claude Code (Kopien des Repos inkl. node_modules).
+    ".claude/worktrees/**",
   ]),
 ]);
 
