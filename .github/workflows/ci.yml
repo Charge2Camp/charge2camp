@@ -1,0 +1,78 @@
+# Qualitaetspruefung fuer jeden Push/PR (OPTIMIERUNG.md, Befund Q-1).
+# Bisher liefen tsc/ESLint/Vitest/Build nur lokal ueber die .claude-Hooks --
+# ein Push ohne Hooks (oder eine Aenderung nur in admin/) blieb ungeprueft.
+# Haupt-App und Admin sind getrennte Next.js-Projekte (eigene package.json),
+# daher zwei Jobs. Laeuft im kostenlosen GitHub-Actions-Kontingent.
+#
+# Build braucht keine echten Secrets: alle Seiten sind dynamisch, die
+# Supabase-Clients lesen die Variablen erst zur Laufzeit. Die Platzhalter
+# unten verhindern nur, dass ein `process.env.X!` beim Build als undefined
+# auffaellt; sie zeigen auf die lokale Supabase-Adresse, nie auf Prod.
+name: CI
+
+on:
+  push:
+    branches: [development, main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NEXT_TELEMETRY_DISABLED: "1"
+  NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder
+  SUPABASE_SERVICE_ROLE_KEY: ci-placeholder
+
+jobs:
+  app:
+    name: App (tsc, Lint, Vitest, Build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+  admin:
+    name: Admin (tsc, Lint, Build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: admin
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: admin/package-lock.json
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm run lint
+      - run: npm run build
+
+  ingest:
+    name: Ingest (Python-Syntax)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # Die test_*.py-Skripte laufen gegen eine echte DB und sind daher
+      # (noch) nicht CI-faehig -- siehe OPTIMIERUNG.md, Befund D-4.
+      - run: python -m py_compile ingest/*.py
