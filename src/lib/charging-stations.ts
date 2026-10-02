@@ -212,7 +212,10 @@ function applyPostFilters(
 ): ChargingStationView[] {
   let results = stations;
   if (applyVerdict && filters.trailerVerdict.length > 0) {
-    results = results.filter((r) => r.trailer && filters.trailerVerdict.includes(r.trailer.verdict));
+    // 'unknown' = noch nicht bewertet (20261026160000): ein Ladepunkt OHNE
+    // trailer_suitability-Zeile (trailer === null) zaehlt ebenso als 'unknown'
+    // wie einer mit Platzhalter-Zeile -- identisch zu core.search_charge_points_by_verdict.
+    results = results.filter((r) => filters.trailerVerdict.includes(r.trailer?.verdict ?? "unknown"));
   }
   if (filters.connectorCategories.length > 0) {
     results = results.filter((r) =>

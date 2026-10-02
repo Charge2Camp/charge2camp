@@ -1580,3 +1580,30 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
   302.901 Zeilen). `src/lib/charging-stations.ts` (`applyPostFilters`,
   bbox-Zweig).
 - **Date:** 2026-10-26.
+
+## Trailer-Filter "Noch nicht bewertet": alles ohne echte Bewertung, nicht nur Platzhalter-Zeilen
+
+- **Decision:** Wählt der Nutzer im Anhängertauglichkeits-Filter "Noch nicht
+  bewertet" (`unknown`), erscheinen jetzt alle Ladepunkte **ohne echte Bewertung**
+  -- also auch die ohne jede `enrich.trailer_suitability`-Zeile. Umgesetzt als
+  "ausschließen, wenn eine echte Bewertung (Nicht-Platzhalter) mit einem Verdict
+  außerhalb der Auswahl existiert" in `core.charge_points_in_bbox` und
+  `core.search_charge_points_by_verdict` (Migration `20261026160000`); der
+  JS-Filter im nicht-bbox-Pfad behandelt `trailer === null` ebenso als `unknown`.
+  Karte und Erstansicht haben dieselbe Bedeutung.
+- **Reason:** (1) Geschwindigkeit: der alte Zweig suchte je Kandidat die
+  Platzhalter-Zeile in der 137.287-Zeilen-Tabelle (Produktion, padded Europa-
+  Ausschnitt, 150 kW: 0,6-1,4 s warm, vorher ~77 ms mit Namenssortierung); jetzt
+  nur noch der winzige Teilindex `idx_ts_meaningful` (~2.500 Einträge).
+  (2) Korrektheit: 23.650 aktive Ladepunkte (19 %) hatten keine Zeile und waren
+  durch keinen Verdict-Filter erreichbar, obwohl die Oberfläche sie als "Noch nicht
+  bewertet" kennzeichnet (`getReviewState(null)` = `getReviewState('auto')`).
+- **Alternatives:** Bisherige Bedeutung ("nur Platzhalter-Zeile") beibehalten und
+  per denormalisiertem Flag auf `core.charge_point` + Trigger beschleunigen --
+  größere Änderung (Schema, Import-Pipeline), die 19 % bleiben unerreichbar.
+- **Impact:** Die Treffermenge von "Noch nicht bewertet" wächst um die Ladepunkte
+  ohne Zeile (lokal mit nachgebildeter Verteilung: +9.575 im Ausschnitt). Der
+  selektive Zweig (nur `yes`/`unhitch`/`no`) und der Zweig ohne Verdict-Filter sind
+  unverändert. `src/lib/charging-stations.ts` (`applyPostFilters`). Der Admin-
+  Listenfilter (`charge_point_admin_list`) ist bewusst NICHT geändert.
+- **Date:** 2026-10-26.
