@@ -21,6 +21,7 @@ import { StationBottomSheet } from "@/components/charging-stations/station-botto
 import { ChargingStationFilterFields } from "@/components/charging-stations/filter-fields";
 import { formatConnectorStandard } from "@/lib/connector-standard";
 import { distanceKm } from "@/lib/geo";
+import { clampBounds } from "@/lib/map-bounds";
 import { saveListNavigationContext } from "@/components/list-navigation";
 import { loadSavedMapViewport, saveMapViewport, type MapViewport } from "@/lib/map-viewport-storage";
 import { useMediaQuery } from "@/lib/use-media-query";
@@ -104,12 +105,13 @@ function buildViewportQuery(filters: ChargingStationFilters, bounds: MapBoundsBo
 function padBounds(bounds: MapBoundsBox, ratio: number): MapBoundsBox {
   const width = bounds.east - bounds.west;
   const height = bounds.north - bounds.south;
-  return {
+  // Bei weitem Zoom ginge der gepolsterte Rand sonst ueber +-180/+-90 hinaus.
+  return clampBounds({
     west: bounds.west - width * ratio,
     east: bounds.east + width * ratio,
     south: bounds.south - height * ratio,
     north: bounds.north + height * ratio,
-  };
+  });
 }
 
 /** Prueft, ob `inner` vollstaendig innerhalb von `outer` liegt -- damit
@@ -512,7 +514,11 @@ export function ChargingStationMapExplorer({
     }, VIEWPORT_FETCH_DEBOUNCE_MS);
   }
 
-  function handleBoundsChange(bounds: MapBoundsBox) {
+  function handleBoundsChange(rawBounds: MapBoundsBox) {
+    // MapLibre meldet beim starken Herauszoomen Grenzen ausserhalb von +-180/+-90 --
+    // begrenzen, damit Vergleich (isBoundsContained), Breitenregel und Anfrage
+    // einheitlich auf gueltigen Koordinaten arbeiten.
+    const bounds = clampBounds(rawBounds);
     lastBoundsRef.current = bounds;
     if (liveFilters.favoritesOnly) return;
     // Schwenk faellt komplett in den zuletzt vorgeladenen Bereich -- die

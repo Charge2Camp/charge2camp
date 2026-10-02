@@ -1668,3 +1668,35 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
   Wartungspunkt: Änderungen am Spaltensatz von `core.charge_point_geo` müssen in der
   View nachgezogen werden. Kein Einfluss auf Anzeige/Verhalten außer der Verzögerung.
 - **Date:** 2026-10-26.
+
+## Ladepunkte-Karte: planarer Kartenausschnitt statt Geographie-Polygon, Grenzen werden begrenzt
+
+- **Decision:** `core.charge_points_in_bbox` vergleicht den Kartenausschnitt jetzt
+  planar (`geom::geometry && ST_MakeEnvelope(west, south, east, north, 4326)`,
+  GiST-Index auf dem Ausdruck `(geom::geometry)` von `core.charge_point_map`;
+  Migration `20261026200000`) statt als Geographie-Polygon. Zusätzlich begrenzt
+  `clampBounds` (`src/lib/map-bounds.ts`) Kartenausschnitt und gepolsterten Rand im
+  Client auf ±180/±90, und die API-Route validiert den `bbox`-Parameter über
+  `parseBboxParam` (endliche Zahlen, west ≤ east, south ≤ north; Werte außerhalb
+  des Bereichs werden begrenzt, vertauschte Seiten mit 400 abgelehnt).
+- **Reason:** Reproduziert lokal und mit PostGIS in Produktion: ein Geographie-
+  Polygon hat Großkreis-Kanten und ist ab ~180° Längenbreite nicht mehr das
+  Lat/Lon-Rechteck der Karte. Mit Testdaten (alle Ladepunkte bei Länge 5-15,
+  Breite 44-54; richtige Antwort immer 49.600): Breite 200°/300° und
+  "fast Welt" lieferten **0** Ladepunkte (stille leere Karte), die korrekt
+  geklemmte Welt (-180..180) und Breite -90..90 warfen **"Antipodal edge
+  detected"**, Werte außerhalb ±180 wurden **umgewickelt** (west -200 → 561
+  statt 49.600 Ladepunkte). Reines Klemmen im Client hätte das nicht behoben.
+  Nebenbefund: auch normale Ausschnitte lieferten zu viele Ladepunkte außerhalb
+  des Rechtecks (+4 % bis +87 % bei Testboxen, Vergleich mit einem reinen
+  lon/lat-Vergleich); jetzt exakt.
+- **Alternatives:** Nur im Client klemmen -- behebt weder die Welt-Ansicht noch die
+  Umwicklung. Beim Geographie-Polygon bleiben und breite Boxen aufteilen --
+  aufwendig und weiter ungenau. Eine eigene geometry-Spalte in der View -- gleich
+  wirksam, aber Neuaufbau der View statt eines Ausdrucksindex.
+- **Impact:** Stark herausgezoomte Karten (gepolsterte Breite > 180°, sichtbar
+  > ~120°) funktionieren wieder (vorher leer oder Fehlerbanner). Am Nord-/Südrand
+  eines Ausschnitts entscheidet jetzt der konstante Breitengrad statt eines
+  gewölbten Großkreises. Der alte Geographie-GiST-Index `idx_cpm_geom` entfällt.
+  Neuer Test `src/lib/map-bounds.test.ts`.
+- **Date:** 2026-10-26.

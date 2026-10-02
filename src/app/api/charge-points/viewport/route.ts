@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchChargingStations, parseChargingStationFilters, type MapBounds } from "@/lib/charging-stations";
 import { requireApiUser } from "@/lib/api-guard";
+import { parseBboxParam } from "@/lib/map-bounds";
 
 /**
  * Internes Endpoint fuer die kartenausschnitt-basierte Ladepunkte-Suche
@@ -40,12 +41,15 @@ export async function GET(request: NextRequest) {
 
     const bboxRaw = sp.get("bbox");
     if (!bboxRaw) return NextResponse.json({ error: "bbox fehlt." }, { status: 400 });
-    const parts = bboxRaw.split(",").map(Number);
-    if (parts.length !== 4 || parts.some((n) => Number.isNaN(n))) {
-      return NextResponse.json({ error: "bbox muss 'west,south,east,north' sein." }, { status: 400 });
+    // Gueltige Zahlen, west <= east, south <= north; Werte ausserhalb von +-180/+-90
+    // werden begrenzt statt abgelehnt (siehe parseBboxParam).
+    const bbox: MapBounds | null = parseBboxParam(bboxRaw);
+    if (!bbox) {
+      return NextResponse.json(
+        { error: "bbox muss 'west,south,east,north' sein (endliche Zahlen, west <= east, south <= north)." },
+        { status: 400 }
+      );
     }
-    const [west, south, east, north] = parts;
-    const bbox: MapBounds = { west, south, east, north };
 
     // Mehrere gleichnamige Parameter (z. B. operator=A&operator=B fuer den
     // Ladeanbieter-Filter) muessen als Array ankommen -- ein simples
