@@ -71,6 +71,8 @@ export function CampsiteFilterForm({
           onCommit={(value) => onChange({ q: value || undefined })}
           placeholder="Name des Campingplatzes"
           fetchSuggestions={suggestCampsiteNames}
+          emptyMessage="Kein Campingplatz mit diesem Namen gefunden. Prüfe die Schreibweise oder gib weniger Zeichen ein."
+          errorMessage="Namensvorschläge gerade nicht verfügbar. Du kannst den Namen trotzdem eingeben und suchen."
           className="w-full rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
         />
       </label>
