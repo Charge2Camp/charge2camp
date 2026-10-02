@@ -1634,3 +1634,37 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
   neuen Parameter auf und läuft unverändert weiter (Defaults), die Migration kann vor
   dem Code-Deploy angewendet werden.
 - **Date:** 2026-10-26.
+
+## Ladepunkte-Karte: schmale Kopie core.charge_point_map gegen Kaltstart-I/O (Daten bis 15 Minuten verzögert)
+
+- **Decision:** Die Karten-Viewport-Abfrage (`core.charge_points_in_bbox` und damit
+  `_enriched`) liest nicht mehr die breite Haupttabelle `core.charge_point`, sondern
+  die Materialized View `core.charge_point_map` (Migration `20261026190000`): aktive
+  Ladepunkte mit nur den Spalten von `core.charge_point_geo` (+ lat/lon) und eigenen
+  Indizes (id, GiST geom, id-Teilindex ab 150 kW, (operator, id), Trigram auf name,
+  external_key, Leistung). Aktualisiert wird sie per pg_cron alle 15 Minuten
+  (`core.refresh_charge_point_map()`, `REFRESH ... CONCURRENTLY`), Muster wie
+  `core.campsite_search`. Erstansicht, Suche, Detailseiten und Admin lesen weiter
+  `core.charge_point`.
+- **Reason:** Gemessen in Produktion: `core.charge_point` hat 431 MB Heap + 187 MB
+  Indizes bei `shared_buffers` 224 MB (`effective_cache_size` 384 MB) -- die
+  Tabelle passt nicht in den Cache, die id-Stichprobe der Karte liest verstreute
+  Seiten von der Platte (Erstaufrufe nach Ruhephasen 6-9 s statt 0,1-0,5 s). Die
+  Durchschnittszeile ist 1.364 Byte, davon 1.111 Byte `field_provenance` (jsonb, von
+  der Karte nie gelesen); die Karte braucht ~260 Byte. Ein Auslagern per
+  `SET STORAGE EXTERNAL`/`toast_tuple_target` wirkt nicht (lokal geprüft: Zeilen
+  unter 2 KB werden nie ausgelagert, Heap blieb bei 187-200 MB).
+- **Alternatives:** `field_provenance` in eine eigene Tabelle auslagern -- behebt die
+  Ursache für alle Abfragen und hält die Daten live, berührt aber Import-Pipeline
+  (9 Python-Dateien), Admin-Backend, OCM-Cron-Route und mehrere Migrationen und
+  braucht ein Wartungsfenster für den Tabellen-Rewrite (exklusive Sperre); bei Bedarf
+  später. Nur Client-Retry -- lässt den I/O unverändert, kann zusätzlich kommen.
+- **Impact:** **Karten-Daten hinken Änderungen an `core.charge_point` (Import,
+  Admin-Bearbeitung, Deaktivierung, neue Ladepunkte) um bis zu 15 Minuten
+  hinterher** -- lokal getestet: Änderung unsichtbar bis zum Refresh, dann sichtbar.
+  Fällt der Cron-Job aus, bleibt die Karte unbemerkt auf altem Stand
+  (`cron.job_run_details` prüfen). Erwartet: hot set (View ~100 MB + Connector-Index
+  20 MB + Trailer-Teilindex) passt in die 224 MB shared_buffers. Neuer
+  Wartungspunkt: Änderungen am Spaltensatz von `core.charge_point_geo` müssen in der
+  View nachgezogen werden. Kein Einfluss auf Anzeige/Verhalten außer der Verzögerung.
+- **Date:** 2026-10-26.
