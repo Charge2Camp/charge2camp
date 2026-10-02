@@ -1700,3 +1700,36 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
   gewölbten Großkreises. Der alte Geographie-GiST-Index `idx_cpm_geom` entfällt.
   Neuer Test `src/lib/map-bounds.test.ts`.
 - **Date:** 2026-10-26.
+
+## Ladepunkte-Karte: Wiederholung bei vorübergehenden Abruffehlern, kürzeres Rate-Limit-Fenster
+
+- **Decision:** Der Karten-Client wiederholt den Viewport-Abruf bei vorübergehenden
+  Fehlern (HTTP 429/500/502/503/504: bis zu 3 Versuche mit 2 s und 5 s Wartezeit;
+  Netzwerkfehler/Timeout: ein zweiter Versuch; ein numerischer `Retry-After`-Header
+  hätte Vorrang, max. 15 s). Dauerhafte Fehler (z. B. 400/401) werden nicht
+  wiederholt. Bis zum Endergebnis steht "Lädt…", die alten Marker bleiben. Der Hinweis
+  am Zähler nennt jetzt die Ursache statt immer "keine Verbindung": "zu viele
+  Anfragen, kurz warten" (429), "keine Verbindung" (Netzwerk/Timeout), "Laden
+  fehlgeschlagen" (sonstige Fehler). Regeln in `src/lib/viewport-retry.ts` (mit
+  Unit-Tests). Das Rate-Limit des Endpunkts wechselt von 120 Aufrufen je 60 s auf
+  40 je 20 s (gleiche Dauerlast von 120/min).
+- **Reason:** (1) Gemessen im Browser: der Client ruft nur ab, wenn der Ausschnitt den
+  vorgeladenen Bereich verlässt -- 20 abwechselnde Zoomschritte in ~10 s lösten keinen
+  einzigen Request aus; die in der Review genannten "bis zu 6 Requests/s" sind eine
+  theoretische Obergrenze. (2) Der echte Schaden liegt beim Überschreiten: das Rate-
+  Limit ist ein FESTES Fenster (`core.check_rate_limit`), der Nutzer ist dann bis zu
+  60 s gesperrt, und die Karte meldete irreführend "keine Verbindung" ohne
+  Wiederholung. Ein Kaltstart-Timeout wurde ebenfalls nie wiederholt, obwohl die
+  Abfrage serverseitig weiterläuft und den Cache wärmt.
+- **Alternatives:** Debounce von 150 ms auf 300-400 ms anheben -- bringt wegen der
+  Bereichs-Prüfung kaum weniger Requests, verzögert aber jede Aktualisierung. Limit
+  anheben -- schwächt den Schutz ohne Bedarf. Server-seitiges Schutzfenster
+  (`Retry-After` aus der DB berechnen) -- zusätzliche Migration, der Client-Backoff
+  genügt. Laufende, überholte Requests abbrechen -- spart im Client nichts und
+  bräuchte ein Durchreichen des Abbruchs bis in die RPC (bei Bedarf später).
+- **Impact:** Bei kurzer Überlastung oder Kaltstart sieht der Nutzer "Lädt…" statt
+  sofort einen Fehler; nach spätestens ~7 s (HTTP) bzw. 2 Versuchen (Timeout) erscheint
+  der ursachenbezogene Hinweis, der nächste Kartenschwenk startet einen neuen Zyklus.
+  Wiederholungen zählen selbst gegen das Rate-Limit. Das Limit sperrt höchstens 20 s
+  statt 60 s. `charging-station-map-explorer.tsx`, `route.ts`.
+- **Date:** 2026-10-26.

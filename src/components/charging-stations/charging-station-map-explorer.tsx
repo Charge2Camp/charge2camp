@@ -22,6 +22,13 @@ import { ChargingStationFilterFields } from "@/components/charging-stations/filt
 import { formatConnectorStandard } from "@/lib/connector-standard";
 import { distanceKm } from "@/lib/geo";
 import { clampBounds } from "@/lib/map-bounds";
+import {
+  VIEWPORT_MAX_ATTEMPTS_NETWORK,
+  isTransientViewportStatus,
+  viewportFailReasonFor,
+  viewportRetryDelayMs,
+  type ViewportFailReason,
+} from "@/lib/viewport-retry";
 import { saveListNavigationContext } from "@/components/list-navigation";
 import { loadSavedMapViewport, saveMapViewport, type MapViewport } from "@/lib/map-viewport-storage";
 import { useMediaQuery } from "@/lib/use-media-query";
@@ -58,6 +65,13 @@ const VIEWPORT_FETCH_DEBOUNCE_MS = 150;
 // Timeout-Konventionen (z. B. iOS Safari), lang genug fuer 3G, kurz genug
 // um dem Nutzer zeitnah eine Rueckmeldung zu geben statt endlos zu warten.
 const VIEWPORT_FETCH_TIMEOUT_MS = 12000;
+// Hinweistext je Ursache, wenn der Viewport-Abruf nach Wiederholungen scheiterte --
+// ein Rate-Limit ist keine fehlende Verbindung (frueher immer "keine Verbindung").
+const VIEWPORT_FAIL_TEXT: Record<ViewportFailReason, string> = {
+  network: "keine Verbindung",
+  rate_limit: "zu viele Anfragen, kurz warten",
+  error: "Laden fehlgeschlagen",
+};
 // Nutzerfeedback (s.o.): ABRP/EVCaravan laden sichtbar einen groesseren
 // Bereich vor, als gerade zu sehen ist, damit ein normaler Schwenk in
 // bereits vorgeladenes Gebiet KEINEN neuen Request ausloest -- die Punkte
@@ -411,7 +425,10 @@ export function ChargingStationMapExplorer({
   // Nutzer muss aber erkennen koennen, dass die Karte NICHT den aktuellen
   // Kartenausschnitt widerspiegelt (Go-Live-Audit, Offline-/Netzstaerke-
   // Verhalten -- vorher gab es dafuer keinerlei Hinweis).
-  const [viewportFetchFailed, setViewportFetchFailed] = useState(false);
+  // Warum der letzte Abruf endgueltig scheiterte (nach Wiederholungen, siehe
+  // viewport-retry.ts) -- steuert den Hinweistext; `null` = alles in Ordnung.
+  const [viewportFailReason, setViewportFailReason] = useState<ViewportFailReason | null>(null);
+  const viewportFetchFailed = viewportFailReason !== null;
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fetchSeqRef = useRef(0);
   // Der zuletzt erfolgreich geladene (bereits um PREFETCH_MARGIN_RATIO
@@ -478,15 +495,44 @@ export function ChargingStationMapExplorer({
     debounceTimerRef.current = setTimeout(async () => {
       const seq = ++fetchSeqRef.current;
       setIsFetchingViewport(true);
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), VIEWPORT_FETCH_TIMEOUT_MS);
       try {
         const qs = buildViewportQuery(filtersToUse, paddedBounds);
-        const res = await fetch(`/api/charge-points/viewport?${qs}`, { signal: controller.signal });
-        if (!res.ok) {
-          if (seq === fetchSeqRef.current) setViewportFetchFailed(true);
-          return;
+        // Voruebergehende Fehler (429, 5xx, Netzwerk/Timeout) werden mit Wartezeit
+        // wiederholt (viewport-retry.ts) -- z. B. ein Kaltstart der Datenbank, dessen
+        // Abfrage serverseitig weiterlaeuft und den Cache waermt, oder ein
+        // ueberschrittenes Rate-Limit (feste Fenster, sperrt sonst bis zum Ende).
+        // Bis zum Endergebnis bleibt "Laedt..." sichtbar und die alten Marker stehen.
+        let res: Response | null = null;
+        for (let attempt = 1; ; attempt++) {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), VIEWPORT_FETCH_TIMEOUT_MS);
+          try {
+            res = await fetch(`/api/charge-points/viewport?${qs}`, { signal: controller.signal });
+          } catch {
+            res = null; // Netzwerkfehler oder Timeout
+          } finally {
+            clearTimeout(timeoutId);
+          }
+          // Nutzer hat inzwischen weitergeschwenkt: dieser Abruf ist veraltet.
+          if (seq !== fetchSeqRef.current) return;
+          if (res?.ok) break;
+          const status = res ? res.status : null;
+          const delay =
+            status === null || isTransientViewportStatus(status)
+              ? viewportRetryDelayMs(
+                  attempt,
+                  res?.headers.get("Retry-After"),
+                  status === null ? VIEWPORT_MAX_ATTEMPTS_NETWORK : undefined
+                )
+              : null;
+          if (delay === null) {
+            setViewportFailReason(viewportFailReasonFor(status));
+            return;
+          }
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          if (seq !== fetchSeqRef.current) return;
         }
+        if (!res) return; // nur fuer den Typ: die Schleife verlaesst sich nur mit res?.ok
         const data = (await res.json()) as { stations?: ChargingStationView[]; truncated?: boolean };
         // Veraltete Antwort (z. B. wenn der Nutzer waehrend des Requests
         // weitergeschwenkt hat) verwerfen, sonst ueberschreibt eine
@@ -498,17 +544,16 @@ export function ChargingStationMapExplorer({
           stationsSignatureRef.current = nextSignature;
           setStations(nextStations);
         }
-        setViewportFetchFailed(false);
+        setViewportFailReason(null);
         lastFetchedBoundsRef.current = paddedBounds;
         lastFetchTruncatedRef.current = Boolean(data.truncated);
         lastFetchedVisibleWidthRef.current = bounds.east - bounds.west;
         setViewportTruncated(Boolean(data.truncated));
       } catch {
-        // Netzwerkfehler/Timeout: Karte behaelt die zuletzt bekannten Marker
-        // statt abzustuerzen, zeigt aber einen Hinweis (viewportFetchFailed).
-        if (seq === fetchSeqRef.current) setViewportFetchFailed(true);
+        // Unerwarteter Fehler (z. B. ungueltiges JSON): Karte behaelt die zuletzt
+        // bekannten Marker statt abzustuerzen, zeigt aber einen Hinweis.
+        if (seq === fetchSeqRef.current) setViewportFailReason("error");
       } finally {
-        clearTimeout(timeoutId);
         if (seq === fetchSeqRef.current) setIsFetchingViewport(false);
       }
     }, VIEWPORT_FETCH_DEBOUNCE_MS);
@@ -736,8 +781,8 @@ export function ChargingStationMapExplorer({
             >
               {isFetchingViewport
                 ? "Lädt…"
-                : viewportFetchFailed
-                  ? `${stationCountLabel} Ladepunkte (nicht aktuell -- keine Verbindung)`
+                : viewportFailReason
+                  ? `${stationCountLabel} Ladepunkte (nicht aktuell -- ${VIEWPORT_FAIL_TEXT[viewportFailReason]})`
                   : `${stationCountLabel} Ladepunkte`}
               {showTruncatedNotice && (
                 // Gekappte Antwort: die Karte zeigt nur eine Stichprobe -- sonst

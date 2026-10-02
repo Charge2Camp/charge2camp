@@ -27,14 +27,16 @@ export async function GET(request: NextRequest) {
   // Funktionslogs. Der try-Block umschliesst deshalb jetzt die GESAMTE
   // Anfrageverarbeitung, nicht nur den fetchChargingStations-Aufruf.
   try {
-    // Sicherheits-Audit: Login + Rate-Limit Pflicht. Limit grosszuegiger als
-    // bei den anderen Endpunkten (120/min statt 60/min), da der Karten-Client
-    // dies bei aktivem Schwenken/Zoomen ca. alle 150ms aufrufen kann (siehe
-    // VIEWPORT_FETCH_DEBOUNCE_MS in charging-station-map-explorer.tsx; der
-    // Karten-Client bricht dabei laufende Requests ab) -- ein durchgehend
-    // geschwenkter Ausschnitt kaeme damit theoretisch auf mehr als 120
-    // Aufrufe pro Minute (dann 429, die Karte zeigt "nicht aktuell").
-    const guard = await requireApiUser("charge-points-viewport", { windowSeconds: 60, maxRequests: 120 });
+    // Sicherheits-Audit: Login + Rate-Limit Pflicht. Limit grosszuegiger als bei den
+    // anderen Endpunkten (120/min statt 60/min im Dauerbetrieb): der Karten-Client ruft
+    // nur bei Bewegung ausserhalb des vorgeladenen Bereichs ab (debounced, siehe
+    // VIEWPORT_FETCH_DEBOUNCE_MS in charging-station-map-explorer.tsx) -- im Browser
+    // gemessen loesten 20 abwechselnde Zoomschritte in ~10 s keinen einzigen Request aus.
+    // Das Fenster ist FEST: wer das Limit ueberschreitet, ist bis zum Fensterende
+    // gesperrt. 40 Aufrufe je 20 s entsprechen weiter 120/min im Dauerbetrieb, begrenzen
+    // die Sperre aber auf hoechstens 20 s statt bis zu 60 s. Bei 429 wiederholt der
+    // Karten-Client mit Wartezeit (viewport-retry.ts) und zeigt "zu viele Anfragen".
+    const guard = await requireApiUser("charge-points-viewport", { windowSeconds: 20, maxRequests: 40 });
     if ("response" in guard) return guard.response;
 
     const sp = request.nextUrl.searchParams;
