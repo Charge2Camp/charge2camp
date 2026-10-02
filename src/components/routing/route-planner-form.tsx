@@ -333,6 +333,11 @@ export function RoutePlannerForm({
   const [forcedStationIdByIndex, setForcedStationIdByIndex] = useState<Record<number, string>>({});
   const [replanBusy, setReplanBusy] = useState(false);
   const [replanError, setReplanError] = useState<string | null>(null);
+  // Hinweis nach dem Oeffnen einer gespeicherten Route, falls die Koordinaten von
+  // Start/Ziel nicht nachgeschlagen werden konnten. An das konkrete Ergebnis-
+  // Objekt gebunden: sobald ein neues Ergebnis gesetzt wird (neu berechnet,
+  // andere Route geoeffnet), verschwindet der Hinweis von selbst.
+  const [restoreNotice, setRestoreNotice] = useState<{ forResult: RoutePlanResult; text: string } | null>(null);
   const [loadingSavedRoute, setLoadingSavedRoute] = useState(Boolean(initialSavedRouteId));
   const showSavedRouteLoadingIndicator = useDelayedLoading(loadingSavedRoute);
   const [savedRouteDialogOpen, setSavedRouteDialogOpen] = useState(false);
@@ -394,18 +399,23 @@ export function RoutePlannerForm({
   // (?savedRouteId=... aus dem Link "Öffnen" im Profil) und vom
   // "Gespeicherte Route öffnen"-Picker (siehe savedRouteDialogOpen), bevor
   // eine eigene Route berechnet wurde.
-  async function resolveKnownPlace(name: string): Promise<{ latitude: number; longitude: number } | null> {
+  async function resolveKnownPlace(
+    name: string
+  ): Promise<{ coords: { latitude: number; longitude: number } | null; failed: boolean }> {
     const known = knownPlaceByName.get(name);
-    if (known) return known;
+    if (known) return { coords: known, failed: false };
     // Kein Treffer unter Favoriten/Zuhause: koennte ein eigener Campingplatz
-    // gewesen sein. Ein Fehler/Nichttreffer bedeutet nur "Koordinaten
-    // unbekannt" (wie bisher bei freiem Text) -- die Route laesst sich
-    // trotzdem oeffnen und wird beim Neuberechnen normal geocodiert.
+    // gewesen sein. Ein Nichttreffer bedeutet nur "Koordinaten unbekannt" (wie
+    // bisher bei freiem Text) -- die Route laesst sich trotzdem oeffnen und wird
+    // beim Neuberechnen normal geocodiert. Ein FEHLER beim Nachschlagen
+    // (Netz, Rate-Limit, Server) wird dagegen gemeldet (failed), denn bei einem
+    // Demo-Campingplatz wuerde das spaetere Neuberechnen am Geocoder scheitern,
+    // ohne dass die Ursache erkennbar waere.
     try {
       const campsite = await fetchCampsiteByName(name);
-      return campsite ? { latitude: campsite.latitude, longitude: campsite.longitude } : null;
+      return { coords: campsite ? { latitude: campsite.latitude, longitude: campsite.longitude } : null, failed: false };
     } catch {
-      return null;
+      return { coords: null, failed: true };
     }
   }
 
@@ -419,7 +429,7 @@ export function RoutePlannerForm({
         return;
       }
       const saved = savedResult.data;
-      const [restoredStartCoords, restoredEndCoords] = await Promise.all([
+      const [restoredStart, restoredEnd] = await Promise.all([
         resolveKnownPlace(saved.startQuery),
         resolveKnownPlace(saved.endQuery),
       ]);
@@ -430,8 +440,8 @@ export function RoutePlannerForm({
       // Koordinaten wiederherstellen -- sonst wuerde ein spaeteres "neu
       // berechnen" versuchen, den (bei Demo-Namen nicht auffindbaren) Text
       // per Nominatim zu geocodieren, siehe actions.ts.
-      setStartCoords(restoredStartCoords);
-      setEndCoords(restoredEndCoords);
+      setStartCoords(restoredStart.coords);
+      setEndCoords(restoredEnd.coords);
       setManualStopQueries(saved.manualStopQueries);
       setVehicleId(saved.vehicleId);
       setCaravanId(saved.caravanId ?? "");
@@ -465,6 +475,14 @@ export function RoutePlannerForm({
       setSaveError(null);
       setSaveSuccess(false);
       setResult(saved.result);
+      setRestoreNotice(
+        restoredStart.failed || restoredEnd.failed
+          ? {
+              forResult: saved.result,
+              text: "Gespeicherte Route geöffnet, aber die Koordinaten von Start oder Ziel konnten nicht geladen werden. Wähle sie vor dem Neuberechnen erneut aus der Vorschlagsliste.",
+            }
+          : null
+      );
       setActiveStep(2);
       setSavedRouteDialogOpen(false);
     } catch (err) {
@@ -1202,6 +1220,12 @@ export function RoutePlannerForm({
           {result.plan.warning && (
             <p className="rounded-md border border-warning/30 bg-warning/5 p-3 text-sm text-warning-text">
               {result.plan.warning}
+            </p>
+          )}
+
+          {restoreNotice && restoreNotice.forResult === result && (
+            <p className="rounded-md border border-warning/30 bg-warning/5 p-3 text-sm text-warning-text">
+              {restoreNotice.text}
             </p>
           )}
 

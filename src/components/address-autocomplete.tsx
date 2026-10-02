@@ -64,6 +64,10 @@ export function AddressAutocomplete({
 }) {
   const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
   const [fetchedLocal, setFetchedLocal] = useState<LocalSuggestion[]>([]);
+  // Abruf der eigenen Treffer (z. B. Campingplaetze) fehlgeschlagen -- getrennt
+  // von suggestFailed (Photon): ohne eigenen Hinweis fehlten z. B. [DEMO]-
+  // Campingplaetze, die ueber Photon gar nicht auffindbar sind, kommentarlos.
+  const [localFailed, setLocalFailed] = useState(false);
   // UX-Audit (2026-09-24): ein fehlgeschlagener Vorschlag-Abruf blieb bisher
   // komplett unsichtbar (leere Liste, kein Hinweis) -- wirkte fuer den
   // Nutzer wie "diese Adresse gibt es nicht", statt wie ein Netzwerkproblem.
@@ -101,6 +105,7 @@ export function AddressAutocomplete({
       if (query.length < MIN_QUERY_LENGTH) {
         setSuggestions([]);
         setFetchedLocal([]);
+        setLocalFailed(false);
         setSuggestFailed(false);
         return;
       }
@@ -111,10 +116,14 @@ export function AddressAutocomplete({
         // freie Eingabe funktionieren weiter.
         fetchLocalSuggestions(query, localController.signal).then(
           (results) => {
-            if (requestIdRef.current === requestId) setFetchedLocal(results);
+            if (requestIdRef.current !== requestId) return;
+            setFetchedLocal(results);
+            setLocalFailed(false);
           },
           () => {
-            if (!localController.signal.aborted && requestIdRef.current === requestId) setFetchedLocal([]);
+            if (localController.signal.aborted || requestIdRef.current !== requestId) return;
+            setFetchedLocal([]);
+            setLocalFailed(true);
           }
         );
       }
@@ -163,6 +172,7 @@ export function AddressAutocomplete({
     setOpen(false);
     setSuggestions([]);
     setFetchedLocal([]);
+    setLocalFailed(false);
   }
 
   function selectRemote(suggestion: AddressSuggestion) {
@@ -172,6 +182,7 @@ export function AddressAutocomplete({
     setOpen(false);
     setSuggestions([]);
     setFetchedLocal([]);
+    setLocalFailed(false);
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -221,6 +232,11 @@ export function AddressAutocomplete({
       {open && suggestFailed && localMatches.length === 0 && (
         <p className="mt-1 text-xs text-text-muted">
           Adressvorschläge gerade nicht verfügbar -- Adresse kann trotzdem frei eingegeben werden.
+        </p>
+      )}
+      {open && localFailed && (
+        <p className="mt-1 text-xs text-text-muted">
+          Eigene Campingplätze gerade nicht verfügbar -- Ort kann trotzdem frei eingegeben werden.
         </p>
       )}
       {open && hasSuggestions && (
