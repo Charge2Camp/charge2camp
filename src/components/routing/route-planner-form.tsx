@@ -214,8 +214,8 @@ interface RouteDraftState {
 /** Serverseitige Vorschlaege eigener Campingplaetze fuer das Ziel-Feld
  * (statt einer vorgeladenen Liste, siehe suggestCampsites in campsites.ts).
  * Auf Modulebene, damit die Referenz fuer AddressAutocomplete stabil bleibt. */
-async function suggestCampsiteDestinations(query: string): Promise<LocalSuggestion[]> {
-  const campsites = await fetchCampsiteSuggestions(query);
+async function suggestCampsiteDestinations(query: string, signal: AbortSignal): Promise<LocalSuggestion[]> {
+  const campsites = await fetchCampsiteSuggestions(query, signal);
   return campsites.map((c) => ({ id: c.id, displayName: c.name, latitude: c.latitude, longitude: c.longitude }));
 }
 

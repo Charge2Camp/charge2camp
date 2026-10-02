@@ -58,7 +58,7 @@ export function AddressAutocomplete({
   required?: boolean;
   className?: string;
   localSuggestions?: LocalSuggestion[];
-  fetchLocalSuggestions?: (query: string) => Promise<LocalSuggestion[]>;
+  fetchLocalSuggestions?: (query: string, signal: AbortSignal) => Promise<LocalSuggestion[]>;
   localSuggestionLabel?: string;
   onSelectCoordinates?: (coords: { latitude: number; longitude: number } | null) => void;
 }) {
@@ -93,6 +93,9 @@ export function AddressAutocomplete({
 
     const query = value.trim();
     const requestId = ++requestIdRef.current;
+    // Abbruch der eigenen Campingplatz-Abfrage bei neuer Eingabe/Unmount
+    // (der Photon-Abruf bleibt unveraendert, siehe photon.ts).
+    const localController = new AbortController();
 
     const timeout = setTimeout(async () => {
       if (query.length < MIN_QUERY_LENGTH) {
@@ -106,12 +109,12 @@ export function AddressAutocomplete({
         // sie da sind, unabhaengig von der (oft langsameren) Photon-Antwort.
         // Ein Fehler zeigt einfach keine eigenen Vorschlaege -- Photon und
         // freie Eingabe funktionieren weiter.
-        fetchLocalSuggestions(query).then(
+        fetchLocalSuggestions(query, localController.signal).then(
           (results) => {
             if (requestIdRef.current === requestId) setFetchedLocal(results);
           },
           () => {
-            if (requestIdRef.current === requestId) setFetchedLocal([]);
+            if (!localController.signal.aborted && requestIdRef.current === requestId) setFetchedLocal([]);
           }
         );
       }

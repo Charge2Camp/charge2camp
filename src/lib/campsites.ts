@@ -187,13 +187,16 @@ export async function suggestCampsites(query: string): Promise<CampsiteDestinati
 
 /** Genau der Campingplatz mit diesem Namen -- zum Wiederherstellen der
  * Koordinaten einer gespeicherten Route (route-planner-form.tsx). Bei
- * mehreren gleichnamigen der alphabetisch/technisch erste. */
+ * mehreren gleichnamigen (z. B. "Camping Municipal" bei EU-Daten) der mit der
+ * kleinsten id -- deterministisch, aber nicht zwingend der damals gewaehlte;
+ * die gespeicherte Route kennt nur den Namen, nicht die Campingplatz-ID. */
 export async function fetchCampsiteDestinationByName(name: string): Promise<CampsiteDestinationOption | null> {
   const { data, error } = await createAdminClient()
     .schema("core")
     .from("campsite_search")
     .select("id, name, lat, lon")
     .eq("name", name)
+    .order("id")
     .limit(1);
   if (error) throw new Error(error.message);
   const row = (data ?? [])[0] as CampsiteDestinationRow | undefined;

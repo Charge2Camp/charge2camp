@@ -52,7 +52,7 @@ export function NameSuggestField({
   placeholder?: string;
   options?: string[];
   /** Serverseitige Vorschlagssuche (mind. 3 Zeichen, debounced); ersetzt `options`. */
-  fetchSuggestions?: (query: string) => Promise<string[]>;
+  fetchSuggestions?: (query: string, signal: AbortSignal) => Promise<string[]>;
   className?: string;
 }) {
   const [value, setValue] = useState(externalValue ?? defaultValue ?? "");
@@ -86,23 +86,31 @@ export function NameSuggestField({
     }
     const query = value.trim();
     const requestId = ++requestIdRef.current;
+    // Beim naechsten Tastendruck/Unmount wird die laufende Anfrage ABGEBROCHEN
+    // (nicht nur ihre Antwort ignoriert), damit der Server fuer verworfene
+    // Eingaben keine Arbeit mehr leistet.
+    const controller = new AbortController();
     const timeout = setTimeout(async () => {
       if (query.length < MIN_QUERY_LENGTH) {
         setRemoteSuggestions([]);
         return;
       }
       try {
-        const results = await fetchSuggestions(query);
+        const results = await fetchSuggestions(query, controller.signal);
         if (requestIdRef.current !== requestId) return; // veraltete Antwort ignorieren
         setRemoteSuggestions(results.slice(0, MAX_SUGGESTIONS));
       } catch {
         // Vorschlaege sind nur eine Komfortfunktion -- das Feld bleibt frei
         // beschreibbar und absendbar, ein Fehler zeigt einfach keine Liste.
-        if (requestIdRef.current !== requestId) return;
+        // Ein Abbruch durch neue Eingabe ist kein Fehler und aendert nichts.
+        if (controller.signal.aborted || requestIdRef.current !== requestId) return;
         setRemoteSuggestions([]);
       }
     }, DEBOUNCE_MS);
-    return () => clearTimeout(timeout);
+    return () => {
+      clearTimeout(timeout);
+      controller.abort();
+    };
   }, [value, fetchSuggestions]);
 
   useEffect(() => {

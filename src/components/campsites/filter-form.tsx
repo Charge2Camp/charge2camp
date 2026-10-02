@@ -8,8 +8,8 @@ import type { CoreAmenity } from "@/types/database";
 
 /** Serverseitige Namensvorschlaege fuer das Suchfeld (ab drei Zeichen, siehe
  * NameSuggestField) -- auf Modulebene, damit die Referenz stabil bleibt. */
-async function suggestCampsiteNames(query: string): Promise<string[]> {
-  return (await fetchCampsiteSuggestions(query)).map((c) => c.name);
+async function suggestCampsiteNames(query: string, signal: AbortSignal): Promise<string[]> {
+  return (await fetchCampsiteSuggestions(query, signal)).map((c) => c.name);
 }
 
 /** Merkmale nach Kategorie gruppiert -- bei 30 Eintraegen ist eine flache

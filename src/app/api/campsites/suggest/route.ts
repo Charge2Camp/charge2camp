@@ -13,8 +13,9 @@ import { requireApiUser } from "@/lib/api-guard";
 export async function GET(request: NextRequest) {
   try {
     // Login + Rate-Limit wie die uebrigen internen Endpunkte; die Seiten, die
-    // dies aufrufen, sind ohnehin login-pflichtig (proxy.ts). 120/min, da der
-    // Aufrufer waehrend des Tippens debounced (~350 ms) anfragt.
+    // dies aufrufen, sind ohnehin login-pflichtig (proxy.ts). 120/min, da die
+    // Aufrufer waehrend des Tippens debounced anfragen (NameSuggestField 300 ms,
+    // AddressAutocomplete 350 ms).
     const guard = await requireApiUser("campsites-suggest", { windowSeconds: 60, maxRequests: 120 });
     if ("response" in guard) return guard.response;
 
