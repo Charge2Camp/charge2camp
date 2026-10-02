@@ -1763,3 +1763,29 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
   `search_charge_points*` nicht mehr direkt aufrufen (kein Select auf der Kopie) --
   die App nutzt ausschließlich den Admin-Client.
 - **Date:** 2026-10-26.
+
+## Betreiber-Optionen der Ladepunkte-Seite aus vorberechneter Zählung
+
+- **Decision:** `core.charge_point_operator_options` liest die Materialized View
+  `core.charge_point_operator_counts` (Anzahl aktiver Ladepunkte je Betreiber, ohne
+  null und Platzhalter in Klammern; Quelle `core.charge_point_map`) statt bei jedem
+  Aufruf alle ~124.000 Ladepunkte zu zählen (Migration `20261026220000`). Signatur,
+  Rückgabetyp, `security definer` und der Admin-Check bleiben unverändert; der
+  Schwellenwert `p_min_stations` wird auf der kleinen Tabelle angewendet. Der
+  bestehende pg_cron-Job (`core.refresh_charge_point_map()`, alle 15 Minuten)
+  aktualisiert jetzt zuerst die Karten-Kopie und danach die Zählung.
+- **Reason:** Gemessen in Produktion nach 20261026210000: 385 ms beim ersten Aufruf,
+  ~90 ms warm -- bei jedem Aufruf von `/ladepunkte`, obwohl sich die Betreiberliste
+  kaum ändert; der langsamste Teil der Erstansicht. Die View hat ~10.600 Zeilen (nur
+  wenige hundert mit ≥ 20 Stationen, dem Schwellenwert der Seite).
+- **Alternatives:** Cache in Next.js (`unstable_cache`/`use cache` mit Revalidate) --
+  zusätzliche, versionsabhängige Caching-Schicht (AGENTS.md warnt vor Abweichungen
+  dieser Next-Version), pro Instanz/Deployment verschieden und ohne Nutzen für andere
+  Aufrufer. Index-Only-Zählung über `idx_cpm_operator_id` -- spart nur einen Teil
+  der Arbeit, zählt weiterhin bei jedem Aufruf.
+- **Impact:** Die Betreiberliste hinkt Änderungen an `core.charge_point` um bis zu
+  15 Minuten hinterher (wie Karte und Erstansicht). Scheitert der zweite Refresh,
+  schlägt der Cron-Job fehl (`cron.job_run_details`); die Karten-Kopie ist dann
+  trotzdem aktualisiert. Lokal gegen die bisherige Funktion verglichen (Schwellen
+  1/5/20/100/99999 und Reihenfolge): identisch.
+- **Date:** 2026-10-26.
