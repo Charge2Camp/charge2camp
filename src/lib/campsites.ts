@@ -149,7 +149,7 @@ function escapeLikeTerm(term: string): string {
  * frueheren Listen (order by name limit 5000) verloren ab >5.000
  * Campingplaetzen (EU-Rollout) alle Namen jenseits des Alphabet-Endes und
  * wuerden mit jedem Land mehr Payload an den Client schicken. Nutzt den
- * Trigram-Index idx_cssearch_name_trgm (20261024260000) von
+ * Trigram-Index idx_cssearch_name_trgm (angelegt 20261024260000, nach der View-Neuerstellung wiederhergestellt in 20261026120000) von
  * core.campsite_search. Rueckgabe samt Koordinaten, damit der Routenplaner
  * nicht erneut geocodieren muss (siehe routenplaner/actions.ts). */
 export async function suggestCampsites(query: string): Promise<CampsiteDestinationOption[]> {

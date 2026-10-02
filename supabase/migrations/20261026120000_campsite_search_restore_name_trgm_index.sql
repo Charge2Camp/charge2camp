@@ -1,0 +1,24 @@
+-- Stellt den Trigram-Index auf core.campsite_search.name wieder her.
+-- 20261024260000 hat idx_cssearch_name_trgm angelegt, danach haben
+-- 20261025080000 und 20261025090000 die MATERIALIZED VIEW per DROP/CREATE neu
+-- erstellt (ein DROP einer Materialized View nimmt ALLE ihre Indizes mit) und
+-- nur idx_cssearch_id/_amen/_geo/_score wiederhergestellt -- der Name-Index
+-- fehlte seither, auch in Produktion (per pg_indexes bestaetigt). Folge:
+-- jede Namenssuche (ilike '%q%' / 'q%') auf core.campsite_search, also
+-- fetchCampsites (src/lib/campsites.ts) und die neuen Namensvorschlaege
+-- (suggestCampsites, GET /api/campsites/suggest), las die ganze View per
+-- Sequential Scan.
+--
+-- Lokal mit 40.000 synthetischen Campingplaetzen gemessen (best of 6, ilike mit
+-- order by name limit 8): ohne Index 23-27 ms, mit diesem Index 3,6-7 ms;
+-- Gleichheitssuche (name = ...) 1,7 -> 0,28 ms. Ein zusaetzlicher btree auf
+-- name brachte nur weitere 1-5 ms und wurde bewusst NICHT angelegt (ein
+-- weiterer Index, der bei jedem REFRESH mitgepflegt werden muesste).
+--
+-- WICHTIG fuer jede kuenftige DROP/CREATE-Neuerstellung von
+-- core.campsite_search: diesen Index (und die uebrigen idx_cssearch_*) im
+-- selben Migrationsfile wieder anlegen.
+-- "if not exists": idempotent, falls der Index lokal/in einer anderen Umgebung
+-- schon existiert. Einfaches CREATE INDEX (nicht CONCURRENTLY, in einer
+-- Migrationstransaktion nicht erlaubt) -- bei ~3.700 Zeilen Millisekunden.
+create index if not exists idx_cssearch_name_trgm on core.campsite_search using gin (name gin_trgm_ops);
