@@ -1733,3 +1733,33 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
   Wiederholungen zählen selbst gegen das Rate-Limit. Das Limit sperrt höchstens 20 s
   statt 60 s. `charging-station-map-explorer.tsx`, `route.ts`.
 - **Date:** 2026-10-26.
+
+## Ladepunkte-Erstansicht: liest ebenfalls die schmale Karten-Kopie
+
+- **Decision:** Die serverseitig gerenderte Erstansicht von `/ladepunkte` liest jetzt
+  `core.charge_point_map` (Migration `20261026210000`) statt der breiten Haupttabelle:
+  `core.search_charge_points`, `core.search_charge_points_by_verdict` (alle drei
+  Zweige) und `core.charge_point_operator_options` zählen/lesen die Kopie;
+  `fetchChargingStationNameOptions` liest sie direkt (`grant select` an
+  `service_role`). Neue Indizes `idx_cpm_name_op` (name) include (operator) und
+  `idx_cpm_fast_name` (name) where max_power_kw ≥ 150 ersetzen die Namensindizes der
+  Haupttabelle für `order by name limit N`. Signaturen und Rückgabetypen bleiben
+  unverändert. Favoriten, Detailseiten, Admin und Campingplatz-Suche lesen weiter live.
+- **Reason:** Dieselbe Ursache wie bei der Karte (20261026190000): `core.charge_point`
+  hat 431 MB Heap und passt nicht in 224 MB shared_buffers. Gemessen in Produktion
+  (erster Aufruf / warm): Standard-Erstansicht 587 / 227 ms, 1.000 Namensvorschläge
+  867 / 2 ms, Betreiber-Optionen 483 / 66 ms -- nach Ruhephasen über eine Sekunde
+  DB-Zeit vor der Anreicherung. Nebenbei sind Erstansicht und Karte jetzt
+  konsistent (beide dieselbe Kopie), statt sich nach Admin-Änderungen kurz zu
+  widersprechen.
+- **Alternatives:** Erstansicht gar nicht mehr serverseitig laden (die Karte holt
+  ohnehin sofort den Viewport) -- größere UX-Änderung. `enrichStations` der Erstansicht
+  ebenfalls in einen Roundtrip ziehen -- eigener Schritt, bei Bedarf später.
+- **Impact:** Alle Ergebnisse lokal gegen Hashes der bisherigen Funktionen verglichen:
+  identisch (Standardansicht, alle Verdict-Pfade, Betreiber-/Steckerfilter, q,
+  Leistungsstufen, Betreiber-Optionen, Namensliste). **Erstansicht, Namensvorschläge und
+  Betreiber-Optionen hinken Änderungen an `core.charge_point` um bis zu 15 Minuten
+  hinterher** (pg_cron-Refresh, wie die Karte). `anon`/`authenticated` können
+  `search_charge_points*` nicht mehr direkt aufrufen (kein Select auf der Kopie) --
+  die App nutzt ausschließlich den Admin-Client.
+- **Date:** 2026-10-26.

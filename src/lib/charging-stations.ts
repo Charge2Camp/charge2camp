@@ -413,11 +413,13 @@ const NAME_OPTIONS_LIMIT = 1000;
  * unabhaengig von aktiven Filtern, fuer die Vorschlagsliste im Suchfeld. */
 export async function fetchChargingStationNameOptions(): Promise<string[]> {
   const supabase = createAdminClient();
+  // Liest die schmale Karten-Kopie (nur aktive Ladepunkte, Index-Only-Scan ueber
+  // idx_cpm_name_op) statt der breiten Haupttabelle -- siehe Migration 20261026210000.
+  // Daten hinken Aenderungen an core.charge_point um bis zu 15 Minuten hinterher.
   const { data, error } = await supabase
     .schema("core")
-    .from("charge_point")
+    .from("charge_point_map")
     .select("name, operator")
-    .eq("is_active", true)
     .order("name")
     .limit(NAME_OPTIONS_LIMIT);
   if (error) throw new Error(error.message);
