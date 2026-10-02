@@ -1542,3 +1542,41 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
   Request (Debounce 150 ms, wie bisher abbrechbar). `charging-station-map-
   explorer.tsx`, `route.ts`/`charging-stations.ts` (Kommentare).
 - **Date:** 2026-10-26.
+
+## Ladepunkte-Viewport: Anreicherung in einem Datenbank-Roundtrip, Platzhalter ohne Trailer-Objekt
+
+- **Decision:** Der bbox-Pfad von `fetchChargingStations` holt Stationen samt
+  Connectoren und Trailer-Daten über `core.charge_points_in_bbox_enriched`
+  (Migration `20261026150000`) in EINER Abfrage, statt über ~20 gebatchte
+  PostgREST-Abfragen (`enrichStations`). Die Funktion ruft die bestehende
+  `core.charge_points_in_bbox` und liefert je Station JSON mit `connectors`
+  (Array) und `trailer` (Objekt oder `null`) -- nur mit Feldern, die der Client
+  liest (kein `geom`, kein `verified_by`/`manual_override`/`source_type`).
+  Reine Platzhalter-Zeilen von `enrich.trailer_suitability` (verdict `unknown`,
+  origin `auto`, ohne Notiz/drive_through) liefern `trailer = null`. Dazu zwei
+  Indizes: Covering Index `idx_conn_cp_covering` auf `core.connector`
+  (Index-Only-Scan) und Teilindex `idx_ts_meaningful` nur für aussagekräftige
+  Trailer-Zeilen (~2.500 statt 137.000 Einträge). `enrichStations` bleibt für
+  den nicht-bbox-Pfad und die Favoriten unverändert.
+- **Reason:** Gemessen in Produktion (1.500 Stationen): selbst bei vollem Cache
+  kosten 1.500 PK-Lookups auf `enrich.trailer_suitability` ~1,15 s und 1.500
+  Connector-Lookups ~0,55 s; kalt dauerte die Connector-Einzelabfrage 3,3 s.
+  134.801 von 137.287 Trailer-Zeilen sind Platzhalter (0 mit weiteren Daten), die
+  der Client nicht von "kein Eintrag" unterscheidet (`getReviewState('auto')` =
+  `getReviewState(null)`, Pin 'ungeprüft' für `unknown` wie `null`) -- für sie
+  wurde bisher trotzdem gesucht und übertragen. Nebenbei verschwindet die
+  Auslieferung der Nutzer-UUID `verified_by` an jeden Client.
+- **Alternatives:** Nur Spalten einschränken (`select` statt `select *`) --
+  spart Payload, aber nicht die ~20 Abfragen und Lookups. Connectoren/Trailer erst
+  beim Antippen laden -- die Karte braucht den Verdict-Pin und die Listenkarte die
+  Stecker sofort. Connector-JSON auf `core.charge_point` denormalisieren -- würde
+  den Kalt-Cache-I/O ganz entfernen, braucht aber Pflege in Import-Pipeline/Trigger;
+  bei Bedarf der nächste Schritt.
+- **Impact:** Für den Client ist nichts sichtbar anders (gleiche Pins, Badges,
+  Karten). `trailer` ist für Platzhalter `null` statt eines `unknown/auto`-
+  Objekts; der JS-Filter auf `trailer.verdict` entfällt im bbox-Pfad (filtert schon
+  SQL-seitig), Connector-/Betreiber-Filter bleiben in JS. Neue Indizes: Aufbau mit
+  einfachem `CREATE INDEX` (blockiert Schreibzugriffe auf `core.connector` kurz;
+  302.901 Zeilen). `src/lib/charging-stations.ts` (`applyPostFilters`,
+  bbox-Zweig).
+- **Date:** 2026-10-26.

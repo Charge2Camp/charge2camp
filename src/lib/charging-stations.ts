@@ -202,6 +202,29 @@ export interface MapBounds {
   north: number;
 }
 
+/** Filter, die nach der Anreicherung in JS laufen. `applyVerdict` nur fuer den
+ * nicht-bbox-Pfad (dort liefert enrichStations alle Trailer-Zeilen inkl.
+ * Platzhaltern); im bbox-Pfad filtert SQL und Platzhalter sind trailer = null. */
+function applyPostFilters(
+  stations: ChargingStationView[],
+  filters: ChargingStationFilters,
+  applyVerdict: boolean
+): ChargingStationView[] {
+  let results = stations;
+  if (applyVerdict && filters.trailerVerdict.length > 0) {
+    results = results.filter((r) => r.trailer && filters.trailerVerdict.includes(r.trailer.verdict));
+  }
+  if (filters.connectorCategories.length > 0) {
+    results = results.filter((r) =>
+      r.connectors.some((c) => connectorStandardMatchesAnyCategory(c.standard, filters.connectorCategories))
+    );
+  }
+  if (filters.operators.length > 0) {
+    results = results.filter((r) => r.operator !== null && filters.operators.includes(r.operator));
+  }
+  return results;
+}
+
 /** Alle Filter (q, Betreiber, Mindestleistung, Steckertyp, trailerVerdict)
  * greifen schon VOR der Anreicherung in SQL -- beim bbox-Pfad ueber
  * core.charge_points_in_bbox (p_trailer_verdicts), beim nicht-bbox-Pfad
@@ -246,7 +269,13 @@ export async function fetchChargingStations(
     // der Karte", 2026-09-21). core.charge_points_in_bbox() filtert
     // stattdessen ueber den raeumlichen "&&"-Operator direkt auf geom (53ms,
     // siehe 20261023020000_charge_points_in_bbox_spatial_index.sql).
-    ({ data, error } = await supabase.schema("core").rpc("charge_points_in_bbox", {
+    // Anreicherung (Connectoren + Trailer) laeuft seit 20261026150000 in EINEM
+    // Roundtrip innerhalb der Datenbank (core.charge_points_in_bbox_enriched,
+    // ruft core.charge_points_in_bbox) statt ueber ~20 gebatchte Abfragen von
+    // enrichStations -- siehe Migrationskommentar (Messwerte, Indizes).
+    const { data: enrichedData, error: enrichedError } = await supabase
+      .schema("core")
+      .rpc("charge_points_in_bbox_enriched", {
       p_west: bbox.west,
       p_south: bbox.south,
       p_east: bbox.east,
@@ -268,7 +297,14 @@ export async function fetchChargingStations(
       // core.charge_points_in_bbox() die Treffermenge selbst schon auf die
       // ~1,6 % mit geprueftem Verdict, bevor enrichStations ueberhaupt startet.
       p_trailer_verdicts: filters.trailerVerdict.length > 0 ? filters.trailerVerdict : null,
-    }));
+    });
+    if (enrichedError) throw new Error(enrichedError.message);
+    // Verdict-Filter bewusst NICHT nochmal in JS: er greift schon in SQL, und
+    // reine Platzhalter-Zeilen (unknown/auto) liefern dort trailer = null --
+    // ein JS-Filter auf trailer.verdict wuerde 'unknown'-Treffer faelschlich
+    // verwerfen. Connector-/Betreiber-Filter existieren in SQL fuer den bbox-
+    // Pfad nicht und bleiben deshalb hier.
+    return applyPostFilters((enrichedData as ChargingStationView[]) ?? [], filters, false);
   } else {
     // Performance-/Korrektheits-Audit 2026-09-30 (Nutzermeldung "canceling
     // statement due to statement timeout" auf GET /ladepunkte): q/operator/
@@ -323,20 +359,8 @@ export async function fetchChargingStations(
   if (error) throw new Error(error.message);
   const stations = (data as CoreChargePointGeo[]) ?? [];
 
-  let results = await enrichStations(supabase, stations);
-
-  if (filters.trailerVerdict.length > 0) {
-    results = results.filter((r) => r.trailer && filters.trailerVerdict.includes(r.trailer.verdict));
-  }
-  if (filters.connectorCategories.length > 0) {
-    results = results.filter((r) =>
-      r.connectors.some((c) => connectorStandardMatchesAnyCategory(c.standard, filters.connectorCategories))
-    );
-  }
-  if (filters.operators.length > 0) {
-    results = results.filter((r) => r.operator !== null && filters.operators.includes(r.operator));
-  }
-  return results;
+  const results = await enrichStations(supabase, stations);
+  return applyPostFilters(results, filters, true);
 }
 
 /** Vom Nutzer gemerkte Ladepunkte mit vollen Kartendaten (core.charge_point_geo
