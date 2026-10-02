@@ -230,7 +230,8 @@ function applyPostFilters(
 
 /** Alle Filter (q, Betreiber, Mindestleistung, Steckertyp, trailerVerdict)
  * greifen schon VOR der Anreicherung in SQL -- beim bbox-Pfad ueber
- * core.charge_points_in_bbox (p_trailer_verdicts), beim nicht-bbox-Pfad
+ * core.charge_points_in_bbox (p_trailer_verdicts, seit 20261026180000 auch
+ * p_operators/p_connector_standards), beim nicht-bbox-Pfad
  * (Server-Erstansicht ohne bekannten Kartenausschnitt) ueber
  * core.search_charge_points bzw. mit trailerVerdict ueber
  * core.search_charge_points_by_verdict (20261026100000). Die JS-Filter am
@@ -300,13 +301,20 @@ export async function fetchChargingStations(
       // core.charge_points_in_bbox() die Treffermenge selbst schon auf die
       // ~1,6 % mit geprueftem Verdict, bevor enrichStations ueberhaupt startet.
       p_trailer_verdicts: filters.trailerVerdict.length > 0 ? filters.trailerVerdict : null,
+      // Betreiber und Steckertyp filtern seit 20261026180000 ebenfalls VOR der
+      // Stichprobe (order by id limit) in SQL -- vorher liefen sie erst danach in JS
+      // und zeigten bei weitem Zoom nur den Stichprobenanteil (~9 %) der passenden
+      // Ladepunkte. Gleiche Semantik wie im nicht-bbox-Pfad (core.search_charge_points).
+      p_operators: filters.operators.length > 0 ? filters.operators : null,
+      p_connector_standards:
+        filters.connectorCategories.length > 0 ? standardsForCategories(filters.connectorCategories) : null,
     });
     if (enrichedError) throw new Error(enrichedError.message);
     // Verdict-Filter bewusst NICHT nochmal in JS: er greift schon in SQL, und
     // reine Platzhalter-Zeilen (unknown/auto) liefern dort trailer = null --
     // ein JS-Filter auf trailer.verdict wuerde 'unknown'-Treffer faelschlich
-    // verwerfen. Connector-/Betreiber-Filter existieren in SQL fuer den bbox-
-    // Pfad nicht und bleiben deshalb hier.
+    // verwerfen. Die Connector-/Betreiber-Filter in applyPostFilters sind im bbox-
+    // Pfad nur noch ein redundantes Sicherheitsnetz (SQL filtert identisch).
     return applyPostFilters((enrichedData as ChargingStationView[]) ?? [], filters, false);
   } else {
     // Performance-/Korrektheits-Audit 2026-09-30 (Nutzermeldung "canceling

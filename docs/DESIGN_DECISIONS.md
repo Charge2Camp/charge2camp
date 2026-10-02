@@ -1607,3 +1607,30 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
   unverändert. `src/lib/charging-stations.ts` (`applyPostFilters`). Der Admin-
   Listenfilter (`charge_point_admin_list`) ist bewusst NICHT geändert.
 - **Date:** 2026-10-26.
+
+## Ladepunkte-Karte: Betreiber- und Steckertyp-Filter wirken vor der Stichprobe
+
+- **Decision:** `core.charge_points_in_bbox` und `core.charge_points_in_bbox_enriched`
+  bekommen die Parameter `p_operators` und `p_connector_standards` (Migration
+  `20261026180000`). Beide Filter greifen in SQL vor `order by id limit p_limit`;
+  `fetchChargingStations` übergibt sie im bbox-Pfad (gleiche Semantik wie im nicht-
+  bbox-Pfad: exakte Betreibernamen, exakte Steckerstandards aus
+  `standardsForCategories`). Die JS-Filter in `applyPostFilters` bleiben als
+  redundantes Sicherheitsnetz.
+- **Reason:** Vorher liefen diese beiden Filter erst NACH der id-Stichprobe von
+  höchstens 1.500 Ladepunkten in JS. Bei weitem Zoom zeigte ein Betreiberfilter
+  deshalb nur den Stichprobenanteil (~9 %) der passenden Ladepunkte -- lokal mit
+  nachgebildeten Daten: Ionity 188 statt 1.500, CCS 476 statt 1.500; in Produktion
+  hat z. B. EnBW 1.265 Ladepunkte im Europa-Ausschnitt, in der Stichprobe 120-139.
+- **Alternatives:** Filter weiter in JS und das Limit anheben -- skaliert nicht
+  (EU-Datenmenge) und behebt nur die Kappung, nicht die Kosten der Anreicherung.
+- **Impact:** Bei aktivem Betreiber-/Steckerfilter füllt die Karte bis zu 1.500
+  passende Ladepunkte; ist die Menge größer, gilt weiter der Hinweis "Auswahl --
+  zoome hinein" (`truncated`). Kosten in Produktion (äquivalente Kandidatenabfrage,
+  padded Europa-Ausschnitt, ab 150 kW, warm): Betreiber 5-8 ms, Type 2 35 ms,
+  CHAdeMO 120-340 ms, Steckertyp ohne Treffer im Ausschnitt ~375 ms; kalt jeweils
+  Sekunden wie bei den übrigen Pfaden. Signaturänderung: alte Signaturen werden vor
+  dem Neuanlegen gedroppt (kein doppelter Overload); der bisherige Code ruft ohne die
+  neuen Parameter auf und läuft unverändert weiter (Defaults), die Migration kann vor
+  dem Code-Deploy angewendet werden.
+- **Date:** 2026-10-26.
