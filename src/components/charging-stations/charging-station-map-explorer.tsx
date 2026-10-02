@@ -67,6 +67,13 @@ const VIEWPORT_FETCH_TIMEOUT_MS = 12000;
 // 20261023020000_charge_points_in_bbox_spatial_index.sql) auch bei der
 // groesseren Flaeche unkritisch.
 const PREFETCH_MARGIN_RATIO = 0.5;
+// Ist die letzte Antwort gekappt ("truncated": der Ausschnitt enthielt mehr
+// Ladepunkte als das Server-Limit, die Karte zeigt nur eine gleichmaessige
+// Stichprobe), reicht "der neue Ausschnitt liegt im vorgeladenen Bereich" NICHT
+// zum Ueberspringen des Requests -- beim Hineinzoomen waeren dort mehr
+// Ladepunkte nachladbar. Daher wird nachgeladen, sobald der sichtbare Ausschnitt
+// schmaler als dieser Anteil der Breite beim letzten Laden ist.
+const TRUNCATED_REFETCH_WIDTH_RATIO = 0.7;
 
 // Deutschland-weiter Standard-Ausschnitt fuer die initiale Kartenzentrierung
 // ohne hinterlegte Zuhause-Adresse (Nutzerwunsch) -- entspricht MapView's
@@ -390,6 +397,12 @@ export function ChargingStationMapExplorer({
   // bleibt (siehe oben).
   const [stations, setStations] = useState<ChargingStationView[]>(initialStations);
   const [isFetchingViewport, setIsFetchingViewport] = useState(false);
+  // Letzte Viewport-Antwort war gekappt (zeigt nur eine Stichprobe, siehe
+  // TRUNCATED_REFETCH_WIDTH_RATIO). State fuer die Anzeige, Ref fuer die
+  // Nachlade-Entscheidung in handleBoundsChange (kein Re-Render noetig).
+  const [viewportTruncated, setViewportTruncated] = useState(false);
+  const lastFetchTruncatedRef = useRef(false);
+  const lastFetchedVisibleWidthRef = useRef(0);
   // true, wenn der letzte Nachlade-Versuch fehlgeschlagen ist (Netzwerkfehler,
   // Timeout, oder Server-Fehler) -- `stations` zeigt dann bewusst weiter die
   // zuletzt erfolgreich geladenen Marker (siehe handleBoundsChange), der
@@ -472,7 +485,7 @@ export function ChargingStationMapExplorer({
           if (seq === fetchSeqRef.current) setViewportFetchFailed(true);
           return;
         }
-        const data = (await res.json()) as { stations?: ChargingStationView[] };
+        const data = (await res.json()) as { stations?: ChargingStationView[]; truncated?: boolean };
         // Veraltete Antwort (z. B. wenn der Nutzer waehrend des Requests
         // weitergeschwenkt hat) verwerfen, sonst ueberschreibt eine
         // langsame, alte Antwort ein bereits aktuelleres Ergebnis.
@@ -485,6 +498,9 @@ export function ChargingStationMapExplorer({
         }
         setViewportFetchFailed(false);
         lastFetchedBoundsRef.current = paddedBounds;
+        lastFetchTruncatedRef.current = Boolean(data.truncated);
+        lastFetchedVisibleWidthRef.current = bounds.east - bounds.west;
+        setViewportTruncated(Boolean(data.truncated));
       } catch {
         // Netzwerkfehler/Timeout: Karte behaelt die zuletzt bekannten Marker
         // statt abzustuerzen, zeigt aber einen Hinweis (viewportFetchFailed).
@@ -503,7 +519,12 @@ export function ChargingStationMapExplorer({
     // bereits angezeigten `stations` decken ihn schon ab, kein Request
     // noetig (Kernstueck des ABRP/EVCaravan-Verhaltens, Nutzerfeedback).
     if (lastFetchedBoundsRef.current && isBoundsContained(bounds, lastFetchedBoundsRef.current)) {
-      return;
+      // Gekappte Antwort + deutlich hineingezoomt: Request NICHT ueberspringen,
+      // im kleineren Ausschnitt sind mehr Ladepunkte nachladbar.
+      const zoomedInEnough =
+        lastFetchTruncatedRef.current &&
+        bounds.east - bounds.west < lastFetchedVisibleWidthRef.current * TRUNCATED_REFETCH_WIDTH_RATIO;
+      if (!zoomedInEnough) return;
     }
     scheduleViewportRefetch(liveFilters, bounds);
   }
@@ -552,7 +573,10 @@ export function ChargingStationMapExplorer({
     router.push("/ladepunkte");
   }
 
-  const stationCountLabel = stations.length >= 5000 ? `${stations.length}+` : `${stations.length}`;
+  const stationCountLabel =
+    viewportTruncated || stations.length >= 5000 ? `${stations.length}+` : `${stations.length}`;
+
+  const showTruncatedNotice = viewportTruncated && !isFetchingViewport && !viewportFetchFailed;
 
   function handleSortChange(next: SortOption) {
     setSortOption(next);
@@ -696,7 +720,9 @@ export function ChargingStationMapExplorer({
               wie Popups/MapLibres eigene Bedienelemente, siehe globals.css. */}
           <div className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-2 p-3 pt-[calc(0.75rem+var(--safe-top))] md:pt-3">
             <span
-              className={`pointer-events-auto rounded-full px-3 py-1.5 text-sm font-medium shadow-md ${
+              className={`pointer-events-auto px-3 py-1.5 text-sm font-medium shadow-md ${
+                showTruncatedNotice ? "rounded-2xl" : "rounded-full"
+              } ${
                 viewportFetchFailed && !isFetchingViewport
                   ? "bg-warning/15 text-warning-text"
                   : "bg-white/95 dark:bg-neutral-900/95"
@@ -707,6 +733,13 @@ export function ChargingStationMapExplorer({
                 : viewportFetchFailed
                   ? `${stationCountLabel} Ladepunkte (nicht aktuell -- keine Verbindung)`
                   : `${stationCountLabel} Ladepunkte`}
+              {showTruncatedNotice && (
+                // Gekappte Antwort: die Karte zeigt nur eine Stichprobe -- sonst
+                // wirkt die Anzeige wie "das sind alle Ladepunkte hier".
+                <span className="block text-xs font-normal text-text-muted">
+                  Auswahl -- zoome hinein, um alle zu sehen
+                </span>
+              )}
             </span>
             <div className="pointer-events-auto flex gap-2">
               {FilterButton}

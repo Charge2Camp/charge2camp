@@ -1509,3 +1509,36 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
   (client-sicherer Teil). Seiten `/campingplaetze` und `/routenplaner`
   laden keine Campingplatz-Namensliste mehr.
 - **Date:** 2026-10-26.
+
+## Ladepunkte-Karte: unverzerrte Stichprobe + Hinweis bei gekappter Ansicht
+
+- **Decision:** Enthält ein Kartenausschnitt mehr Ladepunkte als das Server-
+  Limit (1.500), liefert `core.charge_points_in_bbox` eine stabile Stichprobe
+  (`order by id`, Migration `20261026140000`) statt der alphabetisch ersten
+  1.500 Namen. Die Karte liest das bereits mitgelieferte Antwortfeld
+  `truncated`: der Zähler zeigt "1500+" und darunter den Hinweis "Auswahl --
+  zoome hinein, um alle zu sehen"; nach einer gekappten Antwort wird beim
+  Hineinzoomen (sichtbare Breite < 70 % der Breite beim letzten Laden)
+  nachgeladen, auch wenn der Ausschnitt noch im vorgeladenen Bereich liegt.
+- **Reason:** Gemessen in Produktion (gepolsterter Europa-Ausschnitt, ab
+  150 kW): 16.023 Ladepunkte, die Namenssortierung zeigte nur Namen von
+  " AdS…" bis "Aral Pulse" -- 84 von 1.033 Betreibern, angeführt von Aral/
+  Allego/ALDI SÜD; EnBW (1.265), IZIVIA (816), EWE Go (662) und Tesla (596)
+  fehlten praktisch. Mit `order by id` erscheinen 297 Betreiber proportional
+  zu ihrem Anteil. Die Anzeige "1500" wirkte zudem wie "das sind alle".
+- **Alternatives:** Grid-Sampling ("stärkster Lader je Zelle") -- in
+  Produktion 9-16 s (alle Zeilen lesen/sortieren) bzw. > 20 s (Index-Zugriff
+  je Zelle), nicht tragfähig; ein Vorab-Aggregat je Zoomstufe wäre eine
+  große Änderung an der Import-Pipeline. Sortierung nach Leistung -- bei
+  Gleichstand wieder nach Name, kaum besser. Serverseitige Cluster mit
+  Zählern -- größte Änderung (neues Antwortformat, neue Interaktion), für
+  später offen. Nur Schnelllader bei weitem Zoom -- der Default (≥ 150 kW)
+  hat im Europa-Ausschnitt trotzdem ~16.000 Treffer.
+- **Impact:** Bei sehr weitem Zoom zeigt die Karte weiterhin nur eine
+  Stichprobe (~9 %), jetzt aber betreiberneutral, stabil (kein Flackern beim
+  Schwenken) und erkennbar als Auswahl. Der Hinweis nutzt die Pille oben links
+  (zweite Zeile, Textfarbe text-text-muted aus den Design-Tokens, Du-Form, sachlich).
+  Beim Hineinzoomen aus einer gekappten Ansicht entsteht ein zusätzlicher
+  Request (Debounce 150 ms, wie bisher abbrechbar). `charging-station-map-
+  explorer.tsx`, `route.ts`/`charging-stations.ts` (Kommentare).
+- **Date:** 2026-10-26.

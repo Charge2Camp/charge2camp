@@ -28,10 +28,11 @@ export async function GET(request: NextRequest) {
   try {
     // Sicherheits-Audit: Login + Rate-Limit Pflicht. Limit grosszuegiger als
     // bei den anderen Endpunkten (120/min statt 60/min), da der Karten-Client
-    // dies bei aktivem Schwenken/Zoomen alle 500ms aufrufen kann (siehe
-    // VIEWPORT_FETCH_DEBOUNCE_MS in charging-station-map-explorer.tsx) --
-    // ein durchgehend geschwenkter Ausschnitt ueber eine volle Minute kaeme
-    // damit theoretisch auf bis zu 120 Aufrufe.
+    // dies bei aktivem Schwenken/Zoomen ca. alle 150ms aufrufen kann (siehe
+    // VIEWPORT_FETCH_DEBOUNCE_MS in charging-station-map-explorer.tsx; der
+    // Karten-Client bricht dabei laufende Requests ab) -- ein durchgehend
+    // geschwenkter Ausschnitt kaeme damit theoretisch auf mehr als 120
+    // Aufrufe pro Minute (dann 429, die Karte zeigt "nicht aktuell").
     const guard = await requireApiUser("charge-points-viewport", { windowSeconds: 60, maxRequests: 120 });
     if ("response" in guard) return guard.response;
 
@@ -74,7 +75,8 @@ export async function GET(request: NextRequest) {
     // wurden (jetzt ab 1500 statt 5000).
     const VIEWPORT_LIMIT = 1500;
     // Supabase begrenzt jede PostgREST-Antwort projektweit zusaetzlich hart
-    // auf max_rows = 5000 (supabase/config.toml) -- bei einem stark
+    // auf max_rows = 50000 (supabase/config.toml; fuer dieses Limit ohne
+    // Belang, da VIEWPORT_LIMIT deutlich darunter liegt) -- bei einem stark
     // herausgezoomten Kartenausschnitt (z. B. "ganz Italien") kann die
     // tatsaechliche Treffermenge trotz Geo-Filterung trotzdem ueber
     // VIEWPORT_LIMIT liegen (insgesamt ca. 18.900+ Ladepunkte) -- der Client

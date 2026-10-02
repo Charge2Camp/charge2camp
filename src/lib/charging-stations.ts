@@ -220,9 +220,14 @@ export interface MapBounds {
  * dieser Funktion rein alphabetisch nach Name und schneidet danach ab --
  * bei ueber 18.000 Ladepunkten blieben dadurch alle Namen ab ungefaehr "S"
  * bis "Z" fuer das reine Kartenbrowsen unsichtbar, unabhaengig vom
- * Kartenausschnitt (Nutzerfeedback). Mit bbox ist die Alphabet-Sortierung
- * dagegen unproblematisch, da `limit` innerhalb eines Kartenausschnitts in
- * der Praxis so gut wie nie erreicht wird. */
+ * Kartenausschnitt (Nutzerfeedback). Mit bbox greift das `limit` nur bei
+ * sehr weitem Zoom (EU-Datenmenge: ein Europa-Ausschnitt enthaelt >16.000
+ * Ladepunkte ab 150 kW, >120.000 ohne Leistungsfilter) -- dann liefert
+ * core.charge_points_in_bbox seit 20261026140000 eine stabile, nach
+ * Betreibernamen UNVERZERRTE Stichprobe (order by id statt name; die alte
+ * Namenssortierung lieferte fast nur A-Betreiber) und die Route meldet
+ * `truncated`, woraufhin die Karte darauf hinweist und beim Hineinzoomen
+ * nachlaedt. */
 export async function fetchChargingStations(
   filters: ChargingStationFilters,
   limit = 5000,
