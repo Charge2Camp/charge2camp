@@ -160,6 +160,11 @@ Skills: `/pre-push-check` vor Push, `/new-migration` fuer Migrationen, `/mobile-
    Produktions-DB treffen), sondern `docker exec -i supabase_db_eCamper psql …`.
 4. **Migrations-Drift:** vor jedem `db push` `npx supabase migration list` pruefen; Prod-Historie
    hatte Luecken (repariert 2026-10-04). `db push` nur nach ausdruecklicher Freigabe.
+5. **Funktionsrechte in `core`/`enrich`:** neue Funktionen sind seit 20261027030000 nur fuer
+   `service_role` ausfuehrbar (PUBLIC per Default-Privileg entzogen). Braucht die Nutzer-Session
+   eine Funktion, ausdruecklich `grant execute ... to authenticated` UND die Berechtigung in der
+   Funktion selbst pruefen; nie an `anon`. Pruefung: `ingest/test_function_privileges.py`
+   (Allow-Liste dort pflegen).
 
 ## Wichtige Dateien
 
