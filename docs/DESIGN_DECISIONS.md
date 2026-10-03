@@ -1477,6 +1477,25 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
   angepasst).
 - **Date:** 2026-09-28.
 
+## Admin: "Laden direkt am Stellplatz" nicht mehr separat pflegbar
+
+- **Decision:** Im Admin-Campingplatz-Detail entfallen die Checkbox "Laden
+  direkt am Stellplatz" (`enrich.campsite_charging.pitch_charging`) und die
+  Kategorie "Elektromobilitaet" (`charging_on_site`/`charging_at_pitch`/
+  `charging_dc`) im Merkmale-Formular. Es bleibt eine Checkbox "Laden auf dem
+  Platz moeglich (inkl. direkt am Stellplatz)". Die Spalte `pitch_charging`
+  bleibt im Schema (Abwaertskompatibilitaet, API/Meilisearch), wird vom
+  Admin aber nicht mehr geschrieben.
+- **Reason:** Die Konsolidierung vom 2026-09-28 galt nur fuer Filter/Daten,
+  das Admin-Formular bot die Unterscheidung weiter an. Die Checkbox hatte
+  keine Wirkung auf Filter/EV-Score (nur `has_charging` zaehlt), konnte aber
+  zu Widerspruechen fuehren: nur "Stellplatz" angehakt, "Platz" nicht =>
+  Platz gilt als ohne Laden.
+- **Alternatives:** Spalte per Migration droppen -- verworfen (CLAUDE.md:
+  keine Funktionalitaet entfernen, API-Feld `charging.pitch_charging`).
+- **Impact:** `admin/app/(dashboard)/campingplaetze/[id]/page.tsx`, `actions.ts`.
+- **Date:** 2026-10-03.
+
 ## Campingplatz-Namensvorschläge serverseitig statt vorgeladener Namenslisten
 
 - **Decision:** Die Namensvorschläge im Campingplatz-Suchfeld
