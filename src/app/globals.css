@@ -75,6 +75,7 @@
      aussieht. */
   --c-line-strong: #CFCCC0;
   --c-tint-trailer: #E8F5C0;
+  --c-hover: #0F3B360F;
 
   --c-text: #0F3B36;
   --c-text-muted: #5C6B66;
@@ -131,6 +132,7 @@
   --color-line: var(--c-line);
   --color-line-strong: var(--c-line-strong);
   --color-tint-trailer: var(--c-tint-trailer);
+  --color-hover: var(--c-hover);
 
   --color-text: var(--c-text);
   --color-text-muted: var(--c-text-muted);

@@ -30,7 +30,7 @@ export function RigLengthDistributionChart({
       {distribution.buckets.map((bucket) => (
         <div key={bucket.label} className="flex items-center gap-2 text-sm sm:gap-3">
           <span className="w-14 shrink-0 text-text-muted sm:w-16">{bucket.label}</span>
-          <div className="h-4 flex-1 overflow-hidden rounded-full bg-black/5 dark:bg-white/10">
+          <div className="h-4 flex-1 overflow-hidden rounded-full bg-line">
             {bucket.count > 0 && (
               <div
                 className="h-full rounded-full"

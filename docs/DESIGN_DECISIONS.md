@@ -1932,3 +1932,9 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
 - **Alternatives:** Skills nachrangig zum bestehenden Design System behalten; Skills nicht einsetzen.
 - **Impact:** Bei Konflikten gelten die Skill-Empfehlungen. Das Token-System (`--c-*`) und Prinzip 8 (Mobile/Touch) bleiben die technische Basis; Abweichungen hier dokumentieren.
 - **Date:** 2026-10-03.
+
+- **Decision:** Karten-Overlays und Hover-Zustände der Ladepunkte-Karte nutzen Tokens (`bg-card/95`, `bg-line`, `bg-line-strong`, `bg-base-deep/50`, neuer Token `--c-hover` mit `hover:bg-hover active:bg-hover`). Die `dark:`-Varianten dort entfallen.
+- **Reason:** UI/UX-Pro-Max-Audit: Raw-Farben statt Tokens, kein Tap-Feedback auf Touch. Das Design-System kennt bewusst keinen Dark Mode (globals.css), die `dark:`-Varianten griffen aber bei dunklem System-Theme und erzeugten dunkle Buttons auf heller App.
+- **Alternatives:** Dark-Tokens einführen (widerspricht dem festen Markenkontrast); Altbestand unverändert lassen.
+- **Impact:** Erscheinungsbild im hellen Theme praktisch unverändert; bei dunklem System-Theme jetzt konsistent hell. Weitere Fundstellen in anderen Komponenten bleiben offen.
+- **Date:** 2026-10-03.

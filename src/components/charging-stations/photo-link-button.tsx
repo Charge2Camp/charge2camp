@@ -17,7 +17,7 @@ export function PhotoLinkButton({ link, externalKey }: { link: GoogleMapsPhotoLi
         onClick={() => {
           void logPhotoButtonClick(externalKey, link.tier);
         }}
-        className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-line-strong px-4 py-2 text-sm font-medium hover:bg-black/5 dark:hover:bg-white/5"
+        className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-line-strong px-4 py-2 text-sm font-medium hover:bg-hover active:bg-hover"
       >
         {link.label}
         <span aria-hidden="true">↗</span>

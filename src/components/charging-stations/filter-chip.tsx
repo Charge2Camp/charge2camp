@@ -28,7 +28,7 @@ export function FilterChip({
       className={`inline-flex min-h-11 items-center gap-1 rounded-full border px-4 text-sm font-medium transition-colors ${
         active
           ? "border-action bg-action"
-          : "border-line-strong bg-transparent hover:bg-black/5 dark:hover:bg-white/10"
+          : "border-line-strong bg-transparent hover:bg-hover active:bg-hover"
       }`}
     >
       {active && <span aria-hidden="true">✓</span>}

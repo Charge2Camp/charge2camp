@@ -256,7 +256,7 @@ export function StationBottomSheet({
         onPointerCancel={handlePointerUp}
       >
         <div className="flex justify-center pt-2 pb-1">
-          <span aria-hidden="true" className="h-1.5 w-10 rounded-full bg-black/15 dark:bg-white/20" />
+          <span aria-hidden="true" className="h-1.5 w-10 rounded-full bg-line-strong" />
         </div>
 
         <div className="flex items-start justify-between gap-2 px-4">
