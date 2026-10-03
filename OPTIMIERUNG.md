@@ -101,6 +101,7 @@ Aufwand: S = < 1 h, M = halber Tag, L = 1+ Tage.
 |---|---|---|
 | S-1 Next.js 16.3.8 | erledigt | `1a3e62c` |
 | S-2 Security-Header (CSP Report-Only) | erledigt, wirkt nach Deploy | Branch `optimierung-s2-s3` |
+| S-3 RLS auf restlichen core/raw-Tabellen, `campsite_search` nicht mehr öffentlich | erledigt lokal; Prod nach `db push` | Branch `optimierung-s2-s3` |
 | Q-1 CI-Pipeline | erledigt | `a7bc1d0` |
 | D-1 OCM-Lizenzfilter, Bestandsbereinigung | erledigt, Prod eingespielt 2026-10-03 | `d1f2df5` |
 | D-1 Registry-Lizenzen, Namensnennung Impressum | erledigt, Prod eingespielt 2026-10-03 | `a956832` |
@@ -117,6 +118,12 @@ Aufwand: S = < 1 h, M = halber Tag, L = 1+ Tage.
 | S-4 | **SECURITY-DEFINER-Funktionen für jeden aufrufbar.** Postgres vergibt `EXECUTE` standardmäßig an `PUBLIC`. Die Migrationen vergeben Rechte nur an `service_role` und entziehen `PUBLIC` nie. Lokal sind 38 SECURITY-DEFINER-Funktionen in `core`/`enrich` für `anon` ausführbar, 17 davon ohne eigene Berechtigungsprüfung. Beide Schemas sind über PostgREST exponiert (`config.toml`). Mit dem öffentlichen Anon-Key wären u. a. aufrufbar: `enrich.set_trailer_suitability` (inkl. `p_origin='admin_override'`, d. h. **Überschreiben manueller Caravan-Bewertungen**, harte Regel 1), `core.upsert_charge_point(s_bulk)`, `core.absorb_technical_fields`, `core.deactivate_insufficient_charging_stations`, `core.refresh_*`. Prod-Stand nicht geprüft (kein Zugriff), Migrationen sind aber identisch. | `supabase/migrations` | M | security-and-hardening |
 | S-5 | **Regression: `enrich.moderate_trailer_report` ohne Admin-Prüfung.** 20260927000000 hatte die `is_admin`-Prüfung eingebaut, die Neufassung in 20261012000000 hat sie wieder verloren. Jeder (über S-4 sogar ohne Login) kann Anhänger-Meldungen genehmigen/ablehnen. | `20261012000000_…sql` | S | security-and-hardening |
 | D-5 | **Dubletten-Merge löscht manuelle Caravan-Bewertungen (harte Regel 1).** `core.merge_charge_points` übernimmt die Bewertung der entfernten Zeile nur, wenn die überlebende Zeile `unknown` hat. Lokal reproduziert: überlebende BNetzA-Zeile mit automatischem „no“, entfernte manuelle Zeile mit `manual_override=true`, „yes“ → nach dem Merge bleibt „no/auto“, die manuelle Bewertung ist gelöscht. Zusätzlich kopiert der Merge `manual_override`, `source_type` und `verification_note` nicht mit, also verliert eine übernommene manuelle Bewertung ihren Schutz. Betrifft manuelle Merges und die Auto-Merges (`auto_merge_*`). | `20261024020000_…sql` | S | test-driven-development |
+
+### Hoch (gefunden bei S-3)
+
+| ID | Befund | Ort | Aufwand | Skill |
+|---|---|---|---|---|
+| S-6 | **PostGIS-Tabelle `public.spatial_ref_sys` für `anon`/`authenticated` beschreibbar** (INSERT/UPDATE/DELETE/TRUNCATE, kein RLS; Prod bestätigt). Lokal per REST-API mit dem Anon-Key nachgewiesen: DELETE wird angenommen. Löscht jemand SRID 4326, scheitern alle `geography`-Abfragen, also Karte, Umkreissuche und Routenplanung. Eigentümer ist `supabase_admin`, die Migrationsrolle `postgres` kann die Rechte nicht entziehen. Lösung: Supabase-Support bitten, `revoke insert, update, delete, truncate on public.spatial_ref_sys from anon, authenticated` als `supabase_admin` auszuführen; Alternative wäre ein Umzug von PostGIS ins Schema `extensions` (großer Umbau, Zustimmung nötig). `ingest/test_table_privileges.py` meldet den Punkt als OFFEN. | Supabase-Projekt | S (Support-Ticket) | security-and-hardening |
 
 ### Konflikt mit den harten Regeln (Entscheidung nötig)
 
