@@ -95,6 +95,36 @@ Aufwand: S = < 1 h, M = halber Tag, L = 1+ Tage.
 | idea-refine / interview-me | Produktentscheidung Store-Verpackung | U-2 |
 | using-agent-skills | Meta-Skill zur Auswahl | – |
 
+## Umsetzungsstand
+
+| Befund | Status | Commit |
+|---|---|---|
+| S-1 Next.js 16.3.8 | erledigt | `1a3e62c` |
+| Q-1 CI-Pipeline | erledigt | `a7bc1d0` |
+| D-1 OCM-Lizenzfilter, Bestandsbereinigung | erledigt (lokal; Prod nach `db push`) | `d1f2df5` |
+| D-1 Registry-Lizenzen, Namensnennung Impressum | erledigt (lokal; Prod nach `db push`) | `a956832` |
+| D-2 Priorität BNetzA > IRVE/RIPREE | erledigt (lokal; Prod nach `db push`) | `c5d26eb` |
+
+## Neue Befunde aus Phase 2 (2026-10-03)
+
+### Kritisch
+
+| ID | Befund | Ort | Aufwand | Skill |
+|---|---|---|---|---|
+| S-4 | **SECURITY-DEFINER-Funktionen für jeden aufrufbar.** Postgres vergibt `EXECUTE` standardmäßig an `PUBLIC`. Die Migrationen vergeben Rechte nur an `service_role` und entziehen `PUBLIC` nie. Lokal sind 38 SECURITY-DEFINER-Funktionen in `core`/`enrich` für `anon` ausführbar, 17 davon ohne eigene Berechtigungsprüfung. Beide Schemas sind über PostgREST exponiert (`config.toml`). Mit dem öffentlichen Anon-Key wären u. a. aufrufbar: `enrich.set_trailer_suitability` (inkl. `p_origin='admin_override'`, d. h. **Überschreiben manueller Caravan-Bewertungen**, harte Regel 1), `core.upsert_charge_point(s_bulk)`, `core.absorb_technical_fields`, `core.deactivate_insufficient_charging_stations`, `core.refresh_*`. Prod-Stand nicht geprüft (kein Zugriff), Migrationen sind aber identisch. | `supabase/migrations` | M | security-and-hardening |
+| S-5 | **Regression: `enrich.moderate_trailer_report` ohne Admin-Prüfung.** 20260927000000 hatte die `is_admin`-Prüfung eingebaut, die Neufassung in 20261012000000 hat sie wieder verloren. Jeder (über S-4 sogar ohne Login) kann Anhänger-Meldungen genehmigen/ablehnen. | `20261012000000_…sql` | S | security-and-hardening |
+| D-5 | **Dubletten-Merge löscht manuelle Caravan-Bewertungen (harte Regel 1).** `core.merge_charge_points` übernimmt die Bewertung der entfernten Zeile nur, wenn die überlebende Zeile `unknown` hat. Lokal reproduziert: überlebende BNetzA-Zeile mit automatischem „no“, entfernte manuelle Zeile mit `manual_override=true`, „yes“ → nach dem Merge bleibt „no/auto“, die manuelle Bewertung ist gelöscht. Zusätzlich kopiert der Merge `manual_override`, `source_type` und `verification_note` nicht mit, also verliert eine übernommene manuelle Bewertung ihren Schutz. Betrifft manuelle Merges und die Auto-Merges (`auto_merge_*`). | `20261024020000_…sql` | S | test-driven-development |
+
+### Konflikt mit den harten Regeln (Entscheidung nötig)
+
+| ID | Befund |
+|---|---|
+| D-6 | `core.auto_merge_bnetza_over_manual_duplicates` (20261024020000) lässt bei eindeutigen Dubletten die BNetzA-Zeile gegen eine manuelle Station gewinnen. Das war eine dokumentierte Nutzerentscheidung vom 2026-09-22 („BNetzA bleibt hier Prio1“) und widerspricht dem Wortlaut der neuen harten Regel 2 (manuell > BNetzA). Die abhängigen Daten werden übertragen; mit dem Fix D-5 dann auch die manuelle Caravan-Bewertung vollständig. Nicht geändert, wartet auf deine Entscheidung. |
+
+### Ergänzung zu U-1
+
+Hart codierte Textfarben (`text-black/70 dark:text-white/70`) gibt es auch in der App, nicht nur im Admin: 10 Dateien (u. a. `page.tsx`, `community`, `datenschutz`, `route-wizard-tabs.tsx`). Das Impressum ist seit `a956832` umgestellt.
+
 ## D-1 Lizenzrecherche (2026-10-03)
 
 | Quelle | Ergebnis | Kommerziell nutzbar | Beleg |
