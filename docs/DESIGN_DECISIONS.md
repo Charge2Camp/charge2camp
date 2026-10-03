@@ -1847,3 +1847,39 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
   an `authenticated` gegrantet werden und in die Allow-Liste des Tests (CLAUDE.md,
   Falle 5). Sonst schlägt der Aufruf mit `permission denied` fehl.
 - **Date:** 2026-10-03.
+
+## Nächtlicher Qualitätsjob: Dubletten-Insert als Gleichheits-Join, 20 Minuten Zeitbudget
+
+- **Decision:** Migration `20261026240000`: (1) Der zweite Insert in
+  `core.refresh_charge_point_duplicates()` (Kandidaten über exakte normalisierte Adresse +
+  PLZ) berechnet die Normalisierung einmal je Zeile in einer CTE und verbindet per
+  Gleichheits-Join auf (normalisierte Adresse, PLZ); `b.external_key > a.external_key` und
+  die 5-km-Grenze sind nur noch Join-Filter. (2) Der Cron-Befehl von
+  `refresh-all-quality-data` lautet jetzt `set statement_timeout = '20min'; select
+  core.refresh_all_quality_data()` (via `cron.alter_job`, Job-ID und Historie bleiben).
+  Alles andere an der Funktion ist unverändert.
+- **Reason:** Der Job scheiterte 11 Nächte in Folge (2026-09-23 bis 2026-10-03, jeweils nach
+  exakt 2:00 Minuten = `statement_timeout`), zuletzt erfolgreich am 2026-09-22 (1:42).
+  Der Planer führte den alten Self-Join quadratisch aus: je Zeile eine Bitmap-Suche, die den
+  Adressindex per `BitmapAnd` mit einem Bereichsscan auf `external_key < b.external_key`
+  verband (im Schnitt die halbe Indexgröße, ~54.000 Einträge; Kostenschätzung ~1,0 × 10⁹).
+  Gemessen auf Produktion: 13,4 s für nur 170 Zeilen (~79 ms/Zeile, hochgerechnet ~3 Stunden
+  für alle); die neue Form braucht 11,5 s für den gesamten Select und liefert auf einer
+  Stichprobe dieselben Paare (38, identischer Hash). Folgen des Ausfalls: Dublettentabelle
+  und Dashboard-Zahlen 11 Tage veraltet, automatisches Zusammenführen und Qualitätsprüfungen
+  liefen nie (die ~23.000 am 27./28.09. importierten Ladepunkte wurden nicht dedupliziert).
+- **Alternatives:** Nur den Insert beschleunigen -- der erste Insert verbraucht schon fast
+  das ganze 2-Minuten-Limit, die übrigen Schritte passen dann vermutlich nicht in die
+  Restzeit. Nur das Limit erhöhen -- der quadratische Insert bräuchte Stunden. Den Job in
+  mehrere Cron-Einträge aufteilen -- sauberer isoliert, aber größerer Umbau; bei Bedarf
+  später. Funktionsindex um die PLZ erweitern -- das Problem ist nicht der Index, sondern
+  die Ungleichung im Join.
+- **Impact:** Gleichwertig geprüft: a.address/a.postcode müssen nicht null sein, ein
+  Gleichheitsvergleich schließt null auf der b-Seite ohnehin aus; lokal erzeugen alte und
+  neue Funktion auf gezielten Testfällen (Dreier-Gruppen, Groß-/Kleinschreibung, PLZ im Text,
+  führende Hausnummer, räumlich schon abgedeckte Paare, inaktive Zeilen, Abstand > 5 km,
+  andere/leere PLZ, leere Adresse) dieselbe Tabelle. Ohne `is_active`-Filter wie bisher. Der
+  erste Lauf nach dem Fix arbeitet 11 Tage Rückstau ab und kann länger dauern; das Limit
+  gilt nur für diesen Lauf. Erst wenn der Job wieder erfolgreich läuft, in
+  `CRON_HEALTH_JOBS` des Workflows `cron-health.yml` aufnehmen (Limit 1560 Minuten).
+- **Date:** 2026-10-03.
