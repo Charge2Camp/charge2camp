@@ -11,7 +11,7 @@
  * unklarer Lizenz landet so nie ungeprueft in der Datenbank.
  *
  * Python-Gegenstueck: ingest/ocm_license.py. Beide teilen sich die
- * Testfaelle in ingest/ocm_license_cases.json und muessen identisch
+ * Testfaelle in src/lib/ocm-license-cases.json und muessen identisch
  * entscheiden -- Aenderungen immer an beiden Stellen. */
 
 export type OcmLicenseClass = "allowed" | "restricted" | "unknown";

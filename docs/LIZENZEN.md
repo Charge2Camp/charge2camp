@@ -101,7 +101,7 @@ Anbieter deaktiviert `core.apply_ocm_license_filter()` mit
 Konkreter Fund: **Oplaadpalen.nl** (Provider 26, CC BY-NC-SA 3.0) lieferte
 in unseren Importländern rund 7.675 Ladepunkte (NL 7.045, DE 307, BE 120,
 CH 108, AT 67, FR 24, IT 4; Live-Abfrage 2026-10-03). Testfälle mit den
-wörtlichen Lizenztexten: `ingest/ocm_license_cases.json`.
+wörtlichen Lizenztexten: `src/lib/ocm-license-cases.json`.
 
 ## Bundesnetzagentur, IRVE, RIPREE (nationale Register)
 

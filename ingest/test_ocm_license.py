@@ -1,5 +1,6 @@
 """Prueft ocm_license.py gegen die gemeinsamen Testfaelle in
-ocm_license_cases.json (dieselben wie src/lib/ocm-license.test.ts).
+src/lib/ocm-license-cases.json (dieselben wie src/lib/ocm-license.test.ts; liegt
+unter src/, weil .vercelignore den Ordner ingest/ vom Deploy ausschliesst).
 Braucht keine Datenbank, laeuft auch in CI (.github/workflows/ci.yml).
 
 Aufruf:
@@ -18,7 +19,7 @@ from ocm_license import classify_ocm_license, classify_ocm_poi
 
 
 def main() -> int:
-    cases = json.loads((Path(__file__).parent / "ocm_license_cases.json").read_text(encoding="utf-8"))["cases"]
+    cases = json.loads((Path(__file__).parent.parent / "src" / "lib" / "ocm-license-cases.json").read_text(encoding="utf-8"))["cases"]
     failures = []
     for c in cases:
         actual = classify_ocm_license(c["license"], c["isOpenDataLicensed"])

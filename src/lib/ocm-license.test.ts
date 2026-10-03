@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { classifyOcmLicense, classifyOcmPoi } from "@/lib/ocm-license";
 // Dieselben Faelle prueft ingest/test_ocm_license.py gegen die Python-
 // Implementierung -- beide Importwege muessen identisch entscheiden.
-import fixture from "../../ingest/ocm_license_cases.json";
+import fixture from "./ocm-license-cases.json";
 
 describe("classifyOcmLicense", () => {
   for (const c of fixture.cases) {
