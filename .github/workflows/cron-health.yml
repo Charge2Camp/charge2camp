@@ -1,0 +1,51 @@
+# Ueberwacht die pg_cron-Jobs der Produktionsdatenbank und schlaegt FEHL, wenn einer
+# ungesund ist -- GitHub benachrichtigt dann ueber den fehlgeschlagenen Lauf.
+#
+# Hintergrund: Karten-Kopie, Erstansicht und Betreiber-Optionen der Ladepunkte-Seite
+# haengen vom 15-Minuten-Job refresh-charge-point-map ab (Migrationen 20261026190000,
+# 210000, 220000). Faellt er aus, bleiben diese Daten OHNE sichtbaren Fehler veraltet.
+# Geprueft wird ueber core.cron_job_health (Migration 20261026230000), siehe auch die
+# Statuskarte im Admin-Dashboard.
+#
+# Laeuft hier und nicht als Vercel-Cron: Vercel-Crons dieses Projekts sind taeglich
+# (vercel.json); eine halbstuendliche Pruefung braucht einen eigenen Takt.
+#
+# Hinweise:
+#  - Geplante Workflows laufen nur auf dem Standardbranch (development) und koennen sich
+#    bei hoher Last um einige Minuten verzoegern.
+#  - Bei einem Dauerfehler schlaegt JEDER Lauf (alle 30 Minuten) fehl -> wiederholte
+#    Benachrichtigungen, bis der Job wieder gesund ist.
+#  - Neuen Job aufnehmen: in CRON_HEALTH_JOBS "jobname:max_alter_in_minuten" ergaenzen.
+#    Das Limit sollte ~2 Laeufe plus Puffer betragen (15-Minuten-Job: 35).
+name: Cron-Job-Gesundheit
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cron-health
+  cancel-in-progress: false
+
+jobs:
+  cron-health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cron-Jobs pruefen
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # Leerzeichen-getrennt: jobname:max_alter_in_minuten
+          # NICHT aufgenommen: refresh-all-quality-data (nachts, Limit 1560 = 26 h). Der Job
+          # scheitert seit 2026-09-23 jede Nacht mit "statement timeout"; er wird hier erst
+          # eingetragen, wenn er wieder laeuft -- sonst schluege dieser Check ab dem ersten
+          # Lauf dauerhaft fehl. Das Admin-Dashboard zeigt ihn bereits an.
+          CRON_HEALTH_JOBS: "refresh-charge-point-map:35"
+        run: bash .github/scripts/check-cron-health.sh
