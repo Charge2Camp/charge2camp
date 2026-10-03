@@ -69,6 +69,38 @@ volle Produkt- und Architekturspezifikation.
    Alternatives/Impact/Date), damit spätere Arbeit nachvollziehen kann,
    *warum* etwas so entschieden wurde.
 
+## Harte Regeln (niemals verletzen)
+
+1. **Manuelle Caravan-Tauglichkeitsbewertungen sind unantastbar.** Weder
+   OSM- noch API-/Importdaten dürfen sie überschreiben
+   (`enrich.trailer_suitability` mit `manual_override`/`origin <> 'auto'`,
+   Campingplatz-Merkmale mit `source = 'admin'`). Technische Felder
+   (aktiv/inaktiv, Anschlüsse, Leistung) dürfen aktualisiert werden.
+   Absicherung: `ingest/test_enrich_immutability.py`.
+2. **Datenpriorität Ladestationen:** manuell kuratiert
+   (`admin_manual`, `sascha_list`) > Bundesnetzagentur > weitere frei
+   kommerziell nutzbare nationale Quellen (IRVE, RIPREE, …) > OSM.
+   Abgebildet über `core.source_registry.priority`.
+3. **Keine Datenquellen mit kommerziellen Nutzungsbeschränkungen**
+   (Lizenz in `core.source_registry` und
+   [docs/data-sources.md](docs/data-sources.md) dokumentieren).
+4. **Bestehende Architekturentscheidungen fortführen.** Keine
+   Framework-Wechsel oder großen Umbauten ohne ausdrückliche Zustimmung.
+5. **Keine Funktionalität entfernen.**
+
+## Architektur (Kurzfassung)
+
+- Datenschichten in Postgres: `raw.*` (Rohimporte je Quelle) → `core.*`
+  (normalisierte Ladepunkte/Campingplätze, von Importern überschreibbar) →
+  `enrich.*` (redaktionelle/Nutzer-Bewertungen, verknüpft über
+  `external_key`, von Importern nie verändert). `public.*` = Nutzerdaten
+  (Profile, Gespann, Routen, Reviews), alle mit RLS.
+- Lesezugriff der App über API-Routen mit `requireApiUser`/`requireApiAdmin`
+  (`src/lib/api-guard.ts`: Login + Rate-Limit) und SQL-Funktionen
+  (`core.charge_points_in_bbox`, `search_*`).
+- Importe: OCM per Vercel-Cron (`/api/cron/ocm-import`), nationale Quellen
+  per GitHub Action, OSM-Campingplätze per `ingest/`.
+
 ## Stack
 
 - Next.js (App Router) + TypeScript + Tailwind CSS
@@ -128,6 +160,11 @@ Skills: `/pre-push-check` vor Push, `/new-migration` fuer Migrationen, `/mobile-
    Produktions-DB treffen), sondern `docker exec -i supabase_db_eCamper psql …`.
 4. **Migrations-Drift:** vor jedem `db push` `npx supabase migration list` pruefen; Prod-Historie
    hatte Luecken (repariert 2026-10-04). `db push` nur nach ausdruecklicher Freigabe.
+5. **Funktionsrechte in `core`/`enrich`:** neue Funktionen sind seit 20261027030000 nur fuer
+   `service_role` ausfuehrbar (PUBLIC per Default-Privileg entzogen). Braucht die Nutzer-Session
+   eine Funktion, ausdruecklich `grant execute ... to authenticated` UND die Berechtigung in der
+   Funktion selbst pruefen; nie an `anon`. Pruefung: `ingest/test_function_privileges.py`
+   (Allow-Liste dort pflegen).
 
 ## Wichtige Dateien
 

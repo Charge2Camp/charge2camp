@@ -1,0 +1,24 @@
+{
+  "_comment": "Gemeinsame Testfaelle fuer die OCM-Lizenzklassifizierung, gelesen von src/lib/ocm-license.test.ts UND ingest/test_ocm_license.py (liegt unter src/, weil .vercelignore ingest/ ausschliesst) -- beide Implementierungen muessen identisch entscheiden. license-Texte sind woertlich aus https://api.openchargemap.io/v3/referencedata (DataProviders[].License, Stand 2026-10-03). Harte Regel 3 (CLAUDE.md): nur 'allowed' wird importiert, 'restricted' und 'unknown' werden uebersprungen (fail-closed).",
+  "cases": [
+    { "provider": "1 Open Charge Map Contributors", "license": "Licensed under Creative Commons Attribution 4.0 International (CC BY 4.0)", "isOpenDataLicensed": true, "expected": "allowed" },
+    { "provider": "2 afdc.energy.gov", "license": "This data is provided by the National Renewable Energy Laboratory (\"NREL\"), which is operated by the Alliance for Sustainable Energy, LLC (\"Alliance\"), for the U.S. Department of Energy (\"DOE\"), and may be used for any purpose whatsoever.", "isOpenDataLicensed": true, "expected": "allowed" },
+    { "provider": "7 Mobie.pt", "license": "Public Data redistributed by agreement", "isOpenDataLicensed": true, "expected": "unknown" },
+    { "provider": "8 ev-charging.com", "license": null, "isOpenDataLicensed": null, "expected": "unknown" },
+    { "provider": "15 CarStations.com", "license": null, "isOpenDataLicensed": false, "expected": "restricted" },
+    { "provider": "18 UK National Charge Point Registry", "license": "Contains public sector information licensed under the Open Government Licence v2.0.", "isOpenDataLicensed": true, "expected": "allowed" },
+    { "provider": "19 NOBIL", "license": "NOBIL by Enova is licensed under a Creative Commons Attribution 4.0 International (CC BY 4.0) license", "isOpenDataLicensed": true, "expected": "allowed" },
+    { "provider": "24 AddEnergie", "license": "http://creativecommons.org/licenses/by/3.0", "isOpenDataLicensed": true, "expected": "allowed" },
+    { "provider": "25 ICAEN", "license": "General public data", "isOpenDataLicensed": true, "expected": "unknown" },
+    { "provider": "26 Oplaadpalen.nl", "license": "Licensed under Attribution-NonCommercial-ShareAlike 3.0 : http://creativecommons.org/licenses/by-nc-sa/3.0/", "isOpenDataLicensed": true, "expected": "restricted" },
+    { "provider": "28 data.gouv.fr", "license": "Open License: https://www.etalab.gouv.fr/wp-content/uploads/2014/05/Licence_Ouverte.pdf", "isOpenDataLicensed": true, "expected": "allowed" },
+    { "provider": "29 Bundesnetzagentur.de", "license": "Provided by Bundesnetzagentur.de under the CC-BY 4.0 license", "isOpenDataLicensed": true, "expected": "allowed" },
+    { "provider": "30 EVIO", "license": "CC-BY", "isOpenDataLicensed": true, "expected": "allowed" },
+    { "provider": "31 SITRONICS", "license": "CC-0", "isOpenDataLicensed": true, "expected": "allowed" },
+    { "provider": "34 Toger.co", "license": "Licensed under CC0  by data sharing agreement", "isOpenDataLicensed": true, "expected": "allowed" },
+    { "provider": "41 ChargeSini", "license": "CC0", "isOpenDataLicensed": true, "expected": "allowed" },
+    { "provider": "synthetisch: NC-Kurzform", "license": "CC BY-NC 4.0", "isOpenDataLicensed": true, "expected": "restricted" },
+    { "provider": "synthetisch: nicht-kommerziell deutsch", "license": "Nur nicht-kommerzielle Nutzung", "isOpenDataLicensed": true, "expected": "restricted" },
+    { "provider": "synthetisch: leerer Text", "license": "   ", "isOpenDataLicensed": true, "expected": "unknown" }
+  ]
+}

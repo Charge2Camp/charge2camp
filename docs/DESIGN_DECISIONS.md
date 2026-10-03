@@ -1825,6 +1825,29 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
   nicht erreichbar/falscher Schlüssel/ungültige Konfiguration.
 - **Date:** 2026-10-03.
 
+## Funktionsrechte in core/enrich: nur service_role, Allow-Liste für authenticated
+
+- **Decision:** Alle Funktionen in `core` und `enrich` sind nur für `service_role`
+  ausführbar; `authenticated` erhält ausdrücklich nur die fünf RPCs, die App und Admin
+  mit der Nutzer-Session aufrufen (`submit_trailer_report`, `submit_campsite_charging`,
+  `moderate_trailer_report`, `research_queue`, `run_quality_checks`), `anon` keine.
+  Default-Privilegien entziehen PUBLIC das Ausführungsrecht für künftige Funktionen.
+  Migration `20261027030000`, Test `ingest/test_function_privileges.py`.
+- **Reason:** Postgres vergibt EXECUTE standardmäßig an PUBLIC, und `core`/`enrich`
+  sind über PostgREST exponiert. Die Migrationen hatten nur Rechte vergeben, nie
+  entzogen -- dadurch war z. B. `enrich.set_trailer_suitability` mit dem öffentlichen
+  Anon-Key aufrufbar und konnte manuelle Caravan-Bewertungen überschreiben (harte
+  Regel 1). Lokal mit dem Anon-Key über die REST-API nachgewiesen und nach dem Fix mit
+  `permission denied` (HTTP 401) bestätigt. OPTIMIERUNG.md, Befund S-4.
+- **Alternatives:** Pro Funktion eine Berechtigungsprüfung im Funktionskörper
+  ergänzen -- 17 Funktionen, und jede künftige Funktion wäre wieder standardmäßig offen.
+  Schemas `core`/`enrich` aus PostgREST entfernen -- bricht den Service-Role-Zugriff
+  von App, Admin und Cron über supabase-js.
+- **Impact:** Jede neue Funktion, die die Nutzer-Session braucht, muss ausdrücklich
+  an `authenticated` gegrantet werden und in die Allow-Liste des Tests (CLAUDE.md,
+  Falle 5). Sonst schlägt der Aufruf mit `permission denied` fehl.
+- **Date:** 2026-10-03.
+
 ## Nächtlicher Qualitätsjob: Dubletten-Insert als Gleichheits-Join, 20 Minuten Zeitbudget
 
 - **Decision:** Migration `20261026240000`: (1) Der zweite Insert in

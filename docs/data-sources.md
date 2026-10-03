@@ -28,7 +28,7 @@ werden.
 
 | Anbieter | URL | Lizenz | Kosten | Status |
 |---|---|---|---|---|
-| Open Charge Map | https://openchargemap.org | je Datenanbieter unterschiedlich, überwiegend CC BY 4.0/CC0 (**nicht** ODbL — siehe [LIZENZEN.md](LIZENZEN.md)) | kostenlos, API-Key nötig | aktiv seit Auftrag A (Datenschicht) |
+| Open Charge Map | https://openchargemap.org | CC BY 4.0 (OCM-Beiträge); importierte Datensätze je Datenanbieter (**nicht** ODbL). Seit 2026-10-03 werden nur kommerziell nutzbare Anbieter importiert (`src/lib/ocm-license.ts`, `ingest/ocm_license.py`), u. a. ausgeschlossen: Oplaadpalen.nl (CC BY-NC-SA 3.0) — siehe [LIZENZEN.md](LIZENZEN.md) | kostenlos, API-Key nötig | aktiv seit Auftrag A (Datenschicht) |
 | Eco-Movement | https://ecomovement.com | kommerziell | kostenpflichtig | Research Required — Adapter/Mock zunächst |
 | Eigene Startdaten (300+ anhängertaugliche Ladepunkte) | privat | eigene Daten | kostenlos | rechtliche Prüfung vor Import ausstehen (§17) |
 
@@ -113,6 +113,7 @@ Anhängertauglichkeit.
 |---|---|---|---:|
 | 1 | Charge2Camp Admin/Sascha-Liste (manuell) | `admin_manual`, `sascha_list` | 100 |
 | 2 | Bundesnetzagentur Ladesäulenregister | `bundesnetzagentur` | 90 |
+| 3 | Weitere nationale Register: IRVE (FR), RIPREE (ES) | `irve`, `ripree` | 80 (seit 2026-10-03; vorher 90, gleichauf mit BNetzA — harte Regel 2) |
 | 4 | Open Charge Map | `ocm` | 40 (Community-Daten, keine staatliche Quelle) |
 | 5 | OpenStreetMap | `osm` | 10 (nur Kontext-/Geodaten, keine Ladeinfrastruktur-Stammdaten) |
 
@@ -191,6 +192,11 @@ vier Spalten (`="..."`-Wrapper um Koordinaten/PLZ/Ort). `core.charge_point`
 = eine Zeile je Installation (`COD.INSTALACION`), nicht je Ladepunkt —
 Details siehe Moduldocstring in
 [ingest/import_ripree.py](../ingest/import_ripree.py).
+
+Lizenz (geprüft 2026-10-03): **CC BY 4.0**, Herausgeber MITECO, laut
+Katalogeintrag [datos.gob.es e05068001](https://datos.gob.es/es/catalogo/e05068001-puntos-de-recarga-de-vehiculos-electricos)
+(dieselbe Export-URL wie der Importer). Kommerziell nutzbar,
+Namensnennung im Impressum.
 
 ### Admin-Upload (GitHub Actions)
 

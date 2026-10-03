@@ -18,7 +18,7 @@ export default function ImpressumPage() {
 
       <section>
         <h2 className="font-semibold">Angaben gemäß § 5 DDG</h2>
-        <p className="mt-2 text-sm text-black/70 dark:text-white/70">
+        <p className="mt-2 text-sm text-text-muted">
           Sascha Panadero Fernández – charge2camp
           <br />
           Hauptstr. 15D
@@ -32,7 +32,7 @@ export default function ImpressumPage() {
 
       <section>
         <h2 className="font-semibold">Kontakt</h2>
-        <p className="mt-2 text-sm text-black/70 dark:text-white/70">
+        <p className="mt-2 text-sm text-text-muted">
           E-Mail:{" "}
           <a href="mailto:hello@charge2camp.com" className="text-route hover:underline">
             hello@charge2camp.com
@@ -42,14 +42,14 @@ export default function ImpressumPage() {
 
       <section>
         <h2 className="font-semibold">Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV</h2>
-        <p className="mt-2 text-sm text-black/70 dark:text-white/70">
+        <p className="mt-2 text-sm text-text-muted">
           Sascha Panadero Fernández (Anschrift wie oben)
         </p>
       </section>
 
       <section>
         <h2 className="font-semibold">Haftung für Inhalte</h2>
-        <p className="mt-2 text-sm text-black/70 dark:text-white/70">
+        <p className="mt-2 text-sm text-text-muted">
           Als Diensteanbieter sind wir gemäß § 7 Abs. 1 DDG für eigene Inhalte auf diesen Seiten
           nach den allgemeinen Gesetzen verantwortlich. Nach §§ 8 bis 10 DDG sind wir als
           Diensteanbieter jedoch nicht verpflichtet, übermittelte oder gespeicherte fremde
@@ -64,7 +64,7 @@ export default function ImpressumPage() {
 
       <section>
         <h2 className="font-semibold">Haftung für Links</h2>
-        <p className="mt-2 text-sm text-black/70 dark:text-white/70">
+        <p className="mt-2 text-sm text-text-muted">
           Unser Angebot enthält Links zu externen Websites Dritter (u. a. OpenStreetMap, Open
           Charge Map, Ladestationsbetreiber, Campingplatz-Websites), auf deren Inhalte wir keinen
           Einfluss haben. Deshalb können wir für diese fremden Inhalte auch keine Gewähr
@@ -77,11 +77,17 @@ export default function ImpressumPage() {
 
       <section>
         <h2 className="font-semibold">Urheberrecht</h2>
-        <p className="mt-2 text-sm text-black/70 dark:text-white/70">
+        <p className="mt-2 text-sm text-text-muted">
           Die durch die Betreiber erstellten Inhalte und Werke auf diesen Seiten unterliegen dem
           deutschen Urheberrecht. Kartendaten stammen von OpenStreetMap-Mitwirkenden (©
-          OpenStreetMap contributors, ODbL) und Open Charge Map. Beiträge Dritter sind als solche
-          gekennzeichnet.
+          OpenStreetMap contributors, ODbL). Beiträge Dritter sind als solche gekennzeichnet.
+        </p>
+        <p className="mt-2 text-sm text-text-muted">
+          Ladepunktdaten: © Open Charge Map contributors, openchargemap.org (CC BY 4.0; importierte
+          Datensätze unter der Lizenz ihres jeweiligen Datenanbieters, nur kommerziell nutzbare
+          Lizenzen) · Ladesäulenregister der Bundesnetzagentur (CC BY 4.0) · Base nationale des
+          IRVE, data.gouv.fr (Licence Ouverte / Etalab) · RIPREE, Ministerio para la Transición
+          Ecológica y el Reto Demográfico (CC BY 4.0).
         </p>
       </section>
 
