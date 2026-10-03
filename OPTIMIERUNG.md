@@ -95,6 +95,26 @@ Aufwand: S = < 1 h, M = halber Tag, L = 1+ Tage.
 | idea-refine / interview-me | Produktentscheidung Store-Verpackung | U-2 |
 | using-agent-skills | Meta-Skill zur Auswahl | – |
 
+## D-1 Lizenzrecherche (2026-10-03)
+
+| Quelle | Ergebnis | Kommerziell nutzbar | Beleg |
+|---|---|---|---|
+| Bundesnetzagentur Ladesäulenregister | CC BY 4.0, Namensnennung erforderlich | ja | [Impressum Ladesäulenregister](https://www.bundesnetzagentur.de/impressum-lsr); in OCM als Provider 29 „CC-BY 4.0“ |
+| RIPREE (MITECO, Spanien) | CC BY 4.0 laut Katalogeintrag datos.gob.es, Herausgeber MITECO; Download-URL identisch mit unserem Importer | ja | [datos.gob.es e05068001](https://datos.gob.es/es/catalogo/e05068001-puntos-de-recarga-de-vehiculos-electricos) |
+| IRVE (data.gouv.fr) | Licence Ouverte (Etalab), bereits korrekt in Registry | ja | – |
+| Open Charge Map (eigene Beiträge, Provider 1) | CC BY 4.0 (nicht ODbL, wie in der Registry steht) | ja | [OCM-Ankündigung 2022](https://community.openchargemap.org/t/announcing-our-new-simpler-data-license-for-ocm-data-cc-by-4-0-international/565) |
+| Open Charge Map (importierte Provider) | Lizenz **je Datenanbieter**; OCM schreibt ausdrücklich, dass der Nutzer die Lizenz pro Ladepunkt prüfen muss | gemischt | OCM-Referenzdaten `/v3/referencedata` → `DataProviders[].License` |
+
+**Problemfall OCM-Provider 26 „Oplaadpalen.nl“:** Lizenz CC BY-NC-SA 3.0 (nicht kommerziell). Live-Abfrage der OCM-API (2026-10-03) in unseren Importländern: NL 7.045, DE 307, BE 120, CH 108, AT 67, FR 24, IT 4, zusammen **≈ 7.675 Ladepunkte**. Weil der Import nicht nach Provider filtert, landen diese Daten aktuell in `core.charge_point`. Das verletzt die harte Regel 3.
+
+Weitere Provider mit unklarer Lizenz (kein Treffer in unseren 7 Ländern, aber ohne Filter jederzeit möglich): 7 Mobie.pt („redistributed by agreement“), 25 ICAEN („General public data“), 15 CarStations (`IsOpenDataLicensed = false`), sowie alle Provider ohne Lizenzangabe.
+
+**Vorgeschlagene Umsetzung (wartet auf Freigabe):**
+1. Allow-Liste kommerziell nutzbarer OCM-Provider (CC BY, CC0, OGL, Etalab, gemeinfrei) in `ingest/import_ocm.py` und `src/app/api/cron/ocm-import/route.ts`; alles andere wird beim Import übersprungen und gezählt.
+2. Migration: bereits importierte OCM-Ladepunkte nicht freigegebener Provider auf `is_active = false` setzen (nicht löschen, `enrich.*` bleibt unberührt). Prod erst nach `db push`-Freigabe.
+3. `core.source_registry` korrigieren: BNetzA und RIPREE `license = 'CC BY 4.0'`, `commercial_use = true`, `attribution_required = true`; OCM `license = 'CC BY 4.0 (OCM-Beiträge); importierte Provider je eigene Lizenz, gefiltert'`.
+4. Namensnennung für BNetzA/RIPREE in `docs/LIZENZEN.md` und auf der Legende-/Impressum-Seite prüfen.
+
 ## Vorschlag Reihenfolge Phase 2+
 
 1. **S-1** Next 16.3.8 (App + Admin) → Build/Lint/Test.
