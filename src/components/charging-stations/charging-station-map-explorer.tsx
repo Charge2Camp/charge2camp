@@ -260,7 +260,7 @@ function ChargingStationCard({
       className={`block rounded-lg border p-4 transition-colors ${
         selected
           ? "border-route bg-route/5"
-          : "border-line hover:bg-black/5 dark:hover:bg-white/10"
+          : "border-line hover:bg-hover active:bg-hover"
       }`}
     >
       <div className="flex items-start justify-between gap-2">
@@ -292,7 +292,7 @@ function ChargingStationCard({
       </div>
 
       {station.trailer?.notes && (
-        <p className="mt-2 text-sm text-black/70 dark:text-white/70">{station.trailer.notes}</p>
+        <p className="mt-2 text-sm text-text-muted">{station.trailer.notes}</p>
       )}
     </Link>
   );
@@ -716,7 +716,7 @@ export function ChargingStationMapExplorer({
         // vermeiden.
         selectStation(null);
       }}
-      className="flex min-h-11 items-center gap-1.5 rounded-full bg-white/95 px-4 text-sm font-medium shadow-md hover:bg-white dark:bg-neutral-900/95 dark:hover:bg-neutral-900"
+      className="flex min-h-11 items-center gap-1.5 rounded-full bg-card/95 px-4 text-sm font-medium shadow-md hover:bg-card active:bg-card"
     >
       Filter
       {activeFilterCount > 0 && (
@@ -776,7 +776,7 @@ export function ChargingStationMapExplorer({
               } ${
                 viewportFetchFailed && !isFetchingViewport
                   ? "bg-warning/15 text-warning-text"
-                  : "bg-white/95 dark:bg-neutral-900/95"
+                  : "bg-card/95"
               }`}
             >
               {isFetchingViewport
@@ -797,7 +797,7 @@ export function ChargingStationMapExplorer({
               <button
                 type="button"
                 onClick={() => setViewMode("list")}
-                className="flex min-h-11 items-center rounded-full bg-white/95 px-4 text-sm font-medium shadow-md hover:bg-white dark:bg-neutral-900/95 dark:hover:bg-neutral-900"
+                className="flex min-h-11 items-center rounded-full bg-card/95 px-4 text-sm font-medium shadow-md hover:bg-card active:bg-card"
               >
                 Liste
               </button>
@@ -806,7 +806,7 @@ export function ChargingStationMapExplorer({
 
           {stations.length === 0 && (
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-6">
-              <p className="pointer-events-auto max-w-xs rounded-lg bg-white/95 px-4 py-3 text-center text-sm shadow-md dark:bg-neutral-900/95">
+              <p className="pointer-events-auto max-w-xs rounded-lg bg-card/95 px-4 py-3 text-center text-sm shadow-md">
                 {emptyMessage}
               </p>
             </div>
@@ -826,7 +826,7 @@ export function ChargingStationMapExplorer({
             <button
               type="button"
               onClick={() => setViewMode("map")}
-              className="flex min-h-11 items-center gap-1.5 rounded-md border border-line-strong px-4 text-sm font-medium hover:bg-black/5 dark:hover:bg-white/10"
+              className="flex min-h-11 items-center gap-1.5 rounded-md border border-line-strong px-4 text-sm font-medium hover:bg-hover active:bg-hover"
             >
               ← Zur Karte
             </button>
@@ -840,7 +840,7 @@ export function ChargingStationMapExplorer({
                 <select
                   value={sortOption}
                   onChange={(e) => handleSortChange(e.target.value as SortOption)}
-                  className="min-h-11 rounded-md border border-line-strong px-3 py-2 text-base dark:bg-transparent"
+                  className="min-h-11 rounded-md border border-line-strong px-3 py-2 text-base"
                 >
                   {(Object.keys(SORT_LABELS) as SortOption[]).map((option) => (
                     <option key={option} value={option}>
@@ -878,7 +878,7 @@ export function ChargingStationMapExplorer({
                 <button
                   type="button"
                   onClick={() => setVisibleCount((n) => n + PAGE_SIZE)}
-                  className="mt-3 min-h-11 w-full rounded-md border border-line-strong px-4 text-sm font-medium hover:bg-black/5 dark:hover:bg-white/5"
+                  className="mt-3 min-h-11 w-full rounded-md border border-line-strong px-4 text-sm font-medium hover:bg-hover active:bg-hover"
                 >
                   Weitere anzeigen ({Math.min(visibleCount, sortedStations.length)} von {sortedStations.length})
                 </button>
@@ -889,9 +889,9 @@ export function ChargingStationMapExplorer({
       )}
 
       {filterOpen && (
-        <div className="fixed inset-0 z-50 bg-black/50" onClick={() => setFilterOpen(false)}>
+        <div className="fixed inset-0 z-50 bg-base-deep/50" onClick={() => setFilterOpen(false)}>
           <div
-            className="fixed inset-x-0 bottom-0 z-50 flex max-h-[85vh] flex-col overflow-hidden rounded-t-2xl bg-white dark:bg-neutral-900 md:inset-y-0 md:left-0 md:right-auto md:bottom-auto md:h-full md:max-h-none md:w-96 md:rounded-none md:rounded-r-2xl"
+            className="fixed inset-x-0 bottom-0 z-50 flex max-h-[85vh] flex-col overflow-hidden rounded-t-2xl bg-card md:inset-y-0 md:left-0 md:right-auto md:bottom-auto md:h-full md:max-h-none md:w-96 md:rounded-none md:rounded-r-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-line p-4 pt-[calc(1rem+var(--safe-top))]">
@@ -926,7 +926,7 @@ export function ChargingStationMapExplorer({
                 <button
                   type="button"
                   onClick={resetFilters}
-                  className="flex min-h-12 w-full items-center justify-center rounded-md border border-line px-4 hover:bg-black/5 dark:hover:bg-white/10"
+                  className="flex min-h-12 w-full items-center justify-center rounded-md border border-line px-4 hover:bg-hover active:bg-hover"
                 >
                   Zurücksetzen
                 </button>

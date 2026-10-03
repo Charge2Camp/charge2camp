@@ -69,7 +69,13 @@ export default async function CampsiteDetailPage({ params }: { params: Promise<{
       // ladestationen/[id]/page.tsx, gleiches Muster).
       supabase.schema("core").from("campsite_geo_admin").select("lat, lon").eq("id", id).maybeSingle(),
     ]);
-  const amenities = (amenityCatalog ?? []) as Amenity[];
+  // Kategorie "laden" (Ladepunkt auf dem Platz / Laden am Stellplatz / DC) ist
+  // bewusst NICHT im Merkmale-Formular: "Laden auf dem Platz" (egal ob am
+  // Stellplatz) wird ausschliesslich im Block "Ladeinfos auf dem Gelaende"
+  // gepflegt (docs/DESIGN_DECISIONS.md, 2026-10-03). Auch aus den
+  // gebundenen Keys entfernt, damit ein Speichern bestehende Werte nicht
+  // ueberschreibt.
+  const amenities = ((amenityCatalog ?? []) as Amenity[]).filter((a) => a.category !== "laden");
   const activeAmenityKeys = new Set(
     ((campsiteAmenities ?? []) as CampsiteAmenity[]).filter((a) => a.value_bool).map((a) => a.amenity_key)
   );
@@ -248,11 +254,7 @@ export default async function CampsiteDetailPage({ params }: { params: Promise<{
         <form action={chargingAction} className="mt-3 flex flex-col gap-4">
           <label className="flex min-h-11 items-center gap-2 text-sm">
             <input type="checkbox" name="has_charging" value="1" defaultChecked={chargingInfo?.has_charging ?? false} />
-            Laden auf dem Platz möglich
-          </label>
-          <label className="flex min-h-11 items-center gap-2 text-sm">
-            <input type="checkbox" name="pitch_charging" value="1" defaultChecked={chargingInfo?.pitch_charging ?? false} />
-            Laden direkt am Stellplatz
+            Laden auf dem Platz möglich (inkl. direkt am Stellplatz)
           </label>
           <div className="grid grid-cols-2 gap-4">
             <label className="flex flex-col gap-1 text-sm">

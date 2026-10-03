@@ -70,7 +70,10 @@ export async function overrideCampsiteCharging(campsiteId: string, campsiteKey: 
         const n = formData.get("point_count") ? Number(formData.get("point_count")) : null;
         return n !== null && Number.isFinite(n) && n >= 0 ? n : null;
       })(),
-      pitch_charging: formData.get("pitch_charging") === "1",
+      // pitch_charging bewusst NICHT mehr geschrieben: "Laden am Stellplatz"
+      // ist in "Laden auf dem Platz" (has_charging) konsolidiert, siehe
+      // docs/DESIGN_DECISIONS.md. Ein Upsert ohne die Spalte laesst den
+      // Altwert unveraendert.
       origin: "admin_override",
       checked_at: new Date().toISOString(),
       verified_at: new Date().toISOString(),

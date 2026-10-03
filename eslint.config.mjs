@@ -18,6 +18,9 @@ const eslintConfig = defineConfig([
     "admin/**",
     // Git-Worktrees von Claude Code (Kopien des Repos inkl. node_modules).
     ".claude/worktrees/**",
+    // Agent-Skills bringen eigene Node-Skripte (.cjs mit require) mit; das ist
+    // kein App-Code.
+    ".claude/skills/**",
   ]),
 ]);
 

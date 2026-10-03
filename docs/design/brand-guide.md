@@ -125,6 +125,8 @@ Immer Satzanfang groß, nie Versalien. Zeilenlänge höchstens 72 Zeichen.
 - Formular-/Bedienelement-Rahmen (Eingabefelder, Buttons mit Rahmen, Dropdowns) 1 px in
   `--c-line-strong` — kräftiger als reine Trennlinien, damit Eingabefelder auf `--c-surface`
   und `--c-card` als solche erkennbar bleiben.
+- Hover-/Tap-Überlagerung auf Bedienelementen: `--c-hover` (`hover:bg-hover active:bg-hover`),
+  damit Touch ein Tap-Feedback bekommt. Halbtransparente Karten-Overlays: `bg-card/95`.
 - Tap-Ziele mindestens 44 px. Die App wird im Auto und bei Wind bedient.
 
 ---

@@ -1477,6 +1477,25 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
   angepasst).
 - **Date:** 2026-09-28.
 
+## Admin: "Laden direkt am Stellplatz" nicht mehr separat pflegbar
+
+- **Decision:** Im Admin-Campingplatz-Detail entfallen die Checkbox "Laden
+  direkt am Stellplatz" (`enrich.campsite_charging.pitch_charging`) und die
+  Kategorie "Elektromobilitaet" (`charging_on_site`/`charging_at_pitch`/
+  `charging_dc`) im Merkmale-Formular. Es bleibt eine Checkbox "Laden auf dem
+  Platz moeglich (inkl. direkt am Stellplatz)". Die Spalte `pitch_charging`
+  bleibt im Schema (Abwaertskompatibilitaet, API/Meilisearch), wird vom
+  Admin aber nicht mehr geschrieben.
+- **Reason:** Die Konsolidierung vom 2026-09-28 galt nur fuer Filter/Daten,
+  das Admin-Formular bot die Unterscheidung weiter an. Die Checkbox hatte
+  keine Wirkung auf Filter/EV-Score (nur `has_charging` zaehlt), konnte aber
+  zu Widerspruechen fuehren: nur "Stellplatz" angehakt, "Platz" nicht =>
+  Platz gilt als ohne Laden.
+- **Alternatives:** Spalte per Migration droppen -- verworfen (CLAUDE.md:
+  keine Funktionalitaet entfernen, API-Feld `charging.pitch_charging`).
+- **Impact:** `admin/app/(dashboard)/campingplaetze/[id]/page.tsx`, `actions.ts`.
+- **Date:** 2026-10-03.
+
 ## Campingplatz-Namensvorschläge serverseitig statt vorgeladener Namenslisten
 
 - **Decision:** Die Namensvorschläge im Campingplatz-Suchfeld
@@ -1882,4 +1901,40 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
   erste Lauf nach dem Fix arbeitet 11 Tage Rückstau ab und kann länger dauern; das Limit
   gilt nur für diesen Lauf. Erst wenn der Job wieder erfolgreich läuft, in
   `CRON_HEALTH_JOBS` des Workflows `cron-health.yml` aufnehmen (Limit 1560 Minuten).
+- **Date:** 2026-10-03.
+
+## Sicherheits-Header: CSP zunächst Report-Only, ohne Nonces
+
+- **Decision:** App und Admin setzen über `headers()` in `next.config.ts` auf allen
+  Pfaden `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`,
+  `Referrer-Policy: strict-origin-when-cross-origin`, HSTS (2 Jahre, ohne preload),
+  eine `Permissions-Policy` (App: Geolocation nur self; Admin: keine) und eine
+  Content-Security-Policy **als Report-Only**. `X-Powered-By` ist abgeschaltet.
+  Baustein: `src/lib/security-headers.ts` (Test daneben), Kopie in
+  `admin/lib/security-headers.ts`. OPTIMIERUNG.md, Befund S-2.
+- **Reason:** Bisher setzte keine der beiden Apps Sicherheits-Header (Clickjacking auf
+  das Admin-Backend möglich). Report-Only, weil MapLibre (Worker aus `blob:`),
+  Supabase-Auth, Sentry und eventuell Vercel-Werkzeuge (Preview-Toolbar) aus mehreren
+  Ursprüngen laden und ein vergessener Ursprung Karte oder Login lahmlegen würde.
+  Lokal mit vorübergehend erzwungener CSP geprüft: Login, Ladepunkte-Karte inkl. Zoom
+  und Photon-Adresssuche funktionieren ohne Verstoß.
+- **Alternatives:** Nonces über `proxy.ts` (Next-Doku) -- strenger (`script-src` ohne
+  `unsafe-inline`), aber Umbau der Proxy-Logik beider Apps; später möglich. CSP sofort
+  erzwingen -- Risiko eines Ausfalls in Prod durch nicht lokal sichtbare Ursprünge.
+- **Impact:** Verstöße landen bei gesetzter `NEXT_PUBLIC_SENTRY_DSN` als Security-
+  Report in Sentry. Bleiben sie eine Weile aus, in beiden `next.config.ts`
+  `enforceCsp: true` setzen. Neue Browser-Ziele (fetch aus dem Client) müssen in
+  `connectSrc` ergänzt werden, sonst blockiert die erzwungene CSP sie.
+- **Date:** 2026-10-03.
+
+- **Decision:** Die per `ui-ux-pro-max-cli` installierten Skills (`.claude/skills/ui-ux-pro-max`, `design-system`, `design`, `brand`, `ui-styling`, `banner-design`, `slides`) haben Vorrang vor `docs/design/*` und `docs/DESIGN_SYSTEM.md`.
+- **Reason:** Ausdrückliche Vorgabe des Produktverantwortlichen.
+- **Alternatives:** Skills nachrangig zum bestehenden Design System behalten; Skills nicht einsetzen.
+- **Impact:** Bei Konflikten gelten die Skill-Empfehlungen. Das Token-System (`--c-*`) und Prinzip 8 (Mobile/Touch) bleiben die technische Basis; Abweichungen hier dokumentieren.
+- **Date:** 2026-10-03.
+
+- **Decision:** Karten-Overlays und Hover-Zustände der Ladepunkte-Karte nutzen Tokens (`bg-card/95`, `bg-line`, `bg-line-strong`, `bg-base-deep/50`, neuer Token `--c-hover` mit `hover:bg-hover active:bg-hover`). Die `dark:`-Varianten dort entfallen.
+- **Reason:** UI/UX-Pro-Max-Audit: Raw-Farben statt Tokens, kein Tap-Feedback auf Touch. Das Design-System kennt bewusst keinen Dark Mode (globals.css), die `dark:`-Varianten griffen aber bei dunklem System-Theme und erzeugten dunkle Buttons auf heller App.
+- **Alternatives:** Dark-Tokens einführen (widerspricht dem festen Markenkontrast); Altbestand unverändert lassen.
+- **Impact:** Erscheinungsbild im hellen Theme praktisch unverändert; bei dunklem System-Theme jetzt konsistent hell. Weitere Fundstellen in anderen Komponenten bleiben offen.
 - **Date:** 2026-10-03.
