@@ -86,6 +86,34 @@ Die vollständigen aktuellen Nutzungsbedingungen auf openchargemap.org
 2026-09-06 nicht automatisiert abgerufen werden — vor Go-Live manuell im
 Browser nachlesen.
 
+### Lizenzfilter je Datenanbieter (seit 2026-10-03)
+
+Harte Regel 3 (CLAUDE.md): Beide OCM-Importwege (Vercel-Cron und
+`ingest/import_ocm.py`) klassifizieren jeden Ladepunkt über
+`DataProvider.License` und importieren nur kommerziell nutzbare Lizenzen
+(CC BY, CC BY-SA, CC0, Open Government Licence, Licence Ouverte,
+gemeinfrei). Nicht kommerzielle (`NonCommercial`/`NC`) und nicht eindeutige
+Lizenztexte (leer, „Public Data redistributed by agreement“, „General public
+data“) werden übersprungen (fail-closed); bereits importierte Zeilen dieser
+Anbieter deaktiviert `core.apply_ocm_license_filter()` mit
+`deactivated_by_rule = license_restricted`.
+
+Konkreter Fund: **Oplaadpalen.nl** (Provider 26, CC BY-NC-SA 3.0) lieferte
+in unseren Importländern rund 7.675 Ladepunkte (NL 7.045, DE 307, BE 120,
+CH 108, AT 67, FR 24, IT 4; Live-Abfrage 2026-10-03). Testfälle mit den
+wörtlichen Lizenztexten: `ingest/ocm_license_cases.json`.
+
+## Bundesnetzagentur, IRVE, RIPREE (nationale Register)
+
+| Quelle | Lizenz | Beleg |
+|---|---|---|
+| Bundesnetzagentur Ladesäulenregister | CC BY 4.0 | https://www.bundesnetzagentur.de/impressum-lsr |
+| Base nationale des IRVE (data.gouv.fr) | Licence Ouverte / Etalab | data.gouv.fr |
+| RIPREE (MITECO, Spanien) | CC BY 4.0 | https://datos.gob.es/es/catalogo/e05068001-puntos-de-recarga-de-vehiculos-electricos |
+
+Alle drei verlangen Namensnennung; sie steht seit 2026-10-03 im Impressum
+(`src/app/impressum/page.tsx`).
+
 ## ACSI / PiNCAMP / camping.info
 
 | | |
