@@ -38,7 +38,13 @@ volle Produkt- und Architekturspezifikation.
    Navigation über Adapter kapseln (§3). Details und Begründung in
    [docs/architecture.md](docs/architecture.md), Abschnitt
    "Mobile/Touch-Design & Vorbereitung auf native Apps".
-9. **Charge2Camp Design System ist bindend, nicht optional.** Jede
+9. **Vorrang der UI/UX-Pro-Max-Skills (Entscheidung 2026-10-03):** Bei
+   UI-/Design-Aufgaben haben die Skills in `.claude/skills/` (`ui-ux-pro-max`,
+   `design-system`, `design`, `brand`, `ui-styling`, `banner-design`, `slides`)
+   Vorrang vor den unten genannten Design-Dokumenten. Widersprüche werden
+   zugunsten der Skills aufgelöst; harte Regeln, Mobile-/Touch-Anforderungen
+   (Prinzip 8) und Funktionserhalt bleiben unberührt.
+10. **Charge2Camp Design System ist bindend (nachrangig zu Prinzip 9).** Jede
    UI-Aufgabe (neue Komponente, neuer Screen, Änderung an bestehendem
    Markup/Styling) berücksichtigt automatisch:
    - [docs/design/brand-guide.md](docs/design/brand-guide.md) — Logo,

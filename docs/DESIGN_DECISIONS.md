@@ -1926,3 +1926,9 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
   `enforceCsp: true` setzen. Neue Browser-Ziele (fetch aus dem Client) müssen in
   `connectSrc` ergänzt werden, sonst blockiert die erzwungene CSP sie.
 - **Date:** 2026-10-03.
+
+- **Decision:** Die per `ui-ux-pro-max-cli` installierten Skills (`.claude/skills/ui-ux-pro-max`, `design-system`, `design`, `brand`, `ui-styling`, `banner-design`, `slides`) haben Vorrang vor `docs/design/*` und `docs/DESIGN_SYSTEM.md`.
+- **Reason:** Ausdrückliche Vorgabe des Produktverantwortlichen.
+- **Alternatives:** Skills nachrangig zum bestehenden Design System behalten; Skills nicht einsetzen.
+- **Impact:** Bei Konflikten gelten die Skill-Empfehlungen. Das Token-System (`--c-*`) und Prinzip 8 (Mobile/Touch) bleiben die technische Basis; Abweichungen hier dokumentieren.
+- **Date:** 2026-10-03.
