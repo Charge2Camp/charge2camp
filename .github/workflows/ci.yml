@@ -65,7 +65,7 @@ jobs:
       - run: npm run build
 
   ingest:
-    name: Ingest (Python-Syntax)
+    name: Ingest (Python-Syntax, DB-freie Tests)
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -73,6 +73,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      # Die test_*.py-Skripte laufen gegen eine echte DB und sind daher
-      # (noch) nicht CI-faehig -- siehe OPTIMIERUNG.md, Befund D-4.
       - run: python -m py_compile ingest/*.py
+      # Ohne Abhaengigkeiten lauffaehig (ocm_license.py importiert weder
+      # psycopg2 noch requests). Die uebrigen test_*.py-Skripte laufen gegen
+      # eine echte DB und sind (noch) nicht CI-faehig -- OPTIMIERUNG.md D-4.
+      - run: python test_ocm_license.py
+        working-directory: ingest

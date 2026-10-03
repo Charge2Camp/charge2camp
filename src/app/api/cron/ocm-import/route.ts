@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { classifyOcmPoi, type OcmPoiLicenseInfo } from "@/lib/ocm-license";
 
 /**
  * Wiederkehrender Open-Charge-Map-Reimport (Nutzerwunsch: "in welchem
@@ -57,7 +58,7 @@ interface OcmConnection {
   Quantity?: number | null;
 }
 
-interface OcmPoi {
+interface OcmPoi extends OcmPoiLicenseInfo {
   ID?: number;
   AddressInfo?: {
     Title?: string;
@@ -215,7 +216,18 @@ export async function GET(request: NextRequest) {
   }
   const pois = (await ocmResponse.json()) as OcmPoi[];
 
-  const parsed = pois.map(parsePoi).filter((p): p is ParsedChargePoint => p !== null);
+  // Harte Regel 3 (CLAUDE.md): nur Ladepunkte von Datenanbietern mit
+  // kommerziell nutzbarer Lizenz uebernehmen, siehe src/lib/ocm-license.ts.
+  // Die Schluessel der uebrigen gehen am Ende an apply_ocm_license_filter(),
+  // damit bereits importierte Zeilen dieser Anbieter deaktiviert werden.
+  const licensedPois: OcmPoi[] = [];
+  const excludedKeys: string[] = [];
+  for (const poi of pois) {
+    if (classifyOcmPoi(poi) === "allowed") licensedPois.push(poi);
+    else if (poi.ID !== undefined) excludedKeys.push(`ocm:${poi.ID}`);
+  }
+
+  const parsed = licensedPois.map(parsePoi).filter((p): p is ParsedChargePoint => p !== null);
 
   // Schreibt ueber core.upsert_charge_point() (siehe supabase/migrations/
   // 20261012000000_field_provenance_and_source_registry.sql) statt eines
@@ -289,20 +301,39 @@ export async function GET(request: NextRequest) {
     .rpc("reactivate_sufficiently_equipped_charge_points");
   if (reactivateError) return fail(`reactivate: ${reactivateError.message}`, 500, coreUpserted);
 
+  let licenseDeactivated = 0;
+  let licenseReactivated = 0;
+  const allowedKeys = parsed.map((p) => p.external_key);
+  const keyBatchSize = 2000;
+  const keyBatches = Math.max(excludedKeys.length, allowedKeys.length) / keyBatchSize;
+  for (let i = 0; i < keyBatches; i++) {
+    const { data, error } = await supabase.schema("core").rpc("apply_ocm_license_filter", {
+      p_excluded_keys: excludedKeys.slice(i * keyBatchSize, (i + 1) * keyBatchSize),
+      p_allowed_keys: allowedKeys.slice(i * keyBatchSize, (i + 1) * keyBatchSize),
+    });
+    if (error) return fail(`apply_ocm_license_filter: ${error.message}`, 500, coreUpserted);
+    const row = (data as { deactivated: number; reactivated: number }[] | null)?.[0];
+    licenseDeactivated += Number(row?.deactivated ?? 0);
+    licenseReactivated += Number(row?.reactivated ?? 0);
+  }
+
   await supabase.schema("core").rpc("finish_import_run", {
     p_run_id: runId,
     p_status: "ok",
     p_record_count: coreUpserted,
-    p_notes: "vercel-cron",
+    p_notes: `vercel-cron; lizenz-ausgeschlossen: ${excludedKeys.length}`,
   });
 
   return NextResponse.json({
     country,
     fetched: pois.length,
+    licenseExcluded: excludedKeys.length,
     parsed: parsed.length,
     coreUpserted,
     connectorsInserted,
     deactivatedNearManual: deactivatedCount,
     reactivatedSufficientlyEquipped: reactivatedCount,
+    licenseDeactivated,
+    licenseReactivated,
   });
 }

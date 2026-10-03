@@ -34,6 +34,7 @@ import requests
 from psycopg2.extras import Json, execute_batch
 
 from common import get_connection, import_run, setup_logging
+from ocm_license import classify_ocm_poi
 
 # ConnectionType.ID -> (standard, current_type), siehe Auftragsdokument
 # Abschnitt 6. Unbekannte IDs werden nicht geraten, sondern als
@@ -251,6 +252,23 @@ def fetch_from_api(args: argparse.Namespace) -> list[dict]:
     return response.json()
 
 
+def fetch_provider_index(args: argparse.Namespace, logger) -> dict[int, dict] | None:
+    """Das ocm-export-Format enthaelt nur DataProviderID, keine Lizenz --
+    fuer die Lizenzpruefung die Anbieterliste aus /v3/referencedata laden.
+    Ohne API-Key bleibt jeder Ladepunkt ohne DataProvider-Objekt "unknown"
+    und wird uebersprungen (fail-closed, siehe ocm_license.py)."""
+    key = args.key or os.environ.get("OCM_API_KEY") or os.environ.get("OPEN_CHARGE_MAP_API_KEY")
+    if not key:
+        logger.warning(
+            "Kein OCM-API-Key: Datenanbieter-Lizenzen koennen nicht aufgeloest werden, "
+            "Ladepunkte ohne DataProvider-Objekt werden uebersprungen."
+        )
+        return None
+    response = requests.get("https://api.openchargemap.io/v3/referencedata/", params={"key": key}, timeout=60)
+    response.raise_for_status()
+    return {p["ID"]: p for p in response.json().get("DataProviders", [])}
+
+
 def fetch_from_file(path: str) -> list[dict]:
     p = Path(path)
     if p.is_dir():
@@ -277,14 +295,33 @@ def main() -> None:
 
     logger = setup_logging()
 
+    providers_by_id: dict[int, dict] | None = None
     if args.api:
         pois = fetch_from_api(args)
         scope = f"bbox:{args.bbox}" if args.bbox else (f"country:{args.country}" if args.country else "unbounded")
     else:
         pois = fetch_from_file(args.file)
         scope = f"file:{args.file}"
+        providers_by_id = fetch_provider_index(args, logger)
 
     logger.info("%d Datensaetze von der Quelle erhalten (scope=%s)", len(pois), scope)
+
+    # Harte Regel 3 (CLAUDE.md): nur Datenanbieter mit kommerziell nutzbarer
+    # Lizenz, siehe ocm_license.py. Ausgeschlossene Schluessel gehen nach dem
+    # Lauf an core.apply_ocm_license_filter(), damit bereits importierte
+    # Zeilen dieser Anbieter deaktiviert werden.
+    licensed_pois = []
+    excluded_keys: list[str] = []
+    license_classes: Counter = Counter()
+    for poi in pois:
+        license_class = classify_ocm_poi(poi, providers_by_id)
+        license_classes[license_class] += 1
+        if license_class == "allowed":
+            licensed_pois.append(poi)
+        elif poi.get("ID") is not None:
+            excluded_keys.append(f"ocm:{poi['ID']}")
+    pois = licensed_pois
+    logger.info("Lizenzpruefung je Datenanbieter: %s", dict(license_classes))
 
     unknown_connection_types: Counter = Counter()
     skipped_no_id_or_coords = 0
@@ -340,11 +377,25 @@ def main() -> None:
 
                     state["record_count"] += 1
 
+                cur.execute(
+                    "select deactivated, reactivated from core.apply_ocm_license_filter(%s, %s)",
+                    (excluded_keys, [f"ocm:{p['ID']}" for p in pois if p.get("ID") is not None]),
+                )
+                license_deactivated, license_reactivated = cur.fetchone()
+
                 cur.execute(FILL_MISSING_TRAILER_SUITABILITY_SQL)
     finally:
         conn.close()
 
     logger.info("Verarbeitet: %d Ladepunkte.", state["record_count"])
+    if excluded_keys:
+        logger.warning(
+            "%d Ladepunkte wegen nicht freigegebener Datenanbieter-Lizenz uebersprungen; "
+            "im Bestand deaktiviert: %d, wieder freigegeben: %d.",
+            len(excluded_keys),
+            license_deactivated,
+            license_reactivated,
+        )
     if skipped_no_id_or_coords:
         logger.warning("%d Datensaetze ohne ID/Koordinaten uebersprungen.", skipped_no_id_or_coords)
     if missing_country_code:
