@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createServiceClient } from "@/lib/supabase/service";
+import { CronJobCard, type CronHealthRow } from "@/components/cron-job-card";
 
 const ISSUE_CHECKS = [
   { name: "coordinate_plausibility", label: "Unplausible Koordinaten", href: "/datenqualitaet/koordinaten" },
@@ -80,6 +81,15 @@ const NATIONAL_SOURCES = [
   { source: "ripree", label: "RIPREE (Spanien)" },
 ] as const;
 
+// Hintergrundjobs (pg_cron), geprueft ueber core.cron_job_health (Migration
+// 20261026230000). maxAgeMinutes = nach so langer Zeit ohne Erfolg gilt der Job als
+// ausgefallen (~2 Laeufe plus Puffer). Der Karten-Job wird zusaetzlich alle 30 Minuten
+// vom GitHub-Workflow "Cron-Job-Gesundheit" geprueft (Benachrichtigung bei Ausfall).
+const CRON_JOBS = [
+  { job: "refresh-charge-point-map", label: "Karten-Kopie der Ladepunkte", rhythm: "alle 15 Minuten", maxAgeMinutes: 35 },
+  { job: "refresh-all-quality-data", label: "Datenqualität (Prüfungen & Dubletten)", rhythm: "nachts um 03:00", maxAgeMinutes: 1560 },
+] as const;
+
 export default async function DashboardPage() {
   const supabase = createServiceClient();
 
@@ -103,6 +113,7 @@ export default async function DashboardPage() {
       { count: pendingMissingStationCount },
     ],
     nationalImportResults,
+    cronHealthResults,
   ] = await Promise.all([
     Promise.all([
       supabase.schema("core").from("campsite").select("id", { count: "exact", head: true }),
@@ -137,6 +148,11 @@ export default async function DashboardPage() {
       supabase.schema("enrich").from("missing_station_report").select("id", { count: "exact", head: true }).eq("status", "pending"),
     ]),
     Promise.all(NATIONAL_SOURCES.map((s) => supabase.schema("core").rpc("last_import", { p_source: s.source }))),
+    Promise.all(
+      CRON_JOBS.map((c) =>
+        supabase.schema("core").rpc("cron_job_health", { p_jobname: c.job, p_max_age_minutes: c.maxAgeMinutes })
+      )
+    ),
   ]);
 
   const lastOcmImport = lastOcmImportRows?.[0] as LastImportRow | undefined;
@@ -147,6 +163,12 @@ export default async function DashboardPage() {
     ...s,
     lastImport: (nationalImportResults[i].data?.[0] as LastImportRow | undefined) ?? undefined,
     error: nationalImportResults[i].error,
+  }));
+
+  const cronJobs = CRON_JOBS.map((c, i) => ({
+    ...c,
+    health: (cronHealthResults[i].data?.[0] as CronHealthRow | undefined) ?? undefined,
+    error: cronHealthResults[i].error,
   }));
 
   // Fehler aus den Ueberblick-Abfragen sichtbar machen statt sie als
@@ -164,6 +186,7 @@ export default async function DashboardPage() {
     ["Routen geplant", routesPlannedError],
     ["Letzter OCM-Import", lastOcmImportError],
     ...nationalImports.map((n): [string, { message: string } | null | undefined] => [`Letzter ${n.label}-Import`, n.error]),
+    ...cronJobs.map((c): [string, { message: string } | null | undefined] => [`Hintergrundjob "${c.label}"`, c.error]),
   ];
   const queryErrors = queryErrorEntries.filter(
     (entry): entry is [string, { message: string }] => Boolean(entry[1])
@@ -258,6 +281,17 @@ export default async function DashboardPage() {
             Neue Datei hochladen (BNetzA/IRVE/RIPREE) →
           </Link>
         </p>
+      </Section>
+
+      <Section
+        title="Hintergrundjobs"
+        description="Geplante Datenbank-Aufgaben (pg_cron). Fällt eine aus, bleiben die davon abhängigen Daten ohne weiteren Hinweis veraltet."
+      >
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {cronJobs.map((c) => (
+            <CronJobCard key={c.job} label={c.label} rhythm={c.rhythm} health={c.health} />
+          ))}
+        </div>
       </Section>
 
       <Section

@@ -1789,3 +1789,38 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
   trotzdem aktualisiert. Lokal gegen die bisherige Funktion verglichen (Schwellen
   1/5/20/100/99999 und Reihenfolge): identisch.
 - **Date:** 2026-10-26.
+
+## Überwachung der Cron-Jobs: Gesundheitsfunktion, GitHub-Check und Dashboard-Karte
+
+- **Decision:** `core.cron_job_health(job, max_alter_minuten)` (Migration
+  `20261026230000`, nur `service_role`) meldet je pg_cron-Job: aktiv, letzter
+  abgeschlossener Lauf, letzter Erfolg und dessen Alter, Fehlschläge in den letzten 10
+  Läufen und ein Gesamturteil `healthy` mit Klartext-Grund (healthy = aktiv, mind. ein
+  Erfolg, letzter abgeschlossener Lauf erfolgreich, letzter Erfolg jünger als das Limit).
+  Zwei Konsumenten: (1) der Workflow `.github/workflows/cron-health.yml` ruft sie alle
+  30 Minuten über `.github/scripts/check-cron-health.sh` auf und schlägt fehl, wenn ein
+  Job ungesund ist **oder die Abfrage selbst scheitert** -- GitHub benachrichtigt dann
+  über den fehlgeschlagenen Lauf; (2) eine Statuskarte "Hintergrundjobs" im Admin-
+  Dashboard (`admin/components/cron-job-card.tsx`; Symbol + Text, Farbe nur
+  unterstützend). Geprüft wird zunächst `refresh-charge-point-map` (Limit 35 Minuten).
+- **Reason:** Karten-Kopie, Erstansicht und Betreiber-Optionen hängen am 15-Minuten-Job
+  `refresh-charge-point-map` (20261026190000/210000/220000); fällt er aus, bleiben sie
+  ohne sichtbaren Fehler veraltet. Dass genau das passiert, zeigt der Bestand:
+  `refresh-all-quality-data` scheitert seit 2026-09-23 jede Nacht (10 Läufe in Folge) an
+  einem Statement-Timeout beim Insert in `core.charge_point_duplicate`, zuletzt
+  erfolgreich am 2026-09-22 -- die Datenqualitäts-Zahlen im Dashboard sind seit zehn
+  Tagen veraltet, ohne dass es jemand bemerkt hat.
+- **Alternatives:** Vercel-Cron als Prüfer -- die Crons dieses Projekts sind täglich
+  (vercel.json, 60-s-Limit), eine 30-Minuten-Prüfung ist dort nicht möglich. Sentry --
+  ohne regelmäßigen Auslöser und eine extern zu konfigurierende Alarmregel wirkungslos.
+  Nur Dashboard-Karte -- passiv, hilft nur, wenn jemand hinsieht.
+- **Impact:** Der Workflow läuft nur auf dem Standardbranch (`development`), kann sich
+  bei Last um Minuten verzögern und meldet einen Dauerfehler bei JEDEM Lauf (alle 30
+  Minuten). `refresh-all-quality-data` ist bewusst NICHT im Workflow (Limit 1560 min),
+  solange er scheitert -- sonst schlüge der Check ab dem ersten Lauf dauerhaft fehl; das
+  Dashboard zeigt ihn bereits rot. Neuen Job aufnehmen: `CRON_HEALTH_JOBS` im Workflow
+  und `CRON_JOBS` im Dashboard ergänzen. Lokal gegen simulierte Laufhistorien getestet
+  (gesund, veraltet, letzter Lauf fehlgeschlagen, laufend, hängend, nur Fehlschläge,
+  deaktiviert, unbekannter Job, Berechtigungen) und das Skript gegen Gesund/Ungesund/
+  nicht erreichbar/falscher Schlüssel/ungültige Konfiguration.
+- **Date:** 2026-10-03.
