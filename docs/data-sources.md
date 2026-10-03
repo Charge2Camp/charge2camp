@@ -113,6 +113,7 @@ Anhängertauglichkeit.
 |---|---|---|---:|
 | 1 | Charge2Camp Admin/Sascha-Liste (manuell) | `admin_manual`, `sascha_list` | 100 |
 | 2 | Bundesnetzagentur Ladesäulenregister | `bundesnetzagentur` | 90 |
+| 3 | Weitere nationale Register: IRVE (FR), RIPREE (ES) | `irve`, `ripree` | 80 (seit 2026-10-03; vorher 90, gleichauf mit BNetzA — harte Regel 2) |
 | 4 | Open Charge Map | `ocm` | 40 (Community-Daten, keine staatliche Quelle) |
 | 5 | OpenStreetMap | `osm` | 10 (nur Kontext-/Geodaten, keine Ladeinfrastruktur-Stammdaten) |
 
