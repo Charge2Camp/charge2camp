@@ -2,7 +2,7 @@
 keine Daten mit kommerziellen Nutzungsbeschraenkungen).
 
 Python-Gegenstueck zu src/lib/ocm-license.ts (dort die ausfuehrliche
-Begruendung). Beide teilen sich die Testfaelle in ocm_license_cases.json
+Begruendung). Beide teilen sich die Testfaelle in src/lib/ocm-license-cases.json
 und muessen identisch entscheiden -- Aenderungen immer an beiden Stellen.
 
 Fail-closed: nur "allowed" wird importiert, "restricted" und "unknown"

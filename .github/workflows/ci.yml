@@ -40,6 +40,10 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      # Globale Typen wie LayoutProps/PageProps erzeugt Next erst unter
+      # .next/types -- lokal liegen sie vom Dev-Server schon da, in der
+      # frischen CI nicht (erster Lauf: "Cannot find name LayoutProps").
+      - run: npx next typegen
       - run: npx tsc --noEmit
       - run: npm run lint
       - run: npm test
@@ -60,6 +64,10 @@ jobs:
           cache: npm
           cache-dependency-path: admin/package-lock.json
       - run: npm ci
+      # Globale Typen wie LayoutProps/PageProps erzeugt Next erst unter
+      # .next/types -- lokal liegen sie vom Dev-Server schon da, in der
+      # frischen CI nicht (erster Lauf: "Cannot find name LayoutProps").
+      - run: npx next typegen
       - run: npx tsc --noEmit
       - run: npm run lint
       - run: npm run build
