@@ -104,6 +104,8 @@ Aufwand: S = < 1 h, M = halber Tag, L = 1+ Tage.
 | D-1 OCM-Lizenzfilter, Bestandsbereinigung | erledigt (lokal; Prod nach `db push`) | `d1f2df5` |
 | D-1 Registry-Lizenzen, Namensnennung Impressum | erledigt (lokal; Prod nach `db push`) | `a956832` |
 | D-2 Priorität BNetzA > IRVE/RIPREE | erledigt (lokal; Prod nach `db push`) | `c5d26eb` |
+| S-4 Funktionsrechte, S-5 Admin-Prüfung Moderation | erledigt (lokal; Prod nach `db push`) | siehe `git log` |
+| D-5 Merge erhält manuelle Caravan-Bewertung | erledigt (lokal; Prod nach `db push`) | siehe `git log` |
 
 ## Neue Befunde aus Phase 2 (2026-10-03)
 
