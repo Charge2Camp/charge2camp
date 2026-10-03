@@ -1,8 +1,28 @@
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs/config";
+import { buildSecurityHeaders } from "./src/lib/security-headers";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  poweredByHeader: false,
+  // OPTIMIERUNG.md, Befund S-2 -- Begruendung und Report-Only-Strategie in
+  // src/lib/security-headers.ts.
+  async headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: buildSecurityHeaders({
+          supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+          sentryDsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
+          isDev: process.env.NODE_ENV === "development",
+          // Adresssuche ruft Photon direkt aus dem Browser auf
+          // (src/lib/providers/geocoding/photon.ts in address-autocomplete.tsx);
+          // OSM-Kacheln laedt MapLibre per fetch (src/components/map/osm-style.ts).
+          connectSrc: ["https://photon.komoot.io", "https://tile.openstreetmap.org"],
+          // Standortsuche fuer "Ladepunkte in der Naehe" braucht Geolocation.
+          permissionsPolicy: "camera=(), microphone=(), geolocation=(self), payment=(), usb=()",        }),
+      },
+    ];
+  },
   experimental: {
     // Das Projekt liegt in einem live synchronisierten OneDrive-Ordner
     // (C:\Users\...\OneDrive\Dokumente\eCamper) -- Turbopacks persistenter

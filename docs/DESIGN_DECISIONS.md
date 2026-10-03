@@ -1883,3 +1883,27 @@ nachvollziehen kann, *warum* eine Entscheidung getroffen wurde — nicht nur
   gilt nur für diesen Lauf. Erst wenn der Job wieder erfolgreich läuft, in
   `CRON_HEALTH_JOBS` des Workflows `cron-health.yml` aufnehmen (Limit 1560 Minuten).
 - **Date:** 2026-10-03.
+
+## Sicherheits-Header: CSP zunächst Report-Only, ohne Nonces
+
+- **Decision:** App und Admin setzen über `headers()` in `next.config.ts` auf allen
+  Pfaden `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`,
+  `Referrer-Policy: strict-origin-when-cross-origin`, HSTS (2 Jahre, ohne preload),
+  eine `Permissions-Policy` (App: Geolocation nur self; Admin: keine) und eine
+  Content-Security-Policy **als Report-Only**. `X-Powered-By` ist abgeschaltet.
+  Baustein: `src/lib/security-headers.ts` (Test daneben), Kopie in
+  `admin/lib/security-headers.ts`. OPTIMIERUNG.md, Befund S-2.
+- **Reason:** Bisher setzte keine der beiden Apps Sicherheits-Header (Clickjacking auf
+  das Admin-Backend möglich). Report-Only, weil MapLibre (Worker aus `blob:`),
+  Supabase-Auth, Sentry und eventuell Vercel-Werkzeuge (Preview-Toolbar) aus mehreren
+  Ursprüngen laden und ein vergessener Ursprung Karte oder Login lahmlegen würde.
+  Lokal mit vorübergehend erzwungener CSP geprüft: Login, Ladepunkte-Karte inkl. Zoom
+  und Photon-Adresssuche funktionieren ohne Verstoß.
+- **Alternatives:** Nonces über `proxy.ts` (Next-Doku) -- strenger (`script-src` ohne
+  `unsafe-inline`), aber Umbau der Proxy-Logik beider Apps; später möglich. CSP sofort
+  erzwingen -- Risiko eines Ausfalls in Prod durch nicht lokal sichtbare Ursprünge.
+- **Impact:** Verstöße landen bei gesetzter `NEXT_PUBLIC_SENTRY_DSN` als Security-
+  Report in Sentry. Bleiben sie eine Weile aus, in beiden `next.config.ts`
+  `enforceCsp: true` setzen. Neue Browser-Ziele (fetch aus dem Client) müssen in
+  `connectSrc` ergänzt werden, sonst blockiert die erzwungene CSP sie.
+- **Date:** 2026-10-03.

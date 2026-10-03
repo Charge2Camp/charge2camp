@@ -100,6 +100,7 @@ Aufwand: S = < 1 h, M = halber Tag, L = 1+ Tage.
 | Befund | Status | Commit |
 |---|---|---|
 | S-1 Next.js 16.3.8 | erledigt | `1a3e62c` |
+| S-2 Security-Header (CSP Report-Only) | erledigt, wirkt nach Deploy | Branch `optimierung-s2-s3` |
 | Q-1 CI-Pipeline | erledigt | `a7bc1d0` |
 | D-1 OCM-Lizenzfilter, Bestandsbereinigung | erledigt, Prod eingespielt 2026-10-03 | `d1f2df5` |
 | D-1 Registry-Lizenzen, Namensnennung Impressum | erledigt, Prod eingespielt 2026-10-03 | `a956832` |
